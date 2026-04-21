@@ -2,24 +2,28 @@
 import Layout from "../../layouts/Layout.astro";
 ---
 
-<Layout title="로그인">
-  <h1 class="text-2xl font-bold mb-6">관리자 로그인</h1>
+<Layout title="로그인" scope="admin">
+  <div class="max-w-sm mx-auto mt-12">
+    <h1 class="wordmark text-3xl mb-2">관리자</h1>
+    <p class="meta-line mb-10">Kosmos 편집 콘솔</p>
 
-  <form id="login-form" class="grid gap-3 max-w-sm">
-    <label class="grid gap-1">
-      <span class="text-sm">이메일</span>
-      <input type="email" name="email" required class="border rounded px-3 py-2" />
-    </label>
-    <label class="grid gap-1">
-      <span class="text-sm">비밀번호</span>
-      <input type="password" name="password" required minlength="8" class="border rounded px-3 py-2" />
-    </label>
-    <div class="flex gap-2">
-      <button type="submit" data-action="signin" class="bg-black text-white rounded px-4 py-2">로그인</button>
-      <button type="submit" data-action="signup" class="border rounded px-4 py-2">처음이면 가입</button>
-    </div>
-    <p id="msg" class="text-sm text-red-600"></p>
-  </form>
+    <form id="login-form" class="grid gap-4">
+      <label class="label">
+        <span class="label-text">이메일</span>
+        <input type="email" name="email" required class="input" />
+      </label>
+      <label class="label">
+        <span class="label-text">비밀번호</span>
+        <input type="password" name="password" required minlength="8" class="input" />
+      </label>
+
+      <div class="flex gap-2 mt-2">
+        <button type="submit" data-action="signin" class="btn btn-primary flex-1">로그인</button>
+        <button type="submit" data-action="signup" class="btn btn-secondary">처음이면 가입</button>
+      </div>
+      <p id="msg" class="text-sm text-red-700"></p>
+    </form>
+  </div>
 </Layout>
 
 <script>

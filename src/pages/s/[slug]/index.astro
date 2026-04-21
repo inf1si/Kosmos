@@ -17,36 +17,53 @@ const chapters = await db
   .orderBy(asc(chapter.number))
   .all();
 
-// 단편이면 본문을 바로 보여줌 (ch 1)
 const isShort = s.kind === "단편";
 const first = chapters[0];
 ---
 
 <Layout title={s.title}>
-  <header class="mb-6">
-    <div class="text-sm text-gray-500">{s.kind} · {s.status}</div>
-    <h1 class="text-3xl font-bold mt-1">{s.title}</h1>
-    {s.synopsis && <p class="mt-3 text-gray-700">{s.synopsis}</p>}
+  <header class="mb-12">
+    <h1 class="wordmark text-4xl sm:text-5xl leading-tight mb-3">{s.title}</h1>
+    <div class="meta-line mb-5">
+      {s.kind}<span class="dot">·</span>{s.status}
+      {!isShort && <><span class="dot">·</span>{chapters.length}화</>}
+    </div>
+    {s.synopsis && (
+      <p class="font-serif text-[1.02rem] text-gray-700 leading-relaxed max-w-prose">
+        {s.synopsis}
+      </p>
+    )}
   </header>
 
   {isShort && first ? (
-    <article class="prose max-w-none" set:html={first.contentHtml ?? ""} />
+    <>
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-200/70">
+        <h2 class="wordmark text-xl text-gray-800">{first.title}</h2>
+      </div>
+      <article class="prose max-w-none" set:html={first.contentHtml ?? ""} />
+    </>
   ) : (
-    <ul class="divide-y border rounded">
-      {chapters.length === 0 && <li class="p-4 text-gray-500">아직 등록된 화가 없습니다.</li>}
-      {chapters.map((c) => (
-        <li class="p-4 hover:bg-gray-50">
-          <a href={`/s/${s.slug}/${c.number}`} class="flex justify-between">
-            <span>
-              <span class="text-gray-500 mr-3">{c.number}화</span>
-              <span class="font-medium">{c.title}</span>
-            </span>
-            {c.status !== "발행" && (
-              <span class="text-xs text-amber-600">{c.status}</span>
-            )}
-          </a>
-        </li>
-      ))}
-    </ul>
+    <section>
+      <h2 class="text-sm font-semibold text-gray-500 tracking-widest uppercase mb-5">
+        목차 · {chapters.length}화
+      </h2>
+      {chapters.length === 0 ? (
+        <p class="text-gray-500 text-sm">아직 등록된 화가 없습니다.</p>
+      ) : (
+        <ol class="divide-y divide-gray-200/70 border-y border-gray-200/70">
+          {chapters.map((c) => (
+            <li>
+              <a href={`/s/${s.slug}/${c.number}`} class="flex items-baseline gap-4 py-3 px-1 hover:bg-gray-50/50">
+                <span class="w-10 text-sm text-gray-400 tabular-nums text-right">{c.number}</span>
+                <span class="flex-1 font-medium">{c.title}</span>
+                {c.status !== "발행" && (
+                  <span class="text-xs text-amber-700">{c.status}</span>
+                )}
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   )}
 </Layout>

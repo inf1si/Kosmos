@@ -1,0 +1,164 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { db } from "../lib/db/client";
+import { series, chapter, wikiPage } from "../lib/db/schema";
+import { and, eq, like, or } from "drizzle-orm";
+import { stripHtml, snippet, highlight } from "../lib/search";
+
+const q = Astro.url.searchParams.get("q")?.trim() ?? "";
+
+type SeriesHit = { type: "series"; id: string; title: string; body: string; url: string; meta: string };
+type ChapterHit = { type: "chapter"; id: string; title: string; body: string; url: string; meta: string };
+type WikiHit = { type: "wiki"; id: string; title: string; body: string; url: string; meta: string };
+
+let seriesHits: SeriesHit[] = [];
+let chapterHits: ChapterHit[] = [];
+let wikiHits: WikiHit[] = [];
+
+if (q) {
+  const pat = `%${q}%`;
+
+  const [sRows, cRows, wRows] = await Promise.all([
+    db
+      .select()
+      .from(series)
+      .where(or(like(series.title, pat), like(series.synopsis, pat)))
+      .limit(20)
+      .all(),
+
+    db
+      .select({
+        id: chapter.id,
+        number: chapter.number,
+        title: chapter.title,
+        contentHtml: chapter.contentHtml,
+        seriesSlug: series.slug,
+        seriesTitle: series.title,
+      })
+      .from(chapter)
+      .innerJoin(series, eq(chapter.seriesId, series.id))
+      .where(
+        and(
+          eq(chapter.status, "발행"),
+          or(like(chapter.title, pat), like(chapter.contentHtml, pat)),
+        ),
+      )
+      .limit(20)
+      .all(),
+
+    db
+      .select()
+      .from(wikiPage)
+      .where(
+        and(
+          eq(wikiPage.status, "발행"),
+          or(
+            like(wikiPage.title, pat),
+            like(wikiPage.summary, pat),
+            like(wikiPage.contentHtml, pat),
+          ),
+        ),
+      )
+      .limit(20)
+      .all(),
+  ]);
+
+  seriesHits = sRows.map((s) => ({
+    type: "series",
+    id: s.id,
+    title: s.title,
+    body: snippet(s.synopsis ?? "", q),
+    url: `/s/${s.slug}`,
+    meta: `${s.kind} · ${s.status}`,
+  }));
+
+  chapterHits = cRows.map((c) => ({
+    type: "chapter",
+    id: c.id,
+    title: `${c.number}화 ${c.title}`,
+    body: snippet(stripHtml(c.contentHtml), q),
+    url: `/s/${c.seriesSlug}/${c.number}`,
+    meta: c.seriesTitle,
+  }));
+
+  wikiHits = wRows.map((w) => ({
+    type: "wiki",
+    id: w.id,
+    title: w.title,
+    body: snippet(w.summary ?? stripHtml(w.contentHtml), q),
+    url: `/wiki/${w.slug}`,
+    meta: "위키",
+  }));
+}
+
+const sections: { label: string; hits: (SeriesHit | ChapterHit | WikiHit)[] }[] = [
+  { label: "작품", hits: seriesHits },
+  { label: "화", hits: chapterHits },
+  { label: "위키", hits: wikiHits },
+];
+const total = seriesHits.length + chapterHits.length + wikiHits.length;
+---
+
+<Layout title={q ? `검색: ${q}` : "검색"}>
+  <header class="mb-10">
+    <h1 class="wordmark text-3xl mb-4">검색</h1>
+    <form action="/search" method="get" class="flex gap-2 max-w-lg">
+      <input
+        type="search"
+        name="q"
+        value={q}
+        placeholder="제목 · 본문 · 위키에서 찾기"
+        autofocus
+        class="flex-1 px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-[color:var(--color-accent)]"
+      />
+      <button type="submit" class="bg-black text-white rounded px-4 py-2 text-sm">
+        찾기
+      </button>
+    </form>
+    {q && (
+      <p class="meta-line mt-4">
+        "{q}" — {total}건
+      </p>
+    )}
+  </header>
+
+  {q && total === 0 && (
+    <p class="font-serif italic text-gray-500">일치하는 결과가 없습니다.</p>
+  )}
+
+  {sections
+    .filter((sec) => sec.hits.length > 0)
+    .map((sec) => (
+      <section class="mb-10">
+        <h2 class="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-4">
+          {sec.label} · {sec.hits.length}
+        </h2>
+        <ol class="space-y-5">
+          {sec.hits.map((hit) => (
+            <li>
+              <a href={hit.url} class="block group">
+                <h3 class="wordmark text-xl leading-tight mb-1 group-hover:text-[color:var(--color-accent)]">
+                  <span set:html={highlight(hit.title, q)} />
+                </h3>
+                <div class="meta-line mb-1">{hit.meta}</div>
+                {hit.body && (
+                  <p class="font-serif text-sm text-gray-700 leading-relaxed max-w-prose">
+                    <span set:html={highlight(hit.body, q)} />
+                  </p>
+                )}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+</Layout>
+
+<style>
+  mark {
+    background-color: rgb(254 240 138);
+    color: inherit;
+    padding: 0 1px;
+    border-radius: 2px;
+  }
+</style>

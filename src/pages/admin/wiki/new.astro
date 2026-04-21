@@ -16,8 +16,11 @@ const seriesList = await db
   .all();
 ---
 
-<Layout title="새 위키 문서">
-  <nav class="text-sm text-gray-500 mb-4"><a href="/admin" class="hover:underline">← 관리</a></nav>
-  <h1 class="text-2xl font-bold mb-6">새 위키 문서</h1>
+<Layout title="새 위키 문서" scope="admin">
+  <nav class="text-sm text-gray-500 mb-6">
+    <a href="/admin" class="hover:text-gray-900">← 관리</a>
+  </nav>
+  <h1 class="wordmark text-3xl mb-10">새 위키 문서</h1>
+
   <WikiForm seriesList={seriesList} client:only="react" />
 </Layout>

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../../lib/db/client";
 import { chapter, series } from "../../../lib/db/schema";
 import { requireAuth } from "../../../lib/auth/guard";
+import { syncWikiLinks } from "../../../lib/wiki/links";
 
 export const prerender = false;
 
@@ -46,6 +47,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
     throw e;
   }
+
+  await syncWikiLinks("chapter", id, contentJson);
 
   return json({ id, seriesId, seriesSlug: s.slug, number: n }, 201);
 };

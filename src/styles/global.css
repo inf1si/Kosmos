@@ -1,2 +1,364 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* ───── Typography: Korean serif for reading, sans for UI ───── */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@400;500;600;700&display=swap");
+
+@theme {
+  --font-sans: "Noto Sans KR", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Noto Serif KR", ui-serif, Georgia, serif;
+
+  /* Warm paper palette */
+  --color-paper: #fbf8f2;
+  --color-paper-dark: #f2ece0;
+  --color-ink: #1a1512;
+  --color-ink-muted: #6a5f55;
+  --color-accent: #4f46e5;
+}
+
+/* Body defaults */
+:root {
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Reader article: serif prose + comfy reading width */
+article.prose {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  line-height: 1.85;
+  color: var(--color-ink);
+  max-width: 42rem;
+}
+article.prose p { margin: 1em 0; }
+article.prose h1, article.prose h2, article.prose h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+article.prose h2 { margin-top: 2em; }
+
+/* Admin / forms stay in sans */
+.admin-scope {
+  font-family: var(--font-sans);
+}
+
+/* Admin form elements */
+.admin-scope .input {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.95rem;
+  background: white;
+  border: 1px solid rgb(209 213 219);
+  border-radius: 4px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  color: var(--color-ink);
+}
+.admin-scope .input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgb(79 70 229 / 0.08);
+}
+.admin-scope .input-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+.admin-scope .label {
+  display: grid;
+  gap: 0.35rem;
+}
+.admin-scope .label > .label-text {
+  font-size: 0.72rem;
+  color: rgb(107 114 128);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.admin-scope .label > .label-hint {
+  font-size: 0.75rem;
+  color: rgb(156 163 175);
+  font-style: italic;
+}
+
+.admin-scope .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: all 0.15s;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.admin-scope .btn-primary {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.admin-scope .btn-primary:hover { opacity: 0.88; }
+.admin-scope .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.admin-scope .btn-secondary {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: rgb(209 213 219);
+}
+.admin-scope .btn-secondary:hover { background: rgb(249 250 251); border-color: rgb(156 163 175); }
+
+.admin-scope .btn-ghost {
+  background: transparent;
+  color: rgb(107 114 128);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.825rem;
+}
+.admin-scope .btn-ghost:hover { color: var(--color-ink); }
+
+.admin-scope .btn-danger {
+  background: transparent;
+  color: rgb(185 28 28);
+  padding: 0.35rem 0;
+  font-size: 0.825rem;
+  text-decoration: underline;
+  border: none;
+}
+.admin-scope .btn-danger:hover { color: rgb(153 27 27); }
+
+.admin-scope .section-label {
+  font-size: 0.72rem;
+  color: rgb(107 114 128);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.admin-scope .hairline-list {
+  border-top: 1px solid rgb(229 231 235);
+  border-bottom: 1px solid rgb(229 231 235);
+}
+.admin-scope .hairline-list > * + * {
+  border-top: 1px solid rgb(229 231 235);
+}
+.admin-scope .hairline-list > li {
+  padding: 0.75rem 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: background-color 0.1s;
+}
+.admin-scope .hairline-list > li:hover {
+  background-color: rgb(255 255 255 / 0.6);
+}
+
+/* ───── WikiLink ───── */
+.wiki-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  background-color: rgb(238 242 255 / 0.5);
+  padding: 0 2px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.wiki-link:hover {
+  background-color: rgb(224 231 255);
+}
+
+/* ───── SceneBreak ───── */
+hr.scene-break {
+  border: none;
+  text-align: center;
+  margin: 2.5rem 0;
+  height: 1.5em;
+  position: relative;
+}
+hr.scene-break::before {
+  content: "◆  ◆  ◆";
+  color: var(--color-ink-muted);
+  opacity: 0.55;
+  letter-spacing: 0.2em;
+  font-size: 0.875rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ───── Spoiler ───── */
+.spoiler {
+  background-color: var(--color-ink);
+  color: var(--color-ink);
+  border-radius: 2px;
+  padding: 0 2px;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+  user-select: none;
+}
+.spoiler.revealed {
+  background-color: var(--color-paper-dark);
+  color: inherit;
+  user-select: text;
+}
+.ProseMirror .spoiler {
+  background-color: rgb(229 231 235);
+  color: inherit;
+  outline: 1px dashed rgb(156 163 175);
+  outline-offset: 1px;
+  cursor: text;
+  user-select: text;
+}
+
+/* ───── Aside / Callout ───── */
+aside.callout {
+  border-left: 4px solid var(--color-accent);
+  background: rgb(238 242 255 / 0.5);
+  padding: 0.75rem 1rem;
+  margin: 1.5rem 0;
+  border-radius: 0 4px 4px 0;
+  font-family: var(--font-sans);
+  font-size: 0.95em;
+}
+aside.callout > *:first-child { margin-top: 0; }
+aside.callout > *:last-child { margin-bottom: 0; }
+
+/* ───── Ruby ───── */
+ruby { ruby-align: center; }
+rt {
+  font-size: 0.55em;
+  color: var(--color-ink-muted);
+  letter-spacing: 0;
+}
+
+/* ───── Footnote ───── */
+sup.footnote {
+  color: var(--color-accent);
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0 1px;
+  user-select: none;
+  position: relative;
+}
+sup.footnote:hover { text-decoration: underline; }
+
+/* Hover tooltip (reader pages only; ProseMirror editor excluded) */
+sup.footnote[data-footnote]:hover::after {
+  content: attr(data-footnote-content);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(22rem, 80vw);
+  padding: 0.5rem 0.75rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.55;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px -4px rgb(0 0 0 / 0.2);
+  pointer-events: none;
+  z-index: 40;
+  animation: fn-tip-in 0.12s ease-out;
+}
+sup.footnote[data-footnote]:hover::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--color-ink);
+  pointer-events: none;
+  z-index: 40;
+}
+/* Don't show tooltip inside the editor (avoids double UI with the prompt-based author flow) */
+.ProseMirror sup.footnote:hover::after,
+.ProseMirror sup.footnote:hover::before {
+  content: none;
+}
+
+@keyframes fn-tip-in {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+ol.footnotes {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgb(229 231 235);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+  padding-left: 1.25rem;
+}
+ol.footnotes li { margin-bottom: 0.35rem; scroll-margin-top: 6rem; }
+ol.footnotes a.backref { color: rgb(107 114 128); margin-left: 0.25rem; text-decoration: none; }
+ol.footnotes a.backref:hover { color: var(--color-accent); }
+h3.footnotes-title {
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-ink-muted);
+  margin-top: 3rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+/* ───── Tiptap editor base ───── */
+.ProseMirror { outline: none; }
+.ProseMirror:focus { outline: none; }
+
+/* ───── Site-level components ───── */
+.wordmark {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Kept for the chapter prev/next nav only */
+.card {
+  background: transparent;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 4px;
+  transition: border-color 0.15s;
+}
+.card:hover {
+  border-color: rgb(156 163 175);
+}
+
+/* Editorial metadata line */
+.meta-line {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.01em;
+}
+.meta-line .dot {
+  margin: 0 0.5em;
+  opacity: 0.5;
+}
+
+/* Catalog index number */
+.index-num {
+  font-family: var(--font-serif);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}

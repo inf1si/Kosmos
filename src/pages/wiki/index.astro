@@ -1,20 +1,60 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { db } from "../../lib/db/client";
-import { wikiPage } from "../../lib/db/schema";
+import { wikiPage, series } from "../../lib/db/schema";
+import { desc, eq } from "drizzle-orm";
 
-const pages = await db.select().from(wikiPage).all();
+const pages = await db
+  .select({
+    id: wikiPage.id,
+    slug: wikiPage.slug,
+    title: wikiPage.title,
+    summary: wikiPage.summary,
+    seriesTitle: series.title,
+  })
+  .from(wikiPage)
+  .leftJoin(series, eq(wikiPage.seriesId, series.id))
+  .orderBy(desc(wikiPage.updatedAt))
+  .all();
+
+// Group by series
+const groups = new Map<string, typeof pages>();
+for (const p of pages) {
+  const key = p.seriesTitle ?? "__global__";
+  if (!groups.has(key)) groups.set(key, []);
+  groups.get(key)!.push(p);
+}
 ---
 
 <Layout title="위키">
-  <h1 class="text-3xl font-bold mb-6">위키</h1>
-  <ul class="divide-y border rounded">
-    {pages.length === 0 && <li class="p-4 text-gray-500">아직 문서가 없습니다.</li>}
-    {pages.map((p) => (
-      <li class="p-4 hover:bg-gray-50">
-        <a href={`/wiki/${p.slug}`} class="font-medium hover:underline">{p.title}</a>
-        {p.summary && <p class="text-sm text-gray-600 mt-1">{p.summary}</p>}
-      </li>
-    ))}
-  </ul>
+  <header class="mb-10">
+    <h1 class="wordmark text-4xl leading-tight mb-3">위키</h1>
+    <p class="text-gray-600 text-sm">세계관 · 인물 · 용어</p>
+  </header>
+
+  {pages.length === 0 ? (
+    <p class="text-gray-500 text-sm">아직 문서가 없습니다.</p>
+  ) : (
+    <div class="space-y-10">
+      {[...groups.entries()].map(([groupKey, items]) => (
+        <section>
+          <h2 class="text-sm font-semibold text-gray-500 tracking-widest uppercase mb-4">
+            {groupKey === "__global__" ? "전역" : groupKey}
+          </h2>
+          <ul class="divide-y divide-gray-200/70 border-y border-gray-200/70">
+            {items.map((p) => (
+              <li>
+                <a href={`/wiki/${p.slug}`} class="flex items-baseline gap-4 py-3 px-1 hover:bg-gray-50/50">
+                  <span class="font-medium min-w-fit">{p.title}</span>
+                  {p.summary && (
+                    <span class="text-sm text-gray-500 line-clamp-1">{p.summary}</span>
+                  )}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )}
 </Layout>

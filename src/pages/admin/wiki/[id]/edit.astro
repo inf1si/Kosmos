@@ -1,0 +1,45 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import WikiForm from "../../../../components/editor/WikiForm";
+import { auth } from "../../../../lib/auth";
+import { db } from "../../../../lib/db/client";
+import { series, wikiPage } from "../../../../lib/db/schema";
+import { eq } from "drizzle-orm";
+
+export const prerender = false;
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session) return Astro.redirect("/admin/login");
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/admin");
+
+const p = await db.select().from(wikiPage).where(eq(wikiPage.id, id)).get();
+if (!p) return new Response("Not found", { status: 404 });
+
+const seriesList = await db
+  .select({ id: series.id, title: series.title })
+  .from(series)
+  .all();
+---
+
+<Layout title={`수정 · ${p.title}`} scope="admin">
+  <nav class="text-sm text-gray-500 mb-6">
+    <a href="/admin" class="hover:text-gray-900">← 관리</a>
+  </nav>
+  <h1 class="wordmark text-3xl mb-2">위키 수정</h1>
+  <p class="meta-line mb-10">{p.title}</p>
+
+  <WikiForm
+    seriesList={seriesList}
+    initial={{
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      summary: p.summary,
+      seriesId: p.seriesId,
+      contentJson: p.contentJson,
+    }}
+    client:only="react"
+  />
+</Layout>

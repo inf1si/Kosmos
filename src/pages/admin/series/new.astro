@@ -8,46 +8,48 @@ const session = await auth.api.getSession({ headers: Astro.request.headers });
 if (!session) return Astro.redirect("/admin/login");
 ---
 
-<Layout title="새 작품">
-  <nav class="text-sm text-gray-500 mb-4"><a href="/admin" class="hover:underline">← 관리</a></nav>
-  <h1 class="text-2xl font-bold mb-6">새 작품</h1>
+<Layout title="새 작품" scope="admin">
+  <nav class="text-sm text-gray-500 mb-6">
+    <a href="/admin" class="hover:text-gray-900">← 관리</a>
+  </nav>
+  <h1 class="wordmark text-3xl mb-10">새 작품</h1>
 
-  <form id="new-series" class="grid gap-4 max-w-lg">
-    <label class="grid gap-1">
-      <span class="text-sm">제목</span>
-      <input name="title" required class="border rounded px-3 py-2" />
+  <form id="new-series" class="grid gap-5 max-w-lg">
+    <label class="label">
+      <span class="label-text">제목</span>
+      <input name="title" required class="input" />
     </label>
 
-    <label class="grid gap-1">
-      <span class="text-sm">슬러그 (URL)</span>
+    <label class="label">
+      <span class="label-text">슬러그 (URL)</span>
       <input
         name="slug"
         required
         pattern="[a-z0-9-]+"
-        class="border rounded px-3 py-2 font-mono text-sm"
+        class="input input-mono"
         placeholder="my-novel"
       />
-      <span class="text-xs text-gray-500">영문 소문자·숫자·하이픈만. 예: /s/my-novel</span>
+      <span class="label-hint">영문 소문자·숫자·하이픈. 예 /s/my-novel</span>
     </label>
 
-    <label class="grid gap-1">
-      <span class="text-sm">유형</span>
-      <select name="kind" required class="border rounded px-3 py-2">
+    <label class="label">
+      <span class="label-text">유형</span>
+      <select name="kind" required class="input">
         <option value="장편">장편</option>
         <option value="단편">단편</option>
       </select>
     </label>
 
-    <label class="grid gap-1">
-      <span class="text-sm">시놉시스 (선택)</span>
-      <textarea name="synopsis" rows="4" class="border rounded px-3 py-2"></textarea>
+    <label class="label">
+      <span class="label-text">시놉시스 (선택)</span>
+      <textarea name="synopsis" rows="4" class="input"></textarea>
     </label>
 
-    <div class="flex gap-2">
-      <button type="submit" class="bg-black text-white rounded px-4 py-2">생성</button>
-      <a href="/admin" class="border rounded px-4 py-2">취소</a>
+    <div class="flex gap-2 mt-2">
+      <button type="submit" class="btn btn-primary">생성</button>
+      <a href="/admin" class="btn btn-secondary">취소</a>
     </div>
-    <p id="msg" class="text-sm text-red-600"></p>
+    <p id="msg" class="text-sm text-red-700"></p>
   </form>
 </Layout>
 
@@ -74,7 +76,6 @@ if (!session) return Astro.redirect("/admin/login");
     }
 
     const { id } = await res.json();
-    // 단편이면 바로 1화 작성으로, 장편이면 작품 상세로
     if (body.kind === "단편") {
       window.location.href = `/admin/series/${id}/chapters/new`;
     } else {

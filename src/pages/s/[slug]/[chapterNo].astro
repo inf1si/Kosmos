@@ -2,7 +2,7 @@
 import Layout from "../../../layouts/Layout.astro";
 import { db } from "../../../lib/db/client";
 import { series, chapter } from "../../../lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc, gt, lt, desc } from "drizzle-orm";
 
 const { slug, chapterNo } = Astro.params;
 if (!slug || !chapterNo) return new Response("Not found", { status: 404 });
@@ -19,14 +19,41 @@ const c = await db
   .where(and(eq(chapter.seriesId, s.id), eq(chapter.number, num)))
   .get();
 if (!c) return new Response("Not found", { status: 404 });
+
+const [prev, next] = await Promise.all([
+  db.select().from(chapter)
+    .where(and(eq(chapter.seriesId, s.id), lt(chapter.number, num)))
+    .orderBy(desc(chapter.number)).limit(1).get(),
+  db.select().from(chapter)
+    .where(and(eq(chapter.seriesId, s.id), gt(chapter.number, num)))
+    .orderBy(asc(chapter.number)).limit(1).get(),
+]);
 ---
 
-<Layout title={`${s.title} · ${c.number}화 ${c.title}`}>
-  <nav class="text-sm text-gray-500 mb-4">
-    <a href={`/s/${s.slug}`} class="hover:underline">{s.title}</a>
-    <span class="mx-1">/</span>
-    <span>{c.number}화</span>
+<Layout title={`${c.number}화 ${c.title} — ${s.title}`}>
+  <nav class="text-sm text-gray-500 mb-8">
+    <a href={`/s/${s.slug}`} class="hover:text-gray-900">← {s.title}</a>
   </nav>
-  <h1 class="text-2xl font-bold mb-6">{c.title}</h1>
+
+  <header class="mb-10 pb-6 border-b border-gray-200/70">
+    <div class="text-sm text-gray-500 tabular-nums mb-1">{c.number}화</div>
+    <h1 class="wordmark text-3xl sm:text-4xl leading-tight">{c.title}</h1>
+  </header>
+
   <article class="prose max-w-none" set:html={c.contentHtml ?? ""} />
+
+  <nav class="mt-14 pt-6 border-t border-gray-200/70 grid grid-cols-2 gap-3 text-sm">
+    {prev ? (
+      <a href={`/s/${s.slug}/${prev.number}`} class="card p-4 text-left">
+        <div class="text-xs text-gray-500 mb-1">← 이전 화</div>
+        <div class="font-medium line-clamp-1">{prev.number}화 {prev.title}</div>
+      </a>
+    ) : <div />}
+    {next ? (
+      <a href={`/s/${s.slug}/${next.number}`} class="card p-4 text-right">
+        <div class="text-xs text-gray-500 mb-1">다음 화 →</div>
+        <div class="font-medium line-clamp-1">{next.number}화 {next.title}</div>
+      </a>
+    ) : <div />}
+  </nav>
 </Layout>

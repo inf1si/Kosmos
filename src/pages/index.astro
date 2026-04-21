@@ -1,29 +1,53 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { db } from "../lib/db/client";
-import { series } from "../lib/db/schema";
+import { series, chapter } from "../lib/db/schema";
+import { desc, count } from "drizzle-orm";
 
-const list = await db.select().from(series).all();
+const seriesList = await db.select().from(series).orderBy(desc(series.updatedAt)).all();
+
+const counts = await db
+  .select({ seriesId: chapter.seriesId, n: count() })
+  .from(chapter)
+  .groupBy(chapter.seriesId)
+  .all();
+const countMap = new Map(counts.map((c) => [c.seriesId, c.n]));
 ---
 
-<Layout title="작품 목록">
-  <h1 class="text-3xl font-bold mb-6">작품</h1>
-
-  {list.length === 0 && (
-    <p class="text-gray-500">
-      아직 작품이 없습니다. <a href="/admin" class="underline">관리 페이지</a>에서 추가하세요.
+<Layout title="Kosmos">
+  <section class="mb-20">
+    <h1 class="wordmark text-5xl sm:text-6xl leading-none mb-5">Kosmos</h1>
+    <p class="text-gray-600 max-w-md leading-relaxed font-serif italic">
+      개인 연재 소설과 그 세계관을 담는 공간.<br />
+      별들 사이에서 길어 올리는 이야기들.
     </p>
-  )}
+  </section>
 
-  <ul class="grid gap-4">
-    {list.map((s) => (
-      <li class="border rounded p-4">
-        <a href={`/s/${s.slug}`} class="text-xl font-semibold hover:underline">
-          {s.title}
-        </a>
-        <div class="text-sm text-gray-500 mt-1">{s.kind} · {s.status}</div>
-        {s.synopsis && <p class="mt-2 text-gray-700">{s.synopsis}</p>}
-      </li>
-    ))}
-  </ul>
+  {seriesList.length === 0 ? (
+    <p class="text-gray-500 text-sm italic font-serif">아직 연재 중인 작품이 없습니다.</p>
+  ) : (
+    <ol class="space-y-12">
+      {seriesList.map((s) => {
+        const n = countMap.get(s.id) ?? 0;
+        const meta = [s.kind, s.status, s.kind === "장편" ? `${n}화` : null]
+          .filter(Boolean)
+          .join(" · ");
+        return (
+          <li>
+            <a href={`/s/${s.slug}`} class="block group">
+              <h2 class="wordmark text-2xl sm:text-3xl leading-tight mb-1 group-hover:text-[color:var(--color-accent)] transition-colors">
+                {s.title}
+              </h2>
+              <div class="meta-line mb-2">{meta}</div>
+              {s.synopsis && (
+                <p class="font-serif text-[0.95rem] text-gray-700 leading-relaxed max-w-prose">
+                  {s.synopsis}
+                </p>
+              )}
+            </a>
+          </li>
+        );
+      })}
+    </ol>
+  )}
 </Layout>

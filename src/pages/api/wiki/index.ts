@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { db } from "../../../lib/db/client";
 import { wikiPage } from "../../../lib/db/schema";
 import { requireAuth } from "../../../lib/auth/guard";
+import { syncWikiLinks } from "../../../lib/wiki/links";
 
 export const prerender = false;
 
@@ -44,6 +45,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
     throw e;
   }
+
+  await syncWikiLinks("wiki", id, contentJson);
 
   return json({ id, slug }, 201);
 };

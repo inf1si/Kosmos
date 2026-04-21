@@ -29,13 +29,14 @@ const nextNumber = (last?.number ?? 0) + 1;
 const isShort = s.kind === "단편";
 ---
 
-<Layout title={`새 화 · ${s.title}`}>
-  <nav class="text-sm text-gray-500 mb-4">
-    <a href={`/admin/series/${s.id}`} class="hover:underline">← {s.title}</a>
+<Layout title={`새 화 · ${s.title}`} scope="admin">
+  <nav class="text-sm text-gray-500 mb-6">
+    <a href={`/admin/series/${s.id}`} class="hover:text-gray-900">← {s.title}</a>
   </nav>
-  <h1 class="text-2xl font-bold mb-6">
-    {isShort ? "본문 작성" : `${nextNumber}화 작성`}
+  <h1 class="wordmark text-3xl mb-2">
+    {isShort ? "본문 작성" : `${nextNumber}화`}
   </h1>
+  <p class="meta-line mb-10">{s.title}</p>
 
   <ChapterForm
     seriesId={s.id}

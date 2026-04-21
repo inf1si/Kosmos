@@ -1,0 +1,47 @@
+---
+import Layout from "../../../../../../layouts/Layout.astro";
+import ChapterForm from "../../../../../../components/editor/ChapterForm";
+import { auth } from "../../../../../../lib/auth";
+import { db } from "../../../../../../lib/db/client";
+import { chapter, series } from "../../../../../../lib/db/schema";
+import { eq } from "drizzle-orm";
+
+export const prerender = false;
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session) return Astro.redirect("/admin/login");
+
+const { id, chapterId } = Astro.params;
+if (!id || !chapterId) return Astro.redirect("/admin");
+
+const [s, c] = await Promise.all([
+  db.select().from(series).where(eq(series.id, id)).get(),
+  db.select().from(chapter).where(eq(chapter.id, chapterId)).get(),
+]);
+if (!s || !c || c.seriesId !== s.id) {
+  return new Response("Not found", { status: 404 });
+}
+---
+
+<Layout title={`수정 · ${c.number}화 ${c.title}`} scope="admin">
+  <nav class="text-sm text-gray-500 mb-6">
+    <a href={`/admin/series/${s.id}`} class="hover:text-gray-900">← {s.title}</a>
+  </nav>
+  <h1 class="wordmark text-3xl mb-2">{c.number}화 수정</h1>
+  <p class="meta-line mb-10">{c.status} · {s.title}</p>
+
+  <ChapterForm
+    seriesId={s.id}
+    seriesSlug={s.slug}
+    nextNumber={c.number}
+    isShort={s.kind === "단편"}
+    initial={{
+      id: c.id,
+      number: c.number,
+      title: c.title,
+      contentJson: c.contentJson,
+      status: c.status,
+    }}
+    client:only="react"
+  />
+</Layout>
