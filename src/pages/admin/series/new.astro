@@ -1,0 +1,84 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import { auth } from "../../../lib/auth";
+
+export const prerender = false;
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session) return Astro.redirect("/admin/login");
+---
+
+<Layout title="새 작품">
+  <nav class="text-sm text-gray-500 mb-4"><a href="/admin" class="hover:underline">← 관리</a></nav>
+  <h1 class="text-2xl font-bold mb-6">새 작품</h1>
+
+  <form id="new-series" class="grid gap-4 max-w-lg">
+    <label class="grid gap-1">
+      <span class="text-sm">제목</span>
+      <input name="title" required class="border rounded px-3 py-2" />
+    </label>
+
+    <label class="grid gap-1">
+      <span class="text-sm">슬러그 (URL)</span>
+      <input
+        name="slug"
+        required
+        pattern="[a-z0-9-]+"
+        class="border rounded px-3 py-2 font-mono text-sm"
+        placeholder="my-novel"
+      />
+      <span class="text-xs text-gray-500">영문 소문자·숫자·하이픈만. 예: /s/my-novel</span>
+    </label>
+
+    <label class="grid gap-1">
+      <span class="text-sm">유형</span>
+      <select name="kind" required class="border rounded px-3 py-2">
+        <option value="장편">장편</option>
+        <option value="단편">단편</option>
+      </select>
+    </label>
+
+    <label class="grid gap-1">
+      <span class="text-sm">시놉시스 (선택)</span>
+      <textarea name="synopsis" rows="4" class="border rounded px-3 py-2"></textarea>
+    </label>
+
+    <div class="flex gap-2">
+      <button type="submit" class="bg-black text-white rounded px-4 py-2">생성</button>
+      <a href="/admin" class="border rounded px-4 py-2">취소</a>
+    </div>
+    <p id="msg" class="text-sm text-red-600"></p>
+  </form>
+</Layout>
+
+<script>
+  const form = document.getElementById("new-series") as HTMLFormElement;
+  const msg = document.getElementById("msg") as HTMLElement;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg.textContent = "";
+    const fd = new FormData(form);
+    const body = Object.fromEntries(fd.entries());
+
+    const res = await fetch("/api/series", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "저장 실패" }));
+      msg.textContent = err.error ?? "오류";
+      return;
+    }
+
+    const { id } = await res.json();
+    // 단편이면 바로 1화 작성으로, 장편이면 작품 상세로
+    if (body.kind === "단편") {
+      window.location.href = `/admin/series/${id}/chapters/new`;
+    } else {
+      window.location.href = `/admin/series/${id}`;
+    }
+  });
+</script>

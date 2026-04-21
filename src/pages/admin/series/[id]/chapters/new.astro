@@ -1,0 +1,47 @@
+---
+import Layout from "../../../../../layouts/Layout.astro";
+import ChapterForm from "../../../../../components/editor/ChapterForm";
+import { auth } from "../../../../../lib/auth";
+import { db } from "../../../../../lib/db/client";
+import { chapter, series } from "../../../../../lib/db/schema";
+import { desc, eq } from "drizzle-orm";
+
+export const prerender = false;
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session) return Astro.redirect("/admin/login");
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/admin");
+
+const s = await db.select().from(series).where(eq(series.id, id)).get();
+if (!s) return new Response("Not found", { status: 404 });
+
+const last = await db
+  .select()
+  .from(chapter)
+  .where(eq(chapter.seriesId, s.id))
+  .orderBy(desc(chapter.number))
+  .limit(1)
+  .get();
+
+const nextNumber = (last?.number ?? 0) + 1;
+const isShort = s.kind === "단편";
+---
+
+<Layout title={`새 화 · ${s.title}`}>
+  <nav class="text-sm text-gray-500 mb-4">
+    <a href={`/admin/series/${s.id}`} class="hover:underline">← {s.title}</a>
+  </nav>
+  <h1 class="text-2xl font-bold mb-6">
+    {isShort ? "본문 작성" : `${nextNumber}화 작성`}
+  </h1>
+
+  <ChapterForm
+    seriesId={s.id}
+    seriesSlug={s.slug}
+    nextNumber={nextNumber}
+    isShort={isShort}
+    client:only="react"
+  />
+</Layout>

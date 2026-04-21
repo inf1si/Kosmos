@@ -1,6 +1,5 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import EditorIsland from "../../components/editor/Editor";
 import { auth } from "../../lib/auth";
 import { db } from "../../lib/db/client";
 import { series, wikiPage } from "../../lib/db/schema";
@@ -30,11 +29,11 @@ const [seriesList, wikiList] = await Promise.all([
     <ul class="divide-y border rounded">
       {seriesList.length === 0 && <li class="p-4 text-gray-500">없음</li>}
       {seriesList.map((s) => (
-        <li class="p-4 flex items-center justify-between">
-          <div>
+        <li class="p-4 flex items-center justify-between hover:bg-gray-50">
+          <a href={`/admin/series/${s.id}`} class="flex-1">
             <div class="font-medium">{s.title}</div>
             <div class="text-xs text-gray-500">{s.kind} · {s.status}</div>
-          </div>
+          </a>
           <a href={`/s/${s.slug}`} class="text-sm text-gray-600 hover:underline">미리보기</a>
         </li>
       ))}
@@ -49,20 +48,11 @@ const [seriesList, wikiList] = await Promise.all([
     <ul class="divide-y border rounded">
       {wikiList.length === 0 && <li class="p-4 text-gray-500">없음</li>}
       {wikiList.map((w) => (
-        <li class="p-4 flex items-center justify-between">
+        <li class="p-4 flex items-center justify-between hover:bg-gray-50">
           <div class="font-medium">{w.title}</div>
           <a href={`/wiki/${w.slug}`} class="text-sm text-gray-600 hover:underline">미리보기</a>
         </li>
       ))}
     </ul>
-  </section>
-
-  <hr class="my-10" />
-
-  <section class="text-sm text-gray-500">
-    <p>에디터 미리보기 (StarterKit만 활성화, 커스텀 노드는 추후 추가)</p>
-    <div class="mt-3">
-      <EditorIsland client:only="react" />
-    </div>
   </section>
 </Layout>

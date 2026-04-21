@@ -1,0 +1,68 @@
+---
+import Layout from "../../../../layouts/Layout.astro";
+import { auth } from "../../../../lib/auth";
+import { db } from "../../../../lib/db/client";
+import { series, chapter } from "../../../../lib/db/schema";
+import { asc, eq } from "drizzle-orm";
+
+export const prerender = false;
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session) return Astro.redirect("/admin/login");
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/admin");
+
+const s = await db.select().from(series).where(eq(series.id, id)).get();
+if (!s) return new Response("Not found", { status: 404 });
+
+const chapters = await db
+  .select()
+  .from(chapter)
+  .where(eq(chapter.seriesId, s.id))
+  .orderBy(asc(chapter.number))
+  .all();
+---
+
+<Layout title={`관리 · ${s.title}`}>
+  <nav class="text-sm text-gray-500 mb-4"><a href="/admin" class="hover:underline">← 관리</a></nav>
+
+  <div class="flex items-start justify-between mb-6">
+    <div>
+      <div class="text-sm text-gray-500">{s.kind} · {s.status}</div>
+      <h1 class="text-3xl font-bold mt-1">{s.title}</h1>
+      {s.synopsis && <p class="mt-2 text-gray-700">{s.synopsis}</p>}
+    </div>
+    <a href={`/s/${s.slug}`} class="text-sm text-gray-600 hover:underline">독자 페이지 →</a>
+  </div>
+
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-xl font-semibold">화 목록 ({chapters.length})</h2>
+    <a
+      href={`/admin/series/${s.id}/chapters/new`}
+      class="text-sm border rounded px-3 py-1 hover:bg-gray-50"
+    >
+      + 새 화
+    </a>
+  </div>
+
+  <ul class="divide-y border rounded">
+    {chapters.length === 0 && <li class="p-4 text-gray-500">아직 화가 없습니다.</li>}
+    {chapters.map((c) => (
+      <li class="p-4 flex items-center justify-between">
+        <div>
+          <span class="text-gray-500 mr-3">{c.number}화</span>
+          <span class="font-medium">{c.title}</span>
+          {c.status !== "발행" && (
+            <span class="text-xs text-amber-600 ml-2">{c.status}</span>
+          )}
+        </div>
+        <div class="flex gap-3 text-sm text-gray-600">
+          {c.status === "발행" && (
+            <a href={`/s/${s.slug}/${c.number}`} class="hover:underline">미리보기</a>
+          )}
+        </div>
+      </li>
+    ))}
+  </ul>
+</Layout>

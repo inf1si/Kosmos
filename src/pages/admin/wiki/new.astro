@@ -1,0 +1,23 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import WikiForm from "../../../components/editor/WikiForm";
+import { auth } from "../../../lib/auth";
+import { db } from "../../../lib/db/client";
+import { series } from "../../../lib/db/schema";
+
+export const prerender = false;
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session) return Astro.redirect("/admin/login");
+
+const seriesList = await db
+  .select({ id: series.id, title: series.title })
+  .from(series)
+  .all();
+---
+
+<Layout title="새 위키 문서">
+  <nav class="text-sm text-gray-500 mb-4"><a href="/admin" class="hover:underline">← 관리</a></nav>
+  <h1 class="text-2xl font-bold mb-6">새 위키 문서</h1>
+  <WikiForm seriesList={seriesList} client:only="react" />
+</Layout>
