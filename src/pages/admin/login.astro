@@ -1,0 +1,64 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="로그인">
+  <h1 class="text-2xl font-bold mb-6">관리자 로그인</h1>
+
+  <form id="login-form" class="grid gap-3 max-w-sm">
+    <label class="grid gap-1">
+      <span class="text-sm">이메일</span>
+      <input type="email" name="email" required class="border rounded px-3 py-2" />
+    </label>
+    <label class="grid gap-1">
+      <span class="text-sm">비밀번호</span>
+      <input type="password" name="password" required minlength="8" class="border rounded px-3 py-2" />
+    </label>
+    <div class="flex gap-2">
+      <button type="submit" data-action="signin" class="bg-black text-white rounded px-4 py-2">로그인</button>
+      <button type="submit" data-action="signup" class="border rounded px-4 py-2">처음이면 가입</button>
+    </div>
+    <p id="msg" class="text-sm text-red-600"></p>
+  </form>
+</Layout>
+
+<script>
+  const form = document.getElementById("login-form") as HTMLFormElement;
+  const msg = document.getElementById("msg") as HTMLElement;
+  let action: "signin" | "signup" = "signin";
+
+  form.querySelectorAll<HTMLButtonElement>("button[data-action]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      action = btn.dataset.action as "signin" | "signup";
+    });
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg.textContent = "";
+    const data = new FormData(form);
+    const body = {
+      email: data.get("email"),
+      password: data.get("password"),
+      ...(action === "signup" ? { name: data.get("email") } : {}),
+    };
+
+    const url =
+      action === "signin"
+        ? "/api/auth/sign-in/email"
+        : "/api/auth/sign-up/email";
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      window.location.href = "/admin";
+    } else {
+      const err = await res.json().catch(() => ({ message: "로그인 실패" }));
+      msg.textContent = err.message ?? "오류";
+    }
+  });
+</script>

@@ -1,0 +1,20 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { db } from "../../lib/db/client";
+import { wikiPage } from "../../lib/db/schema";
+
+const pages = await db.select().from(wikiPage).all();
+---
+
+<Layout title="위키">
+  <h1 class="text-3xl font-bold mb-6">위키</h1>
+  <ul class="divide-y border rounded">
+    {pages.length === 0 && <li class="p-4 text-gray-500">아직 문서가 없습니다.</li>}
+    {pages.map((p) => (
+      <li class="p-4 hover:bg-gray-50">
+        <a href={`/wiki/${p.slug}`} class="font-medium hover:underline">{p.title}</a>
+        {p.summary && <p class="text-sm text-gray-600 mt-1">{p.summary}</p>}
+      </li>
+    ))}
+  </ul>
+</Layout>

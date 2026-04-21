@@ -1,0 +1,32 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import { db } from "../../../lib/db/client";
+import { series, chapter } from "../../../lib/db/schema";
+import { eq, and } from "drizzle-orm";
+
+const { slug, chapterNo } = Astro.params;
+if (!slug || !chapterNo) return new Response("Not found", { status: 404 });
+
+const num = Number(chapterNo);
+if (!Number.isFinite(num)) return new Response("Invalid chapter", { status: 400 });
+
+const s = await db.select().from(series).where(eq(series.slug, slug)).get();
+if (!s) return new Response("Not found", { status: 404 });
+
+const c = await db
+  .select()
+  .from(chapter)
+  .where(and(eq(chapter.seriesId, s.id), eq(chapter.number, num)))
+  .get();
+if (!c) return new Response("Not found", { status: 404 });
+---
+
+<Layout title={`${s.title} · ${c.number}화 ${c.title}`}>
+  <nav class="text-sm text-gray-500 mb-4">
+    <a href={`/s/${s.slug}`} class="hover:underline">{s.title}</a>
+    <span class="mx-1">/</span>
+    <span>{c.number}화</span>
+  </nav>
+  <h1 class="text-2xl font-bold mb-6">{c.title}</h1>
+  <article class="prose max-w-none" set:html={c.contentHtml ?? ""} />
+</Layout>

@@ -1,0 +1,49 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { db } from "../../lib/db/client";
+import { wikiPage, link, chapter, series } from "../../lib/db/schema";
+import { eq, and } from "drizzle-orm";
+
+const { slug } = Astro.params;
+if (!slug) return new Response("Not found", { status: 404 });
+
+const p = await db.select().from(wikiPage).where(eq(wikiPage.slug, slug)).get();
+if (!p) return new Response("Not found", { status: 404 });
+
+// 이 위키 문서를 참조하는 화들 (백링크)
+const backlinks = await db
+  .select({
+    chapterId: chapter.id,
+    chapterNumber: chapter.number,
+    chapterTitle: chapter.title,
+    seriesTitle: series.title,
+    seriesSlug: series.slug,
+  })
+  .from(link)
+  .innerJoin(chapter, and(eq(link.fromType, "chapter"), eq(link.fromId, chapter.id)))
+  .innerJoin(series, eq(chapter.seriesId, series.id))
+  .where(and(eq(link.toType, "wiki"), eq(link.toId, p.id)))
+  .all();
+---
+
+<Layout title={p.title}>
+  <h1 class="text-3xl font-bold mb-2">{p.title}</h1>
+  {p.summary && <p class="text-gray-600 mb-6">{p.summary}</p>}
+
+  <article class="prose max-w-none" set:html={p.contentHtml ?? ""} />
+
+  {backlinks.length > 0 && (
+    <section class="mt-10 border-t pt-6">
+      <h2 class="text-lg font-semibold mb-3">등장한 화</h2>
+      <ul class="space-y-1 text-sm">
+        {backlinks.map((b) => (
+          <li>
+            <a href={`/s/${b.seriesSlug}/${b.chapterNumber}`} class="hover:underline">
+              {b.seriesTitle} · {b.chapterNumber}화 {b.chapterTitle}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+</Layout>

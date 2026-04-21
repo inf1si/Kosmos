@@ -1,0 +1,29 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { db } from "../lib/db/client";
+import { series } from "../lib/db/schema";
+
+const list = await db.select().from(series).all();
+---
+
+<Layout title="작품 목록">
+  <h1 class="text-3xl font-bold mb-6">작품</h1>
+
+  {list.length === 0 && (
+    <p class="text-gray-500">
+      아직 작품이 없습니다. <a href="/admin" class="underline">관리 페이지</a>에서 추가하세요.
+    </p>
+  )}
+
+  <ul class="grid gap-4">
+    {list.map((s) => (
+      <li class="border rounded p-4">
+        <a href={`/s/${s.slug}`} class="text-xl font-semibold hover:underline">
+          {s.title}
+        </a>
+        <div class="text-sm text-gray-500 mt-1">{s.kind} · {s.status}</div>
+        {s.synopsis && <p class="mt-2 text-gray-700">{s.synopsis}</p>}
+      </li>
+    ))}
+  </ul>
+</Layout>
