@@ -3,6 +3,9 @@ import Layout from "../../layouts/Layout.astro";
 import { db } from "../../lib/db/client";
 import { wikiPage, series } from "../../lib/db/schema";
 import { desc, eq } from "drizzle-orm";
+import { auth } from "../../lib/auth";
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
 
 const pages = await db
   .select({
@@ -28,8 +31,13 @@ for (const p of pages) {
 
 <Layout title="위키">
   <header class="mb-10">
-    <h1 class="wordmark text-4xl leading-tight mb-3">위키</h1>
-    <p class="text-gray-600 text-sm">세계관 · 인물 · 용어</p>
+    <div class="flex items-baseline justify-between gap-4">
+      <h1 class="wordmark text-4xl leading-tight">위키</h1>
+      {session && (
+        <a href="/admin/wiki/new" class="author-mark">+ 새 문서</a>
+      )}
+    </div>
+    <p class="text-gray-600 text-sm mt-3">세계관 · 인물 · 용어</p>
   </header>
 
   {pages.length === 0 ? (

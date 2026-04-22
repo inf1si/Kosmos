@@ -3,6 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import { db } from "../../lib/db/client";
 import { wikiPage, link, chapter, series } from "../../lib/db/schema";
 import { and, eq } from "drizzle-orm";
+import { auth } from "../../lib/auth";
 
 const { slug } = Astro.params;
 if (!slug) return new Response("Not found", { status: 404 });
@@ -27,6 +28,8 @@ const backlinks = await db
   .innerJoin(series, eq(chapter.seriesId, series.id))
   .where(and(eq(link.toType, "wiki"), eq(link.toId, p.id)))
   .all();
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
 ---
 
 <Layout title={p.title}>
@@ -41,8 +44,17 @@ const backlinks = await db
   </nav>
 
   <header class="mb-8 pb-5 border-b border-gray-200/70">
-    <h1 class="wordmark text-4xl leading-tight mb-2">{p.title}</h1>
-    {p.summary && <p class="text-gray-600">{p.summary}</p>}
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="wordmark text-4xl leading-tight mb-2">{p.title}</h1>
+        {p.summary && <p class="text-gray-600">{p.summary}</p>}
+      </div>
+      {session && (
+        <a href={`/admin/wiki/${p.id}/edit`} class="author-mark shrink-0 mt-2">
+          ✎ 수정
+        </a>
+      )}
+    </div>
   </header>
 
   <article class="prose max-w-none" set:html={p.contentHtml ?? ""} />

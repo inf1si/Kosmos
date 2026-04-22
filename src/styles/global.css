@@ -329,6 +329,20 @@ h3.footnotes-title {
   letter-spacing: -0.02em;
 }
 
+/* Subtle author-only affordance on reader pages (edit / new links).
+   Kept quiet so it doesn't intrude on the reading experience. */
+.author-mark {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  color: rgb(156 163 175);
+  transition: color 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.author-mark:hover {
+  color: var(--color-accent);
+}
+
 /* Kept for the chapter prev/next nav only */
 .card {
   background: transparent;

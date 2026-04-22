@@ -3,6 +3,7 @@ import Layout from "../../../layouts/Layout.astro";
 import { db } from "../../../lib/db/client";
 import { series, chapter } from "../../../lib/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { auth } from "../../../lib/auth";
 
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect("/");
@@ -19,6 +20,8 @@ const chapters = await db
 
 const isShort = s.kind === "단편";
 const first = chapters[0];
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
 ---
 
 <Layout title={s.title}>
@@ -32,6 +35,17 @@ const first = chapters[0];
       <p class="font-serif text-[1.02rem] text-gray-700 leading-relaxed max-w-prose">
         {s.synopsis}
       </p>
+    )}
+
+    {session && (
+      <div class="mt-5 flex gap-4">
+        <a href={`/admin/series/${s.id}/edit`} class="author-mark">✎ 작품 수정</a>
+        {isShort && first ? (
+          <a href={`/admin/series/${s.id}/chapters/${first.id}/edit`} class="author-mark">✎ 본문 수정</a>
+        ) : (
+          <a href={`/admin/series/${s.id}/chapters/new`} class="author-mark">+ 새 화</a>
+        )}
+      </div>
     )}
   </header>
 

@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import { db } from "../lib/db/client";
 import { series, chapter } from "../lib/db/schema";
 import { desc, count } from "drizzle-orm";
+import { auth } from "../lib/auth";
 
 const seriesList = await db.select().from(series).orderBy(desc(series.updatedAt)).all();
 
@@ -12,6 +13,8 @@ const counts = await db
   .groupBy(chapter.seriesId)
   .all();
 const countMap = new Map(counts.map((c) => [c.seriesId, c.n]));
+
+const session = await auth.api.getSession({ headers: Astro.request.headers });
 ---
 
 <Layout title="Kosmos">
@@ -21,6 +24,12 @@ const countMap = new Map(counts.map((c) => [c.seriesId, c.n]));
       개인 연재 소설과 그 세계관을 담는 공간.<br />
       별들 사이에서 길어 올리는 이야기들.
     </p>
+    {session && (
+      <div class="mt-6 flex gap-4">
+        <a href="/admin/series/new" class="author-mark">+ 새 작품</a>
+        <a href="/admin/wiki/new" class="author-mark">+ 새 위키</a>
+      </div>
+    )}
   </section>
 
   {seriesList.length === 0 ? (
