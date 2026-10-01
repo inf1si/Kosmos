@@ -1,0 +1,239 @@
+import JSZip from 'jszip';
+import MarkdownIt from 'markdown-it';
+import markdownFootnote from 'markdown-it-footnote';
+import { parseDocument, DomUtils } from 'htmlparser2';
+import { XMLValidator } from 'fast-xml-parser';
+import SparkMD5 from 'spark-md5';
+import { z } from 'zod';
+import { newDocument, uid, fromText, workspaceSchema, documentSchema, type RichNode, type NovelDocument, type Workspace, type Work, type AssetMeta } from './model';
+
+const MAX_BYTES=100*1024*1024, MAX_TEXT=5*1024*1024, MAX_PAGES=500;
+const encoder=new TextEncoder();
+// The footnote plugin's published types still reference markdown-it 14; its runtime API is compatible with 15.
+const markdown=new MarkdownIt({html:true,breaks:false});
+markdown.use(markdownFootnote as unknown as (md:typeof markdown)=>void);
+type HtmlNode=ReturnType<typeof parseDocument>['children'][number];
+type HtmlElement=HtmlNode & {name:string;attribs:Record<string,string>;children:HtmlNode[]};
+export type ImportedAsset={key:string;name:string;blob:Blob};
+export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string};
+export type ImportBundle={source:string;pages:ImportedPage[];assets:ImportedAsset[];warnings:string[]};
+export type ImportChoice={key:string;title:string;kind:NovelDocument['kind']};
+export type ExportFormat='markdown'|'html'|'enex';
+export type TransferDownload={blob:Blob;name:string};
+const imageTypes:Record<string,AssetMeta['type']>={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp'};
+const isElement=(n:HtmlNode):n is HtmlElement=>'name' in n&&'attribs' in n;
+const text=(n:HtmlNode)=>DomUtils.textContent(n);
+const children=(n:HtmlNode):HtmlNode[]=>'children' in n?n.children:[];
+function elements(n:HtmlNode,name:string):HtmlElement[]{const found:HtmlElement[]=[];const visit=(v:HtmlNode,depth:number)=>{if(depth>60)throw new Error('문서의 중첩이 너무 깊습니다.');if(isElement(v)&&v.name===name)found.push(v);children(v).forEach(c=>visit(c,depth+1));};visit(n,0);return found;}
+function warning(bundle:ImportBundle,message:string){if(!bundle.warnings.includes(message))bundle.warnings.push(message);}
+function path(value:string):string {
+  if(value.includes('\\')||value.startsWith('/')||value.includes('\0')||/^[a-z]+:/i.test(value))throw new Error('안전하지 않은 파일 경로입니다.');
+  const segments:string[]=[];
+  for(const part of value.split('/')){if(!part||part==='.')continue;if(part==='..'){if(!segments.length)throw new Error('묶음 밖의 경로입니다.');segments.pop();}else segments.push(part);}
+  return segments.join('/');
+}
+function resolve(base:string,href:string):string|null {try{const clean=decodeURIComponent(href.split('#')[0].split('?')[0]);if(!clean||clean.startsWith('//')||/^[a-z]+:/i.test(clean))return null;return path(`${base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):''}${clean}`);}catch{return null;}}
+function safeLink(href:string){return /^(https?:|mailto:)/i.test(href)&&!/[\u0000-\u0020]/.test(href)?href:undefined;}
+function baseTitle(name:string){return name.split('/').pop()!.replace(/\.(md|markdown|txt|html?|csv|enex)$/i,'').replace(/\s+[a-f0-9]{32}$/i,'').trim().slice(0,300)||'제목 없는 문서';}
+function imageMime(bytes:Uint8Array):AssetMeta['type']|null {
+  if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b))return'image/png';
+  if(bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return'image/jpeg';
+  if(bytes.length>=12&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP')return'image/webp';
+  return null;
+}
+function base64(bytes:Uint8Array){let s='';for(let i=0;i<bytes.length;i+=16384)s+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(s);}
+function unbase64(value:string){const compact=value.replace(/\s/g,'');if(compact.length>14*1024*1024||!/^[a-zA-Z0-9+/]*={0,2}$/.test(compact))throw new Error('첨부의 Base64 형식 또는 크기를 확인하세요.');const s=atob(compact);return Uint8Array.from(s,c=>c.charCodeAt(0));}
+function paragraph(content:RichNode[]):RichNode{return{type:'paragraph',attrs:{blockId:uid()},content};}
+function appendInline(out:RichNode[],n:RichNode){const last=out.at(-1);if(n.type==='text'&&!n.text)return;if(last?.type==='text'&&n.type==='text'&&JSON.stringify(last.marks)===JSON.stringify(n.marks))last.text=(last.text||'')+n.text;else out.push(n);}
+
+/** Parse into our explicit node whitelist. HTML is never mounted or executed, and resources are never fetched. */
+function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode {
+  const tree=parseDocument(html);const notes=new Map<string,string>();
+  for(const li of elements(tree,'li'))if(li.attribs.id&&/^fn\d+/.test(li.attribs.id))notes.set(li.attribs.id,text(li).replace(/\s*↩︎?\s*$/,'').trim());
+  let nodeCount=0;
+  const enter=(depth:number)=>{if(depth>40||++nodeCount>50000)throw new Error(`${page.title}: 문서가 너무 복잡합니다.`);};
+  const inline=(nodes:HtmlNode[],marks:NonNullable<RichNode['marks']>=[],depth=0):RichNode[]=>{
+    const out:RichNode[]=[];
+    for(const n of nodes){enter(depth);if(n.type==='text'){appendInline(out,{type:'text',text:n.data.replace(/[\t\r\n ]+/g,' '),...(marks.length?{marks}: {})});continue;}if(!isElement(n))continue;
+      const tag=n.name,attrs=n.attribs;
+      if(['script','style','iframe','object','embed','head','svg','form','noscript','template'].includes(tag)){warning(bundle,`${page.title}: 실행 코드·외부 삽입·스타일은 가져오지 않습니다.`);continue;}
+      if(tag==='en-crypt'){warning(bundle,`${page.title}: 암호화된 내용은 원본 앱에서 복호화 후 다시 내보내세요.`);appendInline(out,{type:'text',text:'[암호화된 내용 — 원본 확인 필요]'});continue;}
+      if(tag==='img'||tag==='en-media'){
+        const raw=tag==='en-media'?`enex:${page.key}:${attrs.hash?.toLowerCase()}`:resolve(page.key,attrs.src||'');
+        const asset=bundle.assets.find(a=>a.key===raw);
+        if(asset){if(!page.assetKeys.includes(asset.key))page.assetKeys.push(asset.key);appendInline(out,{type:'text',text:`[첨부: ${asset.name}]`});}
+        else {warning(bundle,`${page.title}: 이미지·첨부를 찾지 못했거나 지원하지 않습니다 (${attrs.alt||attrs.src||attrs.type||'이름 없음'}).`);appendInline(out,{type:'text',text:`[첨부 확인 필요: ${attrs.alt||attrs.type||'이미지'}]`});}continue;
+      }
+      if(tag==='br'){out.push({type:'hardBreak'});continue;}
+      if(tag==='en-todo'||(tag==='input'&&attrs.type==='checkbox')){appendInline(out,{type:'text',text:(attrs.checked==='true'||attrs.checked!==undefined&&attrs.checked!=='false')?'☑ ':'☐ '});continue;}
+      const ownNote=attrs['data-kosmos-note'];
+      if(ownNote!==undefined){out.push({type:'footnote',attrs:{noteId:uid(),text:ownNote}});continue;}
+      if(tag==='a'&&attrs.href?.startsWith('#')&&notes.has(attrs.href.slice(1))){out.push({type:'footnote',attrs:{noteId:uid(),text:notes.get(attrs.href.slice(1))}});continue;}
+      const additions:NonNullable<RichNode['marks']>=[];
+      const m:Record<string,string>={b:'bold',strong:'bold',i:'italic',em:'italic',s:'strike',del:'strike',u:'underline',code:'code'};
+      if(m[tag])additions.push({type:m[tag]});
+      const style=attrs.style||'';
+      if(/font-weight\s*:\s*(bold|[6-9]00)/i.test(style))additions.push({type:'bold'});
+      if(/font-style\s*:\s*italic/i.test(style))additions.push({type:'italic'});
+      if(/text-decoration[^:]*\s*:[^;]*underline/i.test(style))additions.push({type:'underline'});
+      if(/text-decoration[^:]*\s*:[^;]*line-through/i.test(style))additions.push({type:'strike'});
+      if(tag==='a'&&attrs.href){const href=safeLink(attrs.href);if(href)additions.push({type:'link',attrs:{href,target:'_blank',rel:'noopener noreferrer'}});else{const target=resolve(page.key,attrs.href);if(target&&bundle.pages.some(p=>p.key===target))additions.push({type:'wikiLink',attrs:{sourceKey:target}});else if(!attrs.href.startsWith('#'))warning(bundle,`${page.title}: 이동할 수 없는 링크를 일반 텍스트로 가져왔습니다.`);}}
+      if(attrs['data-kosmos-wiki'])additions.push({type:'wikiLink',attrs:{sourceKey:resolve(page.key,attrs['data-kosmos-wiki'])}});
+      inline(n.children,[...marks,...additions],depth+1).forEach(v=>appendInline(out,v));
+    }
+    return out;
+  };
+  const blockTags=new Set(['p','div','section','article','main','header','footer','h1','h2','h3','h4','h5','h6','ul','ol','blockquote','pre','hr','table','en-note']);
+  const blocks=(nodes:HtmlNode[],depth=0):RichNode[]=>{
+    const out:RichNode[]=[];let pending:HtmlNode[]=[];
+    const flush=()=>{const content=inline(pending,[],depth+1);pending=[];if(content.some(n=>n.type!=='text'||n.text?.trim()))out.push(paragraph(content));};
+    for(const n of nodes){enter(depth);if(!isElement(n)||!blockTags.has(n.name)){pending.push(n);continue;}flush();
+      const tag=n.name;if(n.attribs.class?.split(' ').includes('footnotes'))continue;
+      if(tag==='hr'){out.push({type:'horizontalRule'});continue;}
+      if(tag==='pre'){out.push({type:'codeBlock',content:[{type:'text',text:text(n)}]});continue;}
+      if(tag==='ul'||tag==='ol'){const items=n.children.filter(v=>isElement(v)&&v.name==='li').map(li=>({type:'listItem',content:blocks(children(li),depth+1)}));if(items.length)out.push({type:tag==='ul'?'bulletList':'orderedList',attrs:tag==='ol'?{start:Number(n.attribs.start)||1}:{},content:items});continue;}
+      if(tag==='blockquote'){out.push({type:'blockquote',content:blocks(n.children,depth+1)});continue;}
+      if(tag==='table'){warning(bundle,`${page.title}: 표는 행별 텍스트로 변환합니다. 데이터베이스 관계·수식·보기는 복원하지 않습니다.`);for(const row of elements(n,'tr'))out.push(paragraph([{type:'text',text:row.children.filter(c=>isElement(c)&&['td','th'].includes(c.name)).map(text).join(' | ')}]));continue;}
+      if(/^h[1-6]$/.test(tag)){out.push({type:'heading',attrs:{level:Number(tag[1]),blockId:uid()},content:inline(n.children,[],depth+1)});continue;}
+      if(tag==='p'||tag==='div'&&!n.children.some(c=>isElement(c)&&blockTags.has(c.name))){out.push(paragraph(inline(n.children,[],depth+1)));continue;}
+      out.push(...blocks(n.children,depth+1));
+    }flush();return out;
+  };
+  const article=elements(tree,'article')[0];const pageBody=article?.children.find(n=>isElement(n)&&n.attribs.class?.split(' ').includes('page-body'));
+  let root=pageBody||elements(tree,'body')[0]||tree;
+  if(isElement(root)&&root.name==='body'&&article)root=pageBody||article;
+  const content=blocks(children(root));
+  // Notion's page title and our export's title are metadata, not a second copy in the manuscript.
+  if(content[0]?.type==='heading'&&content[0]?.attrs?.level===1&&content[0].content?.map(n=>n.text||'').join('').trim()===page.title)content.shift();
+  return{type:'doc',content:content.length?content:[paragraph([])]};
+}
+
+export function parseCsv(value:string):string[][] {
+  const rows:string[][]=[];let row:string[]=[],cell='',quoted=false;
+  for(let i=0;i<value.length;i++){const c=value[i];if(c==='"'){if(quoted&&value[i+1]==='"'){cell+='"';i++;}else if(quoted)quoted=false;else if(!cell)quoted=true;else throw new Error('CSV의 따옴표 형식을 확인하세요.');}
+    else if(c===','&&!quoted){row.push(cell);cell='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&value[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell='';}else cell+=c;
+    if(rows.length>10000||row.length>200||cell.length>200000)throw new Error('CSV가 너무 큽니다.');
+  }if(quoted)throw new Error('CSV의 닫히지 않은 따옴표가 있습니다.');if(cell||row.length){row.push(cell);rows.push(row);}return rows;
+}
+function csvContent(csv:string,bundle:ImportBundle,page:ImportedPage):RichNode{
+  warning(bundle,`${page.title}: CSV는 행별 문서 목록으로 가져옵니다. 관계·수식·필터는 복원하지 않습니다.`);
+  const rows=parseCsv(csv),header=rows.shift()||[];const content=rows.flatMap((r,i)=>[{type:'heading',attrs:{level:2,blockId:uid()},content:[{type:'text',text:r[0]||`${i+1}번 항목`}]},...r.map((v,j)=>paragraph([{type:'text',text:`${header[j]||`열 ${j+1}`}: ${v}`}]))]);return{type:'doc',content:content.length?content:[paragraph([])]};
+}
+
+export async function readInterchange(files:readonly File[]):Promise<ImportBundle> {
+  if(!files.length)throw new Error('가져올 파일을 선택하세요.');
+  if(files.reduce((n,f)=>n+f.size,0)>MAX_BYTES)throw new Error('한 번에 100MB까지 가져올 수 있습니다.');
+  const bundle:ImportBundle={source:files.map(f=>f.name).join(', '),pages:[],assets:[],warnings:[]};
+  const entries=new Map<string,Uint8Array>();let total=0;
+  function add(name:string,bytes:Uint8Array){const key=path(name);if(entries.has(key))throw new Error(`중복된 파일 경로입니다: ${key}`);total+=bytes.length;if(total>MAX_BYTES||entries.size>=3000)throw new Error('압축 해제한 파일은 100MB·3,000개 이하로 나누어 가져오세요.');entries.set(key,bytes);}
+  for(const file of files){if(/\.zip$/i.test(file.name)){
+      const zip=await JSZip.loadAsync(await file.arrayBuffer());if(zip.file('manifest.json'))throw new Error('전체 백업 ZIP은 「백업과 복구」에서 복원하세요.');
+      const all=Object.values(zip.files).filter(f=>!f.dir);if(all.length>3000)throw new Error('ZIP의 파일이 너무 많습니다.');
+      let declared=total;
+      for(const entry of all){const original=(entry as unknown as {unsafeOriginalName?:string}).unsafeOriginalName||entry.name;if(path(original)!==original)throw new Error('ZIP에 안전하지 않은 경로가 있습니다.');const size=(entry as unknown as {_data?:{uncompressedSize?:number}})._data?.uncompressedSize;if(!Number.isSafeInteger(size)||size!<0)throw new Error('ZIP 크기를 확인하지 못했습니다.');declared+=size!;if(declared>MAX_BYTES)throw new Error('압축 해제 크기가 100MB를 넘습니다.');}
+      for(const entry of all)add(entry.name,await entry.async('uint8array'));
+    }else add(file.webkitRelativePath||file.name,new Uint8Array(await file.arrayBuffer()));}
+  const decoder=new TextDecoder('utf-8',{fatal:true});
+  const decode=(key:string,bytes:Uint8Array,limit=MAX_TEXT)=>{if(bytes.length>limit)throw new Error(`${key}: 파일을 더 작게 나누어 주세요 (문서 5MB / ENEX 100MB).`);try{return decoder.decode(bytes).replace(/^\uFEFF/,'');}catch{throw new Error(`${key}: UTF-8로 저장한 파일을 선택하세요.`);}};
+  let metadata=new Map<string,Partial<ImportedPage>>();const metaBytes=entries.get('kosmos-transfer.json');
+  if(metaBytes){const parsed=z.object({format:z.literal('kosmos-transfer'),version:z.literal(1),documents:z.array(z.object({path:z.string().min(1).max(1000),title:z.string().min(1).max(300).optional(),kind:z.enum(['scene','wiki','memo']).optional(),chapter:z.string().max(300).optional(),category:z.string().max(200).optional(),summary:z.string().max(20000).optional()})).max(MAX_PAGES)}).safeParse(JSON.parse(decode('kosmos-transfer.json',metaBytes)));if(!parsed.success)throw new Error('문서 묶음의 정보를 확인하세요.');metadata=new Map(parsed.data.documents.map(d=>[path(d.path),d]));if(metadata.size!==parsed.data.documents.length)throw new Error('문서 묶음에 중복된 경로가 있습니다.');}
+  const sources=new Map<string,string>();
+  for(const [key,bytes]of entries){if(key.split('/').some(s=>s.startsWith('.')||s==='__MACOSX')||key==='kosmos-transfer.json'||key==='README-KOSMOS.txt')continue;
+    const ext=key.split('.').pop()?.toLowerCase()||'';
+    if(imageTypes[ext]){const type=imageMime(bytes);if(type!==imageTypes[ext]||bytes.length>10*1024*1024){warning(bundle,`${key}: 이미지 형식이 올바르지 않거나 10MB를 넘어서 제외했습니다.`);continue;}bundle.assets.push({key,name:key.split('/').pop()!.slice(0,300),blob:new Blob([Uint8Array.from(bytes).buffer],{type})});}
+    else if(['md','markdown','txt','html','htm','csv'].includes(ext)){
+      const source=decode(key,bytes),meta=metadata.get(key);const page:ImportedPage={key,title:baseTitle(key),kind:meta?.kind&&['scene','wiki','memo'].includes(meta.kind)?meta.kind:'memo',content:fromText(''),assetKeys:[],chapter:meta?.chapter||key.split('/').slice(0,-1).join('/').slice(0,300),category:meta?.category||'',summary:meta?.summary||''};
+      if(meta?.title)page.title=meta.title.slice(0,300);
+      else if(['html','htm'].includes(ext)){const tree=parseDocument(source);page.title=(elements(tree,'h1').find(n=>n.attribs.class?.includes('page-title'))||elements(tree,'title')[0])?text(elements(tree,'h1').find(n=>n.attribs.class?.includes('page-title'))||elements(tree,'title')[0]).trim().slice(0,300)||page.title:page.title;}
+      else if(['md','markdown'].includes(ext)&&/^#\s+[^\n]+/.test(source))page.title=source.match(/^#\s+([^\n]+)/)![1].trim().slice(0,300);
+      bundle.pages.push(page);sources.set(key,source);
+    }else if(ext==='enex'){const xml=decode(key,bytes,MAX_BYTES);if(/<!ENTITY/i.test(xml)||/<!DOCTYPE[^>]*\[/i.test(xml))throw new Error('XML 내부 엔티티 선언은 지원하지 않습니다.');if(XMLValidator.validate(xml)!==true)throw new Error(`${key}: 올바른 ENEX XML 파일이 아닙니다.`);
+      const tree=parseDocument(xml,{xmlMode:true});const root=elements(tree,'en-export')[0];if(!root)throw new Error(`${key}: Evernote ENEX 형식이 아닙니다.`);
+      for(const [i,note]of elements(root,'note').entries()){
+        const page:ImportedPage={key:`${key}/note-${i+1}`,title:text(elements(note,'title')[0]||note).slice(0,300)||'제목 없는 노트',kind:'memo',content:fromText(''),assetKeys:[],chapter:'',category:'',summary:''};
+        const tags=elements(note,'tag').map(text);page.summary=tags.length?`원본 태그: ${tags.join(', ')}`.slice(0,20000):'';
+        if(tags.includes('kosmos:scene'))page.kind='scene';else if(tags.includes('kosmos:wiki'))page.kind='wiki';
+        for(const [j,resource]of elements(note,'resource').entries()){
+          const mimeElement=elements(resource,'mime')[0],filename=elements(resource,'file-name')[0];const mime=mimeElement?text(mimeElement):'',data=elements(resource,'data')[0],name=(filename?text(filename):`첨부-${j+1}`).slice(0,300);
+          if(!data||!Object.values(imageTypes).includes(mime as AssetMeta['type'])){warning(bundle,`${page.title}: ${name} (${mime}) 첨부는 지원하지 않습니다. 원본 ENEX를 보관하세요.`);continue;}
+          const bytes=unbase64(text(data));if(bytes.length>10*1024*1024||imageMime(bytes)!==mime){warning(bundle,`${page.title}: ${name} 이미지의 형식·크기를 확인하세요.`);continue;}
+          const hash=SparkMD5.ArrayBuffer.hash(Uint8Array.from(bytes).buffer),assetKey=`enex:${page.key}:${hash}`;
+          if(!bundle.assets.some(a=>a.key===assetKey))bundle.assets.push({key:assetKey,name,blob:new Blob([Uint8Array.from(bytes).buffer],{type:mime})});page.assetKeys.push(assetKey);
+        }
+        const enml=elements(note,'content')[0];if(!enml)throw new Error(`${page.title}: 본문이 없는 ENEX 노트입니다.`);const body=text(enml);if(encoder.encode(body).length>MAX_TEXT)throw new Error(`${page.title}: 본문이 5MB를 넘습니다.`);bundle.pages.push(page);sources.set(page.key,body);
+      }
+    }else warning(bundle,`${key}: 지원하지 않는 파일이므로 가져오지 않습니다.`);
+    if(bundle.pages.length>MAX_PAGES)throw new Error('한 번에 500개 문서까지 가져올 수 있습니다.');
+  }
+  if(!bundle.pages.length)throw new Error('가져올 문서가 없습니다. ENEX, Markdown, HTML, TXT, CSV 또는 해당 파일을 담은 ZIP을 선택하세요.');
+  for(const page of bundle.pages){const source=sources.get(page.key)!;if(/\.txt$/i.test(page.key))page.content=fromText(source);else if(/\.csv$/i.test(page.key))page.content=csvContent(source,bundle,page);else page.content=htmlContent(/\.(md|markdown)$/i.test(page.key)?markdown.render(source):source,page,bundle);documentSchema.parse({...newDocument(page.kind,page.title),content:page.content,summary:page.summary,chapter:page.chapter,category:page.category});}
+  const used=new Set(bundle.pages.flatMap(p=>p.assetKeys));for(const a of bundle.assets)if(!used.has(a.key))warning(bundle,`${a.name}: 문서에서 참조하지 않는 이미지이므로 가져오지 않습니다.`);
+  bundle.assets=bundle.assets.filter(a=>used.has(a.key));return bundle;
+}
+
+export function prepareImport(state:Workspace,bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']}):{state:Workspace;assets:{id:string;blob:Blob}[];workId:string} {
+  if(!choices.length||new Set(choices.map(c=>c.key)).size!==choices.length)throw new Error('가져올 문서를 선택하세요.');
+  const workId='workId'in target?target.workId:uid();if('workId'in target&&!state.works.some(w=>w.id===workId))throw new Error('작품을 찾지 못했습니다.');
+  const ids=new Map(choices.map(c=>[c.key,uid()])),kinds=new Map(choices.map(c=>[c.key,c.kind]));
+  const assetIds=new Map<string,string>(),assetMetas:AssetMeta[]=[],blobs:{id:string;blob:Blob}[]=[];
+  const documents=choices.map(choice=>{
+    const page=bundle.pages.find(p=>p.key===choice.key);if(!page)throw new Error('가져올 문서가 바뀌었습니다.');const d=newDocument(choice.kind,choice.title.trim());d.id=ids.get(page.key)!;d.chapter=page.chapter;d.category=page.category||d.category;d.summary=page.summary;d.content=structuredClone(page.content);
+    const visit=(node:RichNode)=>{if(node.type==='footnote')node.attrs={...node.attrs,noteId:uid()};if(['paragraph','heading'].includes(node.type))node.attrs={...node.attrs,blockId:uid()};node.marks=node.marks?.flatMap(mark=>{if(mark.type!=='wikiLink')return[mark];const key=String(mark.attrs?.sourceKey||'');return kinds.get(key)==='wiki'?[{type:'wikiLink',attrs:{targetId:ids.get(key)}}]:[];});node.content?.forEach(visit);};visit(d.content);
+    for(const key of new Set(page.assetKeys)){const asset=bundle.assets.find(a=>a.key===key);if(!asset)throw new Error('가져올 첨부가 없습니다.');let id=assetIds.get(key);if(!id){id=uid();assetIds.set(key,id);assetMetas.push({id,workId,name:asset.name,type:asset.blob.type as AssetMeta['type'],size:asset.blob.size});blobs.push({id,blob:asset.blob});}d.assetIds.push(id);}return d;
+  });
+  const next=structuredClone(state);if('workId'in target)next.works.find(w=>w.id===workId)!.documents.push(...documents);else next.works.push({id:workId,title:target.title.trim(),form:target.form,subtitle:'',description:'',documents,publications:[],activePublicationId:null});next.assets.push(...assetMetas);next.updatedAt=new Date().toISOString();workspaceSchema.parse(next);
+  if(encoder.encode(JSON.stringify(next)).length>19000000)throw new Error('원고 저장 용량을 넘습니다. 더 적은 문서를 가져오세요.');
+  return{state:next,assets:blobs,workId};
+}
+
+const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+const mdEsc=(s:string)=>s.replace(/[\\`*_{}\[\]<>#!|]/g,'\\$&');
+const safeFilename=(s:string)=>s.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,100)||'문서';
+function htmlRender(node:RichNode,links:Map<string,string>,notes:{id:string;text:string}[]):string {
+  if(node.type==='text'){let body=esc(node.text||'');for(const mark of node.marks||[]){const tags:Record<string,string>={bold:'strong',italic:'em',strike:'s',underline:'u',code:'code'};if(tags[mark.type])body=`<${tags[mark.type]}>${body}</${tags[mark.type]}>`;else if(mark.type==='link'){const href=safeLink(String(mark.attrs?.href||''));if(href)body=`<a href="${esc(href)}">${body}</a>`;}else if(mark.type==='wikiLink'){const href=links.get(String(mark.attrs?.targetId));if(href)body=`<a href="${esc(href)}">${body}</a>`;} }return body;}
+  if(node.type==='footnote'){notes.push({id:String(node.attrs?.noteId||uid()),text:String(node.attrs?.text||'')});return`<sup data-kosmos-note="${esc(String(node.attrs?.text||''))}"><a href="#note-${notes.length}">[${notes.length}]</a></sup>`;}
+  const body=(node.content||[]).map(n=>htmlRender(n,links,notes)).join('');
+  const tags:Record<string,string>={paragraph:'p',blockquote:'blockquote',bulletList:'ul',orderedList:'ol',listItem:'li',codeBlock:'pre'};
+  if(node.type==='heading')return`<h${Math.max(1,Math.min(6,Number(node.attrs?.level)||2))}>${body}</h${Math.max(1,Math.min(6,Number(node.attrs?.level)||2))}>`;
+  if(node.type==='hardBreak')return'<br />';if(node.type==='horizontalRule')return'<hr />';if(node.type==='orderedList')return`<ol start="${Number(node.attrs?.start)||1}">${body}</ol>`;
+  return tags[node.type]?`<${tags[node.type]}>${body}</${tags[node.type]}>`:body;
+}
+function mdRender(node:RichNode,links:Map<string,string>,notes:string[]):string {
+  if(node.type==='text'){let s=mdEsc(node.text||'');for(const m of node.marks||[]){if(m.type==='bold')s=`**${s}**`;else if(m.type==='italic')s=`*${s}*`;else if(m.type==='strike')s=`~~${s}~~`;else if(m.type==='code'){const fence='`'.repeat(Math.max(1,...(node.text?.match(/`+/g)||[]).map(v=>v.length+1)));s=`${fence} ${(node.text||'')} ${fence}`;}else if(m.type==='underline')s=`<u>${s}</u>`;else{const href=m.type==='wikiLink'?links.get(String(m.attrs?.targetId)):m.type==='link'?safeLink(String(m.attrs?.href||'')):undefined;if(href)s=`[${s}](<${href.replace(/>/g,'%3E')}>)`;}}return s;}
+  if(node.type==='footnote'){notes.push(String(node.attrs?.text||''));return`[^${notes.length}]`;}
+  const body=(node.content||[]).map(n=>mdRender(n,links,notes)).join('');
+  if(node.type==='paragraph')return`${body}\n\n`;if(node.type==='hardBreak')return'  \n';if(node.type==='heading')return`${'#'.repeat(Math.max(1,Math.min(6,Number(node.attrs?.level)||2)))} ${body}\n\n`;
+  if(node.type==='horizontalRule')return'---\n\n';if(node.type==='blockquote')return body.trim().split('\n').map(l=>`> ${l}`).join('\n')+'\n\n';
+  if(node.type==='bulletList'||node.type==='orderedList')return(node.content||[]).map((n,i)=>`${node.type==='bulletList'?'-':`${(Number(node.attrs?.start)||1)+i}.`} ${mdRender(n,links,notes).trim().replace(/\n/g,'\n    ')}`).join('\n')+'\n\n';
+  if(node.type==='codeBlock'){const code=(node.content||[]).map(n=>n.text||'').join(''),fence='`'.repeat(Math.max(3,...(code.match(/`+/g)||[]).map(v=>v.length+1)));return`${fence}\n${code}\n${fence}\n\n`;}return body;
+}
+
+export async function exportInterchange(work:Work,documentIds:string[],metas:AssetMeta[],assets:{id:string;blob:Blob}[],format:ExportFormat):Promise<TransferDownload> {
+  const docs=work.documents.filter(d=>documentIds.includes(d.id));if(!docs.length)throw new Error('내보낼 문서를 선택하세요.');
+  const filenames=new Map(docs.map((d,i)=>[d.id,`${String(i+1).padStart(3,'0')}-${safeFilename(d.title)}.${format==='html'?'html':'md'}`]));
+  const zip=new JSZip(),assetMap=new Map(assets.map(a=>[a.id,a.blob]));let total=0;
+  const getAsset=(id:string)=>{const meta=metas.find(m=>m.id===id),blob=assetMap.get(id);if(!meta||!blob||blob.size!==meta.size)throw new Error('첨부를 모두 내려받은 뒤 내보내세요.');return{meta,blob};};
+  if(format==='enex'){
+    const noteXml:string[]=[];
+    for(const d of docs){const notes:{id:string;text:string}[]=[];let body=htmlRender(d.content,new Map(),notes).replace(/<sup data-kosmos-note="[^"]*">([\s\S]*?)<\/sup>/g,'<sup>$1</sup>');const resources:string[]=[];
+      for(const id of d.assetIds){const{meta,blob}=getAsset(id),bytes=new Uint8Array(await blob.arrayBuffer()),hash=SparkMD5.ArrayBuffer.hash(bytes.buffer);total+=bytes.length;body+=`<div><en-media type="${meta.type}" hash="${hash}" /></div>`;resources.push(`<resource><data encoding="base64">${base64(bytes)}</data><mime>${meta.type}</mime><resource-attributes><file-name>${esc(meta.name)}</file-name></resource-attributes></resource>`);}
+      if(notes.length)body+=`<div><h2>각주</h2>${notes.map((n,i)=>`<p>${i+1}. ${esc(n.text)}</p>`).join('')}</div>`;
+      if(d.summary)body+=`<div><h2>문서 요약</h2><p>${esc(d.summary)}</p></div>`;
+      const enml=`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>${body}</en-note>`;
+      noteXml.push(`<note><title>${esc(d.title)}</title><content><![CDATA[${enml.replace(/\]\]>/g,']]]]><![CDATA[>')}]]></content><created>${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}</created><tag>kosmos:${d.kind}</tag>${resources.join('')}</note>`);
+    }
+    const xml=`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd"><en-export export-date="${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}" application="Kosmos" version="1">${noteXml.join('')}</en-export>`;
+    if(encoder.encode(xml).length>MAX_BYTES)throw new Error('내보내기 크기가 100MB를 넘습니다.');return{blob:new Blob([xml],{type:'application/xml'}),name:`${safeFilename(work.title)}.enex`};
+  }
+  const written=new Set<string>();
+  for(const d of docs){const attachments:string[]=[];
+    for(const id of d.assetIds){const{meta,blob}=getAsset(id),name=`assets/${id}-${safeFilename(meta.name)}`;if(!written.has(id)){total+=blob.size;zip.file(name,await blob.arrayBuffer());written.add(id);}attachments.push(format==='html'?`<p><img src="${esc(name)}" alt="${esc(meta.name)}" /></p>`:`![${mdEsc(meta.name)}](<${name}>)`);}
+    let output:string;
+    if(format==='html'){const notes:{id:string;text:string}[]=[];const body=htmlRender(d.content,filenames,notes);output=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(d.title)}</title></head><body><article><h1>${esc(d.title)}</h1>${body}${attachments.join('')}<section class="footnotes"><h2>각주</h2>${notes.map((n,i)=>`<p id="note-${i+1}">${i+1}. ${esc(n.text)}</p>`).join('')}</section></article></body></html>`;}
+    else {const notes:string[]=[];output=`# ${mdEsc(d.title)}\n\n${mdRender(d.content,filenames,notes)}${attachments.join('\n\n')}\n\n${notes.map((n,i)=>`[^${i+1}]: ${n.replace(/\n/g,'\n    ')}`).join('\n')}`;}
+    total+=encoder.encode(output).length;if(total>MAX_BYTES)throw new Error('내보내기 크기가 100MB를 넘습니다.');zip.file(filenames.get(d.id)!,output);
+  }
+  zip.file('kosmos-transfer.json',JSON.stringify({format:'kosmos-transfer',version:1,workTitle:work.title,documents:docs.map(d=>({path:filenames.get(d.id),title:d.title,kind:d.kind,chapter:d.chapter,category:d.category,summary:d.summary}))},null,2));
+  zip.file('README-KOSMOS.txt','Kosmos 문서 교환용 파일입니다. 초안과 비공개 설정을 포함할 수 있습니다.\nNotion: 설정 → 가져오기 → ZIP. Obsidian: Markdown 묶음을 압축 해제하세요.\n복구 이력과 공개 판본은 포함하지 않습니다. 전체 보관은 Kosmos 전체 백업을 사용하세요.\n문서 내 이미지는 Kosmos에서는 별도 첨부로 가져오며, 표·데이터베이스·앱 고유 기능은 완전히 복원되지 않습니다.');
+  return{blob:await zip.generateAsync({type:'blob',compression:'DEFLATE'}),name:`${safeFilename(work.title)}-${format}.zip`};
+}

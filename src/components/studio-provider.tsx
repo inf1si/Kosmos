@@ -5,6 +5,8 @@ import { seedWorkspace } from '@/lib/seed';
 import { db, writeLocal, checkpoint, LocalConflict, listRevisions } from '@/lib/database';
 import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud } from '@/lib/cloud';
 import { createBackup, readBackup } from '@/lib/backup';
+import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
+import type { Work } from '@/lib/model';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
 type StudioContextValue={
@@ -12,7 +14,9 @@ type StudioContextValue={
   user:string|null;canUse:boolean;epoch:number;lastExportAt:string|null;
   update:(fn:(state:Workspace)=>Workspace)=>void;
   snapshot:(label:string)=>Promise<void>;revisions:()=>Promise<Revision[]>;restore:(data:Workspace)=>Promise<void>;
-  exportBackup:()=>Promise<void>;importBackup:(file:File)=>Promise<void>;
+  exportBackup:()=>Promise<TransferDownload>;importBackup:(file:File)=>Promise<void>;
+  importDocuments:(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']})=>Promise<string>;
+  exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
@@ -128,27 +132,50 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
   },[!!state,namespace,user,setCurrent,syncNow]);
   async function restore(data:Workspace){await flush();await checkpoint(namespace,dataRef.current!,'복원 전 원고');update(()=>structuredClone(data));await flush();setEpoch(x=>x+1);}
   async function exportBackup(){
+    // A recovery export must remain available when local saving or conflict resolution fails.
+    await saveQueue.current;
     const current=dataRef.current;if(!current)throw new Error('원고가 없습니다.');
-    const history=await listRevisions(namespace);
+    let history=await listRevisions(namespace);
+    if(conflictRef.current)history=[{id:uid(),namespace,createdAt:new Date().toISOString(),label:'충돌 중 · 다른 원고',data:conflictRef.current.remote},...history].slice(0,50);
     if(cloudConfigured){for(const meta of new Map([...current.assets,...history.flatMap(r=>r.data.assets)].map(a=>[a.id,a])).values()){
       if(!(await db.assets.get([namespace,meta.id]))){const {data:blob,error}=await cloud().storage.from('private-assets').download(`${user}/${meta.id}`);if(error||!blob)throw new Error(`첨부를 내려받지 못했습니다: ${meta.name}`);await db.assets.put({id:meta.id,namespace,blob});}
     }}
     const assets=await db.assets.where('namespace').equals(namespace).toArray();
     const blob=await createBackup(current,history,assets);
-    const href=URL.createObjectURL(blob);const a=document.createElement('a');a.href=href;a.download=`궤도서재-전체백업-${new Date().toISOString().slice(0,10)}.zip`;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);
-    const date=new Date().toISOString();await db.transaction('rw',db.workspaces,async()=>{const row=await db.workspaces.get(namespace);if(row)await db.workspaces.put({...row,lastExportAt:date});});setLastExportAt(date);
+    const date=new Date().toISOString();try{await db.transaction('rw',db.workspaces,async()=>{const row=await db.workspaces.get(namespace);if(row)await db.workspaces.put({...row,lastExportAt:date});});}catch{/* The archive is still usable when IndexedDB cannot store the timestamp. */}setLastExportAt(date);
+    return{blob,name:`궤도서재-전체백업-${new Date().toISOString().slice(0,10)}.zip`};
+  }
+  async function importDocuments(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']}){
+    await flush();const before=dataRef.current!;
+    const prepared=prepareImport(before,bundle,choices,target);
+    await checkpoint(namespace,before,'외부 문서 가져오기 전');
+    for(const asset of prepared.assets){
+      if(cloudConfigured){const result=await cloud().storage.from('private-assets').upload(`${user}/${asset.id}`,asset.blob,{contentType:asset.blob.type});if(result.error)throw new Error('첨부의 클라우드 저장을 완료하지 못했습니다. 원고는 유지됩니다.');}
+      await db.assets.put({...asset,namespace});
+    }
+    await flush();if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('가져오는 동안 원고가 바뀌었습니다. 다시 시도하세요.');
+    update(()=>prepared.state);await flush();setEpoch(x=>x+1);return prepared.workId;
+  }
+  async function exportDocuments(workId:string,documentIds:string[],format:ExportFormat){
+    await flush();const current=structuredClone(dataRef.current!);const work=current.works.find(w=>w.id===workId);if(!work)throw new Error('작품을 찾지 못했습니다.');
+    const ids=new Set(work.documents.filter(d=>documentIds.includes(d.id)).flatMap(d=>d.assetIds));const assets:{id:string;blob:Blob}[]=[];
+    for(const id of ids){let blob=(await db.assets.get([namespace,id]))?.blob;
+      if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${user}/${id}`);if(result.error||!result.data)throw new Error('첨부를 내려받지 못했습니다.');blob=result.data;await db.assets.put({id,namespace,blob});}
+      if(!blob)throw new Error('첨부를 찾지 못했습니다.');assets.push({id,blob});
+    }return exportInterchange(work,documentIds,current.assets,assets,format);
   }
   async function importBackup(file:File){
     const parsed=await readBackup(file);await flush();
     for(const asset of parsed.assets){
       const old=await db.assets.get([namespace,asset.id]);
       if(old){const a=new Uint8Array(await old.blob.arrayBuffer());const b=new Uint8Array(await asset.blob.arrayBuffer());if(a.length!==b.length||a.some((v,i)=>v!==b[i]))throw new Error('기존 첨부와 백업 첨부의 ID가 충돌합니다. 현재 원고는 유지됩니다.');}
-      if(cloudConfigured){const path=`${user}/${asset.id}`;const existing=await cloud().storage.from('private-assets').download(path);if(existing.error){const upload=await cloud().storage.from('private-assets').upload(path,asset.blob,{contentType:asset.blob.type});if(upload.error)throw new Error('백업 첨부의 클라우드 저장을 완료하지 못했습니다.');}}
+      if(cloudConfigured){const path=`${user}/${asset.id}`;const existing=await cloud().storage.from('private-assets').download(path);if(existing.error){const upload=await cloud().storage.from('private-assets').upload(path,asset.blob,{contentType:asset.blob.type});if(upload.error)throw new Error('백업 첨부의 클라우드 저장을 완료하지 못했습니다.');}else if(existing.data){const remote=new Uint8Array(await existing.data.arrayBuffer()),backup=new Uint8Array(await asset.blob.arrayBuffer());if(remote.length!==backup.length||remote.some((v,i)=>v!==backup[i]))throw new Error('클라우드의 기존 첨부와 백업의 내용이 다릅니다. 현재 원고는 유지됩니다.');}}
     }
     await checkpoint(namespace,dataRef.current!,'백업 복원 전 원고');
     await db.transaction('rw',db.assets,db.revisions,async()=>{
       for(const asset of parsed.assets)await db.assets.put({...asset,namespace});
       for(const revision of parsed.revisions)await db.revisions.put({...revision,id:uid(),namespace,label:`가져온 이력 · ${revision.label}`});
+      const all=await db.revisions.where('namespace').equals(namespace).sortBy('createdAt');if(all.length>50)await db.revisions.bulkDelete(all.slice(0,all.length-50).map(r=>r.id));
     });
     update(()=>parsed.data);await flush();setEpoch(x=>x+1);
   }
@@ -173,7 +200,7 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     conflictRef.current=null;setConflict(null);update(()=>structuredClone(choice==='local'?c.local:c.remote));await flush();setEpoch(x=>x+1);
   }
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,publish,addAsset,resolve,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,resolve,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});if(error)throw error;},
     logout:async()=>{await flush();await syncNow();await cloud().auth.signOut();},flush,syncNow,clearError:()=>setError('')}}>{children}</Context.Provider>;
 }

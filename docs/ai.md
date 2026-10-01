@@ -1,86 +1,52 @@
-# AI 검토 기능
+# OpenAI·Claude·Gemini 검토
 
-현재 API와 UI는 구현했지만 제공자 키와 모델은 연결하지 않았다. 실제 AI 응답·품질·지연·사용료는 아직 검증하지 않았다.
+제공자별 서버 어댑터와 선택 화면을 구현했다. 현재 API 키와 모델이 없어 실제 호출·한국어 SF 검토 품질·지연·사용료는 미검증이다. 연결은 [서비스 연결 안내](service-connection.md)를 따른다.
 
-## 제공하는 범위
+## 원고 범위와 적용
 
-현재 문서의 **문장과 호흡** 또는 **설정·시간·인물의 지식**을 검토한다. 결과는 검토 의견과 최대 5개의 짧은 수정 제안이다. 제공한 자료의 범위 밖에서 작품 전체의 정합성을 확인하는 기능은 아니다.
+현재 문서의 문장·호흡 또는 설정·시간·인물의 지식을 검토한다. 서버 저장본의 일반 텍스트 최대 12,000자, 같은 작품의 연결 설정 또는 제목이 시점 인물과 같은 문서 최대 8개 × 1,800자를 사용한다. 전체 장편·모든 설정·외부 과학 자료를 조회하지 않는다. API의 문서 종류는 scene으로 제한하지 않는다.
 
-자료는 서버에 저장된 현재 문서와 같은 작품의 관련 설정만 사용한다. 관련 설정은 본문의 `wikiLink` 대상 또는 제목이 `pov`와 같은 문서에서 최대 8개, 각각 일반 텍스트 1,800자까지다. 벡터 검색·별칭 검색·전체 설정 자동 탐색·외부 과학 검색은 없다.
+UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권한·작업 공간 소유권·문서 updatedAt을 확인한다. 검토 의견과 최대 5개의 수정 제안을 구조화 출력으로 받는다. 작가가 제안을 선택하면 적용 전 복구 지점을 만든다. 검토 후 원고가 바뀌면 적용을 막는다.
 
-사용자 화면은 장면 검토로 안내하지만 API는 현재 문서 종류를 `scene`으로 제한하지 않는다. 다른 문서 종류를 허용할지 명확히 정하는 것은 후속 작업이다.
+자동 적용은 인용이 단일 텍스트 노드에서 정확히 한 번 나타날 때만 가능하다. 각주·설정 mark를 보존한다. 한 제안을 적용한 뒤 다른 제안은 다시 검토해야 한다. AI 실패는 원고 저장을 멈추지 않는다.
 
-## 실행과 적용
+## 제공자와 서버 설정
 
-1. UI는 기기 저장을 완료하고 클라우드 동기화를 시도한다.
-2. 작가 세션의 Bearer token으로 서버 API를 호출한다.
-3. 서버가 사용자, 소유 작업 공간, 문서의 `updatedAt` 일치를 확인한다.
-4. 해당 작가의 일별 호출을 예약하고 AI 제공자를 호출한다.
-5. 구조화 응답을 검증해 의견·제안·자료 문서 링크를 보여준다.
-6. 적용 전에 복구 지점을 만든다. 검토 이후 원고가 바뀌었다면 적용을 막는다.
+| 선택 | 서버 변수 | 공식 요청 형식 |
+|---|---|---|
+| OpenAI | `OPENAI_API_KEY`, `OPENAI_MODEL` | Responses, `text.format` JSON Schema, `store: false` |
+| Claude | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Messages, `output_config.format` JSON Schema |
+| Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL` | generateContent, `responseMimeType` JSON, `responseJsonSchema` |
 
-자동 적용은 인용이 **단일 텍스트 노드에서 정확히 한 번** 나타날 때만 허용한다. 여러 노드에 걸치거나 중복된 문장은 직접 비교해야 한다. 원고의 각주·설정 mark를 보존한다. 한 제안을 적용하면 문서 시점이 바뀌므로 나머지 제안은 다시 검토해야 한다. 한 번에 전체 제안을 적용하는 기능은 없다.
+키와 모델을 함께 설정한 제공자만 선택·실행 가능하다. 고정 공식 URL을 사용하며 키는 서버 헤더로만 전송한다. 이전 OpenAI `AI_API_KEY`·`AI_MODEL` 별칭은 지원하지만 임의 `AI_API_URL`은 사용하지 않는다. 제공자를 자동 전환하거나 재시도해 원고를 추가 전송하지 않는다. 각 모델은 해당 구조화 출력 형식을 지원해야 한다.
 
-AI 실패·비용 제한은 일반 원고 저장을 멈추지 않는다. 실제 결과가 없을 때 예시 결과를 실제 응답처럼 만들지 않는다.
+세 제공자는 공유된 한국어 SF 지침과 출력 구조를 사용한다. 완료 상태·거부·중단을 검사하고 최종 결과도 로컬 Zod로 검증한다. Gemini의 thought 부분은 결과에서 제외한다. 타임아웃 45초, 출력 토큰 설정 2,200, 응답 바이트 한도 256KiB, 함수 maxDuration 60초다. 호출은 작가별 DB current_date 기준 **세 제공자 합계 하루 10회**이며 예약 후 제공자 실패도 포함한다. 키 미설정은 예약 전에 거절한다.
 
-## API 계약
+`store: false`는 OpenAI 요청 옵션이다. 제공자의 전체 보관·학습 정책을 보장하지 않는다. 실제 원고 사용 전 선택 제공자의 최신 정책과 예산을 확인한다. 비용 대시보드·월 예산 강제 상한은 앱에 없다.
 
-`POST /api/review`, `Content-Type: application/json`, `Authorization: Bearer <작가 세션>`.
+## API
 
-```json
-{
-  "workId": "작품 UUID",
-  "docId": "문서 UUID",
-  "version": "서버 저장 문서의 updatedAt",
-  "goal": "style"
-}
-```
+GET `/api/ai/providers`: 허용 작가의 Bearer 인증 필요. 제공자 ID·표시명·configured·모델만 반환하며 키는 반환하지 않는다. no-store다.
 
-`goal`은 `style` 또는 `continuity`다. UUID·시각 값은 실제 저장 데이터에서 사용한다. 성공 응답:
+POST `/api/review`: 같은 인증, JSON 본문. Content-Length가 없어도 스트림 전체를 10,000바이트로 제한한다.
 
 ```json
-{
-  "result": {
-    "review": "검토 의견",
-    "suggestions": [
-      {"quote": "원고의 실제 구절", "replacement": "제안", "reason": "이유"}
-    ]
-  },
-  "version": "검토한 문서의 updatedAt",
-  "sources": [{"id": "관련 설정 UUID", "title": "설정 제목"}],
-  "dailyCalls": 1
-}
+{"workId":"작품 UUID","docId":"문서 UUID","version":"문서 updatedAt","goal":"style","provider":"openai"}
 ```
+
+goal은 style 또는 continuity, provider는 openai / anthropic / gemini이며 생략 시 openai다. 성공 결과는 result(검토 의견·quote/replacement/reason 제안), provider, model, version, sources, dailyCalls다.
 
 | 응답 | 의미 |
 |---|---|
-| `400` | 요청 또는 AI 응답의 구조 검증 실패 |
-| `401` | 유효한 작가 로그인·연결 정보 없음 |
-| `403` | 작업 공간 조회 권한 없음 |
-| `404` | 작품·문서 없음 |
-| `409` | 요청한 문서 시점과 서버 작업본 불일치 |
-| `413` | Content-Length 10,000 초과 또는 본문 12,000자 초과 |
-| `429` | 일별 횟수 제한 또는 호출 예약 권한 실패 |
-| `502` | 제공자 오류·시간 초과·완료되지 않은 응답 등 |
-| `503` | AI 키 또는 모델 미설정 |
+| 400 | 요청 형식 오류 |
+| 401 | 유효한 작가 로그인 없음 |
+| 403·404 | 권한·작품·문서 조회 실패 |
+| 409 | 요청한 문서 시점과 서버 저장본 불일치 |
+| 413 | 요청 바이트 또는 원고 길이 초과 |
+| 429 | 하루 호출 한도·예약 실패 |
+| 502 | 제공자 오류·시간 초과·거부·불완전하거나 잘못된 결과 |
+| 503 | 선택 제공자의 키·모델 미설정 |
 
-요청 크기 검사는 현재 `Content-Length` 헤더를 이용하며 헤더가 없을 때의 엄격한 본문 바이트 제한은 후속 보강 대상이다.
+외부 제공자 계약은 모의 HTTP 응답으로 테스트했다. 실제 키로 성공·거부·한도·비용을 시험한 결과가 아니다. 선택 문단 검토·작품 전체 검색·결과 영구 보관·스트리밍·장편 작업 큐는 후속 기능이다.
 
-## 한도와 제공자 설정
-
-- 검토 원고: 일반 텍스트 최대 12,000자.
-- 관련 설정: 최대 8개 × 1,800자.
-- 제안: 최대 5개, 인용 최대 2,000자, 대체 최대 3,000자.
-- 호출: 작가별 DB의 `current_date` 기준 하루 최대 10회. 예약 후 제공자 실패도 횟수에 포함한다.
-- 제공자 요청: `max_output_tokens: 2200`, 타임아웃 45초, `store: false`.
-- 라우트 실행 시간 설정: `maxDuration = 60`. 실제 호스팅 한도는 배포 플랜에서 확인한다.
-
-`AI_API_URL`, `AI_API_KEY`, `AI_MODEL`은 서버에 설정한다. 기본 요청 형식은 Responses API다. URL만 바꾼다고 다른 모든 제공자와 호환되는 것은 아니다. 요청·구조화 출력·완료 응답 형식이 일치해야 한다.
-
-`store: false`는 요청 옵션이며 제공자 계약·보관·학습 정책 전체를 보증하는 문구가 아니다. 실제 키 연결 시 정책과 원고 전송 범위를 확인한다. 모델과 월 예산은 미정이다. 하루 횟수 제한은 월 사용료의 절대 상한이 아니므로 제공자 예산 설정을 함께 확인한다.
-
-## 확장 예정
-
-작품 내 근거 검색, 선택 문단 단위, 검토 결과의 영구 기록, 제안별 연속 적용·비교, 스트리밍, 장편 작업 큐, 설정 추출, 외부 과학 리서치는 후속 범위다. 작은 검토로 품질을 확인한 뒤 확장한다.
-
-구현: [route.ts](../src/app/api/review/route.ts), [ai.ts](../src/lib/ai.ts), [ai-review.tsx](../src/components/ai-review.tsx). API 형식의 공식 자료: [Responses API](https://developers.openai.com/api/reference/resources/responses/), [구조화 출력](https://developers.openai.com/api/docs/guides/structured-outputs).
+구현: [어댑터](../src/lib/ai-provider.ts), [검토 라우트](../src/app/api/review/route.ts), [화면](../src/components/ai-review.tsx), [적용 로직](../src/lib/ai.ts). 공식 계약: [OpenAI](https://developers.openai.com/api/docs/guides/structured-outputs), [Claude](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [Gemini](https://ai.google.dev/api/generate-content).

@@ -1,6 +1,6 @@
 # 로컬 실행·계정 연결·배포
 
-2026-10-01에 실제 Supabase 서울 프로젝트에 최초 SQL을 적용했다. 6개 테이블의 RLS, RPC 4개, 비공개 버킷과 Realtime 대상 테이블을 확인했고 공개 회원가입을 닫았다. 익명 REST 접근 검사 7개가 통과했다. 이후 작가 계정 1명·허용 목록·로그인, Vercel GitHub 연결·운영 배포와 기본 클라우드 시험까지 완료했다. 다른 기기 첨부·충돌과 실제 ZIP 파일 복원은 남아 있다. 아래 설치 절차를 이미 적용한 프로젝트에 반복 실행하지 않는다. 새 비밀번호 입력·등록은 계정 소유자가 직접 수행한다. [검증 기록](../VERIFICATION.md).
+2026-10-01에 실제 Supabase 서울 프로젝트에 최초 SQL을 적용했다. 6개 테이블의 RLS, RPC 4개, 비공개 버킷과 Realtime 대상 테이블을 확인했고 공개 회원가입을 닫았다. 익명 REST 접근 검사 7개가 통과했다. 이후 작가 계정 1명·허용 목록·로그인, Vercel GitHub 연결·운영 배포와 기본 클라우드 시험까지 완료했다. 다른 기기 첨부·충돌과 운영 ZIP 파일 복원은 남아 있다. 기존 시험 ZIP의 원고·첨부 복원은 별도 로컬 origin에서 확인했다. 아래 설치 절차를 이미 적용한 프로젝트에 반복 실행하지 않는다. 새 비밀번호 입력·등록은 계정 소유자가 직접 수행한다. [검증 기록](../VERIFICATION.md).
 
 ## 1. 로컬 실행
 
@@ -33,13 +33,27 @@ pnpm start
 | `NEXT_PUBLIC_SUPABASE_URL` | 브라우저·서버 | 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 브라우저·서버 | Supabase publishable key 또는 기존 anon key |
 | `ALLOW_LOCAL_PREVIEW` | 서버 | 기본 `false`. 외부 배포에서 켜지 않음 |
-| `AI_API_URL` | 서버 | 선택적. 기본 `https://api.openai.com/v1/responses` |
-| `AI_API_KEY` | 서버 | AI 연결 때만 설정 |
-| `AI_MODEL` | 서버 | 선택한 제공자의 모델 ID. 아직 미정 |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` | 서버 | OpenAI 키·구조화 출력 지원 모델 ID |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | 서버 | Claude 키·모델 ID |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | 서버 | Gemini 키·모델 ID |
+| `AI_API_KEY`, `AI_MODEL` | 서버 | 이전 OpenAI 별칭. 새 연결은 위의 정식 이름 사용 |
+| `BACKUP_STORAGE_PROVIDER` | 서버 | 사용자 선택 `google-drive`. 선택적으로 `s3` |
+| `BACKUP_GOOGLE_CLIENT_ID` | 서버 | 본인 Google OAuth Client ID |
+| `BACKUP_GOOGLE_CLIENT_SECRET` | 서버 | 같은 클라이언트 secret |
+| `BACKUP_GOOGLE_REFRESH_TOKEN` | 서버 | 본인 승인으로 받은 drive.file refresh token |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 | 자동 백업용 legacy service_role. Production만 |
+| `BACKUP_AUTHOR_ID` | 서버 | 기존 작가의 Auth UUID. 값은 공개 문서에 넣지 않음 |
+| `CRON_SECRET` | 서버 | 별도 무작위 비밀 32자 이상 |
+| `BACKUP_S3_PREFIX` | 서버 | 기본 kosmos. Drive 내부 식별과 S3 경로에 사용 |
+| `BACKUP_S3_ENDPOINT` | 서버 | S3 선택 시 R2 또는 AWS HTTPS endpoint |
+| `BACKUP_S3_REGION` | 서버 | 기본 auto. AWS S3는 실제 region |
+| `BACKUP_S3_BUCKET` | 서버 | S3 선택 시 비공개 버킷 |
+| `BACKUP_S3_ACCESS_KEY_ID`, `BACKUP_S3_SECRET_ACCESS_KEY` | 서버 | S3 선택 시 서버 저장소 키 |
+
 
 현재 Supabase 공식 예시는 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 사용하지만 이 앱은 **`NEXT_PUBLIC_SUPABASE_ANON_KEY`**를 읽는다. publishable key 값을 이 변수에 넣을 수 있다. 변수 이름만 공식 예제처럼 바꾸면 현재 앱이 연결을 인식하지 못한다.
 
-Supabase 공개 키는 RLS와 함께 사용하는 값이다. `service_role`/secret key, DB 비밀번호, AI 키를 `NEXT_PUBLIC_` 변수에 넣지 않는다. 앱 연결에 Supabase service-role key는 필요하지 않다. `.env.local`은 Git·문서·소스 ZIP에서 제외한다.
+Supabase 공개 키는 RLS와 함께 사용하는 값이다. `service_role`/secret key, DB 비밀번호, AI 키를 `NEXT_PUBLIC_` 변수에 넣지 않는다. 일반 집필·동기화는 service-role key를 사용하지 않는다. 독립 서버 백업만 별도 service-role key를 읽는다. `.env.local`은 Git·문서·소스 ZIP에서 제외한다.
 
 환경 변수를 바꾼 뒤 개발 서버를 다시 실행한다. `NEXT_PUBLIC_` 값은 빌드에 반영되므로 Vercel에서는 값 변경 후 재배포한다. 공식 프로젝트 URL·키 위치와 Data API 설정은 [Supabase Next.js 안내](https://supabase.com/docs/guides/getting-started/quickstarts/nextjs)를 확인한다.
 
@@ -100,7 +114,7 @@ Vercel 프로젝트 설정:
 | Output | Next.js 기본값 |
 | 환경 변수 | Supabase URL·공개 키, 이후 AI 서버 값 |
 
-이번 배포의 Supabase URL·공개 키는 Production에만 넣었다. `ENABLE_EXPERIMENTAL_COREPACK=1`은 Production·Preview에 설정했고 빌드 로그에서 pnpm 11.19.0을 확인했다. 이 변수는 Vercel 빌드 설정이며 앱이 읽는 변수 6개와 별개다. [Vercel Corepack 안내](https://vercel.com/docs/builds/configure-a-build#corepack).
+이번 배포의 Supabase URL·공개 키는 Production에만 넣었다. `ENABLE_EXPERIMENTAL_COREPACK=1`은 Production·Preview에 설정했고 빌드 로그에서 pnpm 11.19.0을 확인했다. 이 변수는 Vercel 빌드 설정이며 앱 환경 변수와 별개다. [Vercel Corepack 안내](https://vercel.com/docs/builds/configure-a-build#corepack).
 
 `ALLOW_LOCAL_PREVIEW`는 제거하거나 `false`로 둔다. Vercel 관리 배포에서는 `pnpm start`를 직접 띄우지 않는다. 배포 환경의 Node와 변수 범위는 [Vercel Node.js 안내](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions), [환경 변수 안내](https://vercel.com/docs/environment-variables)를 확인한다.
 
@@ -110,6 +124,6 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 
 ## 7. 다음 연결
 
-AI는 위 저장·권한·복원 흐름이 실제로 확인된 뒤 연결한다. 독립 자동 백업은 별도 저장소와 서버 실행 일정이 필요하다. [AI 안내](ai.md), [백업 안내](backup-restore.md), [운영 안내](operations.md)를 따른다.
+외부 문서는 [가져오기·내보내기](import-export.md)에서 바로 사용한다. Google Drive 무료 공간 백업과 AI 3종은 코드가 준비됐지만 키·토큰이 없어 아직 실행하지 않는다. [서비스 연결 순서](service-connection.md)대로 Google 프로젝트·최소 권한 OAuth와 Vercel Production 변수를 먼저 설정한다. [AI 안내](ai.md), [백업 안내](backup-restore.md), [운영 안내](operations.md)를 따른다.
 
 서비스 비용의 이전 제안은 [기술 제안](technical-proposal.md)에 있다. 가입·결제 시 최신 가격과 Vercel 플랜의 사용 조건을 확인하며, 미정인 유료 플랜·도메인을 이미 구매한 것으로 기록하지 않는다.
