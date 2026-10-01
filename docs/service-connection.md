@@ -2,6 +2,8 @@
 
 Supabase·Vercel과 작가 로그인은 연결됐다. 외부 문서 기능은 파일만으로 바로 사용한다. 다음 작업은 무료 Drive 자동 백업의 OAuth 연결이며 AI는 키를 만든 제공자부터 활성화한다. 비밀번호·API 키·refresh token은 채팅에 보내지 않고 본인이 Vercel의 Production 환경 변수에 직접 넣는다.
 
+2026-10-01에 Google Cloud의 전용 **Kosmos Backup** 프로젝트를 생성하고 Google Drive API의 **사용 설정됨** 상태를 확인했다. 아래 1절의 프로젝트 생성·API 활성화는 이미 완료했다. Google Auth Platform의 앱 정보·동의 설정부터 이어간다. OAuth 클라이언트·접근 승인·refresh token·Vercel 서버 값은 아직 없으며 Drive 파일을 실제로 보관한 상태는 아니다. 결제 계정 연결·저장 공간 구매는 수행하지 않았다.
+
 ## 1. Google 프로젝트와 Drive API
 
 1. 백업에 사용할 Google 계정의 남은 공간을 확인한다.
