@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-01",
+  "scope": "Real anonymous API checks against the temporary sample edition and private test asset. No keys, owner identifiers, or draft text included.",
+  "checks": [
+    {
+      "name": "selected_scene_only",
+      "passed": true,
+      "scenes": 1
+    },
+    {
+      "name": "public_wiki_summaries_only",
+      "passed": true,
+      "wikiEntries": 2
+    },
+    {
+      "name": "private_memo_and_asset_metadata_excluded",
+      "passed": true
+    },
+    {
+      "name": "anonymous_private_asset_download_denied",
+      "status": 400,
+      "passed": true
+    }
+  ]
+}

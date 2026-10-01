@@ -2,7 +2,7 @@
 
 설계 버전: 0.5 / 2026-10-01 · 목표 설계
 
-이 문서는 제품·화면·데이터·운영의 목표 설계다. 첫 로컬 구현과 실제 Supabase 초기 스키마 설치를 수행했으나 작가 클라우드 사용, Vercel 배포와 AI 연결은 완료하지 않았고 아래의 모든 기능을 구현한 상태는 아니다. 현재 동작은 [구현 상태](status.md), [아키텍처](architecture.md), [검증 기록](../VERIFICATION.md)을 기준으로 한다. 예시 사이트명 ‘궤도 서재’와 예시 작품명 ‘먼 별의 항구’는 교체 가능하다. 이 문서는 원래 요구사항을 보존하며 현재 구현의 경계는 별도로 기록한다.
+이 문서는 제품·화면·데이터·운영의 목표 설계다. 첫 로컬 구현과 실제 Supabase 초기 스키마 설치를 수행했으나 기본 작가 클라우드 사용과 Vercel 첫 배포까지 확인했다. AI 연결은 미완료이며 아래의 모든 기능을 구현한 상태는 아니다. 현재 동작은 [구현 상태](status.md), [아키텍처](architecture.md), [검증 기록](../VERIFICATION.md)을 기준으로 한다. 예시 사이트명 ‘궤도 서재’와 예시 작품명 ‘먼 별의 항구’는 교체 가능하다. 이 문서는 원래 요구사항을 보존하며 현재 구현의 경계는 별도로 기록한다.
 
 ## 1. 목표와 기본 가정
 
@@ -209,7 +209,7 @@ AI 제공자는 서버에서 호출하고 키를 브라우저에 보내지 않�
 
 ## 11. 권장 기술 구성과 경계
 
-웹 UI와 서버: Next.js + React + TypeScript. 편집기: Tiptap/ProseMirror 기반 구조화 문서. UI는 Tailwind CSS와 필요한 구성 요소로 별도 설계한다. 현재 구현은 Radix 기반 자체 UI이며 shadcn/ui 템플릿을 사용하지 않았다. 호스팅은 Vercel, 데이터베이스·작가 인증·첨부·변경 알림은 Supabase(PostgreSQL/Auth/Storage/Realtime)를 기준으로 한다. 기기 내 저장은 IndexedDB + Dexie를 사용하고 서버 동기화는 별도로 구현한다. 목표 기술·비용은 [기술 제안](technical-proposal.md), 실제 구현은 [아키텍처](architecture.md)에 기록했다. 현재 로컬 구현이 있으며 실제 서비스 계정 연결과 외부 배포는 남아 있다.
+웹 UI와 서버: Next.js + React + TypeScript. 편집기: Tiptap/ProseMirror 기반 구조화 문서. UI는 Tailwind CSS와 필요한 구성 요소로 별도 설계한다. 현재 구현은 Radix 기반 자체 UI이며 shadcn/ui 템플릿을 사용하지 않았다. 호스팅은 Vercel, 데이터베이스·작가 인증·첨부·변경 알림은 Supabase(PostgreSQL/Auth/Storage/Realtime)를 기준으로 한다. 기기 내 저장은 IndexedDB + Dexie를 사용하고 서버 동기화는 별도로 구현한다. 목표 기술·비용은 [기술 제안](technical-proposal.md), 실제 구현은 [아키텍처](architecture.md)에 기록했다. 로컬 구현과 첫 서비스 연결·Vercel 배포가 있으며 추가 운영 검증과 AI·독립 백업 연결은 남아 있다.
 
 문서 JSON을 원본으로 보관하고 독서용 HTML을 생성한다. 주석·설정 링크용 노드를 확장한다. HTML 출력은 허용된 태그와 속성만 사용한다. UI 화면을 먼저 만든 뒤 저장·권한을 나중에 덧붙이는 방식 대신 작은 작품으로 편집→저장→복구→게시→독서 흐름을 먼저 완성한다.
 

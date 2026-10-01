@@ -1,6 +1,6 @@
 # 로컬 실행·계정 연결·배포
 
-2026-10-01에 실제 Supabase 서울 프로젝트에 최초 SQL을 적용했다. 6개 테이블의 RLS, RPC 4개, 비공개 버킷과 Realtime 대상 테이블을 확인했고 공개 회원가입을 닫았다. 익명 REST 접근 검사 7개가 통과했다. 작가 계정·허용 목록·로그인 시험과 Vercel 배포는 남아 있다. 아래 설치 절차를 이미 적용한 프로젝트에 반복 실행하지 않는다. 새 비밀번호 입력·등록은 계정 소유자가 직접 수행한다. [검증 기록](../VERIFICATION.md).
+2026-10-01에 실제 Supabase 서울 프로젝트에 최초 SQL을 적용했다. 6개 테이블의 RLS, RPC 4개, 비공개 버킷과 Realtime 대상 테이블을 확인했고 공개 회원가입을 닫았다. 익명 REST 접근 검사 7개가 통과했다. 이후 작가 계정 1명·허용 목록·로그인, Vercel GitHub 연결·운영 배포와 기본 클라우드 시험까지 완료했다. 다른 기기 첨부·충돌과 실제 ZIP 파일 복원은 남아 있다. 아래 설치 절차를 이미 적용한 프로젝트에 반복 실행하지 않는다. 새 비밀번호 입력·등록은 계정 소유자가 직접 수행한다. [검증 기록](../VERIFICATION.md).
 
 ## 1. 로컬 실행
 
@@ -86,7 +86,7 @@ insert into public.authors(user_id) values ('작가의-실제-UUID');
 
 ## 6. 소스 보관과 Vercel
 
-소스는 Git 저장소에 넣어 Vercel에서 가져오거나 Vercel CLI로 배포할 수 있다. 공개 저장소에는 소스·예시 자료만 넣고 원고와 비밀 값은 별도로 보관한다. 소스 저장소는 [inf1si/Kosmos](https://github.com/inf1si/Kosmos)이며 새 Next.js 프로젝트는 저장소 루트에 있다. Supabase 초기 설치는 완료했고 Vercel GitHub 앱 연결·프로젝트 가져오기·환경 변수·배포는 아직 완료하지 않았다. GitHub 앱 연결은 해당 저장소 하나만 선택한다. 기존 main 보관·교체·되돌림은 [저장소 안내](repository-transition.md)를 따른다.
+소스는 Git 저장소에 넣어 Vercel에서 가져오거나 Vercel CLI로 배포할 수 있다. 공개 저장소에는 소스·예시 자료만 넣고 원고와 비밀 값은 별도로 보관한다. 소스 저장소는 [inf1si/Kosmos](https://github.com/inf1si/Kosmos)이며 새 Next.js 프로젝트는 저장소 루트에 있다. Supabase 초기 설치와 Vercel GitHub 연결·프로젝트 가져오기·환경 변수·첫 운영 배포를 완료했다. 운영 주소는 [kosmos-ashy.vercel.app](https://kosmos-ashy.vercel.app)이다. GitHub 앱 연결은 해당 저장소 하나만 선택한다. 기존 main 보관·교체·되돌림은 [저장소 안내](repository-transition.md)를 따른다.
 
 Vercel 프로젝트 설정:
 
@@ -94,11 +94,13 @@ Vercel 프로젝트 설정:
 |---|---|
 | Root Directory | `inf1si/Kosmos` 가져오기는 저장소 루트 `./`. 제공된 로컬 폴더명은 `novel-studio` |
 | Framework | Next.js |
-| Install | pnpm, lockfile 기준 |
+| Install | pnpm 11.19.0, lockfile 기준. Vercel의 `ENABLE_EXPERIMENTAL_COREPACK=1` 설정 |
 | Build | `pnpm build` |
 | Node.js | 24.x를 기본 제안. 지원 범위는 `package.json` 확인 |
 | Output | Next.js 기본값 |
 | 환경 변수 | Supabase URL·공개 키, 이후 AI 서버 값 |
+
+이번 배포의 Supabase URL·공개 키는 Production에만 넣었다. `ENABLE_EXPERIMENTAL_COREPACK=1`은 Production·Preview에 설정했고 빌드 로그에서 pnpm 11.19.0을 확인했다. 이 변수는 Vercel 빌드 설정이며 앱이 읽는 변수 6개와 별개다. [Vercel Corepack 안내](https://vercel.com/docs/builds/configure-a-build#corepack).
 
 `ALLOW_LOCAL_PREVIEW`는 제거하거나 `false`로 둔다. Vercel 관리 배포에서는 `pnpm start`를 직접 띄우지 않는다. 배포 환경의 Node와 변수 범위는 [Vercel Node.js 안내](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions), [환경 변수 안내](https://vercel.com/docs/environment-variables)를 확인한다.
 

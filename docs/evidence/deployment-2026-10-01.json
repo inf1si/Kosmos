@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-01",
+  "productionUrl": "https://kosmos-ashy.vercel.app",
+  "firstDeploymentSourceCommit": "ef19083d5784c09d1bb4dc5e7f9d075f3bfa978a",
+  "buildSeconds": 46,
+  "packageManager": "pnpm 11.19.0",
+  "supabaseEnvironmentScope": "Production only",
+  "corepackEnvironmentScope": "Production and Preview",
+  "authorLoginConfirmed": true,
+  "serverSaveAndReloadConfirmed": true,
+  "externalServerChangeReflectedWithoutReload": true,
+  "privateImageUploadConfirmedBytes": 137,
+  "temporarySampleEditionPublishedAndDeactivated": true,
+  "footnoteClickAndReturnConfirmed": true,
+  "publicWikiNavigationConfirmed": true,
+  "zipGenerationMessageConfirmed": true,
+  "zipDownloadFileCaptured": false,
+  "zipRestoreTestedInProduction": false,
+  "remaining": [
+    "fresh-device asset download",
+    "offline cross-device conflict",
+    "production ZIP download and restore",
+    "AI provider connection",
+    "independent scheduled backup"
+  ],
+  "scope": "Sample documents only; no account identifiers, secrets, or manuscript body included."
+}

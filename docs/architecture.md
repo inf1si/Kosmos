@@ -14,7 +14,7 @@
 | 백업 | JSZip, Web Crypto SHA-256, Zod | ZIP 생성·검사·복원 |
 | AI | 서버 `fetch` → Responses 형식 API | 장면 검토·구조화 수정 제안 |
 | 테스트 | Node test runner + tsx, PGlite | 백업·AI 적용·실제 SQL 검증 |
-| 배포 대상 | Vercel | 아직 미배포 |
+| 배포 대상 | Vercel | 첫 운영 배포 Ready, 기본 클라우드 흐름 확인 |
 
 Node.js 지원 범위는 `>=22 <25`다. pnpm은 `packageManager`의 11.19.0을 사용한다. 실제 설치 버전은 [pnpm-lock.yaml](../pnpm-lock.yaml)로 고정한다. 의존성 이름과 스크립트는 [package.json](../package.json)을 기준으로 한다.
 
