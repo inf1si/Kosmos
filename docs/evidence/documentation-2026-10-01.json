@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-01",
+  "markdownFilesChecked": 24,
+  "localFileLinksChecked": 135,
+  "sqlTablesDocumented": 6,
+  "sqlFunctionsDocumented": 4,
+  "environmentVariablesDocumented": 6,
+  "errors": [],
+  "scope": "Documentation consistency only; application tests were not rerun."
+}

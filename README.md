@@ -1,84 +1,49 @@
-# Kosmos
+# 궤도 서재 — 개인 소설 집필·공개·설정집
 
-개인 소설 연재 + 세계관 위키 사이트.
+Next.js + Tiptap + Supabase 기반 개인 SF 소설 사이트의 첫 구현입니다. ‘궤도 서재’와 샘플 작품은 임시 이름입니다.
 
-- **소설**: 장편(다화) / 단편(단화) 동일 데이터 모델로 처리, 유형만 분기
-- **위키**: 세계관·인물·용어 문서. 본문에서 위키 문서를 참조하면 해당 위키 페이지에 "등장한 화" 자동 역참조(백링크)
-- **에디터**: Tiptap 기반 커스텀 에디터 (예정 노드: WikiLink, SceneBreak, ImageBlock, Footnote, Spoiler, Aside, Ruby, CharacterCard, ChapterLink, Dialogue)
-- **AI 보조 (예정)**: 선택 영역 퇴고 · 맞춤법 교정 · 화 요약 · 위키 초안 생성
+**[전체 프로젝트 문서](docs/README.md)**에서 요구사항, 디자인 연구, 실제 구현, 개발 인수인계, 배포와 운영 절차를 확인할 수 있습니다.
 
-## 스택
+## 현재 상태
 
-- **Astro 6** (`output: 'server'`, `@astrojs/node` standalone 어댑터)
-- **React** 아일랜드 (에디터 전용)
-- **Tailwind CSS 4** + `@tailwindcss/typography`
-- **Drizzle ORM** over **libSQL** (로컬 dev = SQLite 파일, 배포 = Turso 호환)
-- **Better-Auth** (이메일/비밀번호)
-- **Tiptap** 3 (StarterKit + 커스텀 확장 예정)
-- **Anthropic SDK** — Claude 기반 AI 기능
+원고 편집·탭·2분할·작품별 문서·기기 저장·복구 이력·ZIP 백업·공개 판본·각주·설정 연결·독서 화면을 로컬에서 구현하고 검증했습니다. 실제 Supabase·Vercel·AI 계정, 외부 공개 URL, 독립 저장소 자동 백업은 아직 연결하지 않았습니다.
 
-## 개발 세팅
+기기 미리보기의 원고는 현재 브라우저에 저장됩니다. 클라우드가 연결되거나 외부에 공개된 상태는 아닙니다. 목표 기능과 실제 동작의 차이는 [구현 상태](docs/status.md)에 기록했습니다.
 
-```bash
-# 1. 의존성 설치
-npm install
+## 빠른 실행
 
-# 2. 환경 변수
-cp .env.example .env
-# .env 열고 BETTER_AUTH_SECRET 채우기 (예: openssl rand -hex 32)
-# ANTHROPIC_API_KEY는 AI 기능 켤 때만 필요
+프로젝트 폴더에서 Node.js 22 또는 24와 pnpm 11.19.0을 사용합니다.
 
-# 3. 로컬 DB 생성 + 스키마 반영
-npm run db:push
-
-# 4. 실행
-npm run dev
+```powershell
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-브라우저에서 http://localhost:4321 로 접속. 첫 사용은 `/admin/login`에서 "처음이면 가입" 버튼으로 관리자 계정 생성.
+[로컬 집필실](http://127.0.0.1:3210/studio)을 엽니다. Windows에서는 [start-studio.ps1](start-studio.ps1)도 사용할 수 있습니다. 소스 ZIP에는 의존성·빌드 결과·비밀 키를 포함하지 않습니다.
 
-## 스크립트
+## 목적별 문서
 
-| 명령 | 동작 |
-| --- | --- |
-| `npm run dev` | dev 서버 (localhost:4321) |
-| `npm run build` | 프로덕션 빌드 → `dist/` |
-| `npm run preview` | 빌드 결과 로컬 미리보기 |
-| `npm run db:push` | 스키마 변경을 DB에 반영 |
-| `npm run db:studio` | Drizzle Studio (DB GUI) |
+- [작가 사용 안내](docs/user-guide.md): 작품·문서·분할·각주·설정·게시.
+- [백업·복구](docs/backup-restore.md): 실제 첨부 포함 ZIP, 복구 이력, 원고 이동.
+- [환경 설정·배포](docs/setup-deployment.md): Supabase 프로젝트·작가 권한·환경 변수·Vercel.
+- [Kosmos main 교체](docs/repository-transition.md): 기존 Astro 코드 보존과 Next.js 소스 교체.
+- [현재 아키텍처](docs/architecture.md): 파일·데이터 경로·기술 경계.
+- [데이터 모델](docs/data-model.md) · [동기화](docs/synchronization.md) · [AI](docs/ai.md).
+- [운영·장애 대응](docs/operations.md) · [검증 기록](VERIFICATION.md).
+- [로드맵](docs/roadmap.md) · [설계 결정](docs/decisions.md) · [변경 기록](CHANGELOG.md).
 
-## 디렉터리 구조
+## 검사
 
-```
-src/
-├── components/editor/     # Tiptap 기반 에디터 아일랜드 (React)
-├── layouts/Layout.astro   # 공통 레이아웃
-├── lib/
-│   ├── ai/client.ts       # Anthropic SDK 클라이언트
-│   ├── auth/              # Better-Auth 설정 + 가드
-│   └── db/                # Drizzle 스키마 & 클라이언트
-├── pages/
-│   ├── index.astro        # 홈 (작품 목록)
-│   ├── s/[slug]/          # 독자용 작품/화 페이지
-│   ├── wiki/              # 독자용 위키 페이지
-│   ├── admin/             # 관리자 UI (인증 필수)
-│   └── api/               # POST 엔드포인트 (series/chapters/wiki/auth)
-└── styles/global.css      # Tailwind 엔트리
+```powershell
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-## 데이터 모델 요약
+기존 타입 검사·운영 빌드·6개 테스트·10개 브라우저 흐름은 통과했습니다. SQL은 PGlite PostgreSQL에서 검증했으며 Supabase 실서비스 검증은 계정 연결 후 수행합니다.
 
-| 테이블 | 내용 |
-| --- | --- |
-| `series` | 작품 — `kind: 단편 \| 장편`, `status: 연재중 \| 완결 \| 휴재` |
-| `chapter` | 화 — 시리즈당 `number` 유니크, Tiptap `contentJson` + 캐시된 `contentHtml` |
-| `wiki_page` | 위키 문서 — 작품 종속(`seriesId`) 또는 전역(`seriesId = null`) |
-| `link` | 본문 → 위키 백링크 (에디터에서 `[[…]]` 입력 시 자동 기록 예정) |
-| `tag`, `chapter_tag`, `wiki_tag` | 태그 |
-| `asset` | 업로드 이미지 |
+## 원고 보존과 운영 경계
 
-## 배포 메모
+백업과 복구에서 **백업 내려받기**로 ZIP을 만들고 별도 저장소에 보관합니다. 현재 자동 복구 지점은 열린 집필실의 기기 이력이며 자동 외부 백업은 아닙니다. 복원·충돌 선택은 작업 공간 전체에 적용합니다.
 
-- **Node 상주 호스팅** (Fly.io / Railway / Render / VPS) + `node ./dist/server/entry.mjs`
-- **DB는 Turso** (libSQL 관리형). `.env`에서 `DATABASE_URL` + `DATABASE_AUTH_TOKEN`만 바꾸면 코드 그대로 동작
-- `BETTER_AUTH_SECRET`은 반드시 강력한 값으로 교체, `BETTER_AUTH_URL`은 실제 도메인으로
+운영 환경에서는 Supabase 연결과 작가 권한을 설정해야 합니다. `ALLOW_LOCAL_PREVIEW`는 공개 배포에서 켜지 않습니다. 실제 원고를 옮기기 전 [운영 전 단계](docs/roadmap.md)를 확인합니다.
