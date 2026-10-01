@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-01",
+  "scope": "Real Supabase REST API; anonymous public-key requests only. No author login, sync, assets, or Realtime session tested.",
+  "results": [
+    {
+      "name": "public_editions",
+      "status": 200,
+      "passed": true,
+      "rows": 0
+    },
+    {
+      "name": "private_workspace",
+      "status": 401,
+      "passed": true,
+      "errorCode": "42501"
+    },
+    {
+      "name": "author_allowlist",
+      "status": 401,
+      "passed": true,
+      "errorCode": "42501"
+    },
+    {
+      "name": "private_revisions",
+      "status": 401,
+      "passed": true,
+      "errorCode": "42501"
+    },
+    {
+      "name": "private_requests",
+      "status": 401,
+      "passed": true,
+      "errorCode": "42501"
+    },
+    {
+      "name": "private_ai_usage",
+      "status": 401,
+      "passed": true,
+      "errorCode": "42501"
+    },
+    {
+      "name": "publication_owner_column",
+      "status": 401,
+      "passed": true,
+      "errorCode": "42501"
+    }
+  ]
+}

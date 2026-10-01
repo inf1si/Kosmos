@@ -1,6 +1,6 @@
 # 저장·동기화·충돌
 
-구현은 [studio-provider.tsx](../src/components/studio-provider.tsx), [database.ts](../src/lib/database.ts), [cloud.ts](../src/lib/cloud.ts), [SQL](../supabase/migrations/001_studio.sql)에 있다. 실제 Supabase 연결 검증은 아직 하지 않았다.
+구현은 [studio-provider.tsx](../src/components/studio-provider.tsx), [database.ts](../src/lib/database.ts), [cloud.ts](../src/lib/cloud.ts), [SQL](../supabase/migrations/001_studio.sql)에 있다. 실제 Supabase에 SQL과 Realtime 대상 테이블을 설치했다. 작가 세션의 저장·충돌·변경 알림 송수신은 아직 검증하지 않았다.
 
 ## 저장 순서
 

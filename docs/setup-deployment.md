@@ -1,6 +1,6 @@
 # 로컬 실행·계정 연결·배포
 
-현재 실제 프로젝트와 계정은 연결되지 않았다. 아래는 연결을 수행할 때 따르는 절차다. 계정 로그인과 비밀번호 입력은 계정 소유자가 직접 수행한다. 아직 완성하지 않은 서비스 설정을 완료로 기록하지 않는다.
+2026-10-01에 실제 Supabase 서울 프로젝트에 최초 SQL을 적용했다. 6개 테이블의 RLS, RPC 4개, 비공개 버킷과 Realtime 대상 테이블을 확인했고 공개 회원가입을 닫았다. 익명 REST 접근 검사 7개가 통과했다. 작가 계정·허용 목록·로그인 시험과 Vercel 배포는 남아 있다. 아래 설치 절차를 이미 적용한 프로젝트에 반복 실행하지 않는다. 새 비밀번호 입력·등록은 계정 소유자가 직접 수행한다. [검증 기록](../VERIFICATION.md).
 
 ## 1. 로컬 실행
 
@@ -46,7 +46,7 @@ Supabase 공개 키는 RLS와 함께 사용하는 값이다. `service_role`/secr
 ## 3. Supabase 새 프로젝트
 
 1. [Supabase Dashboard](https://supabase.com/dashboard)에 로그인한다.
-2. 조직 안에 새 프로젝트를 만든다. 임시 이름은 `orbit-studio`, 지역은 서울을 기본 제안으로 둔다. DB 비밀번호는 계정 소유자가 보관한다.
+2. 기존 빈 프로젝트가 있으면 먼저 확인한다. 이번 연결은 사용자가 만든 `Kosmos` 서울 프로젝트를 사용했다. 새 프로젝트가 필요할 때만 생성하며 DB 비밀번호는 계정 소유자가 보관한다.
 3. SQL Editor에서 [001_studio.sql](../supabase/migrations/001_studio.sql) 전체를 **새 프로젝트에 한 번** 실행한다.
 4. 오류 없이 완료되었는지, 6개 앱 테이블과 `private-assets` 버킷이 생성되었는지 확인한다.
 5. Data API를 꺼두었다면 Integrations의 Data API 설정에서 활성화하고 필요한 public 테이블·함수를 노출한다. 노출과 읽기·쓰기 권한은 별개다. SQL의 RLS·GRANT를 유지한다.
@@ -86,13 +86,13 @@ insert into public.authors(user_id) values ('작가의-실제-UUID');
 
 ## 6. 소스 보관과 Vercel
 
-소스는 Git 저장소에 넣어 Vercel에서 가져오거나 Vercel CLI로 배포할 수 있다. 공개 저장소에는 소스·예시 자료만 넣고 원고와 비밀 값은 별도로 보관한다. 소스 저장소는 [inf1si/Kosmos](https://github.com/inf1si/Kosmos)이며, 이 교체 커밋은 새 Next.js 프로젝트를 저장소 루트에 둔다. Vercel 프로젝트와 Supabase는 아직 연결하지 않았다. 기존 main 보관·교체·되돌림은 [저장소 안내](repository-transition.md)를 따른다.
+소스는 Git 저장소에 넣어 Vercel에서 가져오거나 Vercel CLI로 배포할 수 있다. 공개 저장소에는 소스·예시 자료만 넣고 원고와 비밀 값은 별도로 보관한다. 소스 저장소는 [inf1si/Kosmos](https://github.com/inf1si/Kosmos)이며 새 Next.js 프로젝트는 저장소 루트에 있다. Supabase 초기 설치는 완료했고 Vercel GitHub 앱 연결·프로젝트 가져오기·환경 변수·배포는 아직 완료하지 않았다. GitHub 앱 연결은 해당 저장소 하나만 선택한다. 기존 main 보관·교체·되돌림은 [저장소 안내](repository-transition.md)를 따른다.
 
 Vercel 프로젝트 설정:
 
 | 항목 | 값 |
 |---|---|
-| Root Directory | `package.json`이 있는 `novel-studio` 폴더. 저장소 루트 구조에 따라 지정 |
+| Root Directory | `inf1si/Kosmos` 가져오기는 저장소 루트 `./`. 제공된 로컬 폴더명은 `novel-studio` |
 | Framework | Next.js |
 | Install | pnpm, lockfile 기준 |
 | Build | `pnpm build` |
