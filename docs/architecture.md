@@ -1,6 +1,6 @@
 # 현재 구현 아키텍처
 
-이 문서는 0.1.0 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
+이 문서는 0.2.0 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
 
 ## 구성
 
@@ -52,14 +52,17 @@ flowchart LR
 
 | 경로 | 구현 |
 |---|---|
-| `/` | `/studio`로 이동 |
+| `/` | 공개 홈페이지: 집필·읽기·작품별 설정 소개와 데이터 이용 안내 연결 |
+| `/privacy` | 원고 저장·Drive 백업·선택적 AI 검토의 데이터 이용 안내 |
 | `/studio` | 로그인 또는 집필실 |
 | `/library` | 공개 작품 목록 |
 | `/read/[workId]` | 작품의 현재 공개 판본 |
 | `/wiki/[workId]` | 해당 작품의 공개 설정 설명·등장 위치 |
 | `POST /api/review` | 인증·저장 판본 검사 후 AI 검토 |
 
-공개 페이지는 `force-dynamic`, 데이터 조회는 `cache: 'no-store'`다. 공개 캐시, 검색 색인, CDN 판본 갱신 파이프라인은 아직 없다.
+서재·독서·공개 설정집은 `force-dynamic`, 데이터 조회는 `cache: 'no-store'`다. 공개 판본 캐시, 검색 색인, CDN 판본 갱신 파이프라인은 아직 없다.
+
+홈페이지와 데이터 이용 안내는 인증 없이 볼 수 있는 정적 설명 페이지다. 안내는 현재 코드의 저장·전송·접근 권한과 미연결 기능을 설명하며, Google OAuth 연결 자체를 수행하지 않는다. 이 두 페이지의 TypeScript 검사·운영 빌드와 로컬 브라우저의 내용·링크는 확인했다. 최신 운영 배포와 실제 Google 연결 검증은 남아 있다.
 
 ## 파일 안내
 
@@ -100,3 +103,5 @@ Supabase RPC는 기준 버전 검사를 유지한다. 재전송에서 같은 요
 [ai-provider.ts](../src/lib/ai-provider.ts)는 제공자별 요청·완료 상태를 다루고 공통 결과를 검증한다. 서버 인증은 [server-auth.ts](../src/lib/server-auth.ts), 실제 스트림 바이트 제한은 [http.ts](../src/lib/http.ts)에 있다. 선택한 제공자 한 곳만 호출한다.
 
 일일 백업은 [vercel.json](../vercel.json) → 인증된 cron → [offsite-backup-server.ts](../src/lib/offsite-backup-server.ts)의 서버 수집 → [offsite-backup.ts](../src/lib/offsite-backup.ts)의 ZIP·저장 후 검증 → Drive/S3 어댑터 순서다. 브라우저로 service_role·저장소 비밀을 보내지 않는다. 마지막 성공 표시는 실제 저장 파일 검증 이후에만 갱신한다. 구성과 미연결 경계는 [백업 안내](offsite-backup.md)에 있다.
+
+Google OAuth 앱과 웹 클라이언트는 사용자가 생성하고 클라이언트 ID·비밀키를 복사해 보관했다. JSON 다운로드는 완료하지 않았다. 원래 비밀키가 비공개 도구 결과에 포함되어 연결 전에 교체할 예정이다. External Testing 앱의 Production 게시, Google 접근 승인·refresh token, Vercel 서버 변수와 실제 Drive 백업은 아직 미완료다.

@@ -12,6 +12,10 @@ Next.js + Tiptap + Supabase 기반 개인 SF 소설 사이트의 첫 구현입�
 
 운영 주소: [집필실](https://kosmos-ashy.vercel.app/studio) · [공개 서재](https://kosmos-ashy.vercel.app/library). 시험 공개판은 비활성화했고 현재 공개 작품은 없습니다.
 
+추가한 `/`는 집필·공개·작품별 설정을 설명하는 공개 홈페이지이며, `/privacy`는 원고 저장·Google Drive 백업·선택적 AI 검토의 실제 데이터 이용을 설명합니다. 이 변경의 TypeScript 검사·운영 빌드와 로컬 브라우저의 페이지 내용·안내 링크를 확인했습니다. 해당 페이지의 최신 운영 배포 확인은 아직 남아 있습니다.
+
+Google OAuth 앱과 웹 클라이언트는 사용자가 만들었고, 클라이언트 ID·비밀키는 사용자가 복사해 보관했습니다. JSON 다운로드는 완료하지 않았습니다. 원래 비밀키가 비공개 도구 결과에 포함되어 연결 전에 교체할 예정입니다. 앱은 External Testing 상태이며 Production 게시, Google 접근 승인·refresh token 발급, Vercel 서버 변수 입력과 실제 Drive 백업은 아직 완료하지 않았습니다.
+
 ## 빠른 실행
 
 프로젝트 폴더에서 Node.js 22 또는 24와 pnpm 11.19.0을 사용합니다.

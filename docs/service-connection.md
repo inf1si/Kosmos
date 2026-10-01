@@ -2,7 +2,7 @@
 
 Supabase·Vercel과 작가 로그인은 연결됐다. 외부 문서 기능은 파일만으로 바로 사용한다. 다음 작업은 무료 Drive 자동 백업의 OAuth 연결이며 AI는 키를 만든 제공자부터 활성화한다. 비밀번호·API 키·refresh token은 채팅에 보내지 않고 본인이 Vercel의 Production 환경 변수에 직접 넣는다.
 
-2026-10-01에 Google Cloud의 전용 **Kosmos Backup** 프로젝트를 생성하고 Google Drive API의 **사용 설정됨** 상태를 확인했다. 아래 1절의 프로젝트 생성·API 활성화는 이미 완료했다. Google Auth Platform의 앱 정보·동의 설정부터 이어간다. OAuth 클라이언트·접근 승인·refresh token·Vercel 서버 값은 아직 없으며 Drive 파일을 실제로 보관한 상태는 아니다. 결제 계정 연결·저장 공간 구매는 수행하지 않았다.
+2026-10-01에 Google Cloud의 전용 **Kosmos Backup** 프로젝트와 Google Drive API 활성화를 완료했다. 사용자가 Google Auth Platform 앱과 웹 OAuth 클라이언트를 생성하고 클라이언트 ID·비밀값을 본인 컴퓨터에 보관했다. 인앱 브라우저의 JSON 다운로드는 완료되지 않아 생성 창의 복사 버튼을 사용했다. 원래 비밀값은 생성 확인 중 도구 결과에 포함되어 연결 전에 재발급할 예정이다. Google 앱은 아직 External·Testing 상태이며 브랜딩 구성 완료·앱 게시·접근 승인·refresh token·Vercel 서버 값은 남아 있다. 실제 Drive 백업은 실행하지 않았고 결제 계정 연결·저장 공간 구매도 수행하지 않았다.
 
 ## 1. Google 프로젝트와 Drive API
 
@@ -10,12 +10,14 @@ Supabase·Vercel과 작가 로그인은 연결됐다. 외부 문서 기능은 �
 2. [Google Cloud Console](https://console.cloud.google.com/)에서 개인 프로젝트 `Kosmos Backup`을 만든다. 기존 적절한 프로젝트를 사용해도 된다.
 3. API 및 서비스의 라이브러리에서 **Google Drive API**를 찾아 활성화한다. Cloud Storage 버킷·유료 Google One·별도 서버는 이 구성에 필요하지 않다. 결제나 유료 서비스 화면이 나오면 이 백업에 필요한 서비스인지 먼저 확인한다.
 4. Google Auth Platform에서 앱 이름·지원 이메일·연락 이메일을 설정한다. 개인 Google 계정은 External을 사용한다. 요청 범위는 `https://www.googleapis.com/auth/drive.file` 하나다.
-5. Testing으로 확인할 때 본인 계정을 테스트 사용자로 등록한다. 지속 자동 백업에는 앱 상태를 In production으로 전환한 뒤 토큰을 발급한다. Testing 상태의 이 범위 refresh token은 7일 만료 대상이다. 개인 사용·범위·검증 요구는 콘솔 안내를 따른다. [Google OAuth 만료 규칙](https://developers.google.com/identity/protocols/oauth2).
+5. 브랜딩의 홈페이지·개인정보처리방침에는 실제 공개 페이지를 등록한다. Kosmos의 공개 소개는 `/`, 데이터 이용 안내는 `/privacy`이며 로그인 없이 읽을 수 있다. 승인된 도메인은 실제 서비스 도메인을 사용하고, 존재하지 않는 약관·정책 URL을 넣지 않는다. Google의 현재 브랜딩 요구와 콘솔 검증 결과를 따른다. [브랜딩 안내](https://support.google.com/cloud/answer/15549049?hl=en).
+6. Testing으로 확인할 때 본인 계정을 테스트 사용자로 등록한다. 지속 자동 백업에는 앱 상태를 In production으로 전환한 뒤 토큰을 발급한다. Testing 상태의 이 범위 refresh token은 7일 만료 대상이다. Production 전환은 OAuth 검증과 별개이며 토큰의 영구 유효성을 보장하지 않는다. 개인 사용·범위·검증 요구는 콘솔 안내를 따른다. [Google 게시 상태](https://support.google.com/cloud/answer/15549945?hl=en) · [Google OAuth 만료 규칙](https://developers.google.com/identity/protocols/oauth2).
 
 ## 2. 본인 OAuth 클라이언트와 연결 승인
 
 1. OAuth Client를 **Web application**으로 만든다. 이름은 `Kosmos Backup`으로 둔다.
 2. Authorized redirect URI에 `https://developers.google.com/oauthplayground`를 정확히 추가한다.
+   - 새 클라이언트 비밀값은 생성 시점에만 전체 표시·다운로드될 수 있다. 생성 창을 닫기 전에 본인이 보관한다. 다운로드가 동작하지 않으면 복사 버튼으로 보관하며 채팅·GitHub·공유 문서에 붙이지 않는다. [클라이언트 관리](https://support.google.com/cloud/answer/15549257?hl=en).
 3. [Google 공식 OAuth Playground](https://developers.google.com/oauthplayground/)의 설정에서 **Use your own OAuth credentials**를 체크하고 방금 생성한 Client ID·Client secret을 직접 입력한다. Endpoints는 Google, Access type은 Offline으로 둔다.
 4. Step 1의 scope 입력에 `https://www.googleapis.com/auth/drive.file` 하나만 넣는다. Google 로그인과 접근 허용은 계정 소유자가 직접 완료한다. 다른 범위가 함께 요청되면 승인하지 않고 설정을 확인한다.
 5. Step 2의 Exchange authorization code for tokens를 실행해 refresh token을 확보한다. 기본 Playground 클라이언트 토큰은 24시간 후 취소되므로 **본인 클라이언트** 사용이 필요하다. 공유 링크에 자격 증명·토큰을 포함하지 않는다. [Playground 공식 안내](https://developers.google.com/oauthplayground/).
