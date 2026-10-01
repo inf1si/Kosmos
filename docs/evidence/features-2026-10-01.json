@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-01",
+  "version": "0.2.0",
+  "sourceCommit": "0d2489a587ccc4419ebc8133f1c4613eece0c8cb",
+  "deployment": {
+    "status": "Ready",
+    "buildSeconds": 40,
+    "deploymentId": "BKPU4Rsyubbw5v2YptnNW8Es2puQ",
+    "productionUrl": "https://kosmos-ashy.vercel.app",
+    "uniqueUrl": "https://kosmos-esb5xajhq-kosmos24.vercel.app"
+  },
+  "checks": {
+    "typecheck": "passed",
+    "productionBuild": "passed",
+    "automatedTests": { "passed": 24, "failed": 0 },
+    "productionAuthenticatedUi": {
+      "cloudSynchronized": true,
+      "interchangeImportDialog": true,
+      "exportFormatOptions": ["markdown", "html", "enex"],
+      "aiProviders": ["OpenAI", "Claude", "Gemini"],
+      "aiUnconfiguredAndReviewDisabled": true,
+      "offsiteBackupShownUnconfigured": true
+    },
+    "exportDialogGeometry360px": { "pageWidth": 360, "dialogWidth": 332, "overflow": false, "scope": "DOM geometry only; mobile screenshot capture unavailable" },
+    "localIsolatedUi": {
+      "syntheticMarkdownWikiImagePreviewAndAppend": true,
+      "wikiLinkFootnoteAndImageAttachmentShown": true,
+      "interchangeArchiveGenerated": true,
+      "existingPriorTestZipValidatedAndRestored": true,
+      "restoredManuscriptFootnoteAndImageAttachmentShown": true
+    },
+    "liveGoogleDriveBackup": false,
+    "scheduledBackupExecution": false,
+    "liveAiProviderCalls": false,
+    "actualNotionEvernoteAppRoundTrip": false,
+    "freshBrowserDownloadFileCaptured": false,
+    "productionZipRestore": false
+  },
+  "selectedBackupStorage": "Google Drive remaining free space",
+  "credentialsState": "Google OAuth, backup server secrets and all AI keys/models are not configured",
+  "limitations": [
+    "Browser tool did not deliver newly generated download files; generation and file-save links were verified separately from file capture.",
+    "Google Drive and AI HTTP contracts were tested with mocks, not user accounts or paid provider calls.",
+    "Existing prior local test ZIP restoration does not prove production ZIP recovery.",
+    "Two-device offline conflicts, Korean IME and full-length manuscript performance remain unverified."
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-01",
+  "scope": "Anonymous production requests only; no credentials or provider calls",
+  "checks": [
+    {
+      "path": "/api/ai/providers",
+      "method": "GET",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/backup/status",
+      "method": "GET",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/backup/cron",
+      "method": "GET",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/backup/run",
+      "method": "POST",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "path": "/api/review",
+      "method": "POST",
+      "status": 401,
+      "passed": true
+    }
+  ]
+}
