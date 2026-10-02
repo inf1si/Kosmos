@@ -1,14 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { preferredTheme, themeScript, THEME_KEY } from '../src/lib/theme';
-function runScript(stored:string|null,systemDark:boolean,storageFails=false){
-  let theme:string|null=null;
-  const env={localStorage:{getItem:(key:string)=>{if(storageFails)throw new Error('blocked');return key===THEME_KEY?stored:null;}},matchMedia:()=>({matches:systemDark}),document:{documentElement:{setAttribute:(name:string,value:string)=>{if(name==='data-theme')theme=value;}}}};
+import { PALETTE_KEY, preferredPalette, preferredTheme, themeScript, THEME_KEY } from '../src/lib/theme';
+function runScript(stored:{theme?:string|null;palette?:string|null},systemDark:boolean,storageFails=false){
+  const attributes:Record<string,string>={};
+  const values:Record<string,string|null>={[THEME_KEY]:stored.theme??null,[PALETTE_KEY]:stored.palette??null};
+  const env={localStorage:{getItem:(key:string)=>{if(storageFails)throw new Error('blocked');return values[key]??null;}},matchMedia:()=>({matches:systemDark}),document:{documentElement:{setAttribute:(name:string,value:string)=>{attributes[name]=value;}}}};
   new Function('localStorage','matchMedia','document',themeScript)(env.localStorage,env.matchMedia,env.document);
-  return theme;
+  return attributes;
 }
-test('저장한 테마를 먼저 쓰고 없으면 기기 설정을 따르며 머리 스크립트도 같은 규칙을 쓴다',()=>{
-  for(const stored of ['light','dark',null,'night'])for(const systemDark of [true,false])assert.equal(runScript(stored,systemDark),preferredTheme(stored,systemDark));
+test('저장한 밝기를 먼저 쓰고 없으면 기기 설정을 따르며 머리 스크립트도 같은 규칙을 쓴다',()=>{
+  for(const theme of ['light','dark',null,'night'])for(const systemDark of [true,false])assert.equal(runScript({theme},systemDark)['data-theme'],preferredTheme(theme,systemDark));
   assert.equal(preferredTheme('dark',false),'dark');assert.equal(preferredTheme(null,true),'dark');assert.equal(preferredTheme('night',false),'light');
-  assert.equal(runScript('dark',false,true),null);
+  assert.deepEqual(runScript({theme:'dark'},false,true),{});
+});
+test('색 계열은 저장한 카세트만 인정하고 나머지는 보라로 시작한다',()=>{
+  for(const palette of ['cassette','violet',null,'orange'])assert.equal(runScript({palette},false)['data-palette'],preferredPalette(palette));
+  assert.equal(preferredPalette('cassette'),'cassette');assert.equal(preferredPalette('orange'),'violet');assert.equal(preferredPalette(null),'violet');
+  assert.deepEqual(runScript({theme:'light',palette:'cassette'},true),{'data-theme':'light','data-palette':'cassette'});
 });

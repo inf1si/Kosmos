@@ -7,13 +7,13 @@ import { db } from '@/lib/database';
 import { seedWorkspace } from '@/lib/seed';
 import { THEME_KEY } from '@/lib/theme';
 import { Modal } from './primitives';
-import { ThemeToggle, useSiteTheme } from './theme-toggle';
+import { ThemeControls, useSitePalette, useSiteTheme } from './theme-toggle';
 
 function usePublicData(initial:Publication[],localPreview:boolean){
   const [data,setData]=useState(initial);const [loading,setLoading]=useState(localPreview);
   useEffect(()=>{if(!localPreview)return;void db.workspaces.get('preview').then(row=>{const state=row?.data||seedWorkspace();setData(state.works.flatMap(w=>w.publications.filter(p=>p.id===w.activePublicationId)));}).finally(()=>setLoading(false));},[localPreview]);return{data,loading};
 }
-function PublicHeader({children}:{children?:ReactNode}){return <header className="public-header"><Link href="/library" className="public-brand"><span className="public-brand-mark" aria-hidden="true">◌</span>Orbis Tertius</Link><nav>{children}<Link className="studio-link" href="/studio">집필실</Link><ThemeToggle/></nav></header>;}
+function PublicHeader({children}:{children?:ReactNode}){return <header className="public-header"><Link href="/library" className="public-brand"><span className="public-brand-mark" aria-hidden="true">◌</span>Orbis Tertius</Link><nav>{children}<Link className="studio-link" href="/studio">집필실</Link><ThemeControls/></nav></header>;}
 /** A typographic cover: works have no cover art, so the title is set on the brand colour under the ◌ orbit. */
 function BookCover({pub}:{pub:Publication}){return <Link className="book-cover" href={`/read/${pub.workId}`} tabIndex={-1} aria-hidden="true"><svg width="170" height="170" viewBox="0 0 170 170"><circle cx="85" cy="85" r="70" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="1.5 7" strokeLinecap="round"/><circle cx="85" cy="85" r="44" fill="none" stroke="currentColor" strokeOpacity=".5"/></svg><span className="book-cover-series">ORBIS TERTIUS</span><span><strong>{pub.title}</strong><small>소설</small></span></Link>;}
 export function Library({initial,localPreview,error}:{initial:Publication[];localPreview:boolean;error?:string}){
@@ -58,7 +58,7 @@ export function RichReader({content,publication,onWiki}:{content:RichNode;public
 export function Reader({workId,initial,localPreview}:{workId:string;initial:Publication[];localPreview:boolean}){
   const {data,loading}=usePublicData(initial,localPreview);const pub=data.find(p=>p.workId===workId);
   const [settings,setSettings]=useState(false);const [toc,setToc]=useState(false);const [wikiId,setWikiId]=useState<string|null>(null);
-  const [font,setFont]=useState('serif');const [size,setSize]=useState(19);const [width,setWidth]=useState(680);const [theme,setTheme]=useSiteTheme();const [progress,setProgress]=useState(0);
+  const [font,setFont]=useState('serif');const [size,setSize]=useState(19);const [width,setWidth]=useState(680);const [theme,setTheme]=useSiteTheme();const [palette,setPalette]=useSitePalette();const [progress,setProgress]=useState(0);
   const restored=useRef(false);
   // The reader's old 밝게/어둡게 preference carries over once, until the site-wide toggle saves its own choice.
   useEffect(()=>{try{const prefs=JSON.parse(localStorage.getItem('orbit-reader-prefs')||'null');if(prefs){if(['serif','sans'].includes(prefs.font))setFont(prefs.font);if([17,19,21,23].includes(prefs.size))setSize(prefs.size);if([580,680,780].includes(prefs.width))setWidth(prefs.width);if(prefs.theme==='night'&&!localStorage.getItem(THEME_KEY))setTheme('dark');}}catch{}},[]);
@@ -81,7 +81,7 @@ export function Reader({workId,initial,localPreview}:{workId:string;initial:Publ
       {notes.length>0&&<section className="reading-notes"><h2>주석</h2><ol>{notes.map((note,i)=><li id={`note-${note.id}`} key={note.id}><a href={`#ref-${note.id}`} aria-label={`각주 ${i+1} 본문으로 돌아가기`}>{i+1}</a><p>{note.text}</p></li>)}</ol></section>}
       <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><Link href="/library">작품 목록</Link><Link href={`/wiki/${workId}`}>설정집 읽기</Link></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small></footer>
     </main>
-    <Modal open={settings} onClose={()=>setSettings(false)} title="읽기 설정"><div className="reading-preferences"><label>글꼴<select value={font} onChange={e=>setFont(e.target.value)}><option value="serif">명조</option><option value="sans">고딕</option></select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{[17,19,21,23].map(v=><option key={v}>{v}</option>)}</select></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label></div></Modal>
+    <Modal open={settings} onClose={()=>setSettings(false)} title="읽기 설정"><div className="reading-preferences"><label>글꼴<select value={font} onChange={e=>setFont(e.target.value)}><option value="serif">명조</option><option value="sans">고딕</option></select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{[17,19,21,23].map(v=><option key={v}>{v}</option>)}</select></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(e.target.value==='cassette'?'cassette':'violet')}><option value="violet">보라</option><option value="cassette">카세트</option></select></label></div></Modal>
     <Modal open={!!wiki} onClose={()=>setWikiId(null)} title={wiki?.title||'설정'}>{wiki&&<><span className="wiki-category">{wiki.category}</span><p className="wiki-summary">{wiki.summary}</p><Link className="button" href={`/wiki/${workId}?doc=${wiki.id}`}>설정 문서 열기</Link></>}</Modal>
   </div>;
 }

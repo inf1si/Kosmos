@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { ThemeControls } from '@/components/theme-toggle';
 import styles from '../public-info.module.css';
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
         <nav aria-label="주 메뉴">
           <Link href="/library">서재</Link>
           <Link href="/studio">집필실</Link>
-          <ThemeToggle />
+          <ThemeControls />
         </nav>
       </header>
 
