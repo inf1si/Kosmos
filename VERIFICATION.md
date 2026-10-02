@@ -156,3 +156,16 @@ TypeScript 검사·28개 자동 테스트·Next.js 운영 빌드 통과. Windows
 사용자가 두 감시 주소 저장 완료를 보고했고 GitHub의 DB_BACKUP_HEALTHCHECK_URL 이름과 Vercel의 BACKUP_HEALTHCHECK_URL 이름 존재를 확인했다. [첫 DB 백업 실행](https://github.com/inf1si/Kosmos/actions/runs/37021489729)은 57초에 실패했다. Healthchecks의 DB 상태가 Down과 마지막 신호 수신을 표시했다. 실패 원인이 출력되지 않아 고정된 단계 이름과 비밀값 없는 도구 오류 분류를 추가했다. 변경 후 타입 검사·관련 테스트 4개가 통과했다. 이 검사에는 DB 실제 연결·R2 업로드 성공·전체 DB 복원 결과를 포함하지 않는다. 실제 이메일 수신은 사용자 확인을 기다린다.
 
 이후 사용자가 Healthchecks 실패 알림 메일 수신을 보고했다. 실패 신호 도착과 사용자 이메일 수신을 확인한 결과이며, 실행 자체가 누락된 상황의 알림 시험과 DB 백업 성공을 대신하지 않는다.
+
+진단 소스 b9342ff의 [Vercel 배포](https://vercel.com/kosmos24/kosmos/9E5FKVJ2aKJb8caKubggHXjNzotQ) 성공을 확인했다. [두 번째 DB 백업](https://github.com/inf1si/Kosmos/actions/runs/37022765623) 로그에서 첨부 목록 확인 뒤 roles.sql 단계의 DB 인증 실패를 확인했다. R2 업로드 단계에는 도달하지 않았다. 사용자에게 DB 비밀번호로 접속 주소를 다시 만들고 GitHub SUPABASE_DB_URL을 직접 수정하도록 요청했다. 비밀번호·주소 값은 읽지 않았다.
+
+운영 Drive 수동 백업은 23:52:23 KST에 성공했다. 9개 문서·이력 2개·첨부 1개·약 0.02MB의 저장 후 무결성 표시를 확인했다. 수동 경로는 Healthchecks 신호를 보내지 않고 예약 실행 경로만 보낸다. 따라서 이 실행 직후 Drive check의 Never 상태는 감시 실패의 증거가 아니며, 실제 예약 실행 신호 확인은 남아 있다.
+
+
+## 2026-10-03 — DB 인증 통과와 데이터 덤프 옵션 수정
+
+사용자가 접속 주소를 다시 저장했고 GitHub 수정 시각 2026-10-02 23:58 KST를 확인했다. 두 번째 백업의 재시도에서 roles.sql·schema.sql 수집이 성공해 DB 인증 통과를 확인했다. data.sql 단계는 도구 오류로 중단됐으며 R2 업로드에는 아직 도달하지 않았다.
+
+고정된 Supabase CLI 2.119.0의 [공식 구현](https://github.com/supabase/cli/blob/v2.119.0/apps/cli/src/commands/db/dump/dump.handler.ts)은 keep-comments와 data-only를 상호 배타 옵션으로 검사한다. 공통 옵션으로 두 값을 함께 전달한 명령을 수정했다. 역할·스키마에만 keep-comments를 적용하며 데이터는 CLI 자체가 주석을 보존한다. public·auth·storage 범위, COPY 형식, Vector Storage 제외는 유지한다. 상호 배타 옵션과 계정·첨부 데이터 범위를 검사하는 테스트를 추가했고 관련 5개 테스트·타입 검사를 통과했다. 이 로컬 검사는 실제 새 덤프·R2 업로드·복원 성공을 의미하지 않는다.
+
+사용자가 백업 복호화 키 폴더를 다른 장소에도 복사해 보관했다고 확인했다. 이는 사용자 보고 기준이며 사본 바이트를 읽거나 개인키 내용을 검증·업로드하지 않았다. 실제 암호화 DB·첨부 백업, DB 복원 훈련, Drive 예약 신호와 누락 알림 시험은 남아 있다. DB 정기 실행은 복원 훈련 전까지 비활성이다.

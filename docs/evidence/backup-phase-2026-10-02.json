@@ -9,6 +9,9 @@
   "drive": {
     "earlierSuccessAtKst": "2026-10-02T04:58:49+09:00",
     "manualSuccessAtKst": "2026-10-02T22:24:33+09:00",
+    "laterManualSuccessAtKst": "2026-10-02T23:52:23+09:00",
+    "monitorEnvironmentDeploymentSuccessful": true,
+    "scheduledMonitorSignalReceived": false,
     "works": 2,
     "documents": 9,
     "revisions": 2,
@@ -62,8 +65,7 @@
     "liveAuthenticationVerified": false
   },
   "pending": [
-    "Drive monitor redeployment and missed-run notification drill",
-    "independent private-key copy",
+    "Drive scheduled monitor signal and missed-run notification drill",
     "R2 live authentication and encrypted database backup",
     "database restore drill",
     "missing-heartbeat notification receipt"
@@ -76,7 +78,8 @@
     "fixtureRoundTripVerified": true,
     "publicRecipientRegistered": true,
     "privateKeyPrintedOrUploaded": false,
-    "independentKeyCopyConfirmed": false
+    "independentKeyCopyConfirmed": true,
+    "independentKeyCopyEvidence": "user-reported-separate-location-copy"
   },
   "supabaseObserved": {
     "region": "Seoul",
@@ -95,7 +98,8 @@
     "individualCommandsProvidedWithoutPolicyChange": true,
     "credentialValuesReadByAgent": false,
     "dbUrlSecretRegistrationConfirmed": true,
-    "serviceRoleSecretRegistrationConfirmed": true
+    "serviceRoleSecretRegistrationConfirmed": true,
+    "dbCredentialUpdatedAtKst": "2026-10-02T23:58:00+09:00"
   },
   "connectionFixRelease": {
     "sourceCommit": "e3a22fee08a77e5d8b4211112cfd462dc7b888c9",
@@ -136,5 +140,43 @@
     "typecheck": true,
     "targetedTestsPassed": 4,
     "rawToolOutputPrinted": false
+  },
+  "secondDbBackupAttempt": {
+    "runId": 37022765623,
+    "sourceCommit": "b9342ff52c7636406b1a69a43a5ca85cacb504ba",
+    "conclusion": "failure",
+    "storageInventoryReadSuccessful": true,
+    "failedStage": "roles.sql",
+    "safeErrorCategory": "database-authentication-failed",
+    "r2UploadAttempted": false,
+    "dbCredentialCorrectionRequested": true,
+    "retry": {
+      "attempt": 2,
+      "conclusion": "failure",
+      "rolesDumpSuccessful": true,
+      "schemaDumpSuccessful": true,
+      "databaseAuthenticationSuccessful": true,
+      "failedStage": "data.sql",
+      "r2UploadAttempted": false
+    }
+  },
+  "updatedDate": "2026-10-03",
+  "dataDumpOptionFix": {
+    "pinnedCli": "2.119.0",
+    "cause": "keep-comments-and-data-only-mutually-exclusive",
+    "typecheck": true,
+    "targetedTestsPassed": 5,
+    "dataSchemas": [
+      "public",
+      "auth",
+      "storage"
+    ],
+    "newLiveBackupResultConfirmed": false
+  },
+  "diagnosticReleaseChecks": {
+    "sourceCommit": "b9342ff52c7636406b1a69a43a5ca85cacb504ba",
+    "ciSuccessful": true,
+    "productionDeploymentSuccessful": true,
+    "testsPassed": 29
   }
 }

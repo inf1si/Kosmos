@@ -16,7 +16,7 @@ export function toolFailureReason(stderr){
   if(/password authentication failed|28P01|authentication failed/i.test(stderr))return 'DB 인증 실패';
   if(/timed? ?out|timeout|connection refused|could not translate host|no route to host|network is unreachable/i.test(stderr))return 'DB 또는 도구 다운로드 연결 실패';
   if(/permission denied|42501/i.test(stderr))return 'DB 또는 Docker 접근 권한 확인 필요';
-  if(/unknown flag|unrecognized option|unsupported.*version|version mismatch/i.test(stderr))return 'CLI 옵션 또는 버전 확인 필요';
+  if(/unknown flag|unrecognized option|mutually exclusive|none of the others can be|unsupported.*version|version mismatch/i.test(stderr))return 'CLI 옵션 또는 버전 확인 필요';
   return '도구 실행 실패';
 }
 /** @param {Record<string,string|undefined>} env */
@@ -92,13 +92,23 @@ async function ping(config,event){
   const response=await fetch(`${config.heartbeat}${event==='success'?'':`/${event}`}`,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error('백업 감시 서비스에 실행 결과를 전달하지 못했습니다.');
 }
+/** CLI 2.119.0 forbids --keep-comments with --data-only; data comments are retained automatically.
+ * @returns {Array<[string,string[]]>}
+ */
+export function sqlDumpPlan(){
+  return [
+    ['roles.sql',['--role-only','--keep-comments']],
+    ['schema.sql',['--keep-comments']],
+    ['data.sql',['--data-only','--use-copy','--schema','public,auth,storage','-x','storage.buckets_vectors','-x','storage.vector_indexes']],
+  ];
+}
 async function buildEncrypted(config,directory,onStage){
   onStage('첨부 목록 확인');
   const client=createClient(config.apiUrl,config.serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
   const before=await inventory(client),zip=new JSZip(),files=[];let total=0;
   function add(path,bytes){total+=bytes.length;if(total>CAP)throw new Error('DB와 첨부의 총 백업 용량이 100MiB를 넘었습니다.');zip.file(path,bytes);files.push({path,bytes:bytes.length,sha256:sha(bytes)});}
-  const common=['db','dump','--db-url',config.dbUrl,'--keep-comments'];
-  for(const [name,flags] of [['roles.sql',['--role-only']],['schema.sql',[]],['data.sql',['--data-only','--use-copy','--schema','public,auth,storage','-x','storage.buckets_vectors','-x','storage.vector_indexes']]]){
+  const common=['db','dump','--db-url',config.dbUrl];
+  for(const [name,flags] of sqlDumpPlan()){
     onStage(`SQL 수집 ${name}`);
     const path=join(directory,name);await quietTool('supabase',[...common,...flags,'--file',path],name);add(name,await readFile(path));
   }
