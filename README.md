@@ -30,7 +30,7 @@ pnpm dev
 ## 목적별 문서
 
 - [작가 사용 안내](docs/user-guide.md): 작품·문서·분할·각주·설정·게시.
-- [디자인 가이드](docs/design-guide.md): 색 토큰·보라/카세트 × 라이트/다크 테마·글꼴·문구 규칙과 집필실 배치.
+- [디자인 가이드](docs/design-guide.md): 색 토큰·보라/카세트/사이버 × 라이트/다크 테마·글꼴·문구 규칙과 집필실 배치.
 - [백업·복구](docs/backup-restore.md): 실제 첨부 포함 ZIP, 복구 이력, 원고 이동.
 - [외부 문서 교환](docs/import-export.md): Notion ZIP·ENEX·MD·HTML 등.
 - [DB·첨부 암호화 백업과 복원 훈련](docs/disaster-recovery.md).

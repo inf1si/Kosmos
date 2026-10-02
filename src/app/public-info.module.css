@@ -245,3 +245,42 @@
   letter-spacing: .06em;
   text-transform: uppercase;
 }
+:global([data-palette=cyber]) .page {
+  background-image: var(--pub-pattern);
+  background-size: var(--pub-pattern-size);
+}
+:global([data-palette=cyber]) .header {
+  position: relative;
+  margin-bottom: 14px;
+  border-bottom-color: transparent;
+}
+:global([data-palette=cyber]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -12px;
+  height: 8px;
+  background: var(--pub-band);
+}
+:global([data-palette=cyber]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  text-shadow: var(--pub-brand-shadow);
+}
+:global([data-palette=cyber]) .intro h1 {
+  font-family: var(--pub-tech);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow: var(--pub-brand-shadow);
+}
+:global([data-palette=cyber]) .primaryLink {
+  border-radius: var(--pub-ctl-r);
+  font-weight: 600;
+  box-shadow: var(--pub-glow);
+  clip-path: var(--pub-cut-sm);
+}

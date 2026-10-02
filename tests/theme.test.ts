@@ -13,8 +13,8 @@ test('저장한 밝기를 먼저 쓰고 없으면 기기 설정을 따르며 머
   assert.equal(preferredTheme('dark',false),'dark');assert.equal(preferredTheme(null,true),'dark');assert.equal(preferredTheme('night',false),'light');
   assert.deepEqual(runScript({theme:'dark'},false,true),{});
 });
-test('색 계열은 저장한 카세트만 인정하고 나머지는 보라로 시작한다',()=>{
-  for(const palette of ['cassette','violet',null,'orange'])assert.equal(runScript({palette},false)['data-palette'],preferredPalette(palette));
-  assert.equal(preferredPalette('cassette'),'cassette');assert.equal(preferredPalette('orange'),'violet');assert.equal(preferredPalette(null),'violet');
+test('색 계열은 저장한 카세트·사이버만 인정하고 나머지는 보라로 시작한다',()=>{
+  for(const palette of ['cassette','cyber','violet',null,'orange','Cyber'])assert.equal(runScript({palette},false)['data-palette'],preferredPalette(palette));
+  assert.equal(preferredPalette('cassette'),'cassette');assert.equal(preferredPalette('cyber'),'cyber');assert.equal(preferredPalette('orange'),'violet');assert.equal(preferredPalette('Cyber'),'violet');assert.equal(preferredPalette(null),'violet');
   assert.deepEqual(runScript({theme:'light',palette:'cassette'},true),{'data-theme':'light','data-palette':'cassette'});
 });

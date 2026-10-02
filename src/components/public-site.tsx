@@ -5,9 +5,9 @@ import { List, Settings2, X, Link2 } from 'lucide-react';
 import { Publication, RichNode, footnotes, plainText } from '@/lib/model';
 import { db } from '@/lib/database';
 import { seedWorkspace } from '@/lib/seed';
-import { THEME_KEY } from '@/lib/theme';
+import { THEME_KEY, preferredPalette } from '@/lib/theme';
 import { Modal } from './primitives';
-import { ThemeControls, useSitePalette, useSiteTheme } from './theme-toggle';
+import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './theme-toggle';
 
 function usePublicData(initial:Publication[],localPreview:boolean){
   const [data,setData]=useState(initial);const [loading,setLoading]=useState(localPreview);
@@ -81,7 +81,7 @@ export function Reader({workId,initial,localPreview}:{workId:string;initial:Publ
       {notes.length>0&&<section className="reading-notes"><h2>주석</h2><ol>{notes.map((note,i)=><li id={`note-${note.id}`} key={note.id}><a href={`#ref-${note.id}`} aria-label={`각주 ${i+1} 본문으로 돌아가기`}>{i+1}</a><p>{note.text}</p></li>)}</ol></section>}
       <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><Link href="/library">작품 목록</Link><Link href={`/wiki/${workId}`}>설정집 읽기</Link></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small></footer>
     </main>
-    <Modal open={settings} onClose={()=>setSettings(false)} title="읽기 설정"><div className="reading-preferences"><label>글꼴<select value={font} onChange={e=>setFont(e.target.value)}><option value="serif">명조</option><option value="sans">고딕</option></select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{[17,19,21,23].map(v=><option key={v}>{v}</option>)}</select></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(e.target.value==='cassette'?'cassette':'violet')}><option value="violet">보라</option><option value="cassette">카세트</option></select></label></div></Modal>
+    <Modal open={settings} onClose={()=>setSettings(false)} title="읽기 설정"><div className="reading-preferences"><label>글꼴<select value={font} onChange={e=>setFont(e.target.value)}><option value="serif">명조</option><option value="sans">고딕</option></select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{[17,19,21,23].map(v=><option key={v}>{v}</option>)}</select></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(preferredPalette(e.target.value))}>{paletteOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div></Modal>
     <Modal open={!!wiki} onClose={()=>setWikiId(null)} title={wiki?.title||'설정'}>{wiki&&<><span className="wiki-category">{wiki.category}</span><p className="wiki-summary">{wiki.summary}</p><Link className="button" href={`/wiki/${workId}?doc=${wiki.id}`}>설정 문서 열기</Link></>}</Modal>
   </div>;
 }

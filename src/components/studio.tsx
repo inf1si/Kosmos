@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, Moon, MoreHorizontal, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, Sun, User, X } from 'lucide-react';
+import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
 import { PlotBoard } from './plot-board';
 import { WikiIcon } from './studio-icons';
-import { useSitePalette, useSiteTheme } from './theme-toggle';
+import { ThemeControls } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
 import { AIReview } from './ai-review';
 import { NovelDocument, newDocument, plainText, statuses, wikiReferences } from '@/lib/model';
@@ -78,7 +78,7 @@ export function Studio(){
     {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색">
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="work-switcher" ref={workMenuRef}>
-        <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span></button>
+        <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span><span className="work-tag" aria-hidden="true">ORB-{String(s.state.works.indexOf(work)+1).padStart(2,'0')}</span></button>
         {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
       </div>
       <nav className="studio-tools" aria-label="작업 도구">
@@ -99,7 +99,7 @@ export function Studio(){
         <section className="tree-section" aria-label="메모 · 리서치">{heading('memo','메모 추가')}{docs.filter(d=>d.kind==='memo'&&matches(d)).map(d=>row(d,<StickyNote size={15}/>,null))}</section>
         {query&&!docs.some(matches)&&<p className="empty-text">검색 결과가 없습니다.</p>}
       </div>
-      <footer className="sidebar-footer"><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><PaletteButton/><ThemeButton/><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></footer>
+      <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
     </aside>}
     <main className="studio-panel">
       <div className="panel-tabs">
@@ -143,8 +143,6 @@ export function Studio(){
 }
 
 function DocIcon({doc}:{doc:NovelDocument}){return doc.kind==='wiki'?<WikiIcon category={doc.category} size={14}/>:doc.kind==='memo'?<StickyNote size={14}/>:<FileText size={14}/>;}
-function PaletteButton(){const [palette,setPalette]=useSitePalette();const label=palette==='cassette'?'보라 테마로 전환':'카세트 테마로 전환';return <IconButton label={label} className="icon-button palette-button" onClick={()=>setPalette(palette==='cassette'?'violet':'cassette')}>{palette==='cassette'?<span className="palette-swatch" aria-hidden="true"/>:<CassetteTape size={15}/>}</IconButton>;}
-function ThemeButton(){const [theme,setTheme]=useSiteTheme();const label=theme==='dark'?'라이트 모드로 전환':'다크 모드로 전환';return <IconButton label={label} className="icon-button theme-button" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?<Sun size={15}/>:<Moon size={15}/>}</IconButton>;}
 
 /** The title is committed while typing but never left empty; Enter moves into the manuscript. */
 function TitleInput({value,disabled,onCommit}:{value:string;disabled:boolean;onCommit:(title:string)=>void}){
