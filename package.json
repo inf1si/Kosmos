@@ -1,6 +1,6 @@
 {
-  "name": "orbit-novel-studio",
-  "version": "0.2.0",
+  "name": "orbis-tertius",
+  "version": "0.2.1",
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "engines": {

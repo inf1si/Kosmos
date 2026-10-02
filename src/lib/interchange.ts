@@ -138,7 +138,7 @@ export async function readInterchange(files:readonly File[]):Promise<ImportBundl
   let metadata=new Map<string,Partial<ImportedPage>>();const metaBytes=entries.get('kosmos-transfer.json');
   if(metaBytes){const parsed=z.object({format:z.literal('kosmos-transfer'),version:z.literal(1),documents:z.array(z.object({path:z.string().min(1).max(1000),title:z.string().min(1).max(300).optional(),kind:z.enum(['scene','wiki','memo']).optional(),chapter:z.string().max(300).optional(),category:z.string().max(200).optional(),summary:z.string().max(20000).optional()})).max(MAX_PAGES)}).safeParse(JSON.parse(decode('kosmos-transfer.json',metaBytes)));if(!parsed.success)throw new Error('문서 묶음의 정보를 확인하세요.');metadata=new Map(parsed.data.documents.map(d=>[path(d.path),d]));if(metadata.size!==parsed.data.documents.length)throw new Error('문서 묶음에 중복된 경로가 있습니다.');}
   const sources=new Map<string,string>();
-  for(const [key,bytes]of entries){if(key.split('/').some(s=>s.startsWith('.')||s==='__MACOSX')||key==='kosmos-transfer.json'||key==='README-KOSMOS.txt')continue;
+  for(const [key,bytes]of entries){if(key.split('/').some(s=>s.startsWith('.')||s==='__MACOSX')||key==='kosmos-transfer.json'||key==='README-ORBIS-TERTIUS.txt')continue;
     const ext=key.split('.').pop()?.toLowerCase()||'';
     if(imageTypes[ext]){const type=imageMime(bytes);if(type!==imageTypes[ext]||bytes.length>10*1024*1024){warning(bundle,`${key}: 이미지 형식이 올바르지 않거나 10MB를 넘어서 제외했습니다.`);continue;}bundle.assets.push({key,name:key.split('/').pop()!.slice(0,300),blob:new Blob([Uint8Array.from(bytes).buffer],{type})});}
     else if(['md','markdown','txt','html','htm','csv'].includes(ext)){
@@ -222,7 +222,7 @@ export async function exportInterchange(work:Work,documentIds:string[],metas:Ass
       const enml=`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd"><en-note>${body}</en-note>`;
       noteXml.push(`<note><title>${esc(d.title)}</title><content><![CDATA[${enml.replace(/\]\]>/g,']]]]><![CDATA[>')}]]></content><created>${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}</created><tag>kosmos:${d.kind}</tag>${resources.join('')}</note>`);
     }
-    const xml=`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd"><en-export export-date="${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}" application="Kosmos" version="1">${noteXml.join('')}</en-export>`;
+    const xml=`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-export SYSTEM "http://xml.evernote.com/pub/evernote-export4.dtd"><en-export export-date="${new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'')}" application="Orbis Tertius" version="1">${noteXml.join('')}</en-export>`;
     if(encoder.encode(xml).length>MAX_BYTES)throw new Error('내보내기 크기가 100MB를 넘습니다.');return{blob:new Blob([xml],{type:'application/xml'}),name:`${safeFilename(work.title)}.enex`};
   }
   const written=new Set<string>();
@@ -234,6 +234,6 @@ export async function exportInterchange(work:Work,documentIds:string[],metas:Ass
     total+=encoder.encode(output).length;if(total>MAX_BYTES)throw new Error('내보내기 크기가 100MB를 넘습니다.');zip.file(filenames.get(d.id)!,output);
   }
   zip.file('kosmos-transfer.json',JSON.stringify({format:'kosmos-transfer',version:1,workTitle:work.title,documents:docs.map(d=>({path:filenames.get(d.id),title:d.title,kind:d.kind,chapter:d.chapter,category:d.category,summary:d.summary}))},null,2));
-  zip.file('README-KOSMOS.txt','Kosmos 문서 교환용 파일입니다. 초안과 비공개 설정을 포함할 수 있습니다.\nNotion: 설정 → 가져오기 → ZIP. Obsidian: Markdown 묶음을 압축 해제하세요.\n복구 이력과 공개 판본은 포함하지 않습니다. 전체 보관은 Kosmos 전체 백업을 사용하세요.\n문서 내 이미지는 Kosmos에서는 별도 첨부로 가져오며, 표·데이터베이스·앱 고유 기능은 완전히 복원되지 않습니다.');
+  zip.file('README-ORBIS-TERTIUS.txt','Orbis Tertius 문서 교환용 파일입니다. 초안과 비공개 설정을 포함할 수 있습니다.\nNotion: 설정 → 가져오기 → ZIP. Obsidian: Markdown 묶음을 압축 해제하세요.\n복구 이력과 공개 판본은 포함하지 않습니다. 전체 보관은 Orbis Tertius 전체 백업을 사용하세요.\n문서 내 이미지는 Orbis Tertius에서는 별도 첨부로 가져오며, 표·데이터베이스·앱 고유 기능은 완전히 복원되지 않습니다.');
   return{blob:await zip.generateAsync({type:'blob',compression:'DEFLATE'}),name:`${safeFilename(work.title)}-${format}.zip`};
 }

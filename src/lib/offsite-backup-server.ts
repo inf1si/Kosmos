@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { S3Client,GetObjectCommand,PutObjectCommand } from '@aws-sdk/client-s3';
-import { backupConfiguration,backupReportSchema,createOffsiteBackup,type BackupStorage } from './offsite-backup';
+import { backupConfiguration,backupReportSchema,createOffsiteBackup,readOffsiteArchive,type BackupStorage } from './offsite-backup';
 import { workspaceSchema } from './model';
 import { googleDriveStorage } from './google-drive-backup';
 function connections(){
@@ -15,6 +15,7 @@ function connections(){
   return{config,storage,signal};
 }
 export async function latestOffsiteBackup(){const{config,storage}=connections();const raw=await storage.read(`${config.prefix}/${config.authorId}/latest.json`,4096);return raw?backupReportSchema.parse(JSON.parse(new TextDecoder().decode(raw))):null;}
+export async function downloadOffsiteBackup(){const{config,storage}=connections();const raw=await storage.read(`${config.prefix}/${config.authorId}/latest.json`,4096);if(!raw)throw new Error('정상 백업 기록이 없습니다.');const report=backupReportSchema.parse(JSON.parse(new TextDecoder().decode(raw)));return readOffsiteArchive(report,config.prefix,config.authorId,storage);}
 export async function runOffsiteBackup(){
   const{config,storage,signal}=connections();
   const client=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(input,init)=>fetch(input,{...init,signal})}});

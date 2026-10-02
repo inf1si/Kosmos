@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createOffsiteBackup,cronAuthorized,backupConfiguration,type BackupStorage } from '../src/lib/offsite-backup';
+import { createOffsiteBackup,cronAuthorized,backupConfiguration,readOffsiteArchive,type BackupStorage } from '../src/lib/offsite-backup';
 import { readBackup } from '../src/lib/backup';
 import { seedWorkspace } from '../src/lib/seed';
 import { uid } from '../src/lib/model';
@@ -9,6 +9,9 @@ test('외부 백업은 현재·과거 원고와 첨부를 저장하고 실제 �
   const stored=new Map<string,Uint8Array>(),events:string[]=[];const storage:BackupStorage={write:async(k,b)=>{events.push(`write:${k}`);stored.set(k,b);},read:async(k)=>{events.push(`read:${k}`);return stored.get(k)||null;}};
   const report=await createOffsiteBackup({snapshot:{data:state,version:9,revisions:[{id:uid(),namespace:'server',createdAt:new Date().toISOString(),label:'이력',data:old}]},ownerId:uid(),prefix:'kosmos',storage,downloadAsset:async()=>blob});assert.equal(report.verified,true);assert.equal(report.assets,1);assert(events[0].endsWith('.zip'));assert(events[1].startsWith('read:'));assert(events.at(-1)!.endsWith('latest.json'));
   const bytes=[...stored.entries()].find(([k])=>k.endsWith('.zip'))![1];const restored=await readBackup(new Blob([Uint8Array.from(bytes).buffer]));assert.deepEqual(restored.data,state);assert.deepEqual(restored.revisions[0].data,old);assert.equal(restored.assets[0].blob.size,4);
+  const key=report.archiveKey!,owner=key.split('/')[1];assert.deepEqual(await readOffsiteArchive(report,'kosmos',owner,storage),bytes);
+  await assert.rejects(()=>readOffsiteArchive({...report,archiveKey:key.replace(owner,uid())},'kosmos',owner,storage),/위치/);
+  await assert.rejects(()=>readOffsiteArchive({...report,sha256:'0'.repeat(64)},'kosmos',owner,storage),/무결성/);
 });
 test('외부 저장소 손상·누락 첨부 시 이전 성공 표시를 바꾸지 않는다',async()=>{
   const writes:string[]=[];const storage:BackupStorage={write:async(k)=>{writes.push(k);},read:async()=>new Uint8Array([1,2,3])};await assert.rejects(()=>createOffsiteBackup({snapshot:{data:seedWorkspace(),version:1,revisions:[]},ownerId:uid(),prefix:'kosmos',storage,downloadAsset:async()=>{throw new Error('missing');}}),/검증/);assert(!writes.some(k=>k.endsWith('latest.json')));

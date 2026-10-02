@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-02",
+  "timezone": "Asia/Seoul",
+  "version": "0.2.0",
+  "sourceCommit": "41114a172d22217d844a8b623b689c99a9a108e6",
+  "sourceDeployment": {
+    "environment": "Production",
+    "status": "Ready",
+    "buildSeconds": 32,
+    "deploymentId": "HZkBuZnYQuXLwmvWTDyKKgFPEuZf",
+    "productionUrl": "https://kosmos-ashy.vercel.app",
+    "uniqueUrl": "https://kosmos-kpf7sg1g4-kosmos24.vercel.app"
+  },
+  "productionUi": {
+    "homepageIntroductionDisplayed": true,
+    "privacyPageContentDisplayed": true,
+    "homepagePrivacyLinkVerified": true
+  },
+  "googlePreparation": {
+    "oauthAppAndWebClientCreatedByUser": true,
+    "initialValuesSavedByUserUsingCopy": true,
+    "initialJsonDownloadCompleted": false,
+    "replacementClientSecretSavedByUser": true,
+    "originalClientSecretDisabledUiVerified": true,
+    "replacementClientSecretEnabledUiVerified": true,
+    "brandingAndAudienceChangesExplicitlyApprovedByUser": true,
+    "brandingSaved": {
+      "homepageUrl": "https://kosmos-ashy.vercel.app/",
+      "privacyUrl": "https://kosmos-ashy.vercel.app/privacy",
+      "serviceDomain": "kosmos-ashy.vercel.app"
+    },
+    "declaredScopesSaved": ["https://www.googleapis.com/auth/drive.file"],
+    "audienceUserType": "External",
+    "audiencePublishingStatus": "In production",
+    "audienceUiLabelsObserved": ["프로덕션 단계", "테스트로 돌아가기"],
+    "brandVerificationConfirmed": false,
+    "oauthPlaygroundUrl": "https://developers.google.com/oauthplayground/",
+    "googleConsentCompletedReportedByUser": true,
+    "oauthPlaygroundReturnReportedByUser": true,
+    "oauthPlaygroundDomPresenceChecks": {
+      "stage": "Before initial authorization-code exchange",
+      "authorizationCodePresent": true,
+      "refreshTokenPresent": false,
+      "accessTokenPresent": false,
+      "checkScope": "Presence booleans only; credential, code and token values not captured"
+    },
+    "initialTokenExchangeErrorReportedByUser": "invalid_grant",
+    "tokenExchangeErrorBodyAndTokenValuesRead": false,
+    "tokenExchangeFailureCauseConfirmed": false,
+    "newAuthorizationAndRefreshTokenSavedReportedByUser": true,
+    "refreshTokenValueOrFieldReadAfterCompletionReport": false,
+    "tokenIssuanceIndependentlyVerified": false,
+    "oauthPlaygroundUserAction": "User reported reauthorization and refresh-token saving completed; value and token fields not read"
+  },
+  "vercelBackupConfiguration": {
+    "preparedEmptyFormKeys": [
+      "BACKUP_GOOGLE_CLIENT_ID",
+      "BACKUP_GOOGLE_CLIENT_SECRET",
+      "BACKUP_GOOGLE_REFRESH_TOKEN"
+    ],
+    "safeFieldLabelsAndButtonsOnlyRead": true,
+    "secretTypeSelected": true,
+    "productionSelected": true,
+    "userValueEntryAndSaveRequested": true,
+    "userValueEntryAndSaveReportedByUser": true,
+    "productionRedeployReportedByUser": true,
+    "saveConfirmed": false,
+    "remainingServerConfigurationCompleted": false
+  },
+  "remainingUnconfirmed": [
+    "User-reported Vercel save was not independently re-read because credential fields must remain private",
+    "Server service key, backup author, storage provider and cron secret configured",
+    "Actual Drive backup upload and stored-file verification",
+    "Drive ZIP download and isolated restoration",
+    "Scheduled backup execution"
+  ],
+  "ai": {
+    "keysAndModelsConfigured": false,
+    "liveProviderCallsVerified": false
+  },
+  "documentationUpdate": {
+    "scope": "Documents and nonsecret evidence only",
+    "sourceDeploymentDistinguishedFromLaterDocsCommit": true,
+    "laterDocsOnlyCommitDeploymentVerified": false,
+    "applicationChecksRepeatedForDocsOnlyChanges": false
+  },
+  "privacy": {
+    "credentialsTokensPrivateContactsGoogleIdsAndSecretSuffixesIncluded": false,
+    "publicSourceAndDeploymentIdentifiersOnly": true,
+    "userReportedTokenCompletionDistinguishedFromValueInspection": true
+  }
+}

@@ -1,0 +1,39 @@
+name: Verify app and backup encryption
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          corepack enable
+          corepack prepare pnpm@11.19.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm typecheck
+          pnpm test
+          pnpm build
+      - name: Real age encryption and decryption round trip
+        shell: bash
+        run: |
+          set -eu
+          sudo apt-get update -qq
+          sudo apt-get install -y age
+          check_dir=$(mktemp -d)
+          trap 'rm -rf "$check_dir"' EXIT
+          age-keygen -o "$check_dir/test-identity" 2>/dev/null
+          age-keygen -y "$check_dir/test-identity" > "$check_dir/public"
+          printf 'Orbis Tertius encryption verification\n' > "$check_dir/original"
+          age -r "$(cat "$check_dir/public")" -o "$check_dir/archive.age" "$check_dir/original"
+          age -d -i "$check_dir/test-identity" -o "$check_dir/restored" "$check_dir/archive.age"
+          cmp "$check_dir/original" "$check_dir/restored"

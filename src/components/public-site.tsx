@@ -11,12 +11,12 @@ function usePublicData(initial:Publication[],localPreview:boolean){
   const [data,setData]=useState(initial);const [loading,setLoading]=useState(localPreview);
   useEffect(()=>{if(!localPreview)return;void db.workspaces.get('preview').then(row=>{const state=row?.data||seedWorkspace();setData(state.works.flatMap(w=>w.publications.filter(p=>p.id===w.activePublicationId)));}).finally(()=>setLoading(false));},[localPreview]);return{data,loading};
 }
-function PublicHeader({children}:{children?:ReactNode}){return <header className="public-header"><Link href="/library" className="public-brand"><BookOpen size={20}/>궤도 서재</Link><nav>{children}<Link className="studio-link" href="/studio">집필실</Link></nav></header>;}
+function PublicHeader({children}:{children?:ReactNode}){return <header className="public-header"><Link href="/library" className="public-brand"><BookOpen size={20}/>Orbis Tertius</Link><nav>{children}<Link className="studio-link" href="/studio">집필실</Link></nav></header>;}
 export function Library({initial,localPreview,error}:{initial:Publication[];localPreview:boolean;error?:string}){
   const {data,loading}=usePublicData(initial,localPreview);
   return <div className="public-site"><PublicHeader/><main className="library"><div className="library-intro"><span className="eyebrow">FICTION & WORLDS</span><h1>쓰여진 시간들.</h1><p>소설과 그 곁의 세계를 모아둔 서재.</p></div>{localPreview&&<div className="preview-label">기기 내 미리보기 · 예시 작품을 포함합니다</div>}{error&&<p role="alert">{error}</p>}
     {loading?<p className="muted">서재를 여는 중입니다.</p>:data.length?<div className="book-list">{data.map((p,i)=><article className="book-entry" key={p.id}><div className="book-number">{String(i+1).padStart(2,'0')}</div><div className="book-info"><span className="book-category">소설 · {p.scenes.length}개 장면</span><Link href={`/read/${p.workId}`}><h2>{p.title}</h2></Link><p className="book-subtitle">{p.subtitle}</p><p className="book-description">{p.description}</p><div className="book-actions"><Link href={`/read/${p.workId}`}>작품 읽기</Link><Link href={`/wiki/${p.workId}`}>설정집</Link><span>{new Date(p.publishedAt).toLocaleDateString('ko-KR')}</span></div></div><div className="book-excerpt"><span>첫 문장</span><p>{plainText(p.scenes[0].content).split('\n')[0]}</p></div></article>)}</div>:<div className="empty-library"><h2>아직 공개한 작품이 없습니다.</h2><p>첫 작품이 준비되면 이곳에서 읽을 수 있습니다.</p></div>}
-    <footer className="public-footer">궤도 서재 <span>소설 · 기록 · 설정</span></footer></main></div>;
+    <footer className="public-footer">Orbis Tertius</footer></main></div>;
 }
 function NoteLink({id,text,index}:{id:string;text:string;index:number}){
   const [open,setOpen]=useState(false);

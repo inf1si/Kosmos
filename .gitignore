@@ -5,3 +5,6 @@ node_modules/
 *.tsbuildinfo
 .vercel/
 test-results/
+backup-output/
+*.agekey
+*.age

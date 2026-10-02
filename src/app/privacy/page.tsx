@@ -3,17 +3,17 @@ import Link from 'next/link';
 import styles from '../public-info.module.css';
 
 export const metadata: Metadata = {
-  title: '개인정보 및 데이터 이용 안내 · Kosmos',
-  description: '궤도 서재의 원고 저장, Google Drive 백업, 선택적 AI 검토에 대한 데이터 이용 안내.',
+  title: '개인정보 및 데이터 이용 안내 · Orbis Tertius',
+  description: 'Orbis Tertius의 원고 저장, Google Drive 백업, 선택적 AI 검토에 대한 데이터 이용 안내.',
 };
 
 export default function PrivacyPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <Link className={styles.brand} href="/" aria-label="Kosmos 궤도 서재 홈">
+        <Link className={styles.brand} href="/" aria-label="Orbis Tertius 홈">
           <span className={styles.brandMark} aria-hidden="true">◌</span>
-          궤도 서재 <span className={styles.brandEnglish}>Kosmos</span>
+          Orbis Tertius
         </Link>
         <nav aria-label="주 메뉴">
           <Link href="/library">서재</Link>
@@ -24,9 +24,9 @@ export default function PrivacyPage() {
       <main className={styles.document}>
         <p className={styles.eyebrow}>DATA USE</p>
         <h1>개인정보 및<br className={styles.mobileBreak} /> 데이터 이용 안내</h1>
-        <p className={styles.updated}>최종 수정: 2026년 10월 1일</p>
+        <p className={styles.updated}>최종 수정: 2026년 10월 2일</p>
         <p className={styles.documentLead}>
-          Kosmos(궤도 서재)는 개인 소설 집필과 작품 공개를 위한 사이트입니다.
+          Orbis Tertius는 개인 소설 집필과 작품 공개를 위한 사이트입니다.
           이 페이지는 현재 구현된 저장·백업·AI 기능이 어떤 데이터를 처리하는지 설명합니다.
           Google Drive 백업과 AI 검토는 연결 설정을 완료한 경우에만 실행됩니다.
         </p>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
           <p>
             Google 계정 연결은 선택 사항이며, 클라우드에 저장된 원고를 별도로 보관하기 위해 사용합니다.
             연결 시 요청하는 권한은 <code>drive.file</code> 하나입니다.
-            Kosmos는 자신이 만든 백업 폴더와 파일을 조회·생성·읽기·갱신하며,
+            Orbis Tertius는 자신이 만든 백업 폴더와 파일을 조회·생성·읽기·갱신하며,
             Google Drive의 일반 문서나 사진을 전체 검색하지 않습니다.
           </p>
           <p>
@@ -64,7 +64,7 @@ export default function PrivacyPage() {
             백업은 연결한 Google 계정의 저장 공간을 사용합니다.
           </p>
           <p>
-            Google 계정의 앱 연결 관리에서 Kosmos의 접근 권한을 취소할 수 있습니다.
+            Google 계정의 앱 연결 관리에서 Orbis Tertius의 접근 권한을 취소할 수 있습니다.
             취소 후에는 새로운 Drive 백업을 계속할 수 없지만, 이미 만들어진 파일이 자동으로 삭제되지는 않습니다.
             자동 삭제나 보관 기간에 따른 정리는 구현되어 있지 않으므로, 기존 백업은 Google Drive에서 직접 관리해야 합니다.
           </p>
@@ -102,16 +102,16 @@ export default function PrivacyPage() {
             클라우드 원고, 복구 이력과 외부 백업은 각각 따로 관리해야 합니다.
           </p>
           <p>
-            기능 문의와 오류 제보는 <a href="https://github.com/inf1si/Kosmos/issues">Kosmos GitHub 저장소</a>에서 받습니다.
+            기능 문의와 오류 제보는 <a href="https://github.com/inf1si/Kosmos/issues">Orbis Tertius GitHub 저장소</a>에서 받습니다.
             공개 게시물에 비밀번호, 인증 키, 백업 파일이나 비공개 원고를 첨부하지 마세요.
           </p>
         </section>
 
-        <Link className={styles.quietLink} href="/">서재 소개로 돌아가기 <span aria-hidden="true">→</span></Link>
+        <Link className={styles.quietLink} href="/">홈으로 돌아가기 <span aria-hidden="true">→</span></Link>
       </main>
 
       <footer className={styles.footer}>
-        <span>Kosmos · 궤도 서재</span>
+        <span>Orbis Tertius</span>
         <div><Link href="/library">서재</Link><Link href="/studio">집필실</Link></div>
       </footer>
     </div>

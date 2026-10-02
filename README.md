@@ -1,20 +1,20 @@
-# 궤도 서재 — 개인 소설 집필·공개·설정집
+# Orbis Tertius — 개인 소설 집필·공개·설정집
 
-Next.js + Tiptap + Supabase 기반 개인 SF 소설 사이트의 첫 구현입니다. ‘궤도 서재’와 샘플 작품은 임시 이름입니다.
+Next.js + Tiptap + Supabase 기반 개인 SF 소설 사이트입니다. 사이트 이름은 Orbis Tertius이며 소개 문구는 사용하지 않습니다.
 
 **[전체 프로젝트 문서](docs/README.md)**에서 요구사항, 디자인 연구, 실제 구현, 개발 인수인계, 배포와 운영 절차를 확인할 수 있습니다.
 
 ## 현재 상태
 
-원고 편집·탭·2분할·작품별 문서·기기 저장·복구 이력·ZIP 백업·공개 판본·각주·설정 연결·독서 화면을 로컬에서 구현하고 검증했습니다. 서울 지역의 실제 Supabase 프로젝트에 최초 SQL을 적용하고 익명 접근 제한을 확인했습니다. Vercel 운영 배포와 작가 로그인·원고 저장·서버 변경 반영·첨부 업로드·샘플 게시를 확인했습니다. Notion·Evernote 등 외부 문서의 파일 가져오기·내보내기를 추가했습니다. OpenAI·Claude·Gemini 선택과 Google Drive 자동 백업 코드는 준비했으며 키·OAuth는 아직 미연결입니다.
+원고 편집·공개·설정집과 Notion·Evernote 파일 교환을 구현했습니다. 실제 작가 로그인·저장·첨부·샘플 게시와 Google Drive 백업 업로드·재다운로드 검증을 확인했습니다. 0.2.1에는 백업 파일 내려받기·별도 기기 복원 시험·실행 누락 감시 연결·암호화 DB와 첨부의 R2 백업 workflow를 추가했습니다. 실제 새 배포·R2 연결·DB 복원·알림 수신은 구분해 검증합니다. AI 키·모델은 미연결입니다.
 
 기기 미리보기의 원고는 현재 브라우저에 저장됩니다. 로컬 미리보기의 원고가 운영 사이트로 자동 이동하지는 않습니다. 운영 집필실은 별도 작가 계정으로 Supabase에 연결됩니다. 목표 기능과 실제 동작의 차이는 [구현 상태](docs/status.md)에 기록했습니다.
 
 운영 주소: [집필실](https://kosmos-ashy.vercel.app/studio) · [공개 서재](https://kosmos-ashy.vercel.app/library). 시험 공개판은 비활성화했고 현재 공개 작품은 없습니다.
 
-추가한 `/`는 집필·공개·작품별 설정을 설명하는 공개 홈페이지이며, `/privacy`는 원고 저장·Google Drive 백업·선택적 AI 검토의 실제 데이터 이용을 설명합니다. 이 변경의 TypeScript 검사·운영 빌드와 로컬 브라우저의 페이지 내용·안내 링크를 확인했습니다. 해당 페이지의 최신 운영 배포 확인은 아직 남아 있습니다.
+홈페이지는 Orbis Tertius 이름과 서재·집필실 링크만 표시합니다. `/privacy`는 실제 저장·Drive 백업·선택적 AI 데이터 처리를 안내합니다. 기존 source `41114a1`의 배포 확인과 이번 변경의 운영 배포 확인은 구분합니다.
 
-Google OAuth 앱과 웹 클라이언트는 사용자가 만들었고, 클라이언트 ID·비밀키는 사용자가 복사해 보관했습니다. JSON 다운로드는 완료하지 않았습니다. 원래 비밀키가 비공개 도구 결과에 포함되어 연결 전에 교체할 예정입니다. 앱은 External Testing 상태이며 Production 게시, Google 접근 승인·refresh token 발급, Vercel 서버 변수 입력과 실제 Drive 백업은 아직 완료하지 않았습니다.
+Google OAuth Production·drive.file·기존 키 비활성화를 확인했고 사용자가 refresh token과 서버 환경 변수를 입력했습니다. 운영 집필실에서 2026-10-02의 Drive 백업과 저장 후 무결성 확인 기록을 확인했습니다. 값 자체를 문서나 채팅에 기록하지 않습니다. [백업 보강·연결·복원 절차](docs/disaster-recovery.md).
 
 ## 빠른 실행
 
@@ -32,6 +32,7 @@ pnpm dev
 - [작가 사용 안내](docs/user-guide.md): 작품·문서·분할·각주·설정·게시.
 - [백업·복구](docs/backup-restore.md): 실제 첨부 포함 ZIP, 복구 이력, 원고 이동.
 - [외부 문서 교환](docs/import-export.md): Notion ZIP·ENEX·MD·HTML 등.
+- [DB·첨부 암호화 백업과 복원 훈련](docs/disaster-recovery.md).
 - [Drive 자동 백업](docs/offsite-backup.md) · [Google·AI 연결 순서](docs/service-connection.md).
 - [환경 설정·배포](docs/setup-deployment.md): Supabase 프로젝트·작가 권한·환경 변수·Vercel.
 - [Kosmos main 교체](docs/repository-transition.md): 기존 Astro 코드 보존과 Next.js 소스 교체.

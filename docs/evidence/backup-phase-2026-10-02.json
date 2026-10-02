@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-02",
+  "drive": {
+    "earlierSuccessAtKst": "2026-10-02T04:58:49+09:00",
+    "manualSuccessAtKst": "2026-10-02T21:47:36+09:00",
+    "documents": 9,
+    "assets": 1,
+    "approximateMiB": 0.02,
+    "uploadedArchiveVerifiedByServer": true,
+    "indexedDbRestoreDrillVerified": false
+  },
+  "localChecks": {
+    "typecheck": true,
+    "testsPassed": 28,
+    "productionBuild": true
+  },
+  "pending": [
+    "production deployment of 0.2.1",
+    "R2 configuration",
+    "real database dump and age encryption",
+    "database restore drill",
+    "missing-heartbeat notification receipt"
+  ],
+  "containsCredentials": false
+}

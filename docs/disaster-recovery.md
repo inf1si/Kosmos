@@ -1,0 +1,95 @@
+# Orbis Tertius 백업 보강과 연결 절차
+
+기준: 2026-10-02 · 0.2.1. 앱 ZIP, DB 복구용 암호화 파일, Markdown 사본은 각각 다른 목적이다. 새 DB 백업의 첫 복원 훈련을 통과하기 전 기존 Drive ZIP을 유지한다.
+
+## 현재 확인한 것
+
+- 운영 집필실에서 2026-10-02 04:58:49 KST의 정상 백업 표시를 확인했다. 표시만으로 cron 실행 로그까지 검증했다고 해석하지 않는다.
+- 21:47:36 KST에 수동 Drive 백업도 성공했다. 9개 문서·1개 첨부·약 0.02MB이며 서버 코드는 업로드 파일을 다시 읽어 ZIP·SHA-256을 검증한 뒤 성공 기록을 쓴다.
+- 0.2.1에 저장된 클라우드 백업의 다운로드, 별도 IndexedDB 공간 복원 시험, 36시간 초과 경고를 추가했다. 이번 변경의 실제 운영 배포·기기 저장소 복원 시험은 별도 확인 대상이다.
+- 암호화 DB·첨부 R2 실행 스크립트와 GitHub Actions workflow는 구현 단계다. 계정 연결, 실제 pg_dump·age 실행, R2 잠금·만료 정책, 복호화·DB 복원 훈련, 누락 알림의 실제 수신은 완료로 기록하지 않는다.
+
+## 이름 변경과 기존 데이터
+
+화면·페이지 제목·내보내기 표시는 Orbis Tertius로 변경하고 소개 문구를 제거했다. Drive에 앱이 만든 기존 폴더가 있으면 다음 새 백업 때 이름을 변경하며 새 폴더를 중복 생성하지 않는다. 기존 IndexedDB 이름·백업 format·교환 format·Drive appProperties·저장 prefix를 유지해 이전 파일과 기기 원고를 계속 읽는다. GitHub 저장소와 Vercel URL은 기존 주소다. Google OAuth 앱 표시명은 별도 콘솔 설정이다.
+
+## Drive ZIP 다운로드와 복원 시험
+
+집필실 → 백업과 복구 → 지금 클라우드 백업 → 저장된 백업 복원 시험.
+
+새 성공 기록에 파일 위치·SHA-256이 포함된다. 다운로드 API는 로그인한 허용 작가와 백업 소유자가 같아야 하고, 다른 소유자 경로·상태 파일·경로 이탈을 거절한다. 서버에서 ZIP을 검증한 뒤 내려준다. 예전 성공 기록은 새 백업을 한 번 만든 뒤 사용할 수 있다.
+
+복원 시험은 별도 임시 namespace에 원고·이력·첨부를 써서 다시 읽고 내용·첨부 해시를 비교한다. 현재 집필 workspace와 Supabase에는 쓰지 않고 시험 자료는 완료 뒤 정리한다. 이 시험은 앱 데이터의 기기 복원이다. 서버의 로그인·RLS·Storage 복원과 구분한다.
+
+Vercel 응답 제한 때문에 집필실 직접 다운로드는 4MiB 이하로 제한한다. 더 큰 ZIP은 Drive에서 직접 내려받는다. ZIP 생성 자체의 100MiB 한도와 다르다.
+
+## R2 버킷
+
+R2 Standard의 무료 제공량은 계정 합계 월 10 GB-month다. 다른 버킷·사용자·서비스도 함께 계산한다. 무료 범위를 넘으면 과금되는 구독이며 코드의 제한은 Cloudflare 계정 전체의 과금 차단 장치가 아니다. [가격](https://developers.cloudflare.com/r2/pricing/).
+
+권장 버킷 이름: `orbis-tertius-backups`. 비공개, Standard, Public Development URL과 custom domain 비활성.
+
+| prefix | 삭제·덮어쓰기 잠금 | lifecycle 만료 |
+|---|---|---|
+| `daily/` | 30일 | 생성 후 35일 |
+| `monthly/` | 30일 | 생성 후 365일 |
+| `status/` | 없음 | 성공 기록 갱신 |
+
+월간 365일은 보존 계획이며 365일 삭제 방지라고 주장하지 않는다. R2 관리자가 lock 규칙을 제거할 수 있고 lock이 lifecycle보다 우선한다. [잠금](https://developers.cloudflare.com/r2/buckets/bucket-locks/).
+
+코드는 한 번의 DB·첨부 원본 합계 100MiB, 해당 버킷 저장량 9GB를 상한으로 둔다. 35일간 1회/일과 월간 12벌이면 최대 약 47벌이지만 수동 재실행·실패 후 남은 파일도 용량에 포함된다. 자동으로 원고 백업을 삭제하거나 상한을 늘리지 않는다.
+
+업로더는 **이 버킷 하나**의 Object Read & Write만 사용한다. bucket lock·lifecycle·공개 접근을 변경하는 관리자 토큰은 CI에 넣지 않는다.
+
+## GitHub 연결 값
+
+GitHub 저장소 Settings → Secrets and variables → Actions → Repository secrets에 사용자가 직접 입력한다. Vercel의 Drive 값을 R2로 바꾸지 않는다.
+
+| Secret | 확인·준비 위치 |
+|---|---|
+| `SUPABASE_DB_URL` | Supabase Connect → Session pooler 5432, 비밀번호 URL 인코딩, TLS 연결. Transaction pooler 제외 |
+| `SUPABASE_URL` | 현재 프로젝트 API URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | 현재 서버용 키. NEXT_PUBLIC로 넣지 않음 |
+| `R2_ACCOUNT_ID` | Cloudflare R2의 계정 ID |
+| `R2_BUCKET` | 비공개 버킷 이름 |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | 위 버킷만 허용하는 R2 토큰 |
+| `BACKUP_AGE_RECIPIENT` | 아래에서 만든 age 공개키만 |
+| `DB_BACKUP_HEALTHCHECK_URL` | DB 백업용 Healthchecks.io check의 ping URL |
+
+DB 접속 암호와 service role은 새로 발급할 필요 없이 보관한 현재 값을 입력한다. 이 값들은 채팅·문서·로그·소스에 넣지 않는다. Supabase CLI 2.119.0과 Postgres major 17을 고정하고 덤프의 서버·pg_dump 버전도 검사한다. 실제 프로젝트가 17이 아니라면 설정과 훈련을 맞추기 전 실행하지 않는다. [공식 백업·복원 절차](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
+
+## 암호화 키
+
+공식 age 도구를 설치한 사용자 컴퓨터에서 `age-keygen -o orbis-backup-identity.agekey`로 만든다. 파일은 개인키이므로 소스 폴더 밖에 보관한다. `age-keygen -y orbis-backup-identity.agekey`로 얻은 공개키만 CI에 입력한다. 개인키의 별도 사본을 안전한 독립 위치에 보관한다. 개인키가 없으면 DB·첨부를 복구할 수 없다. [age](https://github.com/FiloSottile/age).
+
+## 실제 실행과 보관 범위
+
+GitHub Actions에서 Encrypted database and assets backup → Run workflow로 첫 실행한다. 정기 실행은 `DB_BACKUP_ENABLED=true` Repository variable을 설정하기 전 비활성이다.
+
+스크립트는 CLI의 roles/schema/data SQL과 현재 앱의 public·auth·storage 데이터, Storage API의 파일 바이트·bucket 설정, 버전 관리된 SQL을 수집한다. managed schema를 새로 만드는 덤프가 아니며 Storage RLS 사용자 정의는 기존 migration의 해당 부분으로 따로 복원한다. Vector Storage·Vault·추가 managed service를 이 앱의 완전한 복구 범위로 주장하지 않는다.
+
+첨부 목록을 전후 비교해 업로드·삭제·수정이 발견되면 중단한다. 모든 SQL·첨부·파일별 해시·경로 대응 manifest를 ZIP에 넣고 전체 ZIP을 age로 암호화한다. 고유 파일명으로 `daily/`, UTC 매월 1일에는 `monthly/`에도 저장한다. 업로드 파일을 다시 읽어 해시를 비교한 뒤 잠금 밖의 `status/latest.json`을 갱신한다. 원고·덤프·연결 문자열을 로그나 Actions artifact에 남기지 않는다.
+
+## 첫 DB 복원 훈련
+
+복호화 파일은 별도 로컬 Supabase 환경에서 다룬다. Docker와 공식 CLI를 준비하고 실제 서버와 같은 Postgres major를 쓴다. 운영 DB에 시험 복원하지 않는다.
+
+1. R2의 암호화 파일을 내려받아 `age --decrypt --identity orbis-backup-identity.agekey --output restore.zip backup.zip.age`로 복호화한다.
+2. manifest의 각 파일 크기·SHA-256과 첨부 경로를 검증하고 ZIP을 별도 시험 디렉터리에 푼다.
+3. 공식 가이드의 역할·기본 권한·schema·data 복원 순서를 따른다. `ON_ERROR_STOP`, 단일 트랜잭션과 필요한 trigger 처리를 적용한다. 새 local stack에 public 테이블을 미리 중복 생성하지 않는다.
+4. managed Storage 정책은 원본 migration의 해당 정책만 재적용한다. `001_studio.sql` 전체를 이미 복원된 public schema에 다시 실행하지 않는다. Realtime publication도 확인한다.
+5. manifest의 bucket·원래 object 경로로 실제 파일을 Storage API에 복원하고 해시를 재검사한다. Storage 메타데이터 SQL만 복원해서 끝내지 않는다.
+6. 작가 로그인, 원고·각주·위키 연결, 서버 저장, 공개판 조회, 비공개 RLS, 첨부 접근을 실제로 확인한다. API 키·OAuth·Vercel 설정은 별도로 재연결한다.
+7. 날짜·도구 버전·결과만 검증 기록에 남긴 후 `DB_BACKUP_ENABLED=true`를 켠다. 성공 업로드 기록의 `restoreVerified:false`는 복원 훈련 완료 표시가 아니다.
+
+## 미실행 감시
+
+Healthchecks.io에서 Drive와 DB용 check를 따로 만들고 각 알림 연결을 시험한다. Drive: 24시간 주기 + 12시간 grace. DB: UTC `23 18 * * *` + 12시간 grace. DB 작업은 30분 제한이며 start 신호를 사용하므로 실행 중 grace도 맞춘다. 최초 정상 ping 후 알림을 활성화하고 fail 신호·36시간 누락을 시험한다. [감시 API](https://healthchecks.io/docs/http_api/).
+
+Vercel Production의 `BACKUP_HEALTHCHECK_URL`은 Drive check, GitHub의 `DB_BACKUP_HEALTHCHECK_URL`은 DB check를 쓴다. 시간·성공/실패만 전송하고 오류 본문·원고·계정 식별자는 보내지 않는다. URL 값은 공개하지 않는다. 설정된 URL이 있다는 것과 실제 알림을 수신했다는 것은 다르다.
+
+GitHub schedule은 지연·누락될 수 있고 공개 저장소가 60일 동안 활동이 없으면 비활성화될 수 있다. 외부 check가 바로 이 미실행을 감시한다. [GitHub 제약](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+## 다음 단계
+
+Drive ZIP의 운영 복원 시험, R2 연결·잠금·보존량 측정, DB 복원 훈련과 누락 알림을 먼저 완성한다. 이후 문서별 저장과 Yjs/DO 전환을 별도 migration으로 수행하고, 공개판·문단별 위키 공개 시점·Reader ISR을 보강한다. 원고를 두 저장 구조의 독립 원본으로 동시에 수정하지 않는다. Drive의 Markdown 자동 사본은 ZIP과 독립된 읽기용 출력으로 추가한다.
