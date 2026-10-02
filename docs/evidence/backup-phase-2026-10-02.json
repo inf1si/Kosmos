@@ -1,23 +1,41 @@
 {
   "date": "2026-10-02",
+  "sourceCommit": "88f40105cd9c7257c4a8ba9914d17245033d0923",
+  "production": {
+    "deploymentSuccessful": true,
+    "brandVerified": "Orbis Tertius",
+    "homeIntroRemoved": true
+  },
   "drive": {
     "earlierSuccessAtKst": "2026-10-02T04:58:49+09:00",
-    "manualSuccessAtKst": "2026-10-02T21:47:36+09:00",
+    "manualSuccessAtKst": "2026-10-02T22:24:33+09:00",
+    "works": 2,
     "documents": 9,
+    "revisions": 2,
     "assets": 1,
     "approximateMiB": 0.02,
     "uploadedArchiveVerifiedByServer": true,
-    "indexedDbRestoreDrillVerified": false
+    "serverDownloadVerified": true,
+    "indexedDbRestoreDrillVerified": true,
+    "currentWorkspacePreserved": true,
+    "separateDownloadedFilePathConfirmed": false
   },
-  "localChecks": {
+  "checks": {
     "typecheck": true,
     "testsPassed": 28,
-    "productionBuild": true
+    "productionBuild": true,
+    "ciAgeFixtureRoundTrip": true
+  },
+  "r2": {
+    "subscriptionActive": true,
+    "privateStandardBucketCreated": true,
+    "location": "APAC",
+    "retentionApplied": false,
+    "uploaderConnected": false
   },
   "pending": [
-    "production deployment of 0.2.1",
-    "R2 configuration",
-    "real database dump and age encryption",
+    "R2 retention and uploader credentials",
+    "real database dump and production age encryption",
     "database restore drill",
     "missing-heartbeat notification receipt"
   ],
