@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ThemeControls } from '@/components/theme-toggle';
 import styles from './public-info.module.css';
 
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className={styles.page}>
+    <div className={`public-site ${styles.page}`}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/" aria-label="Orbis Tertius 홈">
           <span className={styles.brandMark} aria-hidden="true">◌</span>
@@ -17,6 +18,7 @@ export default function Home() {
         <nav aria-label="주 메뉴">
           <Link href="/library">서재</Link>
           <Link href="/studio">집필실</Link>
+          <ThemeControls />
         </nav>
       </header>
 

@@ -143,7 +143,7 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     const assets=await db.assets.where('namespace').equals(namespace).toArray();
     const blob=await createBackup(current,history,assets);
     const date=new Date().toISOString();try{await db.transaction('rw',db.workspaces,async()=>{const row=await db.workspaces.get(namespace);if(row)await db.workspaces.put({...row,lastExportAt:date});});}catch{/* The archive is still usable when IndexedDB cannot store the timestamp. */}setLastExportAt(date);
-    return{blob,name:`궤도서재-전체백업-${new Date().toISOString().slice(0,10)}.zip`};
+    return{blob,name:`Orbis-Tertius-전체백업-${new Date().toISOString().slice(0,10)}.zip`};
   }
   async function importDocuments(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']}){
     await flush();const before=dataRef.current!;

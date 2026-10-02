@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ThemeControls } from '@/components/theme-toggle';
 import styles from '../public-info.module.css';
 
 export const metadata: Metadata = {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className={styles.page}>
+    <div className={`public-site ${styles.page}`}>
       <header className={styles.header}>
         <Link className={styles.brand} href="/" aria-label="Orbis Tertius 홈">
           <span className={styles.brandMark} aria-hidden="true">◌</span>
@@ -18,11 +19,11 @@ export default function PrivacyPage() {
         <nav aria-label="주 메뉴">
           <Link href="/library">서재</Link>
           <Link href="/studio">집필실</Link>
+          <ThemeControls />
         </nav>
       </header>
 
       <main className={styles.document}>
-        <p className={styles.eyebrow}>DATA USE</p>
         <h1>개인정보 및<br className={styles.mobileBreak} /> 데이터 이용 안내</h1>
         <p className={styles.updated}>최종 수정: 2026년 10월 2일</p>
         <p className={styles.documentLead}>

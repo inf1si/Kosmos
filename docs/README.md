@@ -12,6 +12,7 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 | 직접 원고를 쓰고 게시·복원하기 | [사용 안내](user-guide.md) |
 | 제품의 목적과 SF 집필 방향 이해 | [제품 요구사항](product.md) · [상세 목표 설계](product-spec.md) |
 | UI 참고 자료와 선택한 방향 확인 | [디자인 레퍼런스](design-references.md) |
+| 새 화면·기능을 기존 디자인에 맞추기 | [디자인 가이드](design-guide.md) |
 | 다른 개발자가 프로젝트 인수 | [현재 아키텍처](architecture.md) → [데이터 모델](data-model.md) → [동기화](synchronization.md) |
 | 계정 연결과 실제 배포 | [환경 설정·배포](setup-deployment.md) |
 | 기존 Kosmos main을 새 프로젝트로 교체 | [저장소 교체 절차](repository-transition.md) |
@@ -50,4 +51,4 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 
 프로젝트 루트에서 `pnpm install --frozen-lockfile`, `pnpm dev`를 실행한다. 필요한 Node.js 버전, 환경 변수, 운영 배포의 닫힌 집필실 정책은 [환경 설정·배포](setup-deployment.md)를 따른다. 신규 개발자는 프로젝트의 [AGENTS.md](../AGENTS.md)도 먼저 읽는다.
 
-공개 사이트의 기본 방향은 **문학 서재**이며, 집필실은 Muvel·Novela·Pensiv의 문서 탐색·분할·참조 패턴을 참고한다. 참고 서비스의 모든 기능을 구현했다는 뜻은 아니다.
+공개 사이트의 기본 방향은 **문학 서재**이며, 색·글꼴·테마·문구 규칙은 [디자인 가이드](design-guide.md)를 따른다. 집필실은 사이드바와 편집 패널 구조이며 Muvel·Novela·Pensiv의 문서 탐색·분할·참조 패턴을 참고한다. 참고 서비스의 모든 기능을 구현했다는 뜻은 아니다.
