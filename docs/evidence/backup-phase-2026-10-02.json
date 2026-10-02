@@ -30,11 +30,27 @@
     "subscriptionActive": true,
     "privateStandardBucketCreated": true,
     "location": "APAC",
-    "retentionApplied": false,
-    "uploaderConnected": false
+    "uploaderConnected": false,
+    "automaticArchiveExpiration": false,
+    "expiryFormCancelledWithoutSaving": true,
+    "lockRulesApplied": [
+      {
+        "prefix": "daily/",
+        "days": 30,
+        "enabled": true
+      },
+      {
+        "prefix": "monthly/",
+        "days": 30,
+        "enabled": true
+      }
+    ],
+    "retentionPolicy": "keep-completed-backups-without-automatic-deletion",
+    "capacityPolicy": "stop-new-uploads-and-preserve-existing-backups",
+    "budgetBytes": 9000000000
   },
   "pending": [
-    "R2 retention and uploader credentials",
+    "R2 uploader credentials",
     "real database dump and production age encryption",
     "database restore drill",
     "missing-heartbeat notification receipt"
