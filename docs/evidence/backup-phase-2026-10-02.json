@@ -47,13 +47,51 @@
     ],
     "retentionPolicy": "keep-completed-backups-without-automatic-deletion",
     "capacityPolicy": "stop-new-uploads-and-preserve-existing-backups",
-    "budgetBytes": 9000000000
+    "budgetBytes": 9000000000,
+    "githubSecretNamesPresent": [
+      "R2_ACCESS_KEY_ID",
+      "R2_SECRET_ACCESS_KEY",
+      "R2_ACCOUNT_ID",
+      "R2_BUCKET",
+      "BACKUP_AGE_RECIPIENT",
+      "SUPABASE_URL"
+    ],
+    "liveAuthenticationVerified": false
   },
   "pending": [
-    "R2 uploader credentials",
-    "real database dump and production age encryption",
+    "DB connection secrets and monitor URL",
+    "independent private-key copy",
+    "R2 live authentication and encrypted database backup",
     "database restore drill",
     "missing-heartbeat notification receipt"
   ],
-  "containsCredentials": false
+  "containsCredentials": false,
+  "localAgeKey": {
+    "version": "1.3.2",
+    "officialArchiveSha256Verified": true,
+    "keyGeneratedOutsideSource": true,
+    "fixtureRoundTripVerified": true,
+    "publicRecipientRegistered": true,
+    "privateKeyPrintedOrUploaded": false,
+    "independentKeyCopyConfirmed": false
+  },
+  "supabaseObserved": {
+    "region": "Seoul",
+    "postgresVersion": "17.11.0.002",
+    "sessionPoolerPort": 5432,
+    "passwordAvailableByUserReport": true
+  },
+  "connectionValidationChange": {
+    "directHostSupported": true,
+    "typecheck": true,
+    "targetedTestsPassed": 3
+  },
+  "dbCredentialHandoff": {
+    "helperSyntaxValidated": true,
+    "scriptExecutionPolicyErrorReportedByUser": true,
+    "individualCommandsProvidedWithoutPolicyChange": true,
+    "credentialValuesReadByAgent": false,
+    "dbUrlSecretRegistrationConfirmed": false,
+    "serviceRoleSecretRegistrationConfirmed": false
+  }
 }

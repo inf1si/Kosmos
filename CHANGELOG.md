@@ -7,6 +7,8 @@
 - Drive cron의 선택형 Healthchecks 신호, R2 암호화 DB·첨부 workflow와 9GB·100MiB 제한·재다운로드 검증·누락 감시 준비.
 - 운영 Drive 백업 성공과 저장 파일 검증 기록 확인. TypeScript·28개 테스트·운영 빌드 통과.
 - 운영 배포·Drive ZIP의 서버 다운로드와 임시 IndexedDB 복원 시험 확인. 실제 R2 업로더 연결·DB age 암호화·DB 복원 훈련·누락 알림 수신은 별도 검증. DB 예약 실행 기본 비활성.
+- Supabase Direct DB의 실제 db.<project>.supabase.co 호스트 형식을 허용하고, Session pooler 도메인과 함께 검증.
+- GitHub R2 설정·공개 암호화 키 등록과 공식 age 로컬 합성 파일 왕복 검증 기록 추가. Windows의 `.ps1` 실행 제한은 정책 변경 없이 개별 명령 입력으로 안내.
 - R2 완료 백업은 자동 만료·영구 삭제 없이 보관. 일별·월별 경로의 30일 삭제·덮어쓰기 잠금 저장 확인, 9GB 상한 초과 예정 시 기존 파일을 보존하고 새 업로드 중단.
 - [연결·복원 절차](docs/disaster-recovery.md).
 

@@ -138,3 +138,13 @@ TypeScript 검사·28개 자동 테스트·Next.js 운영 빌드 통과. Windows
 사용자의 영구 삭제 금지 요청에 따라 준비한 daily/ 35일·monthly/ 365일 만료 양식을 Save 없이 Cancel했다. 실제 lifecycle 표에는 정상 완료 객체를 만료시키는 규칙이 없고, 기본 미완료 multipart 업로드 7일 정리 규칙만 남아 있음을 확인했다. Bucket Lock Rules 표에서 daily/·monthly/ 각각 30 day(s), Enabled를 확인했다. 30일 뒤 파일을 삭제하는 설정은 아니다.
 
 기존 업로더는 고유 경로 쓰기·재읽기·성공 기록 갱신만 사용하며 원격 삭제 호출이 없다. 저장량 상한 초과 시 쓰기·성공 기록 갱신을 하지 않는 기존 테스트 결과를 따른다. 이번 변경은 Cloudflare 보호 설정과 문서이며 앱 코드·SQL을 변경하거나 앱 테스트를 반복하지 않았다. 실제 R2 인증·업로드·DB 복원과 누락 알림 수신은 아직 미완료다.
+
+
+## 2026-10-02 — R2 연결 설정 등록과 로컬 키 검증
+
+- 사용자가 R2 Access Key ID·Secret Access Key 보관과 GitHub 직접 저장 완료를 보고했다. GitHub 등록 목록에서 두 이름과 R2_ACCOUNT_ID·R2_BUCKET·BACKUP_AGE_RECIPIENT·SUPABASE_URL을 확인했다. 인증 비밀값은 읽거나 공개하지 않았다. 목록의 존재는 실제 R2 인증 성공을 대신하지 않는다.
+- 공식 age v1.3.2 Windows ZIP의 GitHub release digest와 다운로드 SHA-256 일치를 확인한 뒤 실행했다. 소스 밖에서 개인키를 만들고 합성 파일 암호화·복호화 뒤 바이트 비교를 통과했다. 개인키의 별도 장소 사본과 실제 백업 복호화는 아직 미확인이다.
+- 실제 Supabase 설정에서 서울과 Postgres 17.11.0.002, Session pooler 5432를 확인했다. 사용자 DB 비밀번호 보관은 값 없이 보고만 받았다.
+- Direct URI 호스트가 db.<project>.supabase.co이므로 기존 .supabase.com 전용 검사로 잘못 거절하는 문제를 수정했다. Supabase Direct와 session pooler 형식을 허용하고 다른 호스트는 거절한다. 변경 후 TypeScript와 백업 테스트 3개 통과. 전체 28개 테스트·빌드의 이전 결과와 이번 범위 검사를 구분한다.
+- DB URI 복사 도우미의 PowerShell 구문만 검사했다. 도우미를 실행하거나 DB 비밀번호를 입력·접속·클립보드 저장한 시험은 하지 않았다.
+- 사용자가 `.ps1` 실행 시 `PSSecurityException`을 보고했다. 실행 정책 변경 없이 PowerShell 창에 개별 명령을 직접 붙여 넣는 안내로 교체했다. 실제 DB URI·service role의 GitHub 저장 완료는 아직 확인하지 않았다.

@@ -15,7 +15,8 @@ export function configuration(env=process.env){
   const required=['SUPABASE_DB_URL','SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','R2_ACCOUNT_ID','R2_BUCKET','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY','BACKUP_AGE_RECIPIENT','DB_BACKUP_HEALTHCHECK_URL'];
   if(required.some(key=>!env[key]))throw new Error('DB 백업 연결 설정이 필요합니다.');
   const db=new URL(env.SUPABASE_DB_URL),api=new URL(env.SUPABASE_URL);
-  if(!['postgres:','postgresql:'].includes(db.protocol)||!db.password||!db.username||!db.hostname.endsWith('.supabase.com')||db.port!=='5432'||db.pathname!=='/postgres')throw new Error('Supabase direct 또는 session pooler 5432 연결을 사용하세요.');
+  const databaseHostAllowed=/^db\.[a-z0-9]+\.supabase\.co$/.test(db.hostname)||/^[a-z0-9-]+\.pooler\.supabase\.com$/.test(db.hostname);
+  if(!['postgres:','postgresql:'].includes(db.protocol)||!db.password||!db.username||!databaseHostAllowed||db.port!=='5432'||db.pathname!=='/postgres')throw new Error('Supabase direct 또는 session pooler 5432 연결을 사용하세요.');
   if(api.protocol!=='https:'||!api.hostname.endsWith('.supabase.co')||api.pathname!=='/'||api.username||api.password||api.search)throw new Error('Supabase URL을 확인하세요.');
   if(!/^[a-f0-9]{32}$/.test(env.R2_ACCOUNT_ID)||! /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(env.R2_BUCKET))throw new Error('R2 계정과 버킷을 확인하세요.');
   if(!/^age1[0-9a-z]{58}$/.test(env.BACKUP_AGE_RECIPIENT))throw new Error('age 공개키를 확인하세요. 개인키는 CI에 넣지 않습니다.');

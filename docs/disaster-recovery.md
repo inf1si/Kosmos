@@ -8,7 +8,9 @@
 - 21:47:36 KST에 수동 Drive 백업도 성공했다. 9개 문서·1개 첨부·약 0.02MB이며 서버 코드는 업로드 파일을 다시 읽어 ZIP·SHA-256을 검증한 뒤 성공 기록을 쓴다.
 - 소스 `88f40105cd9c7257c4a8ba9914d17245033d0923`의 Vercel 배포 성공과 운영 첫 화면·집필실의 Orbis Tertius 표시, 소개 문구 제거를 확인했다. GitHub CI에서 타입 검사·28개 테스트·운영 빌드와 age 암호화/복호화 합성 파일 비교도 통과했다. 합성 파일 검사는 실제 DB 복원을 대신하지 않는다.
 - 22:24:33 KST에 운영 Drive 백업을 다시 만들고 서버에서 ZIP을 다운로드해 별도 IndexedDB 공간에 복원했다. 작품 2개·문서 9개·이력 2개·첨부 1개를 다시 읽고 비교하는 시험이 통과했다. 현재 원고는 유지됐으며 브라우저의 별도 파일 저장 경로는 확보하지 못했다.
-- 암호화 DB·첨부 R2 실행 스크립트와 GitHub Actions workflow는 구현 단계다. R2 구독 활성화와 비공개 Standard/APAC 버킷 생성, daily/·monthly/ 각각 30일 삭제·덮어쓰기 잠금 저장을 확인했다. 사용자의 영구 삭제 금지 요청에 따라 준비했던 일별 35일·월별 365일 만료 규칙은 저장하지 않고 취소했다. 업로더 인증 연결, 실제 pg_dump·운영 파일 age 암호화, 복호화·DB 복원 훈련, 누락 알림의 실제 수신은 완료로 기록하지 않는다.
+- 암호화 DB·첨부 R2 실행 스크립트와 GitHub Actions workflow는 구현 단계다. R2 구독 활성화와 비공개 Standard/APAC 버킷 생성, daily/·monthly/ 각각 30일 삭제·덮어쓰기 잠금 저장을 확인했다. 사용자의 영구 삭제 금지 요청에 따라 준비했던 일별 35일·월별 365일 만료 규칙은 저장하지 않고 취소했다. GitHub에서 R2 계정·버킷·접근 키 두 항목과 암호화 공개키·Supabase URL의 등록된 이름을 확인했다. 실제 R2 인증·업로드, pg_dump·운영 파일 age 암호화, 복호화·DB 복원 훈련, 누락 알림의 실제 수신은 완료로 기록하지 않는다.
+- 공식 age v1.3.2 Windows 배포 파일의 GitHub SHA-256을 검사한 뒤 로컬 키를 만들고 합성 파일 암호화·복호화 비교를 통과했다. 개인키는 소스 폴더 밖에 두었고 출력·업로드하지 않았다. 개인키의 다른 장소 사본 보관은 아직 확인하지 않았다.
+- 실제 Supabase 대시보드에서 서울 리전과 Postgres 17.11.0.002, Session pooler 5432 주소를 확인했다. DB 비밀번호 보관은 사용자 보고이며 값은 읽지 않았다. Direct 주소가 db.<project>.supabase.co인 것도 확인해 업로더의 호스트 검증을 수정했다.
 
 ## 이름 변경과 기존 데이터
 
@@ -44,7 +46,7 @@ R2 Standard의 무료 제공량은 계정 합계 월 10 GB-month다. 다른 버�
 
 ## GitHub 연결 값
 
-GitHub 저장소 Settings → Secrets and variables → Actions → Repository secrets에 사용자가 직접 입력한다. Vercel의 Drive 값을 R2로 바꾸지 않는다.
+GitHub 저장소 Settings → Secrets and variables → Actions → Repository secrets를 사용한다. 인증 비밀은 사용자가 직접 입력·저장하며, 계정 ID·버킷 이름·공개 암호화 키·공개 API URL은 준비된 값으로 등록한다. Vercel의 Drive 값을 R2로 바꾸지 않는다.
 
 | Secret | 확인·준비 위치 |
 |---|---|
@@ -59,9 +61,11 @@ GitHub 저장소 Settings → Secrets and variables → Actions → Repository s
 
 DB 접속 암호와 service role은 새로 발급할 필요 없이 보관한 현재 값을 입력한다. 이 값들은 채팅·문서·로그·소스에 넣지 않는다. Supabase CLI 2.119.0과 Postgres major 17을 고정하고 덤프의 서버·pg_dump 버전도 검사한다. 실제 프로젝트가 17이 아니라면 설정과 훈련을 맞추기 전 실행하지 않는다. [공식 백업·복원 절차](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
 
+Windows에서 `.ps1` 도우미가 `PSSecurityException`으로 차단되면 실행 정책을 변경하지 않는다. `Restricted`는 개별 명령을 허용하므로 필요한 명령을 PowerShell 창에 직접 입력한다. DB 비밀번호는 `Read-Host -AsSecureString`으로 받고 URI 암호 부분을 `Uri.EscapeDataString`으로 인코딩한 뒤 완성한 접속 주소를 `Set-Clipboard`로 복사한다. 접속 주소는 화면에 출력하지 않고 GitHub Secret 칸에 직접 붙여 넣는다. 변환용 BSTR은 `ZeroFreeBSTR`, SecureString은 `Dispose`로 정리한다. 실제 비밀번호와 연결 주소가 없는 구문 검사와 사용자의 입력·저장 완료 확인은 구분한다. [Microsoft 실행 정책 안내](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies).
+
 ## 암호화 키
 
-공식 age 도구를 설치한 사용자 컴퓨터에서 `age-keygen -o orbis-backup-identity.agekey`로 만든다. 파일은 개인키이므로 소스 폴더 밖에 보관한다. `age-keygen -y orbis-backup-identity.agekey`로 얻은 공개키만 CI에 입력한다. 개인키의 별도 사본을 안전한 독립 위치에 보관한다. 개인키가 없으면 DB·첨부를 복구할 수 없다. [age](https://github.com/FiloSottile/age).
+이번 연결에서는 공식 age v1.3.2를 검증해 설치하고 로컬 키를 생성했다. 개인키 위치는 사용자 Documents/Codex 아래의 별도 private-backup-keys 폴더이며 소스 ZIP·저장소에는 포함하지 않는다. 다른 환경에서 새 키가 필요하면 공식 age 도구를 설치한 사용자 컴퓨터에서 `age-keygen -o orbis-backup-identity.agekey`로 만든다. 파일은 개인키이므로 소스 폴더 밖에 보관한다. `age-keygen -y orbis-backup-identity.agekey`로 얻은 공개키만 CI에 입력한다. **정기 실행 전 개인키의 별도 사본을 USB·다른 컴퓨터 등 안전한 독립 위치에 보관하고 실제로 읽을 수 있는지 확인한다.** 현재 이 별도 보관 확인은 남아 있다. 개인키가 없으면 DB·첨부를 복구할 수 없다. [age](https://github.com/FiloSottile/age).
 
 ## 실제 실행과 보관 범위
 
