@@ -73,3 +73,11 @@ Google OAuth 앱·웹 클라이언트는 사용자가 만들었고 새 비밀키
 사용자가 R2 키 두 값을 메모장에 보관하고 GitHub에 직접 저장했다. 값은 읽지 않고 R2_ACCESS_KEY_ID·R2_SECRET_ACCESS_KEY 이름의 존재를 확인했다. 계정·버킷·암호화 공개키·Supabase 공개 URL도 GitHub에 등록했다. 공식 age v1.3.2 SHA-256 확인, 로컬 키 생성과 합성 파일 암호화·복호화 비교를 통과했다. 개인키는 소스 밖에 보관했고 다른 장소 사본은 미확인이다. 실제 Supabase 서울·Postgres 17.11.0.002·Session pooler 5432를 확인했다. Direct 호스트의 실제 .supabase.co 형식도 허용하도록 백업 스크립트를 수정하고 타입 검사와 해당 백업 테스트 3개를 통과했다. DB 인증 두 값과 감시 URL, 실제 R2 업로드·DB 복원은 아직 남아 있다.
 
 DB 주소 복사 도우미의 `.ps1` 실행이 사용자 컴퓨터의 정책으로 차단되어, 정책 변경 없이 PowerShell 창에 명령을 직접 붙여 넣는 안내로 교체했다. DB 인증 두 값의 저장 완료는 아직 확인하지 않았다.
+
+이후 사용자의 저장 완료 보고와 GitHub 목록에서 SUPABASE_DB_URL·SUPABASE_SERVICE_ROLE_KEY 등록을 확인했다. 실제 값과 DB 접속 결과는 읽거나 검사하지 않았다. 수정 소스 e3a22fe의 CI·Vercel 배포가 성공했다. 사용자의 정정에 따라 외부 알림 연결을 계속 진행하며 Healthchecks 계정 로그인·감시 URL 등록·실제 알림 수신은 남아 있다. R2 첫 백업과 DB 복원 전이므로 정기 실행은 계속 비활성이다.
+
+Healthchecks 실제 로그인과 Drive 1일·12시간, DB UTC 18:23·12시간 감시 설정을 저장했다. 두 항목의 이메일 연결이 Ready to deliver 상태다. GitHub DB_BACKUP_HEALTHCHECK_URL·Vercel BACKUP_HEALTHCHECK_URL은 사용자에게 직접 입력·저장을 요청한 단계이며 신호 전송과 이메일 수신은 아직 확인하지 않았다.
+
+이후 사용자 저장 보고와 두 변수 이름 존재를 확인했다. 첫 DB 백업은 실패했으며 Healthchecks에 실패 신호가 도착했다. 비밀값을 출력하지 않는 단계 표시·도구 오류 분류를 추가하고 관련 테스트 4개와 타입 검사를 통과했다. R2 저장 성공·DB 복원과 실제 이메일 수신은 아직 확인하지 않았다. Drive의 새 감시 변수는 후속 Vercel 배포에 반영한다.
+
+사용자가 실패 알림 메일 수신을 보고했다. 누락된 실행의 알림과 R2 저장 성공·DB 복원은 별도 확인 범위다.

@@ -148,3 +148,11 @@ TypeScript 검사·28개 자동 테스트·Next.js 운영 빌드 통과. Windows
 - Direct URI 호스트가 db.<project>.supabase.co이므로 기존 .supabase.com 전용 검사로 잘못 거절하는 문제를 수정했다. Supabase Direct와 session pooler 형식을 허용하고 다른 호스트는 거절한다. 변경 후 TypeScript와 백업 테스트 3개 통과. 전체 28개 테스트·빌드의 이전 결과와 이번 범위 검사를 구분한다.
 - DB URI 복사 도우미의 PowerShell 구문만 검사했다. 도우미를 실행하거나 DB 비밀번호를 입력·접속·클립보드 저장한 시험은 하지 않았다.
 - 사용자가 `.ps1` 실행 시 `PSSecurityException`을 보고했다. 실행 정책 변경 없이 PowerShell 창에 개별 명령을 직접 붙여 넣는 안내로 교체했다. 실제 DB URI·service role의 GitHub 저장 완료는 아직 확인하지 않았다.
+
+그 뒤 사용자가 DB 인증 항목 저장 완료를 보고했고, GitHub 목록에서 SUPABASE_DB_URL·SUPABASE_SERVICE_ROLE_KEY를 포함한 백업 항목 8개 이름을 확인했다. 값 자체와 DB 접속 성공은 확인하지 않았다. 수정 소스 `e3a22fee08a77e5d8b4211112cfd462dc7b888c9`의 [CI](https://github.com/inf1si/Kosmos/actions/runs/37018953413)에서 타입 검사·전체 테스트·운영 빌드와 age 합성 파일 왕복 검증이 통과했고 [Vercel 배포](https://vercel.com/kosmos24/kosmos/8e2qdRFqNQQUMt1wqXdsFMGPZcVY) 성공도 확인했다. 외부 알림 연결은 사용자의 요청에 따라 계속 진행한다.
+
+사용자가 Healthchecks 로그인 완료를 보고했고 실제 계정의 감시 목록을 확인했다. Drive 항목은 1일 주기·12시간 허용 지연, DB 항목은 UTC `23 18 * * *`·12시간 허용 지연으로 저장했다. DB 상세에서 UTC와 실제 값을 확인했고 두 항목 모두 이메일 ON, 통합 목록에서 2 of 2·Ready to deliver를 확인했다. 감시 URL 값은 출력하거나 문서에 넣지 않고 GitHub·Vercel 입력 폼을 준비해 사용자에게 직접 저장을 요청했다. 실제 신호 전송과 이메일 수신은 미확인이다.
+
+사용자가 두 감시 주소 저장 완료를 보고했고 GitHub의 DB_BACKUP_HEALTHCHECK_URL 이름과 Vercel의 BACKUP_HEALTHCHECK_URL 이름 존재를 확인했다. [첫 DB 백업 실행](https://github.com/inf1si/Kosmos/actions/runs/37021489729)은 57초에 실패했다. Healthchecks의 DB 상태가 Down과 마지막 신호 수신을 표시했다. 실패 원인이 출력되지 않아 고정된 단계 이름과 비밀값 없는 도구 오류 분류를 추가했다. 변경 후 타입 검사·관련 테스트 4개가 통과했다. 이 검사에는 DB 실제 연결·R2 업로드 성공·전체 DB 복원 결과를 포함하지 않는다. 실제 이메일 수신은 사용자 확인을 기다린다.
+
+이후 사용자가 Healthchecks 실패 알림 메일 수신을 보고했다. 실패 신호 도착과 사용자 이메일 수신을 확인한 결과이며, 실행 자체가 누락된 상황의 알림 시험과 DB 백업 성공을 대신하지 않는다.

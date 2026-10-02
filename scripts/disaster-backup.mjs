@@ -10,6 +10,15 @@ import { S3Client,ListObjectsV2Command,PutObjectCommand,GetObjectCommand } from 
 
 const CAP=100*1024*1024;
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+class QuietToolError extends Error {}
+/** Classify tool errors without returning a connection string, password, SQL, or raw output. */
+export function toolFailureReason(stderr){
+  if(/password authentication failed|28P01|authentication failed/i.test(stderr))return 'DB 인증 실패';
+  if(/timed? ?out|timeout|connection refused|could not translate host|no route to host|network is unreachable/i.test(stderr))return 'DB 또는 도구 다운로드 연결 실패';
+  if(/permission denied|42501/i.test(stderr))return 'DB 또는 Docker 접근 권한 확인 필요';
+  if(/unknown flag|unrecognized option|unsupported.*version|version mismatch/i.test(stderr))return 'CLI 옵션 또는 버전 확인 필요';
+  return '도구 실행 실패';
+}
 /** @param {Record<string,string|undefined>} env */
 export function configuration(env=process.env){
   const required=['SUPABASE_DB_URL','SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','R2_ACCOUNT_ID','R2_BUCKET','R2_ACCESS_KEY_ID','R2_SECRET_ACCESS_KEY','BACKUP_AGE_RECIPIENT','DB_BACKUP_HEALTHCHECK_URL'];
@@ -29,10 +38,10 @@ export function configuration(env=process.env){
 /** Tool output may contain connection strings. Capture it privately and emit only fixed errors. */
 async function quietTool(command,args,label){
   return new Promise((resolveResult,reject)=>{
-    const child=spawn(command,args,{shell:false,windowsHide:true,stdio:['ignore','pipe','pipe']});let output='';
-    child.stdout.on('data',chunk=>{if(output.length<2*1024*1024)output+=chunk.toString();});child.stderr.on('data',()=>{});
-    child.on('error',()=>reject(new Error(`${label} 도구를 실행하지 못했습니다.`)));
-    child.on('close',code=>code===0?resolveResult(output):reject(new Error(`${label} 단계가 실패했습니다. 인증·Docker·도구 버전을 확인하세요.`)));
+    const child=spawn(command,args,{shell:false,windowsHide:true,stdio:['ignore','pipe','pipe']});let output='',stderr='';
+    child.stdout.on('data',chunk=>{if(output.length<2*1024*1024)output+=chunk.toString();});child.stderr.on('data',chunk=>{if(stderr.length<65536)stderr+=chunk.toString();});
+    child.on('error',()=>reject(new QuietToolError(`${label} 도구를 실행하지 못했습니다.`)));
+    child.on('close',code=>code===0?resolveResult(output):reject(new QuietToolError(`${label}: ${toolFailureReason(stderr)}.`)));
   });
 }
 export function sameInventory(a,b){
@@ -83,27 +92,34 @@ async function ping(config,event){
   const response=await fetch(`${config.heartbeat}${event==='success'?'':`/${event}`}`,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error('백업 감시 서비스에 실행 결과를 전달하지 못했습니다.');
 }
-async function buildEncrypted(config,directory){
+async function buildEncrypted(config,directory,onStage){
+  onStage('첨부 목록 확인');
   const client=createClient(config.apiUrl,config.serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
   const before=await inventory(client),zip=new JSZip(),files=[];let total=0;
   function add(path,bytes){total+=bytes.length;if(total>CAP)throw new Error('DB와 첨부의 총 백업 용량이 100MiB를 넘었습니다.');zip.file(path,bytes);files.push({path,bytes:bytes.length,sha256:sha(bytes)});}
   const common=['db','dump','--db-url',config.dbUrl,'--keep-comments'];
   for(const [name,flags] of [['roles.sql',['--role-only']],['schema.sql',[]],['data.sql',['--data-only','--use-copy','--schema','public,auth,storage','-x','storage.buckets_vectors','-x','storage.vector_indexes']]]){
+    onStage(`SQL 수집 ${name}`);
     const path=join(directory,name);await quietTool('supabase',[...common,...flags,'--file',path],name);add(name,await readFile(path));
   }
+  onStage('Postgres 버전 확인');
   const schema=zip.file('schema.sql'),schemaText=await schema.async('string');
   const versions=[...schemaText.matchAll(/Dumped (?:from database|by pg_dump) version (\d+)/g)].map(match=>Number(match[1]));
   if(versions.length<2||versions.some(version=>version!==config.major))throw new Error('서버와 pg_dump의 Postgres 17 버전 확인에 실패했습니다.');
+  onStage('첨부 바이트 수집');
   const assets=[];
   for(const entry of before.files){
     const result=await client.storage.from(entry.bucket).download(entry.path);if(result.error||!result.data||result.data.size!==entry.size)throw new Error('첨부가 누락되거나 백업 도중 바뀌었습니다.');
     const path=`storage/${sha(Buffer.from(`${entry.bucket}/${entry.path}`))}`,bytes=Buffer.from(await result.data.arrayBuffer());add(path,bytes);assets.push({...entry,archivePath:path,sha256:sha(bytes)});
   }
+  onStage('첨부 변경 확인');
   const after=await inventory(client);if(!sameInventory(before.files,after.files))throw new Error('백업 중 첨부가 바뀌었습니다. 원고 저장을 마친 뒤 다시 실행하세요.');
   // Custom storage policies are excluded from the default CLI schema dump: retain versioned migrations.
+  onStage('복원 migration 수집');
   const migrationRoot=fileURLToPath(new URL('../supabase/migrations/',import.meta.url));
   for(const name of await readdir(migrationRoot))if(/^\d+[a-zA-Z0-9_-]*\.sql$/.test(name))add(`migrations/${name}`,await readFile(join(migrationRoot,name)));
   zip.file('manifest.json',JSON.stringify({format:'orbis-tertius-disaster-backup',version:1,createdAt:new Date().toISOString(),postgresMajor:config.major,supabaseCli:'2.119.0',files,assets,buckets:before.buckets,restoreVerified:false},null,2));
+  onStage('age 암호화');
   const plain=join(directory,'archive.zip'),encrypted=join(directory,'archive.zip.age');
   await writeFile(plain,await zip.generateAsync({type:'nodebuffer',compression:'DEFLATE'}),{mode:0o600});
   await quietTool('age',['--recipient',config.recipient,'--output',encrypted,plain],'age 암호화');
@@ -112,20 +128,24 @@ async function buildEncrypted(config,directory){
 }
 export async function runBackup(){
   const config=configuration(),temporaryRoot=resolve(tmpdir()),directory=await mkdtemp(join(temporaryRoot,'orbis-db-'));
+  let phase='시작 신호';
+  const onStage=next=>{phase=next;console.log(`백업 단계: ${next}`);};
   try{
     await ping(config,'start');
-    const bytes=await buildEncrypted(config,directory),keys=retentionKeys();
+    const bytes=await buildEncrypted(config,directory,onStage),keys=retentionKeys();
+    onStage('R2 업로드와 재읽기');
     const s3=new S3Client({region:'auto',endpoint:`https://${config.account}.r2.cloudflarestorage.com`,credentials:{accessKeyId:config.accessKey,secretAccessKey:config.secretKey},maxAttempts:3});
     const storage={
       write:(key,body)=>s3.send(new PutObjectCommand({Bucket:config.bucket,Key:key,Body:body,ContentType:'application/octet-stream',IfNoneMatch:'*'})),
       read:async(key,max)=>{const object=await s3.send(new GetObjectCommand({Bucket:config.bucket,Key:key}));if(!object.Body||object.ContentLength!==max)throw new Error('R2 파일 크기를 확인하지 못했습니다.');return object.Body.transformToByteArray();},
       status:report=>s3.send(new PutObjectCommand({Bucket:config.bucket,Key:'status/latest.json',Body:JSON.stringify(report),ContentType:'application/json'})),
     };
-    await storeVerified(storage,keys,bytes,config.budget,await usedBytes(s3,config.bucket));await ping(config,'success');
+    await storeVerified(storage,keys,bytes,config.budget,await usedBytes(s3,config.bucket));onStage('성공 신호');await ping(config,'success');
     console.log('암호화 DB·첨부 백업 업로드와 재다운로드 해시 검증 완료. DB 복원 훈련은 별도입니다.');
-  }catch{
+  }catch(error){
     try{await ping(config,'fail');}catch{}
-    throw new Error('DB 백업 실패: 연결 설정·첨부 변경·용량·도구 버전·감시 연결을 확인하세요. 이전 백업은 유지됩니다.');
+    const detail=error instanceof QuietToolError?` ${error.message}`:'';
+    throw new Error(`DB 백업 실패 (${phase}).${detail} 연결 설정·첨부 변경·용량·도구 버전·감시 연결을 확인하세요. 이전 백업은 유지됩니다.`);
   }finally{
     const checked=resolve(directory);if(!checked.startsWith(`${temporaryRoot}/`)&&!checked.startsWith(`${temporaryRoot}\\`))throw new Error('임시 경로 확인 실패.');
     if(!checked.slice(temporaryRoot.length+1).startsWith('orbis-db-'))throw new Error('임시 경로 확인 실패.');

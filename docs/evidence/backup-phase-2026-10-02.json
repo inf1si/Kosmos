@@ -54,12 +54,15 @@
       "R2_ACCOUNT_ID",
       "R2_BUCKET",
       "BACKUP_AGE_RECIPIENT",
-      "SUPABASE_URL"
+      "SUPABASE_URL",
+      "SUPABASE_DB_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "DB_BACKUP_HEALTHCHECK_URL"
     ],
     "liveAuthenticationVerified": false
   },
   "pending": [
-    "DB connection secrets and monitor URL",
+    "Drive monitor redeployment and missed-run notification drill",
     "independent private-key copy",
     "R2 live authentication and encrypted database backup",
     "database restore drill",
@@ -91,7 +94,47 @@
     "scriptExecutionPolicyErrorReportedByUser": true,
     "individualCommandsProvidedWithoutPolicyChange": true,
     "credentialValuesReadByAgent": false,
-    "dbUrlSecretRegistrationConfirmed": false,
-    "serviceRoleSecretRegistrationConfirmed": false
+    "dbUrlSecretRegistrationConfirmed": true,
+    "serviceRoleSecretRegistrationConfirmed": true
+  },
+  "connectionFixRelease": {
+    "sourceCommit": "e3a22fee08a77e5d8b4211112cfd462dc7b888c9",
+    "ciSuccessful": true,
+    "productionDeploymentSuccessful": true
+  },
+  "externalMonitoring": {
+    "requestedByUserAfterCorrectingAccidentalChoice": true,
+    "accountLoginConfirmed": true,
+    "checksConfigured": [
+      {
+        "name": "Orbis Tertius Drive 백업",
+        "periodHours": 24,
+        "graceHours": 12,
+        "emailEnabled": true
+      },
+      {
+        "name": "Orbis Tertius DB 백업",
+        "cron": "23 18 * * *",
+        "timezone": "UTC",
+        "graceHours": 12,
+        "emailEnabled": true
+      }
+    ],
+    "emailIntegrationReady": true,
+    "pingUrlsRegistered": true,
+    "dbFailureSignalReceived": true,
+    "notificationReceiptVerified": true,
+    "notificationReceiptEvidence": "user-reported-email-received",
+    "missedRunNotificationReceiptVerified": false
+  },
+  "firstDbBackupAttempt": {
+    "runId": 37021489729,
+    "conclusion": "failure",
+    "r2StorageSuccessConfirmed": false
+  },
+  "safeFailureDiagnostics": {
+    "typecheck": true,
+    "targetedTestsPassed": 4,
+    "rawToolOutputPrinted": false
   }
 }

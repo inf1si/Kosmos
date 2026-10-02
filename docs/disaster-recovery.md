@@ -11,6 +11,9 @@
 - 암호화 DB·첨부 R2 실행 스크립트와 GitHub Actions workflow는 구현 단계다. R2 구독 활성화와 비공개 Standard/APAC 버킷 생성, daily/·monthly/ 각각 30일 삭제·덮어쓰기 잠금 저장을 확인했다. 사용자의 영구 삭제 금지 요청에 따라 준비했던 일별 35일·월별 365일 만료 규칙은 저장하지 않고 취소했다. GitHub에서 R2 계정·버킷·접근 키 두 항목과 암호화 공개키·Supabase URL의 등록된 이름을 확인했다. 실제 R2 인증·업로드, pg_dump·운영 파일 age 암호화, 복호화·DB 복원 훈련, 누락 알림의 실제 수신은 완료로 기록하지 않는다.
 - 공식 age v1.3.2 Windows 배포 파일의 GitHub SHA-256을 검사한 뒤 로컬 키를 만들고 합성 파일 암호화·복호화 비교를 통과했다. 개인키는 소스 폴더 밖에 두었고 출력·업로드하지 않았다. 개인키의 다른 장소 사본 보관은 아직 확인하지 않았다.
 - 실제 Supabase 대시보드에서 서울 리전과 Postgres 17.11.0.002, Session pooler 5432 주소를 확인했다. DB 비밀번호 보관은 사용자 보고이며 값은 읽지 않았다. Direct 주소가 db.<project>.supabase.co인 것도 확인해 업로더의 호스트 검증을 수정했다.
+- 이후 사용자 보고와 GitHub 목록에서 DB URI·service role 항목 이름 등록도 확인했다. 이 이름의 존재는 실제 DB 인증 성공을 의미하지 않는다. 외부 감시는 사용자의 정정된 선택에 따라 Healthchecks 연결을 진행하며 로그인·URL 등록·수신 시험은 남아 있다.
+
+GitHub Actions는 Supabase의 DB·Auth·설정과 Storage 파일을 수집해 암호화하는 실행 환경이다. GitHub Secrets에는 접속 설정을 두고 완성된 암호화 백업 파일은 R2에 보관한다. 저장소 소스의 migration SQL도 복원용으로 함께 넣지만, 주된 백업 대상은 운영 DB·원고·첨부다.
 
 ## 이름 변경과 기존 데이터
 
@@ -88,6 +91,10 @@ GitHub Actions에서 Encrypted database and assets backup → Run workflow로 �
 7. 날짜·도구 버전·결과만 검증 기록에 남긴 후 `DB_BACKUP_ENABLED=true`를 켠다. 성공 업로드 기록의 `restoreVerified:false`는 복원 훈련 완료 표시가 아니다.
 
 ## 미실행 감시
+
+실제 Healthchecks 계정에서 Drive·DB 항목을 만들고 아래 주기를 저장했다. 두 항목의 이메일 채널은 ON·Ready to deliver 상태다. 비공개 ping URL을 각각 GitHub·Vercel에 입력하는 사용자 작업과 신호·이메일 수신 검증은 아직 남아 있다.
+
+이후 사용자가 두 주소 저장을 보고했고 변수 이름을 확인했다. 첫 DB 백업이 실패한 뒤 Healthchecks에 실패 신호가 도착했지만 실제 메일 수신은 미확인이다. 업로더는 고정된 단계와 오류 분류만 출력한다. CLI 원문에는 연결 주소·SQL 등이 포함될 수 있으므로 원문을 공개 로그로 전환하지 않는다. Drive 감시 변수는 새 Vercel 배포에 반영한 뒤 실제 신호를 확인한다.
 
 Healthchecks.io에서 Drive와 DB용 check를 따로 만들고 각 알림 연결을 시험한다. Drive: 24시간 주기 + 12시간 grace. DB: UTC `23 18 * * *` + 12시간 grace. DB 작업은 30분 제한이며 start 신호를 사용하므로 실행 중 grace도 맞춘다. 최초 정상 ping 후 알림을 활성화하고 fail 신호·36시간 누락을 시험한다. [감시 API](https://healthchecks.io/docs/http_api/).
 
