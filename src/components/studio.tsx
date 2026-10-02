@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, Moon, MoreHorizontal, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, Sun, User, X } from 'lucide-react';
+import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, Moon, MoreHorizontal, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, Sun, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
 import { PlotBoard } from './plot-board';
 import { WikiIcon } from './studio-icons';
-import { useSiteTheme } from './theme-toggle';
+import { useSitePalette, useSiteTheme } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
 import { AIReview } from './ai-review';
 import { NovelDocument, newDocument, plainText, statuses, wikiReferences } from '@/lib/model';
@@ -72,13 +72,13 @@ export function Studio(){
   function moveDoc(direction:number){const next=siblings[position+direction];if(!next)return;s.update(state=>({...state,works:state.works.map(w=>{if(w.id!==work.id)return w;const documents=[...w.documents];const a=documents.findIndex(d=>d.id===active.id),b=documents.findIndex(d=>d.id===next);[documents[a],documents[b]]=[documents[b],documents[a]];return {...w,documents};})}));}
   async function downloadAsset(id:string){try{const meta=s.state!.assets.find(a=>a.id===id)!;let blob=(await db.assets.get([s.namespace,id]))?.blob;if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${s.user}/${id}`);if(result.error)throw result.error;blob=result.data||undefined;}if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.createObjectURL(blob);const a=document.createElement('a');a.href=href;a.download=meta.name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);}catch(e){alert(e instanceof Error?e.message:'첨부를 열지 못했습니다.');}}
   const row=(d:NovelDocument,icon:ReactNode,meta:ReactNode,indent=false)=><div className={`tree-row ${indent?'indent':''} ${d.id===view?'selected':''}`} key={d.id}><button type="button" aria-current={d.id===view||undefined} onClick={()=>openDoc(d.id)}>{icon}<span className="tree-label">{d.title}</span>{meta}</button><IconButton label={`${d.title} 옆에서 열기`} onClick={()=>openDoc(d.id,true)}><Columns2 size={14}/></IconButton></div>;
-  const heading=(kind:NovelDocument['kind'],add:string)=><div className="tree-heading"><span>{kinds[kind]}<span>{docs.filter(d=>d.kind===kind).length}</span></span><IconButton label={add} onClick={()=>createDoc(kind)}><Plus size={14}/></IconButton></div>;
+  const heading=(kind:NovelDocument['kind'],add:string)=><div className="tree-heading"><span><i className="tree-number" aria-hidden="true">{String(Object.keys(kinds).indexOf(kind)+1).padStart(2,'0')}</i>{kinds[kind]}<span>{docs.filter(d=>d.kind===kind).length}</span></span><IconButton label={add} onClick={()=>createDoc(kind)}><Plus size={14}/></IconButton></div>;
   return <TooltipProvider><div className={`studio ${focus?'focus-mode':''}`}>
     {showSidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={()=>setSidebar(false)}/>}
     {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색">
-      <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link>
+      <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="work-switcher" ref={workMenuRef}>
-        <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/></button>
+        <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span></button>
         {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
       </div>
       <nav className="studio-tools" aria-label="작업 도구">
@@ -99,7 +99,7 @@ export function Studio(){
         <section className="tree-section" aria-label="메모 · 리서치">{heading('memo','메모 추가')}{docs.filter(d=>d.kind==='memo'&&matches(d)).map(d=>row(d,<StickyNote size={15}/>,null))}</section>
         {query&&!docs.some(matches)&&<p className="empty-text">검색 결과가 없습니다.</p>}
       </div>
-      <footer className="sidebar-footer"><span className="save-state" aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><ThemeButton/><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></footer>
+      <footer className="sidebar-footer"><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><PaletteButton/><ThemeButton/><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></footer>
     </aside>}
     <main className="studio-panel">
       <div className="panel-tabs">
@@ -128,7 +128,7 @@ export function Studio(){
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={{'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
         <RichEditor key={`${active.id}-${s.epoch}`} doc={active} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} appearances={appearances}
           heading={<DocHead doc={active} wiki={wiki} linked={linked.length} backlinks={backlinks.length} attachments={active.assetIds.length} readonly={readonly} open={properties} onToggle={()=>setProperties(v=>!v)} onPatch={patch=>patchDoc(active.id,patch)} onOpenBeside={id=>openDoc(id,true)} onReference={setReference}/>}
-          toolbarEnd={<><span className="char-count">{countChars(active).toLocaleString()}자<span> · 공백 제외</span></span>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 검토</button></>}/>
+          toolbarEnd={<><span className="char-count"><span className="tape-counter" aria-hidden="true">{String(countChars(active)).padStart(5,'0')}</span><span className="count-number">{countChars(active).toLocaleString()}</span>자<span className="count-suffix"> · 공백 제외</span></span>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 검토</button></>}/>
         {split&&<><div className="split-divider resize-handle" role="separator" aria-label="분할 편집 폭" aria-orientation="vertical" aria-valuenow={splitWidth} aria-valuemin={30} aria-valuemax={70} tabIndex={0} onPointerDown={e=>e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={e=>{if(e.buttons){const rect=e.currentTarget.parentElement!.getBoundingClientRect();setSplitWidth(Math.max(30,Math.min(70,(e.clientX-rect.left)/rect.width*100)));}}} onKeyDown={e=>{if(e.key==='ArrowLeft')setSplitWidth(v=>Math.max(30,v-2));if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="split-pane"><div className="split-heading"><span>참고 · {split.title}</span><IconButton label="분할 닫기" onClick={()=>setSplitId(null)}><X size={15}/></IconButton></div><RichEditor key={`${split.id}-${s.epoch}`} doc={split} onChange={content=>patchDoc(split.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} appearances={appearances}/></div></>}
       </div>
       {reference&&!focus&&<aside className="reference-panel" aria-label="참고 패널"><div className="reference-tabs" role="tablist" aria-label="참고 자료">{(['links','files','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={reference===p} onClick={()=>setReference(p)}>{p==='links'?'연결':p==='files'?'첨부':'AI'}</button>)}<IconButton label="참고 패널 닫기" onClick={()=>setReference(null)}><X size={15}/></IconButton></div><div className="reference-content">
@@ -143,6 +143,7 @@ export function Studio(){
 }
 
 function DocIcon({doc}:{doc:NovelDocument}){return doc.kind==='wiki'?<WikiIcon category={doc.category} size={14}/>:doc.kind==='memo'?<StickyNote size={14}/>:<FileText size={14}/>;}
+function PaletteButton(){const [palette,setPalette]=useSitePalette();const label=palette==='cassette'?'보라 테마로 전환':'카세트 테마로 전환';return <IconButton label={label} className="icon-button palette-button" onClick={()=>setPalette(palette==='cassette'?'violet':'cassette')}>{palette==='cassette'?<span className="palette-swatch" aria-hidden="true"/>:<CassetteTape size={15}/>}</IconButton>;}
 function ThemeButton(){const [theme,setTheme]=useSiteTheme();const label=theme==='dark'?'라이트 모드로 전환':'다크 모드로 전환';return <IconButton label={label} className="icon-button theme-button" onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?<Sun size={15}/>:<Moon size={15}/>}</IconButton>;}
 
 /** The title is committed while typing but never left empty; Enter moves into the manuscript. */
