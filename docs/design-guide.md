@@ -1,6 +1,6 @@
 # 디자인 가이드
 
-기준일: 2026-10-02. 새 화면이나 기능을 추가할 때 기존 화면과 같은 색·글꼴·간격·문구를 쓰기 위한 규칙이다. 화면 시안은 작가 계정의 [디자인 캔버스](https://claude.ai/artifact/8JQvgoZDiTun4ZQ4Cp8FEW)(비공개)에, 네 테마의 토큰과 컴포넌트 미리보기는 [디자인 시스템](https://claude.ai/artifact/XVVsdiqKsa5D99pgd6gc1P)(비공개, 커밋 `949ae3f` 기준)에 있고, 참고 서비스 연구는 [디자인 레퍼런스](design-references.md)에 있다.
+기준일: 2026-10-02. 새 화면이나 기능을 추가할 때 기존 화면과 같은 색·글꼴·간격·문구를 쓰기 위한 규칙이다. 화면 시안은 작가 계정의 [디자인 캔버스](https://claude.ai/artifact/8JQvgoZDiTun4ZQ4Cp8FEW)(비공개)에, 네 테마의 토큰과 컴포넌트 미리보기는 [디자인 시스템](https://claude.ai/artifact/XVVsdiqKsa5D99pgd6gc1P)(비공개, 커밋 `949ae3f` 기준, 사이버 없음)에 있고, 참고 서비스 연구는 [디자인 레퍼런스](design-references.md)에 있다. 두 아티팩트는 레포 밖에 있어 다른 도구에서는 열리지 않을 수 있으며, 값이 다르면 이 문서와 CSS가 기준이다.
 
 ## 1. 적용 상태
 
