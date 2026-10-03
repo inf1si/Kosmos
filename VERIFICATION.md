@@ -9,7 +9,9 @@
 - iframe 검증은 합성 localhost 개발 서버에서만 임시 SAMEORIGIN 헤더를 사용했다. 임시 페이지를 제거하고 기존 `X-Frame-Options: DENY` 설정을 복원했다. 의존성·lockfile·운영 보안 헤더는 변경하지 않는다.
 - 운영 Supabase에 `002`를 적용했고 `preserve_document_navigation`의 활성 상태 `O`를 확인했다. 기존 payload와 작가 권한은 변경하지 않았다.
 
-[문서 트리 사용법](docs/document-navigation.md), [측정 결과](docs/evidence/document-navigation-2026-10-03.json). 최종 TypeScript 검사·63개 테스트·Next.js 운영 빌드가 통과했다. 로컬 의존성 junction 때문에 `--webpack`으로 빌드했으며 의존성·lockfile은 변경하지 않았다. main 배포 결과는 완료 후 이 기록에 추가한다.
+[문서 트리 사용법](docs/document-navigation.md), [측정 결과](docs/evidence/document-navigation-2026-10-03.json). 최종 TypeScript 검사·63개 테스트·Next.js 운영 빌드가 통과했다. 로컬 의존성 junction 때문에 `--webpack`으로 빌드했으며 의존성·lockfile은 변경하지 않았다. 기능 소스 [`c3f26c7`](https://github.com/inf1si/Kosmos/commit/c3f26c7680cfb21eaf3377c75962279e08fad54d)를 main에 커밋·푸시했다. [GitHub CI](https://github.com/inf1si/Kosmos/actions/runs/37117975763)(타입·63개 테스트·운영 빌드·age 왕복)와 [Vercel 배포](https://vercel.com/kosmos42/kosmos/EddbH1jvHApgEDynyvoPpc4smkSU)가 성공했다.
+
+로그인한 운영 집필실의 새 임시 탭에서 기존 12개 문서와 초기 폴더 2개·기본 대분류 3개, 하위 문서/폴더 메뉴·이동 폼의 전체 경로/형제 위치·대분류 이름/기본 종류 폼을 확인했다. 이동 폼에 자기 자신은 부모 후보로 나오지 않고, 취소 후 대분류 버튼으로 초점이 돌아왔다. 1280px 가로 넘침·콘솔 오류가 없었다. 실제 운영 문서 생성·이동·편집·게시·AI 호출은 하지 않았다. 사용자가 열어둔 기존 탭은 그대로 유지했다. 이 완료 기록의 문서 커밋은 위 기능 소스 배포와 구분한다.
 
 ## 2026-10-03 — 문서 그래프
 

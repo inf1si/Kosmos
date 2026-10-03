@@ -60,5 +60,37 @@
     "5000 document performance"
   ],
   "temporaryFilesRemoved": true,
-  "productionSecurityHeadersChanged": false
+  "productionSecurityHeadersChanged": false,
+  "finalChecks": {
+    "typecheck": "passed",
+    "tests": 63,
+    "failures": 0,
+    "localBuild": "passed (webpack; local dependency junction)",
+    "featureCommit": "c3f26c7680cfb21eaf3377c75962279e08fad54d",
+    "githubCI": {
+      "url": "https://github.com/inf1si/Kosmos/actions/runs/37117975763",
+      "conclusion": "success"
+    },
+    "vercel": {
+      "url": "https://vercel.com/kosmos42/kosmos/EddbH1jvHApgEDynyvoPpc4smkSU",
+      "state": "success"
+    }
+  },
+  "productionUI": {
+    "documents": 12,
+    "folderNodes": 2,
+    "sections": 3,
+    "width": 1280,
+    "scrollWidth": 1280,
+    "consoleErrors": 0,
+    "checks": [
+      "child document and folder menu",
+      "move path and sibling position form",
+      "self excluded as parent",
+      "custom section name and default kind form",
+      "cancel returns focus"
+    ],
+    "manuscriptWrites": false,
+    "temporaryTabClosed": true
+  }
 }
