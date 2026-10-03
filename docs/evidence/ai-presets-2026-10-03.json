@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-03",
+  "environment": "localhost synthetic Auth/PostgREST, no real manuscript or AI provider calls",
+  "sourceCommit": "eb009f6f0ebb4ea8343505cbe3e0ec54a7da4a35",
+  "palettes": ["violet", "cassette", "cyber"],
+  "modes": ["light", "dark"],
+  "desktop": {
+    "verifiedCombinations": 6,
+    "viewportWidth": 1280,
+    "documentScrollWidth": 1280,
+    "promptTextareaWidth": 783.33,
+    "presetSaveCopyResetControlsVisible": true
+  },
+  "mobile": {
+    "verifiedCombinations": 6,
+    "environment": "360x720 same-origin development iframe",
+    "viewportWidth": 360,
+    "documentScrollWidth": 360,
+    "promptTextareaWidth": 275.33,
+    "presetSaveCopyResetControlsVisible": true
+  },
+  "productionDatabase": {
+    "migration": "003_ai_preferences_guard.sql",
+    "trigger": "preserve_ai_preferences",
+    "enabled": "O",
+    "existingManuscriptsEdited": false
+  },
+  "notVerified": ["physical mobile devices", "real AI response quality", "AI usage cost"]
+}
+
