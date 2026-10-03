@@ -7,12 +7,12 @@ import Subscript from '@tiptap/extension-subscript';
 import Highlight from '@tiptap/extension-highlight';
 import { Plugin } from '@tiptap/pm/state';
 import { uid } from './model';
-import { htmlParagraphAttrs,paragraphCss } from './manuscript-format';
+import { htmlParagraphAttrs,paragraphCss,inlineFontSize,listStyleType,validListStyle } from './manuscript-format';
 import { searchPlugin } from './editor-search';
 
 const Note=Node.create({name:'footnote',priority:1000,group:'inline',inline:true,atom:true,
   addAttributes(){return {noteId:{default:null},text:{default:''}};},parseHTML(){return [{tag:'sup[data-note-id]'}];},
-  renderHTML({HTMLAttributes}){return ['sup',mergeAttributes({'data-note-id':HTMLAttributes.noteId,class:'editor-note',title:HTMLAttributes.text}), '*'];},
+  renderHTML({HTMLAttributes}){return ['sup',mergeAttributes({'data-note-id':HTMLAttributes.noteId,class:'editor-note'}), '*'];},
 });
 const WikiLink=Mark.create({name:'wikiLink',inclusive:false,addAttributes(){return {targetId:{default:null}};},
   parseHTML(){return [{tag:'span[data-wiki-id]'}];},renderHTML({HTMLAttributes}){return ['span',mergeAttributes({'data-wiki-id':HTMLAttributes.targetId,class:'editor-wiki-link'}),0];},
@@ -22,5 +22,13 @@ const StableBlocks=Extension.create({name:'stableBlocks',
   addProseMirrorPlugins(){return [new Plugin({appendTransaction(transactions,_old,state){if(!transactions.some(t=>t.docChanged))return;const tr=state.tr;const seen=new Set<string>();state.doc.descendants((node,pos)=>{if(!['paragraph','heading'].includes(node.type.name))return;const id=node.attrs.blockId as string;if(!id||seen.has(id)){const next=uid();seen.add(next);tr.setNodeMarkup(pos,undefined,{...node.attrs,blockId:next});}else seen.add(id);});return tr.docChanged?tr:null;}})];},
 });
 const ParagraphFormat=Extension.create({name:'paragraphFormat',addGlobalAttributes(){return [{types:['paragraph','heading'],attributes:Object.fromEntries(['lineHeight','indent','firstLineIndent','spaceBefore','spaceAfter'].map(key=>[key,{default:null,parseHTML:(el:HTMLElement)=>htmlParagraphAttrs(el.getAttribute('style')||'')[key]??null,renderHTML:(attrs:Record<string,unknown>)=>{const style=paragraphCss({[key]:attrs[key]});return style?{style}:{};}}]))}];}});
+// Only this editor's own size spans are read back, so text pasted from web pages keeps the manuscript size.
+const FontSize=Mark.create({name:'fontSize',
+  addAttributes(){return {size:{default:null,parseHTML:el=>inlineFontSize(Number(el.getAttribute('data-font-size')))??null,renderHTML:attrs=>{const size=inlineFontSize(attrs.size);return size?{'data-font-size':String(size),style:`font-size:${size}px`}:{};}}};},
+  parseHTML(){return [{tag:'span[data-font-size]'}];},renderHTML({HTMLAttributes}){return ['span',HTMLAttributes,0];},
+});
+const ListStyle=Extension.create({name:'listStyle',addGlobalAttributes(){return [{types:['bulletList','orderedList'],attributes:{listStyle:{default:null,
+  parseHTML:el=>{const type=el.tagName==='OL'?'orderedList':'bulletList',value=el.getAttribute('data-list-style');return value&&validListStyle(type,value)?value:null;},
+  renderHTML:attrs=>{const style=listStyleType({type:'bulletList',attrs})??listStyleType({type:'orderedList',attrs});return style?{'data-list-style':style,style:`list-style-type:${style}`}:{};}}}}];}});
 const SearchMarks=Extension.create({name:'searchMarks',addProseMirrorPlugins(){return [searchPlugin()];}});
-export const editorExtensions=[StarterKit,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,Note,WikiLink,StableBlocks,ParagraphFormat,SearchMarks];
+export const editorExtensions=[StarterKit,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];

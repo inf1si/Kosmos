@@ -2,10 +2,11 @@ import { z } from 'zod';
 import { conversationSchema } from './ai-conversation';
 import { navigationSchema, navigationIssues } from './document-navigation-schema';
 import { aiPreferencesSchema } from './ai-prompt-presets';
+import { inlineFontSize, validListStyle } from './manuscript-format';
 
 export type RichNode = { type: string; text?: string; attrs?: Record<string, unknown>; marks?: {type: string; attrs?: Record<string, unknown>}[]; content?: RichNode[] };
 const nodeTypes = new Set(['doc','text','paragraph','heading','bulletList','orderedList','listItem','hardBreak','blockquote','codeBlock','horizontalRule','footnote','table','tableRow','tableCell','tableHeader']);
-const markTypes = new Set(['bold','italic','strike','underline','code','link','wikiLink','superscript','subscript','highlight']);
+const markTypes = new Set(['bold','italic','strike','underline','code','link','wikiLink','superscript','subscript','highlight','fontSize']);
 export function isRichDocument(value: unknown): value is RichNode {
   let count = 0;
   function visit(n: unknown, depth: number): boolean {
@@ -14,6 +15,7 @@ export function isRichDocument(value: unknown): value is RichNode {
     if(v.attrs!==undefined&&(!v.attrs||typeof v.attrs!=='object'||Array.isArray(v.attrs)))return false;
     const attrs=v.attrs||{};
     if(['paragraph','heading'].includes(v.type))for(const [key,min,max] of [['lineHeight',1,3],['indent',0,8],['firstLineIndent',0,4],['spaceBefore',0,48],['spaceAfter',0,48]] as const){const number=attrs[key];if(number!==undefined&&number!==null&&(typeof number!=='number'||!Number.isFinite(number)||number<min||number>max))return false;}
+    if(['bulletList','orderedList'].includes(v.type)&&!validListStyle(v.type,attrs.listStyle))return false;
     if(v.type==='table'&&(!Array.isArray(v.content)||!v.content.length||v.content.some(c=>c?.type!=='tableRow')))return false;
     if(v.type==='tableRow'&&(!Array.isArray(v.content)||!v.content.length||v.content.some(c=>!['tableCell','tableHeader'].includes(c?.type))))return false;
     if(['tableCell','tableHeader'].includes(v.type)){
@@ -22,7 +24,7 @@ export function isRichDocument(value: unknown): value is RichNode {
       const widths=attrs.colwidth;if(widths!==undefined&&widths!==null&&(!Array.isArray(widths)||widths.length!==(attrs.colspan??1)||!widths.every(w=>typeof w==='number'&&Number.isInteger(w)&&w>0&&w<=2000)))return false;
     }
     return nodeTypes.has(v.type) && (v.text === undefined || (typeof v.text === 'string' && v.text.length <= 200000))
-      && (!v.marks || (Array.isArray(v.marks) && v.marks.every(m => m && typeof m==='object' && markTypes.has(m.type))))
+      && (!v.marks || (Array.isArray(v.marks) && v.marks.every(m => m && typeof m==='object' && markTypes.has(m.type) && (m.type!=='fontSize' || inlineFontSize(m.attrs?.size)!==undefined))))
       && (!v.content || (Array.isArray(v.content) && v.content.every(c => visit(c, depth + 1))));
   }
   return !!value && (value as RichNode).type === 'doc' && visit(value, 0);

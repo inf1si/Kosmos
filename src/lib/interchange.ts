@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { newDocument, uid, fromText, workspaceSchema, documentSchema, type RichNode, type NovelDocument, type Workspace, type Work, type AssetMeta } from './model';
 import { applyNavigation, defaultSections, resolveNavigation, subsetNavigation, type DocumentNavigation } from './document-navigation';
 import { navigationSchema, navigationIssues } from './document-navigation-schema';
-import { paragraphCss,htmlParagraphAttrs,cellSpan,tableColumns } from './manuscript-format';
+import { paragraphCss,htmlParagraphAttrs,cellSpan,tableColumns,inlineFontSize,listStyleType,validListStyle } from './manuscript-format';
 
 const MAX_BYTES=100*1024*1024, MAX_TEXT=5*1024*1024, MAX_PAGES=500;
 const encoder=new TextEncoder();
@@ -82,6 +82,7 @@ function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode
       if(/text-decoration[^:]*\s*:[^;]*underline/i.test(style))additions.push({type:'underline'});
       if(/text-decoration[^:]*\s*:[^;]*line-through/i.test(style))additions.push({type:'strike'});
       if(tag==='a'&&attrs.href){const href=safeLink(attrs.href);if(href)additions.push({type:'link',attrs:{href,target:'_blank',rel:'noopener noreferrer'}});else{const target=resolve(page.key,attrs.href);if(target&&bundle.pages.some(p=>p.key===target))additions.push({type:'wikiLink',attrs:{sourceKey:target}});else if(!attrs.href.startsWith('#'))warning(bundle,`${page.title}: 이동할 수 없는 링크를 일반 텍스트로 가져왔습니다.`);}}
+      const size=inlineFontSize(Number(attrs['data-font-size']));if(size)additions.push({type:'fontSize',attrs:{size}});
       if(attrs['data-kosmos-wiki'])additions.push({type:'wikiLink',attrs:{sourceKey:resolve(page.key,attrs['data-kosmos-wiki'])}});
       inline(n.children,[...marks,...additions],depth+1).forEach(v=>appendInline(out,v));
     }
@@ -95,7 +96,7 @@ function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode
       const tag=n.name;if(n.attribs.class?.split(' ').includes('footnotes'))continue;
       if(tag==='hr'){out.push({type:'horizontalRule'});continue;}
       if(tag==='pre'){out.push({type:'codeBlock',content:[{type:'text',text:text(n)}]});continue;}
-      if(tag==='ul'||tag==='ol'){const items=n.children.filter(v=>isElement(v)&&v.name==='li').map(li=>({type:'listItem',content:blocks(children(li),depth+1)}));if(items.length)out.push({type:tag==='ul'?'bulletList':'orderedList',attrs:tag==='ol'?{start:Number(n.attribs.start)||1}:{},content:items});continue;}
+      if(tag==='ul'||tag==='ol'){const items=n.children.filter(v=>isElement(v)&&v.name==='li').map(li=>({type:'listItem',content:blocks(children(li),depth+1)}));if(items.length){const type=tag==='ul'?'bulletList':'orderedList',style=n.attribs['data-list-style'],listStyle=style&&validListStyle(type,style)?{listStyle:style}:{};out.push({type,attrs:tag==='ol'?{start:Number(n.attribs.start)||1,...listStyle}:listStyle,content:items});}continue;}
       if(tag==='blockquote'){out.push({type:'blockquote',content:blocks(n.children,depth+1)});continue;}
       if(tag==='table'){
         const rows=elements(n,'tr').filter(row=>{let parent=row.parent;while(parent&&(!isElement(parent)||parent.name!=='table'))parent=parent.parent;return parent===n;}).map(row=>{
@@ -214,7 +215,7 @@ const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,
 const mdEsc=(s:string)=>s.replace(/[\\`*_{}\[\]<>#!|]/g,'\\$&');
 const safeFilename=(s:string)=>s.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,100)||'문서';
 function htmlRender(node:RichNode,links:Map<string,string>,notes:{id:string;text:string}[]):string {
-  if(node.type==='text'){let body=esc(node.text||'');for(const mark of node.marks||[]){const tags:Record<string,string>={bold:'strong',italic:'em',strike:'s',underline:'u',code:'code',superscript:'sup',subscript:'sub',highlight:'mark'};if(tags[mark.type])body=`<${tags[mark.type]}>${body}</${tags[mark.type]}>`;else if(mark.type==='link'){const href=safeLink(String(mark.attrs?.href||''));if(href)body=`<a href="${esc(href)}">${body}</a>`;}else if(mark.type==='wikiLink'){const href=links.get(String(mark.attrs?.targetId));if(href)body=`<a href="${esc(href)}">${body}</a>`;} }return body;}
+  if(node.type==='text'){let body=esc(node.text||'');for(const mark of node.marks||[]){const tags:Record<string,string>={bold:'strong',italic:'em',strike:'s',underline:'u',code:'code',superscript:'sup',subscript:'sub',highlight:'mark'};if(tags[mark.type])body=`<${tags[mark.type]}>${body}</${tags[mark.type]}>`;else if(mark.type==='fontSize'){const size=inlineFontSize(mark.attrs?.size);if(size)body=`<span data-font-size="${size}" style="font-size:${size}px">${body}</span>`;}else if(mark.type==='link'){const href=safeLink(String(mark.attrs?.href||''));if(href)body=`<a href="${esc(href)}">${body}</a>`;}else if(mark.type==='wikiLink'){const href=links.get(String(mark.attrs?.targetId));if(href)body=`<a href="${esc(href)}">${body}</a>`;} }return body;}
   if(node.type==='footnote'){notes.push({id:String(node.attrs?.noteId||uid()),text:String(node.attrs?.text||'')});return`<sup data-kosmos-note="${esc(String(node.attrs?.text||''))}"><a href="#note-${notes.length}">[${notes.length}]</a></sup>`;}
   const body=(node.content||[]).map(n=>htmlRender(n,links,notes)).join('');
   const tags:Record<string,string>={paragraph:'p',blockquote:'blockquote',bulletList:'ul',orderedList:'ol',listItem:'li',codeBlock:'pre',tableRow:'tr'};
@@ -227,12 +228,13 @@ function htmlRender(node:RichNode,links:Map<string,string>,notes:{id:string;text
     const width=Array.isArray(widths)&&widths.length===colspan&&widths.every(w=>typeof w==='number'&&Number.isInteger(w)&&w>0&&w<=2000)?` data-orbis-colwidth="${widths.join(',')}"`:'';
     return`<${tag} colspan="${colspan}" rowspan="${rowspan}"${width} style="border:1px solid currentColor;padding:6px;vertical-align:top">${body}</${tag}>`;
   }
-  if(node.type==='hardBreak')return'<br />';if(node.type==='horizontalRule')return'<hr />';if(node.type==='orderedList')return`<ol start="${Number(node.attrs?.start)||1}">${body}</ol>`;
+  if(node.type==='hardBreak')return'<br />';if(node.type==='horizontalRule')return'<hr />';const list=listStyleType(node),listAttrs=list?` data-list-style="${list}" style="list-style-type:${list}"`:'';
+  if(node.type==='orderedList')return`<ol start="${Number(node.attrs?.start)||1}"${listAttrs}>${body}</ol>`;if(node.type==='bulletList')return`<ul${listAttrs}>${body}</ul>`;
   return tags[node.type]?`<${tags[node.type]}>${body}</${tags[node.type]}>`:body;
 }
 function mdRender(node:RichNode,links:Map<string,string>,notes:string[]):string {
-  // CommonMark has no merged-cell or paragraph-format syntax. Raw HTML retains those values.
-  if(node.type==='table'||(['paragraph','heading'].includes(node.type)&&paragraphCss(node.attrs))){
+  // CommonMark has no merged-cell, paragraph-format, text-size or list-marker syntax. Raw HTML retains those values.
+  if(node.type==='table'||(['paragraph','heading'].includes(node.type)&&(paragraphCss(node.attrs)||node.content?.some(c=>c.marks?.some(m=>m.type==='fontSize'))))||(['bulletList','orderedList'].includes(node.type)&&listStyleType(node))){
     const htmlNotes=notes.map((text,i)=>({id:String(i),text})),before=htmlNotes.length,body=htmlRender(node,links,htmlNotes);notes.push(...htmlNotes.slice(before).map(n=>n.text));return body+'\n\n';
   }
   if(node.type==='text'){let s=mdEsc(node.text||'');for(const m of node.marks||[]){if(m.type==='bold')s=`**${s}**`;else if(m.type==='italic')s=`*${s}*`;else if(m.type==='strike')s=`~~${s}~~`;else if(m.type==='code'){const fence='`'.repeat(Math.max(1,...(node.text?.match(/`+/g)||[]).map(v=>v.length+1)));s=`${fence} ${(node.text||'')} ${fence}`;}else if(['underline','superscript','subscript','highlight'].includes(m.type)){const tag={underline:'u',superscript:'sup',subscript:'sub',highlight:'mark'}[m.type as 'underline'|'superscript'|'subscript'|'highlight'];s=`<${tag}>${s}</${tag}>`;}else{const href=m.type==='wikiLink'?links.get(String(m.attrs?.targetId)):m.type==='link'?safeLink(String(m.attrs?.href||'')):undefined;if(href)s=`[${s}](<${href.replace(/>/g,'%3E')}>)`;}}return s;}
@@ -251,7 +253,7 @@ export async function exportInterchange(work:Work,documentIds:string[],metas:Ass
   const getAsset=(id:string)=>{const meta=metas.find(m=>m.id===id),blob=assetMap.get(id);if(!meta||!blob||blob.size!==meta.size)throw new Error('첨부를 모두 내려받은 뒤 내보내세요.');return{meta,blob};};
   if(format==='enex'){
     const noteXml:string[]=[];
-    for(const d of docs){const notes:{id:string;text:string}[]=[];let body=htmlRender(d.content,new Map(),notes).replace(/<sup data-kosmos-note="[^"]*">([\s\S]*?)<\/sup>/g,'<sup>$1</sup>').replace(/<mark>/g,'<span style="background-color:yellow">').replace(/<\/mark>/g,'</span>').replace(/ data-orbis-colwidth="[^"]*"/g,'');const resources:string[]=[];
+    for(const d of docs){const notes:{id:string;text:string}[]=[];let body=htmlRender(d.content,new Map(),notes).replace(/<sup data-kosmos-note="[^"]*">([\s\S]*?)<\/sup>/g,'<sup>$1</sup>').replace(/<mark>/g,'<span style="background-color:yellow">').replace(/<\/mark>/g,'</span>').replace(/ data-(?:orbis-colwidth|font-size|list-style)="[^"]*"/g,'');const resources:string[]=[];
       for(const id of d.assetIds){const{meta,blob}=getAsset(id),bytes=new Uint8Array(await blob.arrayBuffer()),hash=SparkMD5.ArrayBuffer.hash(bytes.buffer);total+=bytes.length;body+=`<div><en-media type="${meta.type}" hash="${hash}" /></div>`;resources.push(`<resource><data encoding="base64">${base64(bytes)}</data><mime>${meta.type}</mime><resource-attributes><file-name>${esc(meta.name)}</file-name></resource-attributes></resource>`);}
       if(notes.length)body+=`<div><h2>각주</h2>${notes.map((n,i)=>`<p>${i+1}. ${esc(n.text)}</p>`).join('')}</div>`;
       if(d.summary)body+=`<div><h2>문서 요약</h2><p>${esc(d.summary)}</p></div>`;

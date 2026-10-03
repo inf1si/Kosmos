@@ -55,7 +55,7 @@ AI 답변의 선택 필드 promptPreset은 당시 ID·제목·revision을 남긴
 | 설정 | `wikiLink` mark, `targetId` | 설정 미리보기·설정집·등장 위치 |
 | 첨부 | 문서의 `assetIds` + 작업 공간의 `assets` | 파일 메타데이터와 실제 바이트 연결 |
 
-본문은 허용한 노드·mark 목록으로 검사한다. 표는 table → tableRow → tableCell/tableHeader → block 구조다. colspan·rowspan은 정수 1~40, colwidth 배열은 각 너비 1~2,000px와 colspan에 맞는 길이를 검사한다. 새 mark는 superscript·subscript·highlight다. 문단·제목의 선택 속성은 lineHeight 1~3, indent 0~8, firstLineIndent 0~4, spaceBefore/spaceAfter 0~48이며 null/미지정은 기존 기본값이다. 유한한 숫자와 허용 CSS 속성만 사용한다. 임의 HTML·플러그인은 지원하지 않는다. [편집 서식 계약](editor-tools.md).
+본문은 허용한 노드·mark 목록으로 검사한다. 표는 table → tableRow → tableCell/tableHeader → block 구조다. colspan·rowspan은 정수 1~40, colwidth 배열은 각 너비 1~2,000px와 colspan에 맞는 길이를 검사한다. 새 mark는 superscript·subscript·highlight와 선택한 글자 크기 `fontSize`(`size` 10~72, 0.5 단위)다. 글머리·번호 목록의 선택 속성 `listStyle`은 글머리 disc·circle·square, 번호 decimal·hangul·hangul-consonant·lower-alpha·upper-alpha·lower-roman만 허용하고 null/미지정은 기본 모양이다. 붙여넣은 번호 목록의 Tiptap `type`(a·A·i·I)은 `listStyle`이 없을 때만 표시에 쓴다. 문단·제목의 선택 속성은 lineHeight 1~3, indent 0~8, firstLineIndent 0~4, spaceBefore/spaceAfter 0~48이며 null/미지정은 기존 기본값이다. 유한한 숫자와 허용 CSS 속성만 사용한다. 임의 HTML·플러그인은 지원하지 않는다. [편집 서식 계약](editor-tools.md).
 
 새 노드는 기존 작업 공간 JSON·공개 장면 사본·전체 ZIP 복구 경로를 따른다. 형식 1과 IndexedDB 버전 1을 유지하며 SQL 마이그레이션은 없다. 신규 노드를 읽지 못하는 이전 클라이언트는 가져오기를 거절할 수 있으므로 편집·복원에는 최신 앱이 필요하다. 제목 변경은 ID를 바꾸지 않는다. 연결 ID의 전체 유효성 검사와 공개 전 깨진 링크 안내는 후속 보강 대상이다.
 

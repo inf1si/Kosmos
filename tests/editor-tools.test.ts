@@ -8,7 +8,7 @@ import { history,undo,closeHistory } from '@tiptap/pm/history';
 import { addRowAfter,addColumnAfter,mergeCells,splitCell,CellSelection } from '@tiptap/pm/tables';
 import { editorExtensions } from '../src/lib/editor-extensions';
 import { searchMatches,searchKey,searchPlugin } from '../src/lib/editor-search';
-import { paragraphCss,htmlParagraphAttrs } from '../src/lib/manuscript-format';
+import { paragraphCss,htmlParagraphAttrs,listStyleType } from '../src/lib/manuscript-format';
 import { parseEditorPreferences,validFontSize,manuscriptFonts } from '../src/lib/editor-preferences';
 import { isRichDocument,makePublication,footnotes,wikiReferences,type RichNode } from '../src/lib/model';
 import { textStatistics } from '../src/lib/text-statistics';
@@ -92,4 +92,21 @@ test('표 안의 통계는 셀 사이 어절 경계를 유지하고 글꼴·0.5p
   const table=formattedContent().content![2],stats=textStatistics(doc(table));assert.equal(stats.words,4);assert.equal(stats.paragraphs,3);
   assert.equal(manuscriptFonts.length,16);assert(validFontSize(10));assert(validFontSize(72));assert(validFontSize(22.5));assert(!validFontSize(9));assert(!validFontSize(72.5));assert(!validFontSize(20.1));assert(!validFontSize(Infinity));
   assert.equal(parseEditorPreferences('{"font":"hahmlet","size":22.5}').font,'hahmlet');assert.equal(parseEditorPreferences('{"size":22.5}').size,22.5);
+});
+test('선택한 글자 크기와 목록 모양은 검증되어 판본·교환 파일에 남는다',async()=>{
+  const list=(type:string,listStyle:string|null,...items:string[]):RichNode=>({type,attrs:{...(type==='orderedList'?{start:1}:{}),listStyle},content:items.map(v=>({type:'listItem',content:[paragraph(text(v))]}))});
+  const content=doc(paragraph(text('보통 '),text('큰 글자',[{type:'fontSize',attrs:{size:27}}])),list('bulletList','square','네모'),list('orderedList','hangul','가','나'),list('bulletList',null,'기본'));
+  assert(isRichDocument(content));schema.nodeFromJSON(content).check();
+  for(const size of [9.5,72.5,20.2,'24px',null])assert(!isRichDocument(doc(paragraph(text('값',[{type:'fontSize',attrs:{size}}])))),String(size));
+  assert(!isRichDocument(doc(list('orderedList','square','x'))));assert(!isRichDocument(doc(list('bulletList','url(x)','x'))));
+  assert.equal(listStyleType({type:'orderedList',attrs:{type:'a'}}),'lower-alpha');assert.equal(listStyleType({type:'orderedList',attrs:{type:'a',listStyle:'hangul'}}),'hangul');assert.equal(listStyleType({type:'bulletList',attrs:{listStyle:'decimal'}}),undefined);
+  const work=seedWorkspace().works[0];work.documents[0].content=content;const pub=makePublication(work,[work.documents[0].id]);
+  const html=renderToStaticMarkup(createElement(RichReader,{content:pub.scenes[0].content,publication:pub,onWiki:()=>{}}));
+  assert(html.includes('font-size:1.5em'));assert(html.includes('list-style-type:square'));assert(html.includes('list-style-type:hangul'));
+  for(const format of ['markdown','html','enex'] as const){
+    const exported=await exportInterchange(work,[work.documents[0].id],[],[],format),raw=await exported.blob.text(),back=nodes((await readInterchange([new File([exported.blob],exported.name)])).pages[0].content);
+    if(format==='enex'){assert(!/data-(font-size|list-style)/.test(raw));assert(raw.includes('list-style-type:hangul'));continue;}
+    assert(back.some(n=>n.marks?.some(m=>m.type==='fontSize'&&m.attrs?.size===27)),format);
+    assert.deepEqual(back.filter(n=>n.type==='bulletList'||n.type==='orderedList').map(n=>n.attrs?.listStyle??null),['square','hangul',null],format);
+  }
 });
