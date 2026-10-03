@@ -10,7 +10,9 @@
 - localhost의 합성 Auth·PostgREST 계정으로 OpenAI·Claude·Gemini 연결 저장·해제, 키 칸 초기화, 키를 비운 모델 변경, 새로고침 후 모델·프롬프트 유지, 빈 프롬프트·기본값 불러오기·저장을 확인했다. 실제 Supabase 계정이나 제공자 키로 이 시험을 수행하지 않았다.
 - 보라·카세트·사이버 × 라이트·다크의 설정 창을 1280×900과 360×780에서 시각 확인했다. 360px 대화상자 폭은 332px이고 페이지 폭은 360px로 가로 넘침이 없다. 내부 스크롤로 프롬프트·저장 버튼에 도달한다. 주요 버튼은 하나다. 모바일 Escape로 설정만 닫고 AI 설정 진입 버튼으로 초점이 돌아온다.
 
-[비밀값 없는 측정 결과](docs/evidence/ai-settings-2026-10-03.json). Next.js 운영 빌드가 통과했다. 로컬 node_modules junction 때문에 `--webpack`으로 확인했으며 의존성·lockfile은 변경하지 않았다. 실제 제공자 키가 없으므로 키 유효성·AI 답변·지연·과금은 이 검증에 포함되지 않는다. 운영 배포 결과는 완료 후 아래에 추가한다.
+[비밀값 없는 측정 결과](docs/evidence/ai-settings-2026-10-03.json). Next.js 운영 빌드가 통과했다. 로컬 node_modules junction 때문에 `--webpack`으로 확인했으며 의존성·lockfile은 변경하지 않았다. 실제 제공자 키가 없으므로 키 유효성·AI 답변·지연·과금은 이 검증에 포함되지 않는다.
+
+소스 [`a670dc3`](https://github.com/inf1si/Kosmos/commit/a670dc3e2f095c171bc365e75409203468a432ee)를 main에 반영했고 [GitHub CI](https://github.com/inf1si/Kosmos/actions/runs/37098166393)의 타입·47개 테스트·운영 빌드·age 왕복과 [Vercel 배포](https://vercel.com/kosmos24/kosmos/3eL8pjyVY8fZAmUAfuCriajwR6iW)가 성공했다. 로그인한 [운영 집필실](https://kosmos-ashy.vercel.app/studio)의 AI 설정에서 제공자 3종·모델·마스킹 키 입력·4,000자 기본 시스템 프롬프트·저장 버튼, 키 입력 활성화를 확인했다. 운영 원고·키·프롬프트를 변경하거나 AI를 호출하지 않았다. 이 완료 기록을 남기는 문서 커밋과 기능 소스 배포를 구분한다.
 
 ## 2026-10-03 — 분류 선택·원고 글꼴·AI 대화
 

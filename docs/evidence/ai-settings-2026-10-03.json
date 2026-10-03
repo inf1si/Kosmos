@@ -389,5 +389,19 @@
     }
   ],
   "realProviderCall": false,
-  "deployment": "pending"
+  "deployment": {
+    "sourceCommit": "a670dc3e2f095c171bc365e75409203468a432ee",
+    "vercel": "success",
+    "vercelUrl": "https://vercel.com/kosmos24/kosmos/3eL8pjyVY8fZAmUAfuCriajwR6iW",
+    "ci": "success",
+    "ciUrl": "https://github.com/inf1si/Kosmos/actions/runs/37098166393",
+    "productionSettings": {
+      "writerSession": true,
+      "keyEntryEnabled": true,
+      "modelEntryEnabled": true,
+      "promptEntryEnabled": true,
+      "realKeyEntered": false,
+      "realProviderCalled": false
+    }
+  }
 }
