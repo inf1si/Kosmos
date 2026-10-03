@@ -5,7 +5,7 @@ import styles from '../public-info.module.css';
 
 export const metadata: Metadata = {
   title: '개인정보 및 데이터 이용 안내 · Orbis Tertius',
-  description: 'Orbis Tertius의 원고 저장, Google Drive 백업, 선택적 AI 검토에 대한 데이터 이용 안내.',
+  description: 'Orbis Tertius의 원고 저장, Google Drive 백업, 선택적 AI 대화에 대한 데이터 이용 안내.',
 };
 
 export default function PrivacyPage() {
@@ -25,11 +25,11 @@ export default function PrivacyPage() {
 
       <main className={styles.document}>
         <h1>개인정보 및<br className={styles.mobileBreak} /> 데이터 이용 안내</h1>
-        <p className={styles.updated}>최종 수정: 2026년 10월 2일</p>
+        <p className={styles.updated}>최종 수정: 2026년 10월 3일</p>
         <p className={styles.documentLead}>
           Orbis Tertius는 개인 소설 집필과 작품 공개를 위한 사이트입니다.
           이 페이지는 현재 구현된 저장·백업·AI 기능이 어떤 데이터를 처리하는지 설명합니다.
-          Google Drive 백업과 AI 검토는 연결 설정을 완료한 경우에만 실행됩니다.
+          Google Drive 백업과 AI 대화는 연결 설정을 완료한 경우에만 실행됩니다.
         </p>
 
         <section aria-labelledby="storage-title">
@@ -77,17 +77,24 @@ export default function PrivacyPage() {
         </section>
 
         <section aria-labelledby="ai-title">
-          <h2 id="ai-title">선택적 AI 검토</h2>
+          <h2 id="ai-title">선택적 AI 대화</h2>
           <p>
-            AI는 작가가 검토를 요청할 때만 호출됩니다. 선택한 제공자(OpenAI, Claude 또는 Gemini)에게
-            현재 검토 문서의 일반 텍스트와 제목, 검토 목적, 관련 작품 설정을 전송합니다.
-            문서는 최대 12,000자이며, 관련 설정은 원고에서 연결한 설정 또는 시점 인물과 제목이 같은 설정 중
-            최대 8개를 문서당 1,800자까지 포함합니다.
+            AI는 작가가 질문을 보낼 때만 호출됩니다. 선택한 제공자(OpenAI, Claude 또는 Gemini)에게
+            질문, 현재 문서의 제목과 종류, 선택한 자료, 이전 대화를 전송합니다.
+            현재 원고 포함을 켜면 일반 텍스트 최대 12,000자를 보내며, 끄면 이번 요청에서 원고 본문을 제외합니다.
+            참고 자료는 같은 작품의 원고·설정·메모 중 작가가 고른 최대 8개를 문서당 앞 1,800자까지 포함합니다.
+            이전 질문·답변은 최근 5회 중 합계 24,000자 한도 안에서 함께 보내므로,
+            원고 포함을 꺼도 이전 대화에서 다룬 내용은 전송될 수 있습니다.
           </p>
           <p>
-            Google Drive의 백업 파일이나 Google 연결 정보를 AI 검토에 사용하거나 AI 제공자에게 보내지 않습니다.
-            AI 검토는 서버에 저장된 선택 문서에서 필요한 텍스트를 가져옵니다.
-            제공자의 데이터 보관·사용 정책은 각 서비스의 정책을 따르므로, 원고 검토 전에 확인해야 합니다.
+            Google Drive의 백업 파일이나 Google 연결 정보를 AI 제공자에게 보내지 않습니다.
+            선택 자료는 서버에 저장된 작업 공간에서 가져옵니다.
+            제공자의 데이터 보관·사용 정책은 각 서비스의 정책을 따르므로, 질문 전에 확인해야 합니다.
+          </p>
+          <p>
+            완료된 질문·답변은 문서별로 기기에 저장되고 작가의 Supabase 작업 공간과 동기화되며 전체 백업에 포함됩니다.
+            공개 판본에는 포함되지 않습니다. 새 대화를 시작하기 전에 기록을 메모로 보관할 수 있고,
+            기록을 비우기 전에는 복구 지점을 만듭니다. 이전 기록은 복구 이력과 기존 백업에 남을 수 있습니다.
           </p>
           <p>
             제안은 작가가 선택하여 적용하며, AI가 원고를 자동으로 수정하거나 공개하지 않습니다.

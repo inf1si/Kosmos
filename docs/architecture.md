@@ -1,6 +1,6 @@
 # 현재 구현 아키텍처
 
-이 문서는 0.2.0 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
+이 문서는 0.2.1과 2026-10-03 집필 도구·AI 대화 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
 
 ## 구성
 
@@ -12,7 +12,7 @@
 | 기기 저장 | IndexedDB + Dexie | 작업본, 전송 기록, 복구 이력, 첨부 바이트 |
 | 클라우드 연결 | Supabase JS | Auth, PostgreSQL RPC·RLS, Storage, Realtime |
 | 백업 | JSZip, Web Crypto SHA-256, Zod | ZIP 생성·검사·복원 |
-| AI | 서버 `fetch` → Responses 형식 API | 장면 검토·구조화 수정 제안 |
+| AI | 서버 `fetch` → OpenAI Responses / Claude Messages / Gemini generateContent | 문서별 대화·선택 자료·구조화 수정 제안 |
 | 테스트 | Node test runner + tsx, PGlite | 백업·AI 적용·실제 SQL 검증 |
 | 배포 대상 | Vercel | 첫 운영 배포 Ready, 기본 클라우드 흐름 확인 |
 
@@ -53,12 +53,13 @@ flowchart LR
 | 경로 | 구현 |
 |---|---|
 | `/` | 공개 홈페이지: 집필·읽기·작품별 설정 소개와 데이터 이용 안내 연결 |
-| `/privacy` | 원고 저장·Drive 백업·선택적 AI 검토의 데이터 이용 안내 |
+| `/privacy` | 원고 저장·Drive 백업·선택적 AI 대화의 데이터 이용 안내 |
 | `/studio` | 로그인 또는 집필실 |
 | `/library` | 공개 작품 목록 |
 | `/read/[workId]` | 작품의 현재 공개 판본 |
 | `/wiki/[workId]` | 해당 작품의 공개 설정 설명·등장 위치 |
 | `POST /api/review` | 인증·저장 판본 검사 후 AI 검토 |
+| `POST /api/ai/chat` | 인증·원고 버전·선택 자료·이전 대화·하루 한도 검사 후 대화 |
 
 서재·독서·공개 설정집은 `force-dynamic`, 데이터 조회는 `cache: 'no-store'`다. 공개 판본 캐시, 검색 색인, CDN 판본 갱신 파이프라인은 아직 없다.
 
@@ -80,8 +81,10 @@ flowchart LR
 | [rich-editor.tsx](../src/components/rich-editor.tsx) | 편집기와 사용자 정의 노드·링크 |
 | [studio-dialogs.tsx](../src/components/studio-dialogs.tsx) | 백업·충돌·작품 생성·게시 대화상자 |
 | [public-site.tsx](../src/components/public-site.tsx) | 서재·독서·공개 설정집 |
-| [ai-review.tsx](../src/components/ai-review.tsx) | 검토 실행·자료 링크·제안 선택 적용 |
-| [AI route](../src/app/api/review/route.ts) | 인증, 자료 범위, 호출 횟수, AI 요청 |
+| [ai-chat.tsx](../src/components/ai-chat.tsx) | 대화·추천 질문·자료 선택·수정 적용·메모·기록 |
+| [AI 대화 route](../src/app/api/ai/chat/route.ts) | 인증, 자료 범위, 원고 버전, 호출 횟수, AI 요청 |
+| [ai-conversation.ts](../src/lib/ai-conversation.ts) | 질문·답변 저장 계약과 최근 대화 길이 제한 |
+| [manuscript-fonts.ts](../src/components/manuscript-fonts.ts) | Next.js가 빌드 시 내려받아 자체 제공하는 한글 원고 글꼴 |
 | [001_studio.sql](../supabase/migrations/001_studio.sql) | 테이블·권한·RPC·첨부 정책·Realtime |
 
 ## 변경할 때 유지할 규칙
@@ -101,6 +104,8 @@ Supabase RPC는 기준 버전 검사를 유지한다. 재전송에서 같은 요
 [interchange.ts](../src/lib/interchange.ts)는 외부 HTML을 DOM에 삽입하지 않고 허용된 리치 노드로 변환한다. [InterchangeDialog](../src/components/interchange-dialog.tsx)는 미리보기·분류 후 새 ID로 추가한다. 전체 ZIP과 교환용 ZIP은 서로 다른 계약이다.
 
 [ai-provider.ts](../src/lib/ai-provider.ts)는 제공자별 요청·완료 상태를 다루고 공통 결과를 검증한다. 서버 인증은 [server-auth.ts](../src/lib/server-auth.ts), 실제 스트림 바이트 제한은 [http.ts](../src/lib/http.ts)에 있다. 선택한 제공자 한 곳만 호출한다.
+
+대화는 기존 비공개 workspace의 `Work.aiConversations`에 선택 필드로 저장하므로 DB 마이그레이션이 없다. 기기 저장·동기화·ZIP·독립 백업의 기존 경로를 공유하고 공개 판본 생성은 대화를 제외한다. [대화 계약과 한도](ai.md)를 따른다. 원고 수정은 명시적인 적용과 버전 검사·복구 지점을 거치며, 변경된 본문은 열린 Tiptap 편집기에도 반영된다.
 
 일일 백업은 [vercel.json](../vercel.json) → 인증된 cron → [offsite-backup-server.ts](../src/lib/offsite-backup-server.ts)의 서버 수집 → [offsite-backup.ts](../src/lib/offsite-backup.ts)의 ZIP·저장 후 검증 → Drive/S3 어댑터 순서다. 브라우저로 service_role·저장소 비밀을 보내지 않는다. 마지막 성공 표시는 실제 저장 파일 검증 이후에만 갱신한다. 구성과 미연결 경계는 [백업 안내](offsite-backup.md)에 있다.
 

@@ -1,14 +1,22 @@
-# OpenAI·Claude·Gemini 검토
+# OpenAI·Claude·Gemini 대화
 
-제공자별 서버 어댑터와 선택 화면을 구현했다. 현재 API 키와 모델이 없어 실제 호출·한국어 SF 검토 품질·지연·사용료는 미검증이다. 연결은 [서비스 연결 안내](service-connection.md)를 따른다.
+제공자별 서버 어댑터와 문서별 대화 화면을 구현했다. 현재 API 키와 모델이 없어 실제 호출·한국어 SF 답변 품질·지연·사용료는 미검증이다. 연결은 [서비스 연결 안내](service-connection.md)를 따른다.
 
 ## 원고 범위와 적용
 
-현재 문서의 문장·호흡 또는 설정·시간·인물의 지식을 검토한다. 서버 저장본의 일반 텍스트 최대 12,000자, 같은 작품의 연결 설정 또는 제목이 시점 인물과 같은 문서 최대 8개 × 1,800자를 사용한다. 전체 장편·모든 설정·외부 과학 자료를 조회하지 않는다. API의 문서 종류는 scene으로 제한하지 않는다.
+질문을 직접 쓰거나 문장 퇴고·설정 점검·장면 구상·장면 요약·SF 개연성·자료 질문으로 시작한다. 질문은 2,000자까지다. 보낼 자료에서 현재 문서 포함 여부를 정하고, 같은 작품의 원고·설정·메모 최대 8개를 고른다. 처음에는 본문의 연결 설정과 시점 인물 문서를 선택해 둔다. 서버 저장본 원고 최대 12,000자, 참고 문서마다 앞 1,800자를 사용한다. 다른 작품의 ID는 거절한다. 전체 장편·모든 설정·외부 과학 자료를 자동 조회하지 않는다. SF 개연성은 확인할 가정을 정리하는 기능이며 외부 과학 검증이나 인터넷 검색은 수행하지 않는다.
 
-UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권한·작업 공간 소유권·문서 updatedAt을 확인한다. 검토 의견과 최대 5개의 수정 제안을 구조화 출력으로 받는다. 작가가 제안을 선택하면 적용 전 복구 지점을 만든다. 검토 후 원고가 바뀌면 적용을 막는다.
+UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권한·작업 공간 소유권·문서 updatedAt을 확인한다. 답변과 최대 5개의 수정 제안을 구조화 출력으로 받는다. 원고를 제외한 요청의 수정 제안은 서버에서 비운다. 작가가 제안을 선택하면 적용 전 복구 지점을 만든다. 답변 후 원고가 바뀌면 적용을 막는다.
 
-자동 적용은 인용이 단일 텍스트 노드에서 정확히 한 번 나타날 때만 가능하다. 각주·설정 mark를 보존한다. 한 제안을 적용한 뒤 다른 제안은 다시 검토해야 한다. AI 실패는 원고 저장을 멈추지 않는다.
+선택 적용은 인용이 단일 텍스트 노드에서 정확히 한 번 나타날 때만 가능하다. 각주·설정 mark를 보존한다. 한 제안을 적용한 뒤 다른 제안은 새로 질문하거나 직접 비교해야 한다. AI 실패는 원고 저장을 멈추지 않는다. 전송 실패 시 질문을 유지한다. 답변을 기다리다 다른 문서를 열어도 결과는 원래 문서에 저장한다.
+
+## 대화 기록과 보관
+
+작품의 선택 필드 `aiConversations`에 문서 ID와 대화 배열을 저장한다. 한 문서에 최대 20회(40개 메시지), 작품당 최대 200개 문서 대화를 허용한다. 한도를 넘으면 새 요청을 막고 기록을 조용히 삭제하지 않는다. 다음 질문에는 최근 완전한 대화 5회(10개 메시지) 중 총 24,000자 안에 드는 내용을 보낸다. 긴 예전 기록은 저장본에 남지만 다음 요청에서는 빠질 수 있다.
+
+질문과 성공 답변을 한 번에 저장한다. 질문·답변·수정안·제공자·모델·답변 당시 원고 시점·자료 제목/ID가 기기 저장, 클라우드 작업 데이터, 전체 ZIP, Drive 전체 ZIP, 암호화 DB 백업에 포함된다. 공개 판본에는 복사하지 않는다. 별도 DB 테이블이나 마이그레이션은 없다. 기록은 서버의 작가 작업 공간 권한으로 보호한다.
+
+**대화를 메모로 보관**은 질문·답변·수정안을 일반 메모로 복사한다. 메모는 기존 Markdown·HTML·ENEX 내보내기를 사용한다. **새 대화**는 확인 화면을 거쳐 현재 문서의 기록을 비우고 먼저 복구 지점을 만든다. 최근 기기 복구 지점은 기존 50개 보관 정책을 따른다.
 
 ## 제공자와 서버 설정
 
@@ -26,9 +34,22 @@ UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권
 
 ## API
 
+POST `/api/ai/chat`: 작가 Bearer 인증 필요, JSON 본문은 스트림 기준 128KiB까지.
+
+```json
+{
+  "workId":"작품 UUID","docId":"문서 UUID","version":"문서 updatedAt",
+  "provider":"openai","message":"질문","includeManuscript":true,
+  "sourceIds":["같은 작품 자료 UUID"],
+  "history":[{"role":"user","content":"지난 질문"},{"role":"assistant","content":"지난 답변"}]
+}
+```
+
+history는 user/assistant 순서의 완전한 쌍만 허용하며 system 역할을 받지 않는다. 서버에서 현재 원고·자료를 다시 읽고 권한·시점·길이를 검사한 뒤 하루 호출을 예약한다. 성공 결과는 result(답변을 담은 review 문자열과 suggestions), provider, model, version, sources, dailyCalls다. 응답은 no-store다.
+
 GET `/api/ai/providers`: 허용 작가의 Bearer 인증 필요. 제공자 ID·표시명·configured·모델만 반환하며 키는 반환하지 않는다. no-store다.
 
-POST `/api/review`: 같은 인증, JSON 본문. Content-Length가 없어도 스트림 전체를 10,000바이트로 제한한다.
+이전 POST `/api/review`도 호환을 위해 유지한다. 같은 인증, JSON 본문이며 Content-Length가 없어도 스트림 전체를 10,000바이트로 제한한다.
 
 ```json
 {"workId":"작품 UUID","docId":"문서 UUID","version":"문서 updatedAt","goal":"style","provider":"openai"}
@@ -47,6 +68,6 @@ goal은 style 또는 continuity, provider는 openai / anthropic / gemini이며 �
 | 502 | 제공자 오류·시간 초과·거부·불완전하거나 잘못된 결과 |
 | 503 | 선택 제공자의 키·모델 미설정 |
 
-외부 제공자 계약은 모의 HTTP 응답으로 테스트했다. 실제 키로 성공·거부·한도·비용을 시험한 결과가 아니다. 선택 문단 검토·작품 전체 검색·결과 영구 보관·스트리밍·장편 작업 큐는 후속 기능이다.
+외부 제공자 계약은 모의 HTTP 응답으로 테스트했다. 대화 백업 왕복·공개 판본 제외·다른 작품 자료 차단·시점/길이/역할 경계도 테스트했다. 실제 키로 성공·거부·한도·비용을 시험한 결과가 아니다. 선택 문단 전송·작품 전체 자동 검색·스트리밍·장편 작업 큐는 후속 기능이다.
 
-구현: [어댑터](../src/lib/ai-provider.ts), [검토 라우트](../src/app/api/review/route.ts), [화면](../src/components/ai-review.tsx), [적용 로직](../src/lib/ai.ts). 공식 계약: [OpenAI](https://developers.openai.com/api/docs/guides/structured-outputs), [Claude](https://platform.claude.com/docs/en/build-with-claude/structured-outputs), [Gemini](https://ai.google.dev/api/generate-content).
+구현: [어댑터](../src/lib/ai-provider.ts), [대화 라우트](../src/app/api/ai/chat/route.ts), [화면](../src/components/ai-chat.tsx), [기록](../src/lib/ai-conversation.ts), [자료 경계](../src/lib/ai-chat-context.ts), [적용 로직](../src/lib/ai.ts). 공식 계약: [OpenAI 대화 상태](https://developers.openai.com/api/docs/guides/conversation-state)·[구조화 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Claude](https://platform.claude.com/docs/en/api/messages/create), [Gemini](https://ai.google.dev/api/generate-content).

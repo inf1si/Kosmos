@@ -1,0 +1,175 @@
+{
+  "fonts": [
+    {
+      "font": "gowun",
+      "family": "\"Gowun Batang\", \"Gowun Batang Fallback\", Batang, serif, serif",
+      "pageOverflow": false
+    },
+    {
+      "font": "noto-serif",
+      "family": "\"Noto Serif KR\", \"Noto Serif KR Fallback\", Batang, serif, serif",
+      "pageOverflow": false
+    },
+    {
+      "font": "nanum-myeongjo",
+      "family": "\"Nanum Myeongjo\", \"Nanum Myeongjo Fallback\", Batang, serif, serif",
+      "pageOverflow": false
+    },
+    {
+      "font": "ibm-plex",
+      "family": "\"IBM Plex Sans KR\", \"IBM Plex Sans KR Fallback\", \"Malgun Gothic\", sans-serif, sans-serif",
+      "pageOverflow": false
+    },
+    {
+      "font": "noto-sans",
+      "family": "\"Noto Sans KR\", \"Noto Sans KR Fallback\", \"Malgun Gothic\", sans-serif, sans-serif",
+      "pageOverflow": false
+    },
+    {
+      "font": "nanum-gothic",
+      "family": "\"Nanum Gothic\", \"Nanum Gothic Fallback\", \"Malgun Gothic\", sans-serif, sans-serif",
+      "pageOverflow": false
+    },
+    {
+      "font": "system",
+      "family": "system-ui, \"Apple SD Gothic Neo\", \"Malgun Gothic\", sans-serif",
+      "pageOverflow": false
+    }
+  ],
+  "desktop": [
+    {
+      "viewport": "desktop",
+      "selectedPalette": "violet",
+      "selectedMode": "light",
+      "composerVisible": true,
+      "editorRight": 911.3333740234376,
+      "overflow": false,
+      "palette": "violet",
+      "referenceLeft": 911.3333740234376,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "viewport": "desktop",
+      "selectedPalette": "violet",
+      "selectedMode": "dark",
+      "composerVisible": true,
+      "editorRight": 911.3333740234376,
+      "overflow": false,
+      "palette": "violet",
+      "referenceLeft": 911.3333740234376,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "viewport": "desktop",
+      "selectedPalette": "cassette",
+      "selectedMode": "light",
+      "composerVisible": true,
+      "editorRight": 911.3333740234376,
+      "overflow": false,
+      "palette": "cassette",
+      "referenceLeft": 911.3333740234376,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "viewport": "desktop",
+      "selectedPalette": "cassette",
+      "selectedMode": "dark",
+      "composerVisible": true,
+      "editorRight": 911.3333740234376,
+      "overflow": false,
+      "palette": "cassette",
+      "referenceLeft": 911.3333740234376,
+      "theme": "dark",
+      "width": 1280
+    },
+    {
+      "viewport": "desktop",
+      "selectedPalette": "cyber",
+      "selectedMode": "light",
+      "composerVisible": true,
+      "editorRight": 911.3333740234376,
+      "overflow": false,
+      "palette": "cyber",
+      "referenceLeft": 911.3333740234376,
+      "theme": "light",
+      "width": 1280
+    },
+    {
+      "viewport": "desktop",
+      "selectedPalette": "cyber",
+      "selectedMode": "dark",
+      "composerVisible": true,
+      "editorRight": 911.3333740234376,
+      "overflow": false,
+      "palette": "cyber",
+      "referenceLeft": 911.3333740234376,
+      "theme": "dark",
+      "width": 1280
+    }
+  ],
+  "mobile": [
+    {
+      "selectedPalette": "cassette",
+      "selectedMode": "light",
+      "composerVisible": true,
+      "overflow": false,
+      "palette": "cassette",
+      "referenceWidth": 360,
+      "theme": "light",
+      "width": 360
+    },
+    {
+      "selectedPalette": "cassette",
+      "selectedMode": "dark",
+      "composerVisible": true,
+      "overflow": false,
+      "palette": "cassette",
+      "referenceWidth": 360,
+      "theme": "dark",
+      "width": 360
+    },
+    {
+      "selectedPalette": "cyber",
+      "selectedMode": "light",
+      "composerVisible": true,
+      "overflow": false,
+      "palette": "cyber",
+      "referenceWidth": 360,
+      "theme": "light",
+      "width": 360
+    },
+    {
+      "selectedPalette": "cyber",
+      "selectedMode": "dark",
+      "composerVisible": true,
+      "overflow": false,
+      "palette": "cyber",
+      "referenceWidth": 360,
+      "theme": "dark",
+      "width": 360
+    },
+    {
+      "selectedPalette": "violet",
+      "selectedMode": "light",
+      "composerVisible": true,
+      "overflow": false,
+      "palette": "violet",
+      "referenceWidth": 360,
+      "theme": "light",
+      "width": 360
+    },
+    {
+      "selectedPalette": "violet",
+      "selectedMode": "dark",
+      "composerVisible": true,
+      "overflow": false,
+      "palette": "violet",
+      "referenceWidth": 360,
+      "theme": "dark",
+      "width": 360
+    }
+  ]
+}

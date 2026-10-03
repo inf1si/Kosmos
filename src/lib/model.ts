@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { conversationSchema } from './ai-conversation';
 
 export type RichNode = { type: string; text?: string; attrs?: Record<string, unknown>; marks?: {type: string; attrs?: Record<string, unknown>}[]; content?: RichNode[] };
 const nodeTypes = new Set(['doc','text','paragraph','heading','bulletList','orderedList','listItem','hardBreak','blockquote','codeBlock','horizontalRule','footnote']);
@@ -34,6 +35,7 @@ export const workSchema = z.object({
   id:z.uuid(),title:z.string().min(1).max(300),subtitle:z.string().max(500),description:z.string().max(10000),
   form:z.enum(['단편','중편','장편']), documents:z.array(documentSchema).min(1).max(5000),
   publications:z.array(publicationSchema).max(100),activePublicationId:z.uuid().nullable(),
+  aiConversations:z.array(conversationSchema).max(200).optional(),
 });
 export type Work = z.infer<typeof workSchema>;
 export const assetSchema = z.object({id:z.uuid(),workId:z.uuid(),name:z.string().max(300),type:z.enum(['image/png','image/jpeg','image/webp']),size:z.number().int().min(0).max(10*1024*1024)});
@@ -45,6 +47,8 @@ export const workspaceSchema = z.object({
   if (new Set(ids).size !== ids.length) ctx.addIssue({code:'custom',message:'중복된 문서 ID가 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
   for(const w of data.works) {
+    const conversations=w.aiConversations||[];
+    if(new Set(conversations.map(c=>c.docId)).size!==conversations.length||conversations.some(c=>!w.documents.some(d=>d.id===c.docId)))ctx.addIssue({code:'custom',message:'AI 대화의 문서 연결을 확인하세요.'});
     if(w.activePublicationId && !w.publications.some(p=>p.id===w.activePublicationId && p.workId===w.id)) ctx.addIssue({code:'custom',message:'공개 판본 연결을 확인하세요.'});
     for(const d of w.documents) for(const id of d.assetIds) if(assets.get(id)?.workId!==w.id) ctx.addIssue({code:'custom',message:'첨부 연결이 손상되었습니다.'});
   }

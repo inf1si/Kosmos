@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
@@ -9,7 +9,9 @@ import { PlotBoard } from './plot-board';
 import { WikiIcon } from './studio-icons';
 import { ThemeControls } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
-import { AIReview } from './ai-review';
+import { AIChat } from './ai-chat';
+import { EditableCombobox } from './editable-combobox';
+import { useDrawerFocus } from './use-drawer-focus';
 import { NovelDocument, newDocument, plainText, statuses, wikiReferences } from '@/lib/model';
 import { countChars, groupScenes, sceneInsertIndex } from '@/lib/outline';
 import { cloudConfigured, cloud } from '@/lib/cloud';
@@ -33,11 +35,15 @@ export function Studio(){
   const s=useStudio();const [workId,setWorkId]=useState('');const [current,setCurrent]=useState('');const [lastDoc,setLastDoc]=useState('');const [tabs,setTabs]=useState<string[]>([]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
-  const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);const [aiQuery,setAiQuery]=useState('');const [closedParts,setClosedParts]=useState<string[]>([]);
+  const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);const [closedParts,setClosedParts]=useState<string[]>([]);
   const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [workSettings,setWorkSettings]=useState(false);
+  const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const referenceRef=useRef<HTMLElement>(null);
+  const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
+  useDrawerFocus(compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
+  useDrawerFocus(compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,'reference-toggle');
   const workMenuRef=useDismiss(workMenu,setWorkMenu);const moreMenuRef=useDismiss(moreMenu,setMoreMenu);
-  function openSearch(){setFocus(false);setSidebar(true);setSearching(true);setTimeout(()=>document.getElementById('workspace-search')?.focus(),30);}
-  useEffect(()=>{if(narrow())setSidebar(false);},[]);
+  function openSearch(){setReference(null);setFocus(false);setSidebar(true);setSearching(true);setTimeout(()=>document.getElementById('workspace-search')?.focus(),30);}
+  useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);if(media.matches)setSidebar(false);const resize=()=>{setCompact(media.matches);if(media.matches)setSidebar(false);};media.addEventListener('change',resize);return()=>media.removeEventListener('change',resize);},[]);
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&(e.code==='KeyK'||e.key.toLowerCase()==='k')){e.preventDefault();openSearch();}};window.addEventListener('keydown',onKey,true);return()=>window.removeEventListener('keydown',onKey,true);},[]);
   useEffect(()=>{document.querySelector('.doc-tab.active')?.scrollIntoView({block:'nearest',inline:'nearest'});},[current]);
   if(s.loading)return <div className="loading-screen"><NotebookPen size={28}/><p>집필실을 여는 중입니다.</p></div>;
@@ -75,7 +81,8 @@ export function Studio(){
   const heading=(kind:NovelDocument['kind'],add:string)=><div className="tree-heading"><span><i className="tree-number" aria-hidden="true">{String(Object.keys(kinds).indexOf(kind)+1).padStart(2,'0')}</i>{kinds[kind]}<span>{docs.filter(d=>d.kind===kind).length}</span></span><IconButton label={add} onClick={()=>createDoc(kind)}><Plus size={14}/></IconButton></div>;
   return <TooltipProvider><div className={`studio ${focus?'focus-mode':''}`}>
     {showSidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={()=>setSidebar(false)}/>}
-    {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색">
+    {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색" ref={sidebarRef} role={compact?'dialog':undefined} aria-modal={compact||undefined}>
+      <div className="sidebar-close"><IconButton label="작품 탐색 닫기" data-drawer-close onClick={closeSidebar}><X size={17}/></IconButton></div>
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="work-switcher" ref={workMenuRef}>
         <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span><span className="work-tag" aria-hidden="true">ORB-{String(s.state.works.indexOf(work)+1).padStart(2,'0')}</span></button>
@@ -103,13 +110,13 @@ export function Studio(){
     </aside>}
     <main className="studio-panel">
       <div className="panel-tabs">
-        <IconButton label={showSidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={showSidebar} onClick={()=>{if(focus){setFocus(false);setSidebar(true);}else setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton>
+        <IconButton id="sidebar-toggle" label={showSidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={showSidebar} onClick={()=>{if(compact)setReference(null);if(focus){setFocus(false);setSidebar(true);}else setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton>
         <IconButton label="뒤로" className="icon-button history-button" disabled={!back.length} onClick={goBack}><ChevronLeft size={16}/></IconButton>
         <IconButton label="앞으로" className="icon-button history-button" disabled={!forward.length} onClick={goForward}><ChevronRight size={16}/></IconButton>
         <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||'플롯보드';return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
         <span className="tab-spacer"/>
         <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onBoard} onClick={()=>setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null)}><Columns2 size={16}/></IconButton>
-        <IconButton label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onBoard} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>
+        <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onBoard} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>
         <div className="menu-anchor" ref={moreMenuRef}><IconButton label="더 보기" aria-expanded={moreMenu} aria-controls="more-menu" onClick={()=>setMoreMenu(v=>!v)}><MoreHorizontal size={16}/></IconButton>
           {moreMenu&&<div id="more-menu" className="popover-menu more-menu">
             <button type="button" aria-pressed={focus} onClick={()=>{setMoreMenu(false);setFocus(v=>!v);}}><Maximize2 size={15}/>{focus?'집중 모드 끝내기':'집중 모드'}</button>
@@ -128,14 +135,14 @@ export function Studio(){
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={{'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
         <RichEditor key={`${active.id}-${s.epoch}`} doc={active} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} appearances={appearances}
           heading={<DocHead doc={active} wiki={wiki} linked={linked.length} backlinks={backlinks.length} attachments={active.assetIds.length} readonly={readonly} open={properties} onToggle={()=>setProperties(v=>!v)} onPatch={patch=>patchDoc(active.id,patch)} onOpenBeside={id=>openDoc(id,true)} onReference={setReference}/>}
-          toolbarEnd={<><span className="char-count"><span className="tape-counter" aria-hidden="true">{String(countChars(active)).padStart(5,'0')}</span><span className="count-number">{countChars(active).toLocaleString()}</span>자<span className="count-suffix"> · 공백 제외</span></span>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 검토</button></>}/>
+          toolbarEnd={<><span className="char-count"><span className="tape-counter" aria-hidden="true">{String(countChars(active)).padStart(5,'0')}</span><span className="count-number">{countChars(active).toLocaleString()}</span>자<span className="count-suffix"> · 공백 제외</span></span>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 대화</button></>}/>
         {split&&<><div className="split-divider resize-handle" role="separator" aria-label="분할 편집 폭" aria-orientation="vertical" aria-valuenow={splitWidth} aria-valuemin={30} aria-valuemax={70} tabIndex={0} onPointerDown={e=>e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={e=>{if(e.buttons){const rect=e.currentTarget.parentElement!.getBoundingClientRect();setSplitWidth(Math.max(30,Math.min(70,(e.clientX-rect.left)/rect.width*100)));}}} onKeyDown={e=>{if(e.key==='ArrowLeft')setSplitWidth(v=>Math.max(30,v-2));if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="split-pane"><div className="split-heading"><span>참고 · {split.title}</span><IconButton label="분할 닫기" onClick={()=>setSplitId(null)}><X size={15}/></IconButton></div><RichEditor key={`${split.id}-${s.epoch}`} doc={split} onChange={content=>patchDoc(split.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} appearances={appearances}/></div></>}
       </div>
-      {reference&&!focus&&<aside className="reference-panel" aria-label="참고 패널"><div className="reference-tabs" role="tablist" aria-label="참고 자료">{(['links','files','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={reference===p} onClick={()=>setReference(p)}>{p==='links'?'연결':p==='files'?'첨부':'AI'}</button>)}<IconButton label="참고 패널 닫기" onClick={()=>setReference(null)}><X size={15}/></IconButton></div><div className="reference-content">
+      {reference&&!focus&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeReference}/><aside ref={referenceRef} className={`reference-panel ${reference==='ai'?'is-chat':''}`} aria-label="참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="참고 자료">{(['links','files','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={reference===p} onClick={()=>setReference(p)}>{p==='links'?'연결':p==='files'?'첨부':'AI 대화'}</button>)}<IconButton label="참고 패널 닫기" data-drawer-close onClick={closeReference}><X size={15}/></IconButton></div><div className="reference-content">
         {reference==='links'?<><h3>연결된 설정</h3>{linked.length?linked.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id,true)}><WikiIcon category={d.category}/><span><strong>{d.title}</strong><small>{d.category||'설정'} · 옆에서 열기</small></span></button>):<p className="muted">본문에 연결한 설정이 없습니다.</p>}<h3>이 문서를 참조하는 문서</h3>{backlinks.length?backlinks.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id)}><DocIcon doc={d}/><span><strong>{d.title}</strong><small>{kinds[d.kind]}</small></span></button>):<p className="muted">아직 참조가 없습니다.</p>}</>
         :reference==='files'?<><h3>첨부 자료</h3>{active.assetIds.length?<div className="asset-list">{active.assetIds.map(id=><button type="button" key={id} onClick={()=>void downloadAsset(id)}><Paperclip size={14}/>{s.state!.assets.find(a=>a.id===id)?.name}</button>)}</div>:<p className="muted">이 문서에 첨부한 이미지가 없습니다.</p>}<label className="asset-upload">이미지 첨부<input aria-label="이미지 첨부" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];if(file)void s.addAsset(work.id,active.id,file).catch(error=>alert(error.message));e.target.value='';}}/></label></>
-        :<div className="ai-intro"><h3>작품 자료 찾기</h3><p>설정 문서와 원고에서 필요한 내용을 찾아보세요.</p><input aria-label="작품 자료 검색" placeholder="인물, 기술, 장소" value={aiQuery} onChange={e=>setAiQuery(e.target.value)}/>{aiQuery&&docs.filter(d=>`${d.title} ${plainText(d.content)}`.toLocaleLowerCase().includes(aiQuery.toLocaleLowerCase())).map(d=><button type="button" key={d.id} className="reference-card" onClick={()=>openDoc(d.id,true)}><DocIcon doc={d}/>{d.title}</button>)}<AIReview workId={work.id} doc={active} onChange={content=>patchDoc(active.id,{content})} onOpen={id=>openDoc(id,true)}/></div>}
-      </div></aside>}
+        :<AIChat key={`${s.namespace}-${work.id}-${active.id}`} workId={work.id} doc={active} onOpen={id=>openDoc(id,true)}/>}
+      </div></aside></>}
       </div>}
     </main>
     <StudioDialogs workId={work.id}/><Modal open={workSettings} onClose={()=>setWorkSettings(false)} title="작품 정보"><div className="form-grid"><label>작품명<input value={work.title} onChange={e=>{if(e.target.value)patchWork({title:e.target.value});}}/></label><label>부제<input value={work.subtitle} onChange={e=>patchWork({subtitle:e.target.value})}/></label><label>작품 소개<textarea rows={4} value={work.description} onChange={e=>patchWork({description:e.target.value})}/></label></div></Modal>
@@ -168,11 +175,11 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
     </div>
     {open&&doc.kind!=='memo'&&<div className="doc-props" id="doc-properties">{doc.kind==='scene'?<>
       <label>부 · 장<input value={doc.chapter} disabled={readonly} placeholder="예: 제1부 · 남겨진 시간" onChange={e=>onPatch({chapter:e.target.value})}/></label>
-      <label>시점 인물<input list="pov-options" value={doc.pov} disabled={readonly} onChange={e=>onPatch({pov:e.target.value})}/></label><datalist id="pov-options">{wiki.filter(w=>w.category.trim()==='인물').map(w=><option key={w.id} value={w.title}/>)}</datalist>
+      <EditableCombobox label="시점 인물" value={doc.pov} options={wiki.filter(w=>w.category.trim()==='인물').map(w=>w.title)} disabled={readonly} onChange={pov=>onPatch({pov})}/>
       <label>작중 시간<input value={doc.storyTime} disabled={readonly} placeholder="예: 귀환일 · 08:40" onChange={e=>onPatch({storyTime:e.target.value})}/></label>
       <label className="wide">장면 요약<textarea rows={3} value={doc.summary} disabled={readonly} onChange={e=>onPatch({summary:e.target.value})}/></label>
     </>:<>
-      <label>분류<input list="category-options" value={doc.category} disabled={readonly} onChange={e=>onPatch({category:e.target.value})}/></label><datalist id="category-options">{[...new Set(wiki.map(w=>w.category.trim()).filter(Boolean))].map(c=><option key={c} value={c}/>)}</datalist>
+      <EditableCombobox label="분류" value={doc.category} options={wiki.map(w=>w.category)} disabled={readonly} onChange={category=>onPatch({category})}/>
       <label className="check-label"><input type="checkbox" checked={doc.isPublic} disabled={readonly} onChange={e=>onPatch({isPublic:e.target.checked})}/>독자용 설명 공개</label>
       <label className="wide">독자용 설명<textarea rows={4} value={doc.publicSummary} disabled={readonly} onChange={e=>onPatch({publicSummary:e.target.value})}/></label>
       <p className="field-help wide">집필용 본문과 별도로 게시됩니다. 설명이 비어 있으면 공개하지 않습니다.</p>
