@@ -9,5 +9,5 @@ export function chatContext(data:Workspace,input:ChatInput){
   if(text.length>12000)throw new ChatContextError('현재 원고는 12,000자까지 보낼 수 있습니다. 원고 포함을 끄거나 장면을 나누세요.',413);
   const ids=[...new Set(input.sourceIds)];const sources=ids.map(id=>work.documents.find(d=>d.id===id));
   if(sources.some(d=>!d))throw new ChatContextError('같은 작품의 자료만 선택할 수 있습니다.',400);
-  return {input:{work:work.title,title:doc.title,manuscript:text,references:sources.map(d=>({title:d!.title,kind:d!.kind,text:plainText(d!.content).slice(0,1800)})),question:input.message},sources:sources.map(d=>({id:d!.id,title:d!.title})),version:doc.updatedAt};
+  return {input:{work:work.title,form:work.form,title:doc.title,document:{kind:doc.kind,chapter:doc.chapter,pov:doc.pov,storyTime:doc.storyTime},manuscript:text,references:sources.map(d=>({id:d!.id,title:d!.title,kind:d!.kind,category:d!.category,chapter:d!.chapter,pov:d!.pov,storyTime:d!.storyTime,text:plainText(d!.content).slice(0,1800),truncated:plainText(d!.content).length>1800})),question:input.message},sources:sources.map(d=>({id:d!.id,title:d!.title})),version:doc.updatedAt};
 }

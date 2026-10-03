@@ -7,6 +7,7 @@
 ```text
 Workspace
 ├─ id, formatVersion: 1, updatedAt
+├─ aiPreferences?: version: 1, activePresetId, presets[], updatedAt
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
 │  ├─ documents[]: scene | wiki | memo
@@ -33,6 +34,16 @@ Workspace
 [트리 스키마](../src/lib/document-navigation-schema.ts)는 대분류 ID·이름·새 문서의 기본 종류와, 노드의 ID·종류·대분류 ID·부모 ID를 저장한다. 노드 배열에서 같은 부모의 순서를 읽는다. 문서 노드 ID는 문서 UUID와 같고 폴더는 자체 UUID·제목을 갖는다. 중복 ID·없는 문서/부모·다른 대분류의 부모·순환·24단계를 넘는 깊이를 거절한다. `navigation`이 없는 이전 형식 1 자료는 세 기본 대분류와 연속된 부·장별 폴더로 변환한다. [전환·가져오기 계약](document-navigation.md).
 
 AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대화 ID는 중복할 수 없다. 한 대화의 최대 메시지 수는 40개다. 작가 메시지에는 질문, AI 메시지에는 답변·수정안·제공자·모델·원고 시점·참고 자료 제목과 ID를 보관한다. 대화를 저장해도 원고의 `updatedAt`을 바꾸지 않는다. 전체 백업에는 포함하고 공개 판본에는 포함하지 않는다. 새 필드는 선택적이므로 이전 형식 1 백업도 계속 읽는다. [AI 제한](ai.md).
+
+## 계정의 AI 프리셋
+
+`Workspace.aiPreferences`는 모든 작품에서 공유하는 선택 필드다. version: 1, activePresetId, 사용자 presets[], updatedAt을 저장한다. 프리셋은 UUID id, title 1~80자, prompt 1~4,000자, updatedAt ISO 시각을 갖고 최대 20개다. 중복 ID·없는 활성 ID를 거절한다. 기본 6종은 코드의 builtin:* ID·버전으로 제공하며 편집은 사본으로 저장한다. 필드가 없으면 기본 집필 동료를 사용한다.
+
+전체 ZIP·복구 이력에 포함한다. 이전 백업에 필드가 없으면 현재 라이브러리를 유지하고 있으면 백업의 설정을 복원한다. 문서 MD/HTML/ENEX 교환·공개 판본에는 프리셋을 넣지 않는다. API 키는 작업 공간에 넣지 않는다.
+
+AI 답변의 선택 필드 promptPreset은 당시 ID·제목·revision을 남긴다. 기본 프리셋은 코드 버전, 사용자 프리셋은 갱신 시각이다. 답변마다 프롬프트 원문 사본을 저장하지 않으므로 과거 지침 전체의 재현은 보장하지 않는다.
+
+[003_ai_preferences_guard.sql](../supabase/migrations/003_ai_preferences_guard.sql)은 기존 프리셋 객체가 다음 payload에서 사라지면 UPDATE를 거절한다. 데이터·권한·버전 검사를 유지한다. [프롬프트 계약](ai-prompts.md).
 
 ## 원고 본문과 연결
 

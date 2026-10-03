@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { conversationSchema } from './ai-conversation';
 import { navigationSchema, navigationIssues } from './document-navigation-schema';
+import { aiPreferencesSchema } from './ai-prompt-presets';
 
 export type RichNode = { type: string; text?: string; attrs?: Record<string, unknown>; marks?: {type: string; attrs?: Record<string, unknown>}[]; content?: RichNode[] };
 const nodeTypes = new Set(['doc','text','paragraph','heading','bulletList','orderedList','listItem','hardBreak','blockquote','codeBlock','horizontalRule','footnote']);
@@ -46,6 +47,7 @@ export const assetSchema = z.object({id:z.uuid(),workId:z.uuid(),name:z.string()
 export type AssetMeta = z.infer<typeof assetSchema>;
 export const workspaceSchema = z.object({
   formatVersion:z.literal(1),id:z.uuid(),works:z.array(workSchema).min(1).max(100),assets:z.array(assetSchema).max(2000),updatedAt:z.string(),
+  aiPreferences:aiPreferencesSchema.optional(),
 }).superRefine((data,ctx)=>{
   const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id)];
   if (new Set(ids).size !== ids.length) ctx.addIssue({code:'custom',message:'중복된 문서 ID가 있습니다.'});

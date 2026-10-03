@@ -13,6 +13,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -20,9 +21,12 @@ jobs:
           corepack enable
           corepack prepare pnpm@11.19.0 --activate
           pnpm install --frozen-lockfile
+          pnpm docs:check --base "$DOCS_BASE_SHA"
           pnpm typecheck
           pnpm test
           pnpm build
+        env:
+          DOCS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
       - name: Real age encryption and decryption round trip
         shell: bash
         run: |

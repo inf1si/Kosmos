@@ -1,6 +1,6 @@
 # 현재 구현 아키텍처
 
-이 문서는 0.2.1과 2026-10-03 집필 도구·AI 대화·문서 트리 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
+이 문서는 0.2.1과 2026-10-03 집필 도구·AI 프리셋·문서 트리 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
 
 ## 구성
 
@@ -69,7 +69,7 @@ flowchart LR
 
 서재·독서·공개 설정집은 `force-dynamic`, 데이터 조회는 `cache: 'no-store'`다. 공개 판본 캐시, 검색 색인, CDN 판본 갱신 파이프라인은 아직 없다.
 
-홈페이지와 데이터 이용 안내는 인증 없이 볼 수 있는 정적 설명 페이지다. 안내는 현재 코드의 저장·전송·접근 권한과 미연결 기능을 설명하며, Google OAuth 연결 자체를 수행하지 않는다. 이 두 페이지의 TypeScript 검사·운영 빌드·로컬 브라우저 확인 후 소스 `41114a1`의 Vercel Production Ready와 운영 내용·연결을 확인했다. 실제 Google 연결·Drive 백업 검증은 남아 있다.
+홈페이지와 데이터 이용 안내는 인증 없이 볼 수 있는 정적 설명 페이지다. 안내는 현재 코드의 저장·전송·접근 권한과 미연결 기능을 설명하며, Google OAuth 연결 자체를 수행하지 않는다. 이 두 페이지의 TypeScript 검사·운영 빌드·로컬 브라우저 확인 후 소스 `41114a1`의 Vercel Production Ready와 운영 내용·연결을 확인했다. 이는 초기 배포 기록이다. 이후 Google 연결·Drive 업로드·재다운로드·임시 IndexedDB 복원을 확인했으며 최신 결과는 [검증 기록](../VERIFICATION.md)을 따른다.
 
 ## 파일 안내
 
@@ -95,7 +95,9 @@ flowchart LR
 | [ai-settings-dialog.tsx](../src/components/ai-settings-dialog.tsx) | 제공자·모델·마스킹 키·시스템 프롬프트 설정 |
 | [ai-credentials.ts](../src/lib/ai-credentials.ts) | 계정·제공자에 묶인 AES-GCM 쿠키, HKDF, 30일 만료·기본 설정 선택 |
 | [ai-credential-handler.ts](../src/lib/ai-credential-handler.ts) | Origin·8KiB JSON·쿠키 보안 속성·키 미반환 |
-| [use-ai-system-prompt.ts](../src/components/use-ai-system-prompt.ts) | 브라우저별 프롬프트 저장·기본값·탭 동기화 |
+| [use-ai-system-prompt.ts](../src/components/use-ai-system-prompt.ts) | 이전 브라우저 지침의 명시적 가져오기 후보만 읽음 |
+| [ai-prompt-editor.tsx](../src/components/ai-prompt-editor.tsx) · [ai-prompt-presets.ts](../src/lib/ai-prompt-presets.ts) | 계정 프리셋 편집·전환·저장 계약 |
+| [ai-instructions.ts](../src/lib/ai-instructions.ts) | 공통 서버 규칙과 사용자 지침 분리 |
 | [AI 대화 route](../src/app/api/ai/chat/route.ts) | 인증, 자료 범위, 원고 버전, 호출 횟수, AI 요청 |
 | [ai-conversation.ts](../src/lib/ai-conversation.ts) | 질문·답변 저장 계약과 최근 대화 길이 제한 |
 | [manuscript-fonts.ts](../src/components/manuscript-fonts.ts) | Next.js가 빌드 시 내려받아 자체 제공하는 한글 원고 글꼴 |
@@ -111,7 +113,7 @@ Supabase RPC는 기준 버전 검사를 유지한다. 재전송에서 같은 요
 
 ## 현재 기술 경계
 
-저장·충돌·복원은 작업 공간 전체 단위다. 문서별 서버 테이블, CRDT, 자동 병합, 작업 큐, 벡터 검색, PWA는 없다. 외부 문서 변환·AI 3종·Drive/S3 서버 백업은 별도 모듈로 구현했으며 외부 API 자격 증명은 미연결이다. 샘플 데이터와 제한된 브라우저 흐름으로 확인한 첫 구현이며 장편 규모의 운영 성능 측정은 남아 있다.
+저장·충돌·복원은 작업 공간 전체 단위다. 문서별 서버 테이블, CRDT, 자동 병합, 작업 큐, 벡터 검색, PWA는 없다. 외부 문서 변환·AI 3종·Drive/S3 서버 백업은 별도 모듈로 구현했으며 Drive 연결·앱 ZIP 복원은 확인했다. 실제 AI 호출과 R2 DB 저장·전체 복원은 아직 확인하지 않았다. 샘플 데이터와 제한된 브라우저 흐름으로 확인한 첫 구현이며 장편 규모의 운영 성능 측정은 남아 있다.
 
 ## 문서 교환·AI·독립 백업 확장
 
@@ -121,8 +123,8 @@ Supabase RPC는 기준 버전 검사를 유지한다. 재전송에서 같은 요
 
 대화는 기존 비공개 workspace의 `Work.aiConversations`에 선택 필드로 저장하므로 DB 마이그레이션이 없다. 기기 저장·동기화·ZIP·독립 백업의 기존 경로를 공유하고 공개 판본 생성은 대화를 제외한다. [대화 계약과 한도](ai.md)를 따른다. 원고 수정은 명시적인 적용과 버전 검사·복구 지점을 거치며, 변경된 본문은 열린 Tiptap 편집기에도 반영된다.
 
-개인 AI 키는 workspace 밖의 계정·제공자별 암호화 HttpOnly 쿠키로 30일 보관한다. 서버가 복호화한 뒤 고정된 공식 제공자 URL의 요청 헤더에 넣고, 상태 응답에는 연결 여부·모델만 공개한다. 서버 환경 변수는 브라우저 연결이 없을 때의 기본값이다. 손상된 쿠키에서는 기본값 전환을 막는다. 사용자 시스템 프롬프트는 localStorage에 별도로 저장하고 질문할 때 전달한다. 키와 프롬프트는 ZIP·Drive·DB 백업과 공개 판본에 들어가지 않으며 DB 스키마 변경이 없다. 응답 형식·원문 적용·자료 경계 규칙은 서버에서 유지한다.
+개인 AI 키는 workspace 밖의 계정·제공자별 암호화 HttpOnly 쿠키로 30일 보관한다. 서버가 복호화한 뒤 고정된 공식 제공자 URL의 요청 헤더에 넣고, 상태 응답에는 연결 여부·모델만 공개한다. 서버 환경 변수는 브라우저 연결이 없을 때의 기본값이다. 손상된 쿠키에서는 기본값 전환을 막는다. 프롬프트·선택 프리셋은 Workspace.aiPreferences에 저장하고 원고의 기기 저장·버전 검사·동기화·전체 백업 경로를 공유한다. 전체 ZIP·Drive ZIP·암호화 DB 수집 대상에 포함하고 공개 판본에서 제외한다. API 키는 이 데이터에 넣지 않는다. 새 테이블은 없으며 [003 보호 트리거](../supabase/migrations/003_ai_preferences_guard.sql)로 이전 클라이언트의 필드 제거를 거절한다. 응답 형식·원문 적용·자료 경계 규칙은 서버에서 유지한다.
 
 일일 백업은 [vercel.json](../vercel.json) → 인증된 cron → [offsite-backup-server.ts](../src/lib/offsite-backup-server.ts)의 서버 수집 → [offsite-backup.ts](../src/lib/offsite-backup.ts)의 ZIP·저장 후 검증 → Drive/S3 어댑터 순서다. 브라우저로 service_role·저장소 비밀을 보내지 않는다. 마지막 성공 표시는 실제 저장 파일 검증 이후에만 갱신한다. 구성과 미연결 경계는 [백업 안내](offsite-backup.md)에 있다.
 
-Google OAuth 앱·웹 클라이언트는 사용자가 생성했다. 새 비밀키 보관·기존 키 비활성화, 실제 공개 URL·도메인과 `drive.file` 저장, 앱의 프로덕션 상태를 확인했다. 첫 교환의 `invalid_grant` 보고 이후 재승인·Refresh token 보관은 사용자가 완료를 보고했다. 토큰 값은 읽지 않았다. 사용자는 Vercel Production에 Google 연결값 3개를 입력·저장했다고 보고했다. 나머지 서버 설정과 실제 Drive 백업은 대기 중이다. AI 키·모델도 미연결이다.
+Google OAuth 앱·웹 클라이언트는 사용자가 생성했다. 새 비밀키 보관·기존 키 비활성화, 실제 공개 URL·도메인과 `drive.file` 저장, 앱의 프로덕션 상태를 확인했다. 첫 교환의 `invalid_grant` 보고 이후 재승인·Refresh token 보관은 사용자가 완료를 보고했다. 토큰 값은 읽지 않았다. 사용자는 Vercel Production에 Google 연결값 3개를 입력·저장했다고 보고했다. 이후 서버 설정·운영 Drive 백업 성공·재다운로드·임시 IndexedDB 복원을 확인했다. 실제 AI 호출은 미검증이다. 날짜별 근거는 [검증 기록](../VERIFICATION.md)을 따른다.

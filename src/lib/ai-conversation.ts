@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { reviewSchema } from './ai';
 import { systemPromptSchema } from './ai-settings';
+import { promptPresetIdSchema } from './ai-prompt-presets';
 export const conversationProviderSchema=z.enum(['openai','anthropic','gemini']);
 export const chatMessageSchema=z.discriminatedUnion('role',[
   z.object({id:z.uuid(),role:z.literal('user'),text:z.string().min(1).max(2000),createdAt:z.string()}),
-  z.object({id:z.uuid(),role:z.literal('assistant'),result:reviewSchema,createdAt:z.string(),provider:conversationProviderSchema,model:z.string().max(200),version:z.string().max(100),sources:z.array(z.object({id:z.uuid(),title:z.string().max(300)})).max(8)}),
+  z.object({id:z.uuid(),role:z.literal('assistant'),result:reviewSchema,createdAt:z.string(),provider:conversationProviderSchema,model:z.string().max(200),version:z.string().max(100),sources:z.array(z.object({id:z.uuid(),title:z.string().max(300)})).max(8),promptPreset:z.object({id:z.string().max(100),title:z.string().max(80),revision:z.string().max(100)}).optional()}),
 ]);
 export type ChatMessage=z.infer<typeof chatMessageSchema>;
 export const conversationSchema=z.object({docId:z.uuid(),messages:z.array(chatMessageSchema).max(40)}).superRefine((v,ctx)=>{if(v.messages.length%2||v.messages.some((m,i)=>m.role!==(i%2?'assistant':'user')))ctx.addIssue({code:'custom',message:'AI 대화의 질문·답변 순서를 확인하세요.'});});
@@ -15,6 +16,7 @@ export const chatInputSchema=z.object({
   sourceIds:z.array(z.uuid()).max(8),
   history:z.array(z.object({role:z.enum(['user','assistant']),content:z.string().min(1).max(15000)})).max(10),
   systemPrompt:systemPromptSchema.optional(),
+  promptPresetId:promptPresetIdSchema.optional(),
 }).superRefine((v,ctx)=>{
   if(v.history.some((m,i)=>m.role!==(i%2?'assistant':'user'))||v.history.length%2)ctx.addIssue({code:'custom',message:'대화 순서를 확인하세요.'});
   if(v.history.reduce((n,m)=>n+m.content.length,0)>24000)ctx.addIssue({code:'custom',message:'이전 대화가 너무 깁니다.'});

@@ -1,6 +1,12 @@
 # Orbis Tertius 백업 보강과 연결 절차
 
-기준: 2026-10-02 · 0.2.1. 앱 ZIP, DB 복구용 암호화 파일, Markdown 사본은 각각 다른 목적이다. 새 DB 백업의 첫 복원 훈련을 통과하기 전 기존 Drive ZIP을 유지한다.
+기준: 2026-10-03 · 0.2.1. 앱 ZIP, DB 복구용 암호화 파일, Markdown 사본은 각각 다른 목적이다. 새 DB 백업의 첫 복원 훈련을 통과하기 전 기존 Drive ZIP을 유지한다.
+
+## 최신 운영 경계 — 2026-10-03
+
+Drive ZIP 저장·재다운로드·임시 IndexedDB 복원은 완료했다. R2·GitHub 인증 설정과 DB 인증·역할·스키마 수집은 통과했지만 데이터 덤프 옵션 수정 후 실제 R2 저장·전체 DB 복원은 확인하지 않았다. 첫 복원 훈련 전 DB cron은 비활성이다. 완료 백업 자동 삭제는 없다.
+
+Healthchecks DB 실패 신호 도착을 확인했고 실패 메일·키 폴더의 다른 장소 보관은 사용자 완료 보고를 받았다. 개인키 사본 바이트는 읽지 않았다. Drive 예약 신호·누락 알림은 별도 시험한다. 아래 과정은 당시 기록이며 현재 판정은 이 절과 [최신 검증](../VERIFICATION.md)을 따른다.
 
 ## 현재 확인한 것
 
@@ -94,7 +100,7 @@ GitHub Actions에서 Encrypted database and assets backup → Run workflow로 �
 
 실제 Healthchecks 계정에서 Drive·DB 항목을 만들고 아래 주기를 저장했다. 두 항목의 이메일 채널은 ON·Ready to deliver 상태다. 비공개 ping URL을 각각 GitHub·Vercel에 입력하는 사용자 작업과 신호·이메일 수신 검증은 아직 남아 있다.
 
-이후 사용자가 두 주소 저장을 보고했고 변수 이름을 확인했다. 첫 DB 백업이 실패한 뒤 Healthchecks에 실패 신호가 도착했지만 실제 메일 수신은 미확인이다. 업로더는 고정된 단계와 오류 분류만 출력한다. CLI 원문에는 연결 주소·SQL 등이 포함될 수 있으므로 원문을 공개 로그로 전환하지 않는다. Drive 감시 변수는 새 Vercel 배포에 반영한 뒤 실제 신호를 확인한다.
+이후 사용자가 두 주소 저장을 보고했고 변수 이름을 확인했다. 첫 DB 백업이 실패한 뒤 Healthchecks에 실패 신호가 도착했지만 이후 사용자가 실패 메일 수신을 확인했다. 누락 알림은 별도 시험한다. 업로더는 고정된 단계와 오류 분류만 출력한다. CLI 원문에는 연결 주소·SQL 등이 포함될 수 있으므로 원문을 공개 로그로 전환하지 않는다. Drive 감시 변수는 새 Vercel 배포에 반영한 뒤 실제 신호를 확인한다.
 
 Healthchecks.io에서 Drive와 DB용 check를 따로 만들고 각 알림 연결을 시험한다. Drive: 24시간 주기 + 12시간 grace. DB: UTC `23 18 * * *` + 12시간 grace. DB 작업은 30분 제한이며 start 신호를 사용하므로 실행 중 grace도 맞춘다. 최초 정상 ping 후 알림을 활성화하고 fail 신호·36시간 누락을 시험한다. [감시 API](https://healthchecks.io/docs/http_api/).
 

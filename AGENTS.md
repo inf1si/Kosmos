@@ -8,6 +8,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+# Documentation
+
+Read [docs/status.md](docs/status.md) and the relevant feature guide before changing behavior. For a functional change, update the feature guide, [CHANGELOG.md](CHANGELOG.md), [VERIFICATION.md](VERIFICATION.md), and [docs/status.md](docs/status.md) in the same commit. Separate goals, local tests, deployed checks, and user reports. Do not mark unperformed checks complete.
+
+Run `pnpm docs:check` before finishing. CI compares changed paths to the base commit and requires those documentation updates. This checks links and changed files, not factual accuracy; review feature, storage/sync, import/export/backup, privacy, deployment, and design documentation for semantic consistency. Follow [docs/maintenance.md](docs/maintenance.md). Never record credentials or private manuscript text.
+
 # Design
 
 Before building or changing any UI (public pages, the studio, dialogs), read [docs/design-guide.md](docs/design-guide.md) and follow it. It is the single source for colour tokens, the three palettes (violet, cassette, cyber) × light/dark, type, layout, copy rules (Korean, data-based wording, no slogans or English decorative headings) and where studio features go.
