@@ -1,15 +1,69 @@
 'use client';
-import { useEffect,useId,useState } from 'react';
+import { useEffect,useRef,useState } from 'react';
 import type { Editor } from '@tiptap/core';
-import { AlignLeft,AlignCenter,AlignRight,AlignJustify,IndentIncrease,IndentDecrease,ListOrdered,Pilcrow,Table2,Type,Strikethrough,Superscript,Subscript,Highlighter,RemoveFormatting,Omega } from 'lucide-react';
+import type { ResolvedPos } from '@tiptap/pm/model';
+import { AlignLeft,AlignCenter,AlignRight,AlignJustify,IndentIncrease,IndentDecrease,List,ChevronDown,Pilcrow,Table2,Type,Strikethrough,Superscript,Subscript,Highlighter,RemoveFormatting,Omega } from 'lucide-react';
 import { IconButton,Popover } from './primitives';
 import { fontSizes,validFontSize } from '@/lib/editor-preferences';
+import { inlineFontSize,bulletListStyles,orderedListStyles,listStyleType } from '@/lib/manuscript-format';
 import styles from './editor-tools.module.css';
 
-export function FontSizeInput({size,onChange}:{size:number;onChange:(size:number)=>void}){
-  const [value,setValue]=useState(String(size)),id=useId();useEffect(()=>setValue(String(size)),[size]);
-  function commit(){const n=Number(value);if(validFontSize(n))onChange(n);else setValue(String(size));}
-  return <span className={styles.size}><input aria-label="본문 크기" title="본문 크기 · 10–72px" type="number" min={10} max={72} step={0.5} list={id} value={value} onChange={e=>{setValue(e.target.value);const n=Number(e.target.value);if(validFontSize(n))onChange(n);}} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){commit();e.currentTarget.blur();}}}/><span>px</span><datalist id={id}>{fontSizes.map(n=><option key={n} value={n}/>)}</datalist></span>;
+/** The size of the selected text: a number when it is all one size, null when sizes are mixed, undefined when none is set. */
+function selectedFontSize(editor:Editor){
+  const {from,to}=editor.state.selection,sizes=new Set<number|undefined>();
+  editor.state.doc.nodesBetween(from,to,node=>{if(node.isText)sizes.add(inlineFontSize(node.marks.find(m=>m.type.name==='fontSize')?.attrs.size));});
+  return sizes.size>1?null:[...sizes][0];
+}
+/** With text selected the size applies to that text only; with nothing selected it is this device's manuscript display size. */
+export function FontSizeControl({editor,readonly,size,onBaseChange}:{editor:Editor|null;readonly:boolean;size:number;onBaseChange:(size:number)=>void}){
+  const ranged=!!editor&&!readonly&&!editor.state.selection.empty;
+  const selected=ranged?selectedFontSize(editor):undefined,shown=selected===null?null:selected??size;
+  const [value,setValue]=useState(shown===null?'':String(shown)),[open,setOpen]=useState(false),listRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>setValue(shown===null?'':String(shown)),[shown]);
+  useEffect(()=>{if(open)requestAnimationFrame(()=>{const current=listRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]');current?.scrollIntoView({block:'center'});current?.focus();});},[open]);
+  function apply(n:number|null){
+    if(ranged&&editor){const chain=editor.chain().focus();(n===null?chain.unsetMark('fontSize'):chain.setMark('fontSize',{size:n})).run();}
+    else if(n!==null)onBaseChange(n);
+  }
+  function commit(){const n=Number(value);if(value.trim()&&validFontSize(n)){if(n!==shown)apply(n);}else setValue(shown===null?'':String(shown));}
+  const label=ranged?'선택한 글자 크기':'본문 크기';
+  return <span className={styles.size}>
+    <input aria-label={label} title={ranged?'선택한 글자 크기 · 10–72px':'본문 크기 · 이 기기의 원고 표시 설정 · 10–72px'} inputMode="decimal" placeholder={shown===null?'–':undefined} value={value} onChange={e=>setValue(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();if(!ranged)e.currentTarget.blur();}else if(e.key==='Escape')setValue(shown===null?'':String(shown));}}/><span>px</span>
+    <Popover open={open} onOpenChange={setOpen} width={208} title={label} description={ranged?'선택한 부분에만 적용합니다.':'글자를 선택하지 않으면 원고 전체의 표시 크기를 바꿉니다.'} onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label="글자 크기 목록" className={`icon-button ${styles.sizeToggle}`} aria-pressed={open}><ChevronDown size={14}/></IconButton>}>
+      <div className={styles.sizeList} ref={listRef}>{fontSizes.map(n=><button key={n} type="button" aria-pressed={n===shown} onClick={()=>{apply(n);setOpen(false);}}>{n}<span>px</span></button>)}</div>
+      {ranged&&<div className="popover-actions"><button type="button" className="button" disabled={selected===undefined} onClick={()=>{apply(null);setOpen(false);}}>기본 크기로</button></div>}
+    </Popover>
+  </span>;
+}
+type ListType='bulletList'|'orderedList';
+/** The list that holds the cursor, and the marker it shows. Nested bullet lists default to 빈 원, then 네모. */
+function currentList($from:ResolvedPos):{type:ListType;depth:number;style:string;fallback:string}|null{
+  for(let d=$from.depth;d>0;d--){const node=$from.node(d),type=node.type.name;if(type!=='bulletList'&&type!=='orderedList')continue;
+    let nested=0;for(let a=d-1;a>0;a--)if($from.node(a).type.name==='bulletList')nested++;
+    const fallback=type==='bulletList'?['disc','circle','square'][Math.min(nested,2)]:'decimal';
+    return {type,depth:d,style:listStyleType({type,attrs:node.attrs})??fallback,fallback};}
+  return null;
+}
+export function ListMenu({editor,readonly}:{editor:Editor|null;readonly:boolean}){
+  const [open,setOpen]=useState(false);
+  const current=editor?currentList(editor.state.selection.$from):null;
+  function choose(type:ListType,style:string){
+    if(!editor||readonly)return;let chain=editor.chain().focus();
+    if(!current)chain=type==='bulletList'?chain.toggleBulletList():chain.toggleOrderedList();
+    chain.command(({tr,state})=>{const list=currentList(tr.selection.$from);if(!list)return false;const pos=tr.selection.$from.before(list.depth),node=tr.doc.nodeAt(pos);if(!node)return false;
+      // The default marker is stored as null so the nesting rules above still apply; the HTML type of pasted lists gives way.
+      tr.setNodeMarkup(pos,state.schema.nodes[type],{...(node.type.name===type?node.attrs:{}),listStyle:style===(list.type===type?list.fallback:type==='bulletList'?'disc':'decimal')?null:style,...(type==='orderedList'?{type:null}:{})});return true;}).run();
+    setOpen(false);
+  }
+  return <Popover open={open} onOpenChange={setOpen} title="목록" width={312} onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label="목록" disabled={!editor||readonly} aria-pressed={open}><List size={16}/></IconButton>}>
+    <div className={styles.tools}>
+      {([['bulletList','글머리 기호',bulletListStyles],['orderedList','번호',orderedListStyles]] as const).map(([type,name,options])=><div key={type}>
+        <p className={styles.group}>{name}</p>
+        <div className={styles.listStyles}>{options.map(o=><button key={o.id} type="button" className={`button ${styles.listOption}`} aria-label={`${o.label} ${type==='bulletList'?'글머리 기호':'번호 목록'}`} aria-pressed={current?.type===type&&current.style===o.id} onClick={()=>choose(type,o.id)}><span aria-hidden="true">{o.marker}</span>{o.label}</button>)}</div>
+      </div>)}
+      {current&&<div className="popover-actions"><button type="button" className="button" onClick={()=>{if(!editor)return;const chain=editor.chain().focus();(current.type==='bulletList'?chain.toggleBulletList():chain.toggleOrderedList()).run();setOpen(false);}}>목록 해제</button></div>}
+    </div>
+  </Popover>;
 }
 const symbols=[{name:'문장 부호',characters:['“','”','‘','’','「','」','『','』','〈','〉','《','》','…','—','–','·','※']},{name:'SF · 수학',characters:['±','×','÷','≠','≤','≥','≈','∞','√','∑','∫','°','℃','α','β','γ','δ','λ','μ','π','Ω']},{name:'화살표 · 기호',characters:['←','→','↑','↓','↔','⇒','⇔','☐','☑','○','●','◇','◆','☆','★']}];
 export function EditorFormatTools({editor,readonly}:{editor:Editor|null;readonly:boolean}){
@@ -27,9 +81,9 @@ export function EditorFormatTools({editor,readonly}:{editor:Editor|null;readonly
       <IconButton label="위첨자" aria-pressed={editor?.isActive('superscript')} onClick={()=>{editor?.chain().focus().toggleSuperscript().run();setPanel(null);}}><Superscript size={16}/></IconButton>
       <IconButton label="아래첨자" aria-pressed={editor?.isActive('subscript')} onClick={()=>{editor?.chain().focus().toggleSubscript().run();setPanel(null);}}><Subscript size={16}/></IconButton>
       <IconButton label="강조 표시" aria-pressed={editor?.isActive('highlight')} onClick={()=>{editor?.chain().focus().toggleHighlight().run();setPanel(null);}}><Highlighter size={16}/></IconButton>
-      <IconButton label="문자 서식 지우기" onClick={()=>{let chain=editor?.chain().focus();for(const name of ['bold','italic','underline','strike','code','superscript','subscript','highlight'])chain=chain?.unsetMark(name);chain?.run();setPanel(null);}}><RemoveFormatting size={16}/></IconButton>
+      <IconButton label="문자 서식 지우기" onClick={()=>{let chain=editor?.chain().focus();for(const name of ['bold','italic','underline','strike','code','superscript','subscript','highlight','fontSize'])chain=chain?.unsetMark(name);chain?.run();setPanel(null);}}><RemoveFormatting size={16}/></IconButton>
     </div>}
-    {item.id==='paragraph'&&<><div className={styles.row}>{[{name:'왼쪽 정렬',value:'left',icon:<AlignLeft size={16}/>},{name:'가운데 정렬',value:'center',icon:<AlignCenter size={16}/>},{name:'오른쪽 정렬',value:'right',icon:<AlignRight size={16}/>},{name:'양쪽 정렬',value:'justify',icon:<AlignJustify size={16}/>}].map(align=><IconButton key={align.value} label={align.name} aria-pressed={editor?.isActive({textAlign:align.value})} onClick={()=>paragraph({textAlign:align.value})}>{align.icon}</IconButton>)}<IconButton label="들여쓰기" onClick={()=>indent(1)}><IndentIncrease size={16}/></IconButton><IconButton label="내어쓰기" onClick={()=>indent(-1)}><IndentDecrease size={16}/></IconButton><IconButton label="번호 목록" aria-pressed={editor?.isActive('orderedList')} onClick={()=>{editor?.chain().focus().toggleOrderedList().run();setPanel(null);}}><ListOrdered size={16}/></IconButton></div>
+    {item.id==='paragraph'&&<><div className={styles.row}>{[{name:'왼쪽 정렬',value:'left',icon:<AlignLeft size={16}/>},{name:'가운데 정렬',value:'center',icon:<AlignCenter size={16}/>},{name:'오른쪽 정렬',value:'right',icon:<AlignRight size={16}/>},{name:'양쪽 정렬',value:'justify',icon:<AlignJustify size={16}/>}].map(align=><IconButton key={align.value} label={align.name} aria-pressed={editor?.isActive({textAlign:align.value})} onClick={()=>paragraph({textAlign:align.value})}>{align.icon}</IconButton>)}<IconButton label="들여쓰기" onClick={()=>indent(1)}><IndentIncrease size={16}/></IconButton><IconButton label="내어쓰기" onClick={()=>indent(-1)}><IndentDecrease size={16}/></IconButton></div>
       <label>줄간격<select aria-label="줄간격" value={attrs.lineHeight??'default'} onChange={e=>paragraph({lineHeight:e.target.value==='default'?null:Number(e.target.value)})}><option value="default">기본 · 2배</option>{[1,1.15,1.3,1.5,1.75,2,2.25,2.5,3].map(n=><option key={n} value={n}>{n}배</option>)}</select></label>
       <label>첫 줄 들여쓰기<select aria-label="첫 줄 들여쓰기" value={attrs.firstLineIndent??'default'} onChange={e=>paragraph({firstLineIndent:e.target.value==='default'?null:Number(e.target.value)})}><option value="default">기본</option>{[0,1,2,3,4].map(n=><option key={n} value={n}>{n}자</option>)}</select></label>
       <div className={styles.grid}>{[['문단 앞 간격','spaceBefore'],['문단 뒤 간격','spaceAfter']].map(([label,key])=><label key={key}>{label}<select aria-label={label} value={attrs[key]??'default'} onChange={e=>paragraph({[key]:e.target.value==='default'?null:Number(e.target.value)})}><option value="default">기본</option>{[0,4,8,12,16,24,36,48].map(n=><option key={n} value={n}>{n}px</option>)}</select></label>)}</div><button className="button" onClick={()=>paragraph({lineHeight:null,indent:null,firstLineIndent:null,spaceBefore:null,spaceAfter:null,textAlign:null})}>문단 서식 초기화</button></>}

@@ -5,7 +5,7 @@ import { List, Settings2, X, Link2 } from 'lucide-react';
 import { Publication, RichNode, footnotes, plainText } from '@/lib/model';
 import { db } from '@/lib/database';
 import { seedWorkspace } from '@/lib/seed';
-import { paragraphStyle,cellSpan,tableColumns } from '@/lib/manuscript-format';
+import { paragraphStyle,cellSpan,tableColumns,inlineFontSize,listStyleType } from '@/lib/manuscript-format';
 import { THEME_KEY, preferredPalette } from '@/lib/theme';
 import { Popover, type PopoverAnchor } from './primitives';
 import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './theme-toggle';
@@ -35,6 +35,8 @@ export function RichReader({content,publication,onWiki}:{content:RichNode;public
       let text:ReactNode=n.text;
       for(const m of n.marks||[]){
         if(m.type==='bold')text=<strong>{text}</strong>;else if(m.type==='italic')text=<em>{text}</em>;else if(m.type==='underline')text=<u>{text}</u>;else if(m.type==='strike')text=<s>{text}</s>;else if(m.type==='code')text=<code>{text}</code>;else if(m.type==='superscript')text=<sup>{text}</sup>;else if(m.type==='subscript')text=<sub>{text}</sub>;else if(m.type==='highlight')text=<mark>{text}</mark>;
+        // The author picks sizes against the 18px manuscript; the reader's own size choice scales them the same way.
+        else if(m.type==='fontSize'){const size=inlineFontSize(m.attrs?.size);if(size)text=<span style={{fontSize:`${+(size/18).toFixed(4)}em`}}>{text}</span>;}
         else if(m.type==='wikiLink'){const target=String(m.attrs?.targetId||'');const setting=publication.wiki.find(w=>w.id===target);if(setting)text=<button className="reader-wiki-link" title={setting.summary} aria-haspopup="dialog" onClick={e=>onWiki(target,e.currentTarget)}>{text}</button>;}
         else if(m.type==='link'){const href=String(m.attrs?.href||'');if(/^https?:\/\//i.test(href))text=<a href={href} target="_blank" rel="noopener noreferrer">{text}</a>;}
       }
@@ -50,8 +52,8 @@ export function RichReader({content,publication,onWiki}:{content:RichNode;public
     if(n.type==='tableHeader')return <th key={key} colSpan={cellSpan(n.attrs?.colspan)} rowSpan={cellSpan(n.attrs?.rowspan)}>{children}</th>;
     if(n.type==='tableCell')return <td key={key} colSpan={cellSpan(n.attrs?.colspan)} rowSpan={cellSpan(n.attrs?.rowspan)}>{children}</td>;
     if(n.type==='blockquote')return <blockquote key={key}>{children}</blockquote>;
-    if(n.type==='bulletList')return <ul key={key}>{children}</ul>;
-    if(n.type==='orderedList')return <ol key={key}>{children}</ol>;
+    if(n.type==='bulletList')return <ul key={key} style={{listStyleType:listStyleType(n)}}>{children}</ul>;
+    if(n.type==='orderedList')return <ol key={key} start={Number(n.attrs?.start)>1?Number(n.attrs?.start):undefined} style={{listStyleType:listStyleType(n)}}>{children}</ol>;
     if(n.type==='listItem')return <li key={key}>{children}</li>;
     if(n.type==='hardBreak')return <br key={key}/>;
     if(n.type==='horizontalRule')return <hr key={key}/>;
