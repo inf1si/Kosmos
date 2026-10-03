@@ -5,6 +5,7 @@ import { List, Settings2, X, Link2 } from 'lucide-react';
 import { Publication, RichNode, footnotes, plainText } from '@/lib/model';
 import { db } from '@/lib/database';
 import { seedWorkspace } from '@/lib/seed';
+import { paragraphStyle,cellSpan,tableColumns } from '@/lib/manuscript-format';
 import { THEME_KEY, preferredPalette } from '@/lib/theme';
 import { Popover, type PopoverAnchor } from './primitives';
 import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './theme-toggle';
@@ -33,7 +34,7 @@ export function RichReader({content,publication,onWiki}:{content:RichNode;public
     if(n.type==='text'){
       let text:ReactNode=n.text;
       for(const m of n.marks||[]){
-        if(m.type==='bold')text=<strong>{text}</strong>;else if(m.type==='italic')text=<em>{text}</em>;else if(m.type==='underline')text=<u>{text}</u>;else if(m.type==='strike')text=<s>{text}</s>;else if(m.type==='code')text=<code>{text}</code>;
+        if(m.type==='bold')text=<strong>{text}</strong>;else if(m.type==='italic')text=<em>{text}</em>;else if(m.type==='underline')text=<u>{text}</u>;else if(m.type==='strike')text=<s>{text}</s>;else if(m.type==='code')text=<code>{text}</code>;else if(m.type==='superscript')text=<sup>{text}</sup>;else if(m.type==='subscript')text=<sub>{text}</sub>;else if(m.type==='highlight')text=<mark>{text}</mark>;
         else if(m.type==='wikiLink'){const target=String(m.attrs?.targetId||'');const setting=publication.wiki.find(w=>w.id===target);if(setting)text=<button className="reader-wiki-link" title={setting.summary} aria-haspopup="dialog" onClick={e=>onWiki(target,e.currentTarget)}>{text}</button>;}
         else if(m.type==='link'){const href=String(m.attrs?.href||'');if(/^https?:\/\//i.test(href))text=<a href={href} target="_blank" rel="noopener noreferrer">{text}</a>;}
       }
@@ -41,9 +42,13 @@ export function RichReader({content,publication,onWiki}:{content:RichNode;public
     }
     if(n.type==='footnote'){const id=String(n.attrs?.noteId||key);const index=notes.findIndex(note=>note.id===id)+1;return <NoteLink key={key} id={id} index={index} text={String(n.attrs?.text||'')}/>;}
     const children=n.content?.map((c,i)=>node(c,`${key}.${i}`));const id=typeof n.attrs?.blockId==='string'?n.attrs.blockId:undefined;
-    const align=['left','center','right','justify'].includes(String(n.attrs?.textAlign))?n.attrs?.textAlign as React.CSSProperties['textAlign']:undefined;
-    if(n.type==='paragraph')return <p key={key} id={id} style={{textAlign:align}}>{children}</p>;
-    if(n.type==='heading')return <h3 key={key} id={id}>{children}</h3>;
+    const style=paragraphStyle(n.attrs);
+    if(n.type==='paragraph')return <p key={key} id={id} style={style}>{children}</p>;
+    if(n.type==='heading'){const level=Number(n.attrs?.level);return level===1?<h2 key={key} id={id} style={style}>{children}</h2>:level===3?<h4 key={key} id={id} style={style}>{children}</h4>:<h3 key={key} id={id} style={style}>{children}</h3>;}
+    if(n.type==='table'){const widths=tableColumns(n.content?.[0]);return <div className="reader-table" key={key}><table aria-label="본문 표" style={{minWidth:widths.reduce<number>((sum,w)=>sum+(w??60),0)}}><colgroup>{widths.map((w,i)=><col key={i} style={{width:w}}/>)}</colgroup><tbody>{children}</tbody></table></div>;}
+    if(n.type==='tableRow')return <tr key={key}>{children}</tr>;
+    if(n.type==='tableHeader')return <th key={key} colSpan={cellSpan(n.attrs?.colspan)} rowSpan={cellSpan(n.attrs?.rowspan)}>{children}</th>;
+    if(n.type==='tableCell')return <td key={key} colSpan={cellSpan(n.attrs?.colspan)} rowSpan={cellSpan(n.attrs?.rowspan)}>{children}</td>;
     if(n.type==='blockquote')return <blockquote key={key}>{children}</blockquote>;
     if(n.type==='bulletList')return <ul key={key}>{children}</ul>;
     if(n.type==='orderedList')return <ol key={key}>{children}</ol>;

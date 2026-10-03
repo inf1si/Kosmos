@@ -12,7 +12,7 @@ export type CountMetric=typeof countMetrics[number]['id'];
 export type TextStatistics={charactersWithoutSpaces:number;charactersWithSpaces:number;words:number;paragraphs:number;footnotes:number;sheets:number};
 const segmenter=new Intl.Segmenter('ko',{granularity:'grapheme'});
 const cache=new WeakMap<RichNode,TextStatistics>();
-const containers=new Set(['doc','blockquote','bulletList','orderedList','listItem']);
+const containers=new Set(['doc','blockquote','bulletList','orderedList','listItem','table','tableRow','tableCell','tableHeader']);
 
 /** Keep ancestor blocks so a partial selection still counts its selected paragraphs. */
 export function statisticsSelection(doc:ProseMirrorNode,from:number,to:number):RichNode|null{

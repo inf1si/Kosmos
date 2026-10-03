@@ -35,9 +35,9 @@ test('ENEX 내보내기는 선택 문서·태그·첨부 바이트를 전달하�
   const out=await exportInterchange(work,[work.documents[0].id],state.assets,[{id,blob}],'enex'),xml=await out.blob.text();assert.equal(XMLValidator.validate(xml),true);assert(!xml.includes('activePublicationId'));assert(!xml.includes(work.documents[1].title));const bundle=await readInterchange([asFile(out.blob,out.name)]);assert.equal(bundle.pages.length,1);assert.equal(bundle.pages[0].kind,'scene');assert.equal(bundle.assets.length,1);assert.deepEqual(new Uint8Array(await bundle.assets[0].blob.arrayBuffer()),png);assert(plainText(bundle.pages[0].content).includes('각주'));
 });
 
-test('HTML은 실행 코드·추적 이미지·위험 링크를 제거하고 표·암호화 내용을 알린다',async()=>{
+test('HTML은 실행 코드·추적 이미지·위험 링크를 제거하고 표를 보존하며 암호화 내용을 알린다',async()=>{
   const html='<html><head><script>비밀 실행</script></head><body><p onclick="bad()"><a href="javascript:alert(1)">표시</a><strong>굵게</strong><img src="https://tracker.example/image.png" alt="외부 이미지"></p><script>위험한 본문</script><iframe src="file:///secret">금지</iframe><en-crypt>암호화 원문</en-crypt><table><tr><th>열</th><td>값</td></tr></table></body></html>';
-  const bundle=await readInterchange([asFile(html,'악성.html')]),serialized=JSON.stringify(bundle.pages[0].content);assert(!serialized.includes('javascript:'));assert(!serialized.includes('onclick'));assert(!serialized.includes('위험한 본문'));assert(!serialized.includes('암호화 원문'));assert(serialized.includes('굵게'));assert(bundle.warnings.some(w=>w.includes('암호화')));assert(bundle.warnings.some(w=>w.includes('표는')));assert.equal(bundle.assets.length,0);
+  const bundle=await readInterchange([asFile(html,'악성.html')]),serialized=JSON.stringify(bundle.pages[0].content);assert(!serialized.includes('javascript:'));assert(!serialized.includes('onclick'));assert(!serialized.includes('위험한 본문'));assert(!serialized.includes('암호화 원문'));assert(serialized.includes('굵게'));assert(bundle.warnings.some(w=>w.includes('암호화')));assert(allNodes(bundle.pages[0].content).some(n=>n.type==='tableHeader'));assert.equal(bundle.assets.length,0);
 });
 
 test('XML 엔티티·손상 XML·ZIP 경로 이탈·과도한 압축 해제·누락 첨부·잘못된 인코딩을 거절한다',async()=>{

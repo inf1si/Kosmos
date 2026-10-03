@@ -24,7 +24,7 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
   const [menuFor,setMenuFor]=useState<string|null>(null);const [renaming,setRenaming]=useState<Target|null>(null);
   const [name,setName]=useState('');const [kind,setKind]=useState<NovelDocument['kind']>('memo');
   const [destination,setDestination]=useState('');const [place,setPlace]=useState('last');
-  const [notice,setNotice]=useState('');const [error,setError]=useState('');const [undo,setUndo]=useState<NavigationSnapshot|null>(null);
+  const [error,setError]=useState('');const [undo,setUndo]=useState<NavigationSnapshot|null>(null);
   const [drag,setDrag]=useState<Drag|null>(null);const dragRef=useRef<Drag|null>(null);const suppressClick=useRef<{id:string;until:number}|null>(null);
   const documents=new Map(work.documents.map(d=>[d.id,d])),nodes=new Map(nav.nodes.map(n=>[n.id,n]));
   const branches=new Map<string,NavigationNode[]>();for(const n of nav.nodes){const key=`${n.sectionId}/${n.parentId||''}`;branches.set(key,[...(branches.get(key)||[]),n]);}
@@ -35,8 +35,8 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
   if(query.trim())for(const n of nav.nodes)if(n.type==='folder'&&n.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))for(const id of descendantsOf(nav,n.id))matching.add(id);
   const visible=new Set(matching);for(const id of matching){let parent=nodes.get(id)?.parentId;while(parent){visible.add(parent);parent=nodes.get(parent)?.parentId;}}
   const show=(n:NavigationNode)=>!query.trim()||visible.has(n.id);
-  function mutate(fn:(latest:Work)=>Work,message:string,remember=true){
-    if(readonly)return false;try{onChange(latest=>{const next=fn(latest);if(remember)setUndo(navigationSnapshot(latest));return next;});setError('');setNotice(message);return true;}catch(e){setError(e instanceof Error?e.message:'문서 정리를 바꾸지 못했습니다.');return false;}
+  function mutate(fn:(latest:Work)=>Work,remember=true){
+    if(readonly)return false;try{onChange(latest=>{const next=fn(latest);if(remember)setUndo(navigationSnapshot(latest));return next;});setError('');return true;}catch(e){setError(e instanceof Error?e.message:'문서 정리를 바꾸지 못했습니다.');return false;}
   }
   const rowOf=(t:Target)=>root.current?.querySelector<HTMLElement>(t.section?`[data-navigation-section="${t.id}"]`:`[data-navigation-row="${t.id}"]`)||null;
   const menuButtonOf=(t:Target)=>rowOf(t)?.querySelector<HTMLElement>('[data-row-menu]')||null;
@@ -54,7 +54,7 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
     const t=renaming;if(!t)return;const value=name.trim();
     if(save&&!value){setError('이름을 입력하세요.');return;}
     setRenaming(null);setError('');
-    if(save&&value!==targetTitle(t))mutate(latest=>{const next=resolveNavigation(latest);if(t.section)next.sections=next.sections.map(s=>s.id===t.id?{...s,title:value}:s);else next.nodes=next.nodes.map(n=>n.id===t.id&&n.type==='folder'?{...n,title:value}:n);return applyNavigation(latest,next);},'이름을 변경했습니다.');
+    if(save&&value!==targetTitle(t))mutate(latest=>{const next=resolveNavigation(latest);if(t.section)next.sections=next.sections.map(s=>s.id===t.id?{...s,title:value}:s);else next.nodes=next.nodes.map(n=>n.id===t.id&&n.type==='folder'?{...n,title:value}:n);return applyNavigation(latest,next);});
     window.setTimeout(()=>menuButtonOf(t)?.focus(),0);
   }
   function toggle(id:string){setClosed(v=>{const next=new Set(v);if(next.has(id))next.delete(id);else next.add(id);return next;});}
@@ -77,8 +77,7 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
   function finishDrag(cancel=false){
     const current=dragRef.current;dragRef.current=null;setDrag(null);if(!current?.active)return;suppressClick.current={id:current.id,until:Date.now()+500};
     if(cancel)return;if(current.drop?.error){setError(current.drop.error);return;}
-    if(current.drop){const drop=current.drop;mutate(latest=>moveNavigation(latest,current.id,drop.to),'문서 위치를 저장했습니다.');expand(drop.to.parentId);expand(`section:${drop.to.sectionId}`);}
-    else setNotice('이동을 취소했습니다. 문서나 대분류 위에 놓아주세요.');
+    if(current.drop){const drop=current.drop;mutate(latest=>moveNavigation(latest,current.id,drop.to));expand(drop.to.parentId);expand(`section:${drop.to.sectionId}`);}
   }
   function destinationFromValue(value:string):DocumentDestination {
     if(value.startsWith('section:'))return {sectionId:value.slice(8),parentId:null};const parent=nodes.get(value.slice(5));if(!parent)throw new Error('이동할 위치를 선택하세요.');return {sectionId:parent.sectionId,parentId:parent.id};
@@ -101,11 +100,11 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
     if(node){
       if(node.type==='document')entries.push({key:'beside',label:'옆에서 열기',icon:<Columns2 size={15}/>,run:()=>onOpen(node.id,true)});
       entries.push({key:'move',label:'이동 · 순서 변경',icon:<GripVertical size={15}/>,disabled:readonly,divider:true,run:form({type:'move',id:node.id})});
-      for(const direction of [-1,1] as const)entries.push({key:`order${direction}`,label:direction<0?'위로 옮기기':'아래로 옮기기',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||!siblingDestination(work,node.id,direction),run:()=>{mutate(latest=>{const next=siblingDestination(latest,node.id,direction);return next?moveNavigation(latest,node.id,next):latest;},'문서 순서를 저장했습니다.');}});
+      for(const direction of [-1,1] as const)entries.push({key:`order${direction}`,label:direction<0?'위로 옮기기':'아래로 옮기기',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||!siblingDestination(work,node.id,direction),run:()=>{mutate(latest=>{const next=siblingDestination(latest,node.id,direction);return next?moveNavigation(latest,node.id,next):latest;});}});
     }
     if(section||node?.type==='folder')entries.push({key:'rename',label:'이름 변경',icon:<Pencil size={15}/>,disabled:readonly,divider:!!section,run:()=>afterMenu(()=>startRename(t))});
-    if(section){const index=nav.sections.findIndex(s=>s.id===section.id);for(const direction of [-1,1] as const)entries.push({key:`section${direction}`,label:direction<0?'대분류 위로':'대분류 아래로',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||index+direction<0||index+direction>=nav.sections.length,run:()=>{mutate(latest=>{const next=resolveNavigation(latest),i=next.sections.findIndex(s=>s.id===section.id);[next.sections[i],next.sections[i+direction]]=[next.sections[i+direction],next.sections[i]];return applyNavigation(latest,next);},'대분류 순서를 저장했습니다.');}});}
-    if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'대분류':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);if(section)next.sections=next.sections.filter(s=>s.id!==section.id);else next.nodes=next.nodes.filter(n=>n.id!==node!.id);return applyNavigation(latest,next);},'빈 정리 항목을 삭제했습니다.');}});
+    if(section){const index=nav.sections.findIndex(s=>s.id===section.id);for(const direction of [-1,1] as const)entries.push({key:`section${direction}`,label:direction<0?'대분류 위로':'대분류 아래로',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||index+direction<0||index+direction>=nav.sections.length,run:()=>{mutate(latest=>{const next=resolveNavigation(latest),i=next.sections.findIndex(s=>s.id===section.id);[next.sections[i],next.sections[i+direction]]=[next.sections[i+direction],next.sections[i]];return applyNavigation(latest,next);});}});}
+    if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'대분류':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);if(section)next.sections=next.sections.filter(s=>s.id!==section.id);else next.nodes=next.nodes.filter(n=>n.id!==node!.id);return applyNavigation(latest,next);});}});
     return entries;
   }
   const renderEntries=(t:Target,Item:typeof DropdownMenu.Item,Separator:typeof DropdownMenu.Separator)=>menuEntries(t).map(e=><Fragment key={e.key}>{e.divider&&<Separator className="menu-separator"/>}<Item className="menu-item" disabled={e.disabled} onSelect={e.run}>{e.icon}{e.label}</Item></Fragment>);
@@ -126,12 +125,12 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
     if(dialog.type==='move'){
       if(!moveTo)return;const to={...moveTo,...(place==='first'?{beforeId:moveSiblings[0]?.id}:place.startsWith('before:')?{beforeId:place.slice(7)}:{})};
       try{moveNavigation(work,dialog.id,to);}catch(e){setError((e as Error).message);return;}
-      success=mutate(latest=>moveNavigation(latest,dialog.id,to),'문서 위치를 저장했습니다.');expand(to.parentId);expand(`section:${to.sectionId}`);
+      success=mutate(latest=>moveNavigation(latest,dialog.id,to));expand(to.parentId);expand(`section:${to.sectionId}`);
     }else if(!titleValue){setError('이름을 입력하세요.');return;}
-    else if(dialog.type==='folder'){success=mutate(latest=>insertFolder(latest,titleValue,dialog.to),'폴더를 만들었습니다.');expand(dialog.to.parentId);expand(`section:${dialog.to.sectionId}`);}
+    else if(dialog.type==='folder'){success=mutate(latest=>insertFolder(latest,titleValue,dialog.to));expand(dialog.to.parentId);expand(`section:${dialog.to.sectionId}`);}
     else if(dialog.type==='document'){
-      let createdId='';success=mutate(latest=>{const result=createNavigationDocument(latest,kind,dialog.to);createdId=result.document.id;result.document.title=titleValue;return result.work;},'문서를 만들었습니다.',false);expand(dialog.to.parentId);expand(`section:${dialog.to.sectionId}`);if(success&&createdId)onOpen(createdId);
-    }else if(dialog.type==='section'){success=mutate(latest=>{const next=resolveNavigation(latest);next.sections.push({id:uid(),title:titleValue,defaultKind:kind});return applyNavigation(latest,next);},'대분류를 만들었습니다.');}
+      let createdId='';success=mutate(latest=>{const result=createNavigationDocument(latest,kind,dialog.to);createdId=result.document.id;result.document.title=titleValue;return result.work;},false);expand(dialog.to.parentId);expand(`section:${dialog.to.sectionId}`);if(success&&createdId)onOpen(createdId);
+    }else if(dialog.type==='section'){success=mutate(latest=>{const next=resolveNavigation(latest);next.sections.push({id:uid(),title:titleValue,defaultKind:kind});return applyNavigation(latest,next);});}
     if(success)setDialog(null);
   }
   function renderNodes(sectionId:string,parentId:string|null,depth:number):ReactNode{
@@ -148,7 +147,7 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
   }
   const formTitle=dialog?.type==='move'?`${moveNode?title(moveNode):'문서'} 이동`:dialog?.type==='folder'?'폴더 만들기':dialog?.type==='document'?'문서 만들기':'대분류 추가';
   return <div ref={root} className={styles.tree}>
-    <div className={styles.toolbar}><span>문서</span>{undo&&<IconButton label="문서 정리 되돌리기" disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),'문서 정리를 되돌렸습니다.',false);setUndo(null);}}><Undo2 size={14}/></IconButton>}<IconButton label="대분류 추가" disabled={readonly||nav.sections.length>=40} onClick={e=>openForm({type:'section'},e.currentTarget)}><Plus size={15}/></IconButton></div>
+    <div className={styles.toolbar}><span>문서</span>{undo&&<IconButton label="문서 정리 되돌리기" disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),false);setUndo(null);}}><Undo2 size={14}/></IconButton>}<IconButton label="대분류 추가" disabled={readonly||nav.sections.length>=40} onClick={e=>openForm({type:'section'},e.currentTarget)}><Plus size={15}/></IconButton></div>
     {nav.sections.map((section,index)=>{const sectionClosed=!query.trim()&&closed.has(`section:${section.id}`),count=nav.nodes.filter(n=>n.sectionId===section.id&&n.type==='document').length,drop=drag?.active&&drag.drop?.id===section.id?drag.drop:undefined;
       const t={id:section.id,section:true},isRenaming=renaming?.id===section.id&&!!renaming.section;
       return <section key={section.id} className={styles.section} aria-label={section.title}>{rowContext(t,<div data-navigation-section={section.id} data-drop-edge={drop?.edge} className={`${styles.heading} ${menuOpen(t)||dialog&&anchor.current?.dataset.navigationSection===section.id?styles.active:''} ${drop?.error?styles.invalid:''}`}>
@@ -157,8 +156,7 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange}:{wor
       </div>)}{!sectionClosed&&renderNodes(section.id,null,0)}{!sectionClosed&&!childNodes(null,section.id).length&&<p className={styles.empty}>문서를 추가하거나 여기로 옮겨주세요.</p>}</section>;
     })}
     {query.trim()&&!nav.nodes.some(show)&&<p className="empty-text">검색 결과가 없습니다.</p>}
-    <p className={styles.help}>{query.trim()?'드래그로 정리하려면 검색을 닫으세요.':'손잡이를 끌어 순서 변경 · 가운데 놓아 하위로 이동 · 우클릭으로 메뉴'}</p>
-    {!dialog&&error&&<p className={styles.error} role="alert">{error}</p>}<p className={styles.notice} role="status">{notice}</p>
+    {!dialog&&error&&<p className={styles.error} role="alert">{error}</p>}
     {drag?.active&&<div className={styles.ghost} style={{left:Math.max(4,Math.min(drag.x+12,typeof window==='undefined'?0:window.innerWidth-190)),top:drag.y+15}}>{nodes.get(drag.id)?title(nodes.get(drag.id)!):'문서'}<small>{drag.drop?.error|| (drag.drop?drag.drop.edge==='inside'?'하위에 넣기':drag.drop.edge==='before'?'앞에 놓기':'뒤에 놓기':'놓을 위치를 선택하세요.')}</small></div>}
     <Popover open={!!dialog} onOpenChange={open=>{if(!open){setDialog(null);setError('');}}} anchor={anchor} side={typeof window!=='undefined'&&window.innerWidth<700?'bottom':'right'} width={dialog?.type==='move'?340:280} title={formTitle} description={dialog?.type==='move'?'하위 문서와 폴더도 함께 이동합니다. 문서 종류와 부·장은 유지됩니다.':undefined} onReturnFocus={()=>{const target=returnFocus.current;if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButtonElement>(`[data-navigation-row="${activeId}"] button`)||document.getElementById('sidebar-toggle'))?.focus();}}>
       <form onSubmit={e=>{e.preventDefault();formSubmit();}} className={styles.form}>

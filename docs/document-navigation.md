@@ -52,3 +52,7 @@ folder node: { id: UUID, type: "folder", title, sectionId, parentId }
 002는 계층이 이미 있는 작품을 구버전 탭이 계층 없이 저장하려 하면 트랜잭션을 거절한다. 새 클라이언트는 오래된 오프라인 저장 요청·복원본에 계층을 보충해 전송한다. 저장을 거절당한 이전 탭에서 쓴 문장은 먼저 사본으로 보관한 뒤 새로고침하고 최신 원고와 비교한다. 공동 편집·자동 병합을 추가한 기능은 아니다.
 
 구현: [탐색 UI](../src/components/document-tree.tsx), [계층 조작](../src/lib/document-navigation.ts), [검증 스키마](../src/lib/document-navigation-schema.ts), [자동 테스트](../tests/document-navigation.test.ts). 실제 확인 범위는 [검증 기록](../VERIFICATION.md)을 따른다.
+
+## 화면 안내 원칙
+
+문서 트리의 상시 조작법·정리 성공 문단은 제거했다. 이동선·선택·이동 결과·정리 되돌리기로 확인하고 실패는 오류로 표시한다. 드래그·우클릭·이동 폼의 동작과 저장 계약은 유지한다.

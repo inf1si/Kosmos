@@ -128,3 +128,7 @@ Supabase RPC는 기준 버전 검사를 유지한다. 재전송에서 같은 요
 일일 백업은 [vercel.json](../vercel.json) → 인증된 cron → [offsite-backup-server.ts](../src/lib/offsite-backup-server.ts)의 서버 수집 → [offsite-backup.ts](../src/lib/offsite-backup.ts)의 ZIP·저장 후 검증 → Drive/S3 어댑터 순서다. 브라우저로 service_role·저장소 비밀을 보내지 않는다. 마지막 성공 표시는 실제 저장 파일 검증 이후에만 갱신한다. 구성과 미연결 경계는 [백업 안내](offsite-backup.md)에 있다.
 
 Google OAuth 앱·웹 클라이언트는 사용자가 생성했다. 새 비밀키 보관·기존 키 비활성화, 실제 공개 URL·도메인과 `drive.file` 저장, 앱의 프로덕션 상태를 확인했다. 첫 교환의 `invalid_grant` 보고 이후 재승인·Refresh token 보관은 사용자가 완료를 보고했다. 토큰 값은 읽지 않았다. 사용자는 Vercel Production에 Google 연결값 3개를 입력·저장했다고 보고했다. 이후 서버 설정·운영 Drive 백업 성공·재다운로드·임시 IndexedDB 복원을 확인했다. 실제 AI 호출은 미검증이다. 날짜별 근거는 [검증 기록](../VERIFICATION.md)을 따른다.
+
+## 원고 편집 확장 (2026-10-04)
+
+[editor-extensions.ts](../src/lib/editor-extensions.ts)는 표·첨자·강조·각주/설정 링크·안정된 문단 ID·문단 속성을 공유한다. [editor-search.ts](../src/lib/editor-search.ts)는 ProseMirror 텍스트 위치와 Decoration을 사용하고 검색 강조는 원고에 저장하지 않는다. [manuscript-format.ts](../src/lib/manuscript-format.ts)는 편집기·독서·교환 파일의 안전한 서식 변환을 공유한다. [편집 안내](editor-tools.md). 본문 노드 추가 외에 DB·서버 저장 방식·게시 권한·AI 프롬프트는 바꾸지 않았다.

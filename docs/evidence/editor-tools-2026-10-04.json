@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-04",
+  "environment": "Synthetic localhost Auth/PostgREST",
+  "checks": [
+    {
+      "fontSize": "22.5px",
+      "mode": "light",
+      "overflow": false,
+      "palette": "violet",
+      "popup": true,
+      "width": 1280
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "dark",
+      "overflow": false,
+      "palette": "violet",
+      "popup": true,
+      "width": 1280
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "light",
+      "overflow": false,
+      "palette": "cassette",
+      "popup": true,
+      "width": 1280
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "dark",
+      "overflow": false,
+      "palette": "cassette",
+      "popup": true,
+      "width": 1280
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "light",
+      "overflow": false,
+      "palette": "cyber",
+      "popup": true,
+      "width": 1280
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "dark",
+      "overflow": false,
+      "palette": "cyber",
+      "popup": true,
+      "width": 1280
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "light",
+      "overflow": false,
+      "palette": "violet",
+      "popupLeft": 48,
+      "popupRight": 348,
+      "width": 360
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "dark",
+      "overflow": false,
+      "palette": "violet",
+      "popupLeft": 48,
+      "popupRight": 348,
+      "width": 360
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "light",
+      "overflow": false,
+      "palette": "cassette",
+      "popupLeft": 48,
+      "popupRight": 348,
+      "width": 360
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "dark",
+      "overflow": false,
+      "palette": "cassette",
+      "popupLeft": 48,
+      "popupRight": 348,
+      "width": 360
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "light",
+      "overflow": false,
+      "palette": "cyber",
+      "popupLeft": 48,
+      "popupRight": 348,
+      "width": 360
+    },
+    {
+      "fontSize": "22.5px",
+      "mode": "dark",
+      "overflow": false,
+      "palette": "cyber",
+      "popupLeft": 48,
+      "popupRight": 348,
+      "width": 360
+    }
+  ]
+}

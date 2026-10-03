@@ -1,0 +1,22 @@
+/* Manuscript formatting is content; controls continue to use the existing UI classes. */
+.manuscript,.is-split .manuscript{font-size:var(--manuscript-size,18px)}
+.manuscript h1{font-size:1.6em}.manuscript h3{font-size:1.15em}
+.manuscript .tableWrapper,.reader-table{max-width:100%;overflow-x:auto;margin:1.2em 0}
+.manuscript table,.reader-table table{border-collapse:collapse;table-layout:fixed;width:100%}
+.manuscript td,.manuscript th{border:1px solid var(--line);padding:8px;min-width:60px;vertical-align:top;position:relative}
+.manuscript th{background:var(--side);font-weight:600}
+.manuscript td p,.manuscript th p,.reading-body td p,.reading-body th p{margin:0;text-indent:0}
+.manuscript td p+p,.manuscript th p+p,.reading-body td p+p,.reading-body th p+p{margin-top:.6em}
+.manuscript .selectedCell::after{content:"";position:absolute;inset:0;background:var(--sel);opacity:.45;pointer-events:none}
+.manuscript .column-resize-handle{position:absolute;right:-2px;top:0;bottom:-2px;width:4px;background:var(--focus);pointer-events:none}
+.editor-scroll:has(.resize-cursor){cursor:col-resize}
+.reader-table td,.reader-table th{border:1px solid var(--pub-line);padding:8px;min-width:60px;vertical-align:top}
+.reader-table th{background:var(--pub-tint);font-weight:600}
+.reading-body h2,.reading-body h3,.reading-body h4{margin:1em 0 .6em}
+.manuscript sup:not([data-note-id]),.manuscript sub,.reading-body sup,.reading-body sub{font-size:.7em;line-height:0}
+.manuscript sup:not([data-note-id]),.reading-body sup{vertical-align:super}
+.manuscript sub,.reading-body sub{vertical-align:sub}
+.manuscript mark{background:var(--soft);color:var(--soft-ink)}
+.reading-body mark{background:var(--pub-tint);color:var(--pub-tint-ink)}
+.editor-search-match{background:var(--soft);color:var(--soft-ink)}
+.editor-search-match.current{outline:2px solid var(--focus);outline-offset:1px}

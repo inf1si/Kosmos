@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { newDocument, uid, fromText, workspaceSchema, documentSchema, type RichNode, type NovelDocument, type Workspace, type Work, type AssetMeta } from './model';
 import { applyNavigation, defaultSections, resolveNavigation, subsetNavigation, type DocumentNavigation } from './document-navigation';
 import { navigationSchema, navigationIssues } from './document-navigation-schema';
+import { paragraphCss,htmlParagraphAttrs,cellSpan,tableColumns } from './manuscript-format';
 
 const MAX_BYTES=100*1024*1024, MAX_TEXT=5*1024*1024, MAX_PAGES=500;
 const encoder=new TextEncoder();
@@ -72,11 +73,12 @@ function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode
       if(ownNote!==undefined){out.push({type:'footnote',attrs:{noteId:uid(),text:ownNote}});continue;}
       if(tag==='a'&&attrs.href?.startsWith('#')&&notes.has(attrs.href.slice(1))){out.push({type:'footnote',attrs:{noteId:uid(),text:notes.get(attrs.href.slice(1))}});continue;}
       const additions:NonNullable<RichNode['marks']>=[];
-      const m:Record<string,string>={b:'bold',strong:'bold',i:'italic',em:'italic',s:'strike',del:'strike',u:'underline',code:'code'};
+      const m:Record<string,string>={b:'bold',strong:'bold',i:'italic',em:'italic',s:'strike',del:'strike',u:'underline',code:'code',sup:'superscript',sub:'subscript',mark:'highlight'};
       if(m[tag])additions.push({type:m[tag]});
       const style=attrs.style||'';
       if(/font-weight\s*:\s*(bold|[6-9]00)/i.test(style))additions.push({type:'bold'});
       if(/font-style\s*:\s*italic/i.test(style))additions.push({type:'italic'});
+      if(/background-color\s*:\s*(?:yellow|#ffff00)\s*(?:;|$)/i.test(style))additions.push({type:'highlight'});
       if(/text-decoration[^:]*\s*:[^;]*underline/i.test(style))additions.push({type:'underline'});
       if(/text-decoration[^:]*\s*:[^;]*line-through/i.test(style))additions.push({type:'strike'});
       if(tag==='a'&&attrs.href){const href=safeLink(attrs.href);if(href)additions.push({type:'link',attrs:{href,target:'_blank',rel:'noopener noreferrer'}});else{const target=resolve(page.key,attrs.href);if(target&&bundle.pages.some(p=>p.key===target))additions.push({type:'wikiLink',attrs:{sourceKey:target}});else if(!attrs.href.startsWith('#'))warning(bundle,`${page.title}: 이동할 수 없는 링크를 일반 텍스트로 가져왔습니다.`);}}
@@ -95,9 +97,17 @@ function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode
       if(tag==='pre'){out.push({type:'codeBlock',content:[{type:'text',text:text(n)}]});continue;}
       if(tag==='ul'||tag==='ol'){const items=n.children.filter(v=>isElement(v)&&v.name==='li').map(li=>({type:'listItem',content:blocks(children(li),depth+1)}));if(items.length)out.push({type:tag==='ul'?'bulletList':'orderedList',attrs:tag==='ol'?{start:Number(n.attribs.start)||1}:{},content:items});continue;}
       if(tag==='blockquote'){out.push({type:'blockquote',content:blocks(n.children,depth+1)});continue;}
-      if(tag==='table'){warning(bundle,`${page.title}: 표는 행별 텍스트로 변환합니다. 데이터베이스 관계·수식·보기는 복원하지 않습니다.`);for(const row of elements(n,'tr'))out.push(paragraph([{type:'text',text:row.children.filter(c=>isElement(c)&&['td','th'].includes(c.name)).map(text).join(' | ')}]));continue;}
-      if(/^h[1-6]$/.test(tag)){out.push({type:'heading',attrs:{level:Number(tag[1]),blockId:uid()},content:inline(n.children,[],depth+1)});continue;}
-      if(tag==='p'||tag==='div'&&!n.children.some(c=>isElement(c)&&blockTags.has(c.name))){out.push(paragraph(inline(n.children,[],depth+1)));continue;}
+      if(tag==='table'){
+        const rows=elements(n,'tr').filter(row=>{let parent=row.parent;while(parent&&(!isElement(parent)||parent.name!=='table'))parent=parent.parent;return parent===n;}).map(row=>{
+          enter(depth+1);const cells=row.children.filter((c):c is HtmlElement=>isElement(c)&&['td','th'].includes(c.name)).map(c=>{
+            enter(depth+2);const content=blocks(c.children,depth+3),colspan=cellSpan(Number(c.attribs.colspan)),rowspan=cellSpan(Number(c.attribs.rowspan)),widths=c.attribs['data-orbis-colwidth']?.split(',').map(Number);
+            return {type:c.name==='th'?'tableHeader':'tableCell',attrs:{colspan,rowspan,colwidth:widths?.length===colspan&&widths.every(w=>Number.isInteger(w)&&w>0&&w<=2000)?widths:null},content:content.length?content:[paragraph([])]};
+          });return {type:'tableRow',content:cells};
+        }).filter(row=>row.content.length);
+        if(rows.length)out.push({type:'table',content:rows});continue;
+      }
+      if(/^h[1-6]$/.test(tag)){out.push({type:'heading',attrs:{level:Number(tag[1]),blockId:uid(),...htmlParagraphAttrs(n.attribs.style||'')},content:inline(n.children,[],depth+1)});continue;}
+      if(tag==='p'||tag==='div'&&!n.children.some(c=>isElement(c)&&blockTags.has(c.name))){const p=paragraph(inline(n.children,[],depth+1));p.attrs={...p.attrs,...htmlParagraphAttrs(n.attribs.style||'')};out.push(p);continue;}
       out.push(...blocks(n.children,depth+1));
     }flush();return out;
   };
@@ -204,16 +214,28 @@ const esc=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,
 const mdEsc=(s:string)=>s.replace(/[\\`*_{}\[\]<>#!|]/g,'\\$&');
 const safeFilename=(s:string)=>s.replace(/[<>:"/\\|?*\u0000-\u001f]/g,'_').replace(/[. ]+$/,'').slice(0,100)||'문서';
 function htmlRender(node:RichNode,links:Map<string,string>,notes:{id:string;text:string}[]):string {
-  if(node.type==='text'){let body=esc(node.text||'');for(const mark of node.marks||[]){const tags:Record<string,string>={bold:'strong',italic:'em',strike:'s',underline:'u',code:'code'};if(tags[mark.type])body=`<${tags[mark.type]}>${body}</${tags[mark.type]}>`;else if(mark.type==='link'){const href=safeLink(String(mark.attrs?.href||''));if(href)body=`<a href="${esc(href)}">${body}</a>`;}else if(mark.type==='wikiLink'){const href=links.get(String(mark.attrs?.targetId));if(href)body=`<a href="${esc(href)}">${body}</a>`;} }return body;}
+  if(node.type==='text'){let body=esc(node.text||'');for(const mark of node.marks||[]){const tags:Record<string,string>={bold:'strong',italic:'em',strike:'s',underline:'u',code:'code',superscript:'sup',subscript:'sub',highlight:'mark'};if(tags[mark.type])body=`<${tags[mark.type]}>${body}</${tags[mark.type]}>`;else if(mark.type==='link'){const href=safeLink(String(mark.attrs?.href||''));if(href)body=`<a href="${esc(href)}">${body}</a>`;}else if(mark.type==='wikiLink'){const href=links.get(String(mark.attrs?.targetId));if(href)body=`<a href="${esc(href)}">${body}</a>`;} }return body;}
   if(node.type==='footnote'){notes.push({id:String(node.attrs?.noteId||uid()),text:String(node.attrs?.text||'')});return`<sup data-kosmos-note="${esc(String(node.attrs?.text||''))}"><a href="#note-${notes.length}">[${notes.length}]</a></sup>`;}
   const body=(node.content||[]).map(n=>htmlRender(n,links,notes)).join('');
-  const tags:Record<string,string>={paragraph:'p',blockquote:'blockquote',bulletList:'ul',orderedList:'ol',listItem:'li',codeBlock:'pre'};
-  if(node.type==='heading')return`<h${Math.max(1,Math.min(6,Number(node.attrs?.level)||2))}>${body}</h${Math.max(1,Math.min(6,Number(node.attrs?.level)||2))}>`;
+  const tags:Record<string,string>={paragraph:'p',blockquote:'blockquote',bulletList:'ul',orderedList:'ol',listItem:'li',codeBlock:'pre',tableRow:'tr'};
+  const style=paragraphCss(node.attrs),format=style?` style="${esc(style)}"`:'';
+  if(node.type==='paragraph')return`<p${format}>${body}</p>`;
+  if(node.type==='heading')return`<h${Math.max(1,Math.min(6,Number(node.attrs?.level)||2))}${format}>${body}</h${Math.max(1,Math.min(6,Number(node.attrs?.level)||2))}>`;
+  if(node.type==='table')return`<table style="border-collapse:collapse"><colgroup>${tableColumns(node.content?.[0]).map(w=>w?`<col width="${w}" />`:'<col />').join('')}</colgroup><tbody>${body}</tbody></table>`;
+  if(node.type==='tableCell'||node.type==='tableHeader'){
+    const tag=node.type==='tableHeader'?'th':'td',colspan=cellSpan(node.attrs?.colspan),rowspan=cellSpan(node.attrs?.rowspan),widths=node.attrs?.colwidth;
+    const width=Array.isArray(widths)&&widths.length===colspan&&widths.every(w=>typeof w==='number'&&Number.isInteger(w)&&w>0&&w<=2000)?` data-orbis-colwidth="${widths.join(',')}"`:'';
+    return`<${tag} colspan="${colspan}" rowspan="${rowspan}"${width} style="border:1px solid currentColor;padding:6px;vertical-align:top">${body}</${tag}>`;
+  }
   if(node.type==='hardBreak')return'<br />';if(node.type==='horizontalRule')return'<hr />';if(node.type==='orderedList')return`<ol start="${Number(node.attrs?.start)||1}">${body}</ol>`;
   return tags[node.type]?`<${tags[node.type]}>${body}</${tags[node.type]}>`:body;
 }
 function mdRender(node:RichNode,links:Map<string,string>,notes:string[]):string {
-  if(node.type==='text'){let s=mdEsc(node.text||'');for(const m of node.marks||[]){if(m.type==='bold')s=`**${s}**`;else if(m.type==='italic')s=`*${s}*`;else if(m.type==='strike')s=`~~${s}~~`;else if(m.type==='code'){const fence='`'.repeat(Math.max(1,...(node.text?.match(/`+/g)||[]).map(v=>v.length+1)));s=`${fence} ${(node.text||'')} ${fence}`;}else if(m.type==='underline')s=`<u>${s}</u>`;else{const href=m.type==='wikiLink'?links.get(String(m.attrs?.targetId)):m.type==='link'?safeLink(String(m.attrs?.href||'')):undefined;if(href)s=`[${s}](<${href.replace(/>/g,'%3E')}>)`;}}return s;}
+  // CommonMark has no merged-cell or paragraph-format syntax. Raw HTML retains those values.
+  if(node.type==='table'||(['paragraph','heading'].includes(node.type)&&paragraphCss(node.attrs))){
+    const htmlNotes=notes.map((text,i)=>({id:String(i),text})),before=htmlNotes.length,body=htmlRender(node,links,htmlNotes);notes.push(...htmlNotes.slice(before).map(n=>n.text));return body+'\n\n';
+  }
+  if(node.type==='text'){let s=mdEsc(node.text||'');for(const m of node.marks||[]){if(m.type==='bold')s=`**${s}**`;else if(m.type==='italic')s=`*${s}*`;else if(m.type==='strike')s=`~~${s}~~`;else if(m.type==='code'){const fence='`'.repeat(Math.max(1,...(node.text?.match(/`+/g)||[]).map(v=>v.length+1)));s=`${fence} ${(node.text||'')} ${fence}`;}else if(['underline','superscript','subscript','highlight'].includes(m.type)){const tag={underline:'u',superscript:'sup',subscript:'sub',highlight:'mark'}[m.type as 'underline'|'superscript'|'subscript'|'highlight'];s=`<${tag}>${s}</${tag}>`;}else{const href=m.type==='wikiLink'?links.get(String(m.attrs?.targetId)):m.type==='link'?safeLink(String(m.attrs?.href||'')):undefined;if(href)s=`[${s}](<${href.replace(/>/g,'%3E')}>)`;}}return s;}
   if(node.type==='footnote'){notes.push(String(node.attrs?.text||''));return`[^${notes.length}]`;}
   const body=(node.content||[]).map(n=>mdRender(n,links,notes)).join('');
   if(node.type==='paragraph')return`${body}\n\n`;if(node.type==='hardBreak')return'  \n';if(node.type==='heading')return`${'#'.repeat(Math.max(1,Math.min(6,Number(node.attrs?.level)||2)))} ${body}\n\n`;
@@ -229,7 +251,7 @@ export async function exportInterchange(work:Work,documentIds:string[],metas:Ass
   const getAsset=(id:string)=>{const meta=metas.find(m=>m.id===id),blob=assetMap.get(id);if(!meta||!blob||blob.size!==meta.size)throw new Error('첨부를 모두 내려받은 뒤 내보내세요.');return{meta,blob};};
   if(format==='enex'){
     const noteXml:string[]=[];
-    for(const d of docs){const notes:{id:string;text:string}[]=[];let body=htmlRender(d.content,new Map(),notes).replace(/<sup data-kosmos-note="[^"]*">([\s\S]*?)<\/sup>/g,'<sup>$1</sup>');const resources:string[]=[];
+    for(const d of docs){const notes:{id:string;text:string}[]=[];let body=htmlRender(d.content,new Map(),notes).replace(/<sup data-kosmos-note="[^"]*">([\s\S]*?)<\/sup>/g,'<sup>$1</sup>').replace(/<mark>/g,'<span style="background-color:yellow">').replace(/<\/mark>/g,'</span>').replace(/ data-orbis-colwidth="[^"]*"/g,'');const resources:string[]=[];
       for(const id of d.assetIds){const{meta,blob}=getAsset(id),bytes=new Uint8Array(await blob.arrayBuffer()),hash=SparkMD5.ArrayBuffer.hash(bytes.buffer);total+=bytes.length;body+=`<div><en-media type="${meta.type}" hash="${hash}" /></div>`;resources.push(`<resource><data encoding="base64">${base64(bytes)}</data><mime>${meta.type}</mime><resource-attributes><file-name>${esc(meta.name)}</file-name></resource-attributes></resource>`);}
       if(notes.length)body+=`<div><h2>각주</h2>${notes.map((n,i)=>`<p>${i+1}. ${esc(n.text)}</p>`).join('')}</div>`;
       if(d.summary)body+=`<div><h2>문서 요약</h2><p>${esc(d.summary)}</p></div>`;
