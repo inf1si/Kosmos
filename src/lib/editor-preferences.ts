@@ -1,3 +1,4 @@
+import { countMetrics, type CountMetric } from './text-statistics';
 export const manuscriptFonts=[
   {id:'gowun',label:'고운바탕',family:'var(--font-gowun), serif'},
   {id:'noto-serif',label:'본명조',family:'var(--font-noto-serif), serif'},
@@ -7,8 +8,8 @@ export const manuscriptFonts=[
   {id:'nanum-gothic',label:'나눔고딕',family:'var(--font-nanum-gothic), sans-serif'},
   {id:'system',label:'시스템 글꼴',family:'system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif'},
 ] as const;
-export type EditorPreferences={font:string;size:number};
-export const defaultEditorPreferences:EditorPreferences={font:'gowun',size:18};
+export type EditorPreferences={font:string;size:number;countMetric:CountMetric};
+export const defaultEditorPreferences:EditorPreferences={font:'gowun',size:18,countMetric:'charactersWithoutSpaces'};
 export function parseEditorPreferences(raw:string|null):EditorPreferences{
-  try{const value=JSON.parse(raw||'null');return {font:manuscriptFonts.some(f=>f.id===value?.font)?value.font:'gowun',size:[16,18,20,22,24].includes(value?.size)?value.size:18};}catch{return defaultEditorPreferences;}
+  try{const value=JSON.parse(raw||'null');return {font:manuscriptFonts.some(f=>f.id===value?.font)?value.font:'gowun',size:[16,18,20,22,24].includes(value?.size)?value.size:18,countMetric:countMetrics.some(m=>m.id===value?.countMetric)?value.countMetric:'charactersWithoutSpaces'};}catch{return defaultEditorPreferences;}
 }

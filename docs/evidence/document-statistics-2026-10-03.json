@@ -1,0 +1,28 @@
+{
+  "environment": "Local synthetic Auth/PostgREST fixture; no real manuscript, account mutation or AI calls",
+  "palettes": ["violet", "cassette", "cyber"],
+  "modes": ["light", "dark"],
+  "visualReview": "All six combinations reviewed at both widths; actual data-palette/data-theme attributes matched screenshots",
+  "layouts": [
+    {"viewportWidth": 1280, "pageScrollWidth": 1280, "tableWidth": 453.3333435058594, "tableScrollWidth": 453},
+    {"viewportWidth": 360, "pageScrollWidth": 360, "tableWidth": 275.3333435058594, "tableScrollWidth": 275, "selectionColumn": true}
+  ],
+  "fixture": {
+    "currentDocument": {"charactersWithoutSpaces": 418, "charactersWithSpaces": 545, "words": 138, "paragraphs": 11, "sheets": 3, "footnotes": 1},
+    "wholeManuscript": {"charactersWithoutSpaces": 556, "charactersWithSpaces": 731, "words": 189, "paragraphs": 14, "sheets": 4, "footnotes": 1},
+    "firstSelectedWord": {"charactersWithoutSpaces": 3, "charactersWithSpaces": 4, "words": 1, "paragraphs": 1},
+    "splitWiki": {"charactersWithoutSpaces": 86, "charactersWithSpaces": 109, "words": 25, "paragraphs": 2}
+  },
+  "checks": {
+    "allFiveMetricModes": true,
+    "selectionUpdatesAllFiveMetricModes": true,
+    "selectionClearedRestoresDocumentCount": true,
+    "selectionIndicatorAt360pxInAllSixThemes": true,
+    "reloadRetainsMetric": true,
+    "splitEditorsShareMetric": true,
+    "fontAndSizePreserved": true,
+    "escapeReturnsFocusToTrigger": true,
+    "editUpdatesCount": {"before": 418, "afterThreeCharacters": 421, "afterUndo": 418},
+    "previewPageAndDevelopmentHeaderRemoved": true
+  }
+}

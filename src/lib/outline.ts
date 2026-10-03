@@ -1,9 +1,10 @@
-import { NovelDocument, plainText } from './model';
+import { NovelDocument } from './model';
+import { textStatistics } from './text-statistics';
 
 export type SceneGroup={key:string;kicker:string;title:string;scenes:NovelDocument[]};
 
-/** Characters without whitespace, the count shown everywhere in the studio. */
-export function countChars(doc:NovelDocument){return plainText(doc.content).replace(/\s/g,'').length;}
+/** Body characters without whitespace; sidebar and plot cards keep this fixed comparison basis. */
+export function countChars(doc:NovelDocument){return textStatistics(doc.content).charactersWithoutSpaces;}
 
 /** "제1부 · 남겨진 시간" → kicker "제1부", title "남겨진 시간". A label without "·" is all title. */
 export function splitLabel(label:string,empty:string):{kicker:string;title:string}{

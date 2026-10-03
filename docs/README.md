@@ -11,6 +11,7 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 | 현재 무엇이 되는지 확인 | [구현 상태](status.md) |
 | 직접 원고를 쓰고 게시·복원하기 | [사용 안내](user-guide.md) |
 | 문서·폴더·사용자 대분류 정리 | [문서 트리](document-navigation.md) |
+| 글자·단어 수와 선택 영역·작품 합계 | [문서 통계](document-statistics.md) |
 | 제품의 목적과 SF 집필 방향 이해 | [제품 요구사항](product.md) · [상세 목표 설계](product-spec.md) |
 | UI 참고 자료와 선택한 방향 확인 | [디자인 레퍼런스](design-references.md) |
 | 새 화면·기능을 기존 디자인에 맞추기 | [디자인 가이드](design-guide.md) |

@@ -10,6 +10,7 @@ import { NovelDocument, RichNode, plainText, uid } from '@/lib/model';
 import { IconButton, Modal } from './primitives';
 import { WikiIcon } from './studio-icons';
 import { manuscriptFonts } from '@/lib/editor-preferences';
+import { statisticsSelection } from '@/lib/text-statistics';
 import { useEditorPreferences } from './use-editor-preferences';
 import { manuscriptFontVariables } from './manuscript-fonts';
 
@@ -28,7 +29,7 @@ const StableBlocks=Extension.create({name:'stableBlocks',
   addProseMirrorPlugins(){return [new Plugin({appendTransaction(transactions,_old,state){if(!transactions.some(t=>t.docChanged))return;const tr=state.tr;const seen=new Set<string>();state.doc.descendants((node,pos)=>{if(!['paragraph','heading'].includes(node.type.name))return;const id=node.attrs.blockId as string;if(!id||seen.has(id))tr.setNodeMarkup(pos,undefined,{...node.attrs,blockId:uid()});else seen.add(id);});return tr.docChanged?tr:null;}})];},
 });
 /** heading replaces the default kicker and title; toolbarEnd sits at the right of the toolbar; appearances counts each setting's referring documents for the link preview. */
-export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode;appearances?:Record<string,number>}){
+export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode|((selection:RichNode|null)=>ReactNode);appearances?:Record<string,number>}){
   const [{font,size},setPreferences]=useEditorPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
   const toolbarRef=useRef<HTMLDivElement>(null);const [overflow,setOverflow]=useState({before:false,after:false});
   const [find,setFind]=useState(false);const [query,setQuery]=useState('');const [replacement,setReplacement]=useState('');
@@ -90,7 +91,7 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
       <IconButton label="각주 추가" disabled={readonly} onClick={()=>openDialog('note')}><MessageSquareText size={16}/></IconButton>
       <IconButton label="설정 링크 추가" disabled={readonly||!wiki.length} onClick={()=>openDialog('wiki')}><Link2 size={16}/></IconButton>
       <IconButton label="찾기와 바꾸기" aria-pressed={find} onClick={()=>setFind(v=>!v)}><Search size={16}/></IconButton>
-      {toolbarEnd&&<div className="toolbar-end">{toolbarEnd}</div>}
+      {toolbarEnd&&<div className="toolbar-end">{typeof toolbarEnd==='function'?toolbarEnd(editor?statisticsSelection(editor.state.doc,editor.state.selection.from,editor.state.selection.to):null):toolbarEnd}</div>}
     </div>
     {overflow.after&&<div className="toolbar-scroll after"><IconButton label="다음 편집 도구" onClick={()=>toolbarRef.current?.scrollBy({left:240,behavior:'smooth'})}><ChevronRight size={16}/></IconButton></div>}
     </div>

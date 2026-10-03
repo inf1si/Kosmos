@@ -43,7 +43,7 @@ test('대화는 전체 ZIP 왕복에 남고 공개 판본에서는 빠지며 이
 });
 test('AI 채팅은 인증 없이 호출할 수 없고 글꼴 설정이 손상되어도 기본값으로 열린다',async()=>{
   const response=await POST(new Request('http://localhost/api/ai/chat',{method:'POST',body:JSON.stringify(input)}));assert.equal(response.status,401);
-  assert.deepEqual(parseEditorPreferences('{broken'),{font:'gowun',size:18});
-  assert.deepEqual(parseEditorPreferences('{"font":"untrusted-css","size":999}'),{font:'gowun',size:18});
-  assert.deepEqual(parseEditorPreferences('{"font":"nanum-myeongjo","size":22}'),{font:'nanum-myeongjo',size:22});
+  assert.deepEqual(parseEditorPreferences('{broken'),{font:'gowun',size:18,countMetric:'charactersWithoutSpaces'});
+  assert.deepEqual(parseEditorPreferences('{"font":"untrusted-css","size":999}'),{font:'gowun',size:18,countMetric:'charactersWithoutSpaces'});
+  assert.deepEqual(parseEditorPreferences('{"font":"nanum-myeongjo","size":22}'),{font:'nanum-myeongjo',size:22,countMetric:'charactersWithoutSpaces'});
 });
