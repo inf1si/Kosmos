@@ -1,4 +1,16 @@
 {
+  "verifiedSource": "a804e4bbd8a369e992a4d8c5a74a4d105232c8b2",
+  "production": {
+    "deployment": "success",
+    "ci": "success",
+    "categoryMenuOpened": true,
+    "fontOptions": 7,
+    "fontSwitchVerified": true,
+    "chatStarters": 6,
+    "unconfiguredSendDisabled": true,
+    "manuscriptEdited": false,
+    "realAIRequest": false
+  },
   "fonts": [
     {
       "font": "gowun",
@@ -173,3 +185,4 @@
     }
   ]
 }
+
