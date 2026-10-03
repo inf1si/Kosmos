@@ -60,6 +60,8 @@ flowchart LR
 | `/wiki/[workId]` | 해당 작품의 공개 설정 설명·등장 위치 |
 | `POST /api/review` | 인증·저장 판본 검사 후 AI 검토 |
 | `POST /api/ai/chat` | 인증·원고 버전·선택 자료·이전 대화·하루 한도 검사 후 대화 |
+| `GET /api/ai/providers` | 인증 후 제공자 연결 상태·모델·브라우저 키 보관 가능 여부, 비밀값 제외 |
+| `POST/DELETE /api/ai/settings` | 같은 Origin·작가 인증 후 개인 연결의 암호화 쿠키 설정·해제 |
 
 서재·독서·공개 설정집은 `force-dynamic`, 데이터 조회는 `cache: 'no-store'`다. 공개 판본 캐시, 검색 색인, CDN 판본 갱신 파이프라인은 아직 없다.
 
@@ -82,6 +84,10 @@ flowchart LR
 | [studio-dialogs.tsx](../src/components/studio-dialogs.tsx) | 백업·충돌·작품 생성·게시 대화상자 |
 | [public-site.tsx](../src/components/public-site.tsx) | 서재·독서·공개 설정집 |
 | [ai-chat.tsx](../src/components/ai-chat.tsx) | 대화·추천 질문·자료 선택·수정 적용·메모·기록 |
+| [ai-settings-dialog.tsx](../src/components/ai-settings-dialog.tsx) | 제공자·모델·마스킹 키·시스템 프롬프트 설정 |
+| [ai-credentials.ts](../src/lib/ai-credentials.ts) | 계정·제공자에 묶인 AES-GCM 쿠키, HKDF, 30일 만료·기본 설정 선택 |
+| [ai-credential-handler.ts](../src/lib/ai-credential-handler.ts) | Origin·8KiB JSON·쿠키 보안 속성·키 미반환 |
+| [use-ai-system-prompt.ts](../src/components/use-ai-system-prompt.ts) | 브라우저별 프롬프트 저장·기본값·탭 동기화 |
 | [AI 대화 route](../src/app/api/ai/chat/route.ts) | 인증, 자료 범위, 원고 버전, 호출 횟수, AI 요청 |
 | [ai-conversation.ts](../src/lib/ai-conversation.ts) | 질문·답변 저장 계약과 최근 대화 길이 제한 |
 | [manuscript-fonts.ts](../src/components/manuscript-fonts.ts) | Next.js가 빌드 시 내려받아 자체 제공하는 한글 원고 글꼴 |
@@ -106,6 +112,8 @@ Supabase RPC는 기준 버전 검사를 유지한다. 재전송에서 같은 요
 [ai-provider.ts](../src/lib/ai-provider.ts)는 제공자별 요청·완료 상태를 다루고 공통 결과를 검증한다. 서버 인증은 [server-auth.ts](../src/lib/server-auth.ts), 실제 스트림 바이트 제한은 [http.ts](../src/lib/http.ts)에 있다. 선택한 제공자 한 곳만 호출한다.
 
 대화는 기존 비공개 workspace의 `Work.aiConversations`에 선택 필드로 저장하므로 DB 마이그레이션이 없다. 기기 저장·동기화·ZIP·독립 백업의 기존 경로를 공유하고 공개 판본 생성은 대화를 제외한다. [대화 계약과 한도](ai.md)를 따른다. 원고 수정은 명시적인 적용과 버전 검사·복구 지점을 거치며, 변경된 본문은 열린 Tiptap 편집기에도 반영된다.
+
+개인 AI 키는 workspace 밖의 계정·제공자별 암호화 HttpOnly 쿠키로 30일 보관한다. 서버가 복호화한 뒤 고정된 공식 제공자 URL의 요청 헤더에 넣고, 상태 응답에는 연결 여부·모델만 공개한다. 서버 환경 변수는 브라우저 연결이 없을 때의 기본값이다. 손상된 쿠키에서는 기본값 전환을 막는다. 사용자 시스템 프롬프트는 localStorage에 별도로 저장하고 질문할 때 전달한다. 키와 프롬프트는 ZIP·Drive·DB 백업과 공개 판본에 들어가지 않으며 DB 스키마 변경이 없다. 응답 형식·원문 적용·자료 경계 규칙은 서버에서 유지한다.
 
 일일 백업은 [vercel.json](../vercel.json) → 인증된 cron → [offsite-backup-server.ts](../src/lib/offsite-backup-server.ts)의 서버 수집 → [offsite-backup.ts](../src/lib/offsite-backup.ts)의 ZIP·저장 후 검증 → Drive/S3 어댑터 순서다. 브라우저로 service_role·저장소 비밀을 보내지 않는다. 마지막 성공 표시는 실제 저장 파일 검증 이후에만 갱신한다. 구성과 미연결 경계는 [백업 안내](offsite-backup.md)에 있다.
 

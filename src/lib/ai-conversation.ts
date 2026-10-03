@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { reviewSchema } from './ai';
+import { systemPromptSchema } from './ai-settings';
 export const conversationProviderSchema=z.enum(['openai','anthropic','gemini']);
 export const chatMessageSchema=z.discriminatedUnion('role',[
   z.object({id:z.uuid(),role:z.literal('user'),text:z.string().min(1).max(2000),createdAt:z.string()}),
@@ -13,6 +14,7 @@ export const chatInputSchema=z.object({
   message:z.string().trim().min(1).max(2000),includeManuscript:z.boolean(),
   sourceIds:z.array(z.uuid()).max(8),
   history:z.array(z.object({role:z.enum(['user','assistant']),content:z.string().min(1).max(15000)})).max(10),
+  systemPrompt:systemPromptSchema.optional(),
 }).superRefine((v,ctx)=>{
   if(v.history.some((m,i)=>m.role!==(i%2?'assistant':'user'))||v.history.length%2)ctx.addIssue({code:'custom',message:'대화 순서를 확인하세요.'});
   if(v.history.reduce((n,m)=>n+m.content.length,0)>24000)ctx.addIssue({code:'custom',message:'이전 대화가 너무 깁니다.'});

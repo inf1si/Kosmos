@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, Check, Copy, FileText, MessageSquarePlus, Search, Sparkles } from 'lucide-react';
+import { ArrowUp, Check, Copy, FileText, MessageSquarePlus, Search, Sparkles, Settings2 } from 'lucide-react';
 import { applySuggestion,reviewSchema } from '@/lib/ai';
 import { chatMessageSchema,recentChatHistory, type ChatMessage } from '@/lib/ai-conversation';
 import { NovelDocument, newDocument, plainText, uid, wikiReferences } from '@/lib/model';
@@ -8,9 +8,12 @@ import { cloud,cloudConfigured } from '@/lib/cloud';
 import type { AIProvider } from '@/lib/ai-provider';
 import { useStudio } from './studio-provider';
 import { IconButton,Modal } from './primitives';
+import { AISettingsDialog } from './ai-settings-dialog';
+import { useAISystemPrompt } from './use-ai-system-prompt';
+import { DEFAULT_AI_SYSTEM_PROMPT,type AIProviderStatus } from '@/lib/ai-settings';
 
-type Provider={id:AIProvider;label:string;configured:boolean;model:string|null};
-const initialProviders:Provider[]=[{id:'openai',label:'OpenAI',configured:false,model:null},{id:'anthropic',label:'Claude',configured:false,model:null},{id:'gemini',label:'Gemini',configured:false,model:null}];
+type Provider=AIProviderStatus;
+const initialProviders:Provider[]=(['openai','anthropic','gemini'] as const).map(id=>({id,label:({openai:'OpenAI',anthropic:'Claude',gemini:'Gemini'})[id],configured:false,model:null,source:null,browserStored:false,browserInvalid:false}));
 const starters=[
   {title:'문장 퇴고',text:'현재 원고의 문체와 시점을 유지하면서 호흡과 어색한 문장을 살펴봐 줘. 필요한 곳만 수정안을 제안해 줘.'},
   {title:'설정 점검',text:'원고와 선택한 자료 사이의 시간, 인물의 지식, 기술 설정의 모순을 찾아줘. 확실한 모순과 확인이 필요한 부분을 구분해 줘.'},
@@ -22,20 +25,22 @@ const starters=[
 export function AIChat({workId,doc,onOpen}:{workId:string;doc:NovelDocument;onOpen:(id:string)=>void}){
   const s=useStudio();const work=s.state!.works.find(w=>w.id===workId)!;const messages=work.aiConversations?.find(c=>c.docId===doc.id)?.messages||[];
   const [providers,setProviders]=useState(initialProviders);const [provider,setProvider]=useState<AIProvider>('openai');const [loadingProviders,setLoadingProviders]=useState(cloudConfigured);
+  const [settingsOpen,setSettingsOpen]=useState(false),[storageAvailable,setStorageAvailable]=useState(false);const [systemPrompt,saveSystemPrompt]=useAISystemPrompt();
   const [prompt,setPrompt]=useState('');const [busy,setBusy]=useState(false);const [pending,setPending]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');
   const [includeManuscript,setIncludeManuscript]=useState(true);const [sourceIds,setSourceIds]=useState(()=>[...new Set([...wikiReferences(doc.content),...work.documents.filter(d=>d.kind==='wiki'&&d.title===doc.pov).map(d=>d.id)])].slice(0,8));
   const [sourcesOpen,setSourcesOpen]=useState(false);const [sourceQuery,setSourceQuery]=useState('');const [resetOpen,setResetOpen]=useState(false);
-  const log=useRef<HTMLDivElement>(null);const textarea=useRef<HTMLTextAreaElement>(null);const disposed=useRef(false);
+  const log=useRef<HTMLDivElement>(null);const textarea=useRef<HTMLTextAreaElement>(null);const disposed=useRef(false);const settingsTrigger=useRef<HTMLElement|null>(null);
   const currentProvider=providers.find(p=>p.id===provider)!;const availableIds=new Set(work.documents.filter(d=>d.id!==doc.id).map(d=>d.id));const selectedIds=sourceIds.filter(id=>availableIds.has(id));
   const full=messages.length>=40||(!messages.length&&(work.aiConversations?.length||0)>=200);const configured=cloudConfigured&&currentProvider.configured;const chars=plainText(doc.content).length;
-  useEffect(()=>{disposed.current=false;let active=true;if(cloudConfigured)void (async()=>{try{const session=(await cloud().auth.getSession()).data.session;if(!session)throw new Error('작가 로그인이 필요합니다.');const response=await fetch('/api/ai/providers',{headers:{Authorization:`Bearer ${session.access_token}`}});const body=await response.json();if(!response.ok)throw new Error(body.error||'AI 연결 상태를 확인하지 못했습니다.');if(active){setProviders(body.providers);const first=body.providers.find((p:Provider)=>p.configured);if(first)setProvider(first.id);}}catch(e){if(active)setError(e instanceof Error?e.message:'AI 연결을 확인하지 못했습니다.');}finally{if(active)setLoadingProviders(false);}})();return()=>{active=false;disposed.current=true;};},[]);
+  useEffect(()=>{disposed.current=false;let active=true;if(cloudConfigured)void (async()=>{try{const session=(await cloud().auth.getSession()).data.session;if(!session)throw new Error('작가 로그인이 필요합니다.');const response=await fetch('/api/ai/providers',{headers:{Authorization:`Bearer ${session.access_token}`}});const body=await response.json();if(!response.ok)throw new Error(body.error||'AI 연결 상태를 확인하지 못했습니다.');if(active){setProviders(body.providers);setStorageAvailable(!!body.storageAvailable);const first=body.providers.find((p:Provider)=>p.configured);if(first)setProvider(first.id);}}catch(e){if(active)setError(e instanceof Error?e.message:'AI 연결을 확인하지 못했습니다.');}finally{if(active)setLoadingProviders(false);}})();return()=>{active=false;disposed.current=true;};},[]);
+  async function refreshProviders(selected:AIProvider){const session=(await cloud().auth.getSession()).data.session;if(!session)throw new Error('작가 로그인이 필요합니다.');const response=await fetch('/api/ai/providers',{headers:{Authorization:`Bearer ${session.access_token}`}});const body=await response.json();if(!response.ok)throw new Error(body.error||'AI 연결 상태를 읽지 못했습니다.');if(!disposed.current){setProviders(body.providers);setStorageAvailable(!!body.storageAvailable);setProvider(selected);setError('');}}
   useEffect(()=>{if(messages.length||pending)log.current?.scrollTo({top:log.current.scrollHeight,behavior:'smooth'});},[messages.length,pending]);
   async function send(){
     const question=prompt.trim();if(!question||busy||!configured||full||s.conflict)return;
     setBusy(true);setPending(question);setError('');setNotice('');
     try{
       await s.flush();await s.syncNow();const session=(await cloud().auth.getSession()).data.session;if(!session)throw new Error('작가 로그인이 필요합니다.');
-      const version=doc.updatedAt;const response=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({workId,docId:doc.id,version,provider,message:question,includeManuscript,sourceIds:selectedIds,history:recentChatHistory(messages)})});
+      const version=doc.updatedAt;const response=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({workId,docId:doc.id,version,provider,message:question,includeManuscript,sourceIds:selectedIds,history:recentChatHistory(messages),systemPrompt})});
       const body=await response.json();if(!response.ok)throw new Error(body.error||'대화를 완료하지 못했습니다.');
       const answer=chatMessageSchema.parse({id:uid(),role:'assistant',createdAt:new Date().toISOString(),result:reviewSchema.parse(body.result),provider,model:body.model,version:body.version,sources:body.sources});
       // Capture the originating document so switching tabs cannot attach an answer elsewhere.
@@ -59,9 +64,10 @@ export function AIChat({workId,doc,onOpen}:{workId:string;doc:NovelDocument;onOp
     s.update(state=>({...state,works:state.works.map(w=>w.id===workId?{...w,documents:[...w.documents,memo]}:w)}));setNotice('대화를 메모로 보관했습니다.');onOpen(memo.id);
   }
   return <div className="ai-chat">
-    <div className="chat-heading"><div><strong>AI 대화</strong><small>{doc.title}</small></div><IconButton label="새 대화" disabled={busy||!messages.length||!!s.conflict} onClick={()=>setResetOpen(true)}><MessageSquarePlus size={17}/></IconButton></div>
+    <div className="chat-heading"><div><strong>AI 대화</strong><small>{doc.title}</small></div><IconButton label="AI 설정" disabled={busy||loadingProviders} onClick={e=>{settingsTrigger.current=e.currentTarget;setSettingsOpen(true);}}><Settings2 size={17}/></IconButton><IconButton label="새 대화" disabled={busy||!messages.length||!!s.conflict} onClick={()=>setResetOpen(true)}><MessageSquarePlus size={17}/></IconButton></div>
     <div className="chat-provider"><label>제공자<select aria-label="AI 제공자" value={provider} disabled={busy||loadingProviders} onChange={e=>setProvider(e.target.value as AIProvider)}>{providers.map(p=><option key={p.id} value={p.id} disabled={!p.configured}>{p.label}{p.configured?'':' · 연결 필요'}</option>)}</select></label><span title={currentProvider.model||undefined}>{loadingProviders?'연결 확인 중':currentProvider.model||'API 키·모델 미설정'}</span></div>
-    {!configured&&!loadingProviders&&<p className="chat-connection">Vercel에 API 키와 모델을 설정하면 대화할 수 있습니다. 아래 추천으로 질문을 미리 작성해 보세요.</p>}
+    {!configured&&!loadingProviders&&<div className="chat-connection"><p>{currentProvider.browserInvalid?'보관한 연결이 만료되었거나 읽히지 않습니다. AI 설정에서 다시 입력하거나 해제하세요.':'AI 설정에서 API 키와 모델을 입력하면 대화할 수 있습니다. 아래 추천으로 질문을 미리 작성해 보세요.'}</p><button type="button" onClick={e=>{settingsTrigger.current=e.currentTarget;setSettingsOpen(true);}}>AI 설정 열기</button></div>}
+    {configured&&<p className="chat-settings-source">{currentProvider.source==='browser'?'이 브라우저의 키 사용':'서버 키 사용'} · 시스템 프롬프트 {!systemPrompt.trim()||systemPrompt.trim()===DEFAULT_AI_SYSTEM_PROMPT?'기본값 사용':'사용자 설정'}</p>}
     <details className="chat-context"><summary>보낼 자료 · {includeManuscript?'현재 원고':'원고 제외'} · 참고 {selectedIds.length}개</summary><label className="chat-check"><input type="checkbox" checked={includeManuscript} disabled={busy} onChange={e=>setIncludeManuscript(e.target.checked)}/>현재 원고 포함 · {chars.toLocaleString()}자</label><p>원고 최대 12,000자 · 자료마다 앞 1,800자 · 최대 8개. 이전 대화는 최근 5회 중 길이 한도 안에서 함께 보냅니다.</p><div className="chat-source-chips">{selectedIds.map(id=><button type="button" key={id} disabled={busy} onClick={()=>setSourceIds(ids=>ids.filter(v=>v!==id))}>{work.documents.find(d=>d.id===id)?.title} ×</button>)}</div><button type="button" className="chat-secondary" disabled={busy} onClick={()=>setSourcesOpen(true)}><Search size={13}/>참고 자료 선택</button></details>
     <div className="chat-log" ref={log} role="log" aria-label="AI 대화 기록" aria-live="polite" aria-relevant="additions" aria-busy={busy}>
       {!messages.length&&!pending&&<div className="chat-welcome"><Sparkles size={21}/><strong>어떤 도움이 필요해?</strong><p>질문을 직접 쓰거나 아래 기능으로 시작하세요.</p><div className="chat-starters">{starters.map(p=><button type="button" key={p.title} onClick={()=>{setPrompt(p.text);textarea.current?.focus();}}><span>{p.title}</span><small>{p.text}</small></button>)}</div></div>}
@@ -73,5 +79,6 @@ export function AIChat({workId,doc,onOpen}:{workId:string;doc:NovelDocument;onOp
     <form className="chat-composer" onSubmit={e=>{e.preventDefault();void send();}}><textarea ref={textarea} aria-label="AI에게 질문" rows={3} maxLength={2000} disabled={busy||!!s.conflict} placeholder="원고와 설정에 대해 이야기해 보세요…" value={prompt} onChange={e=>setPrompt(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}}}/><div><span>{full?'메모로 보관한 뒤 새 대화를 시작하세요.':'Enter 전송 · Shift+Enter 줄바꿈'}<small>{prompt.length.toLocaleString()} / 2,000자 · 하루 10회</small></span><button type="submit" className="primary" aria-label="질문 보내기" disabled={!configured||busy||full||!prompt.trim()||!!s.conflict||(includeManuscript&&chars>12000)}><ArrowUp size={17}/></button></div>{includeManuscript&&chars>12000&&<p className="chat-error">원고가 12,000자를 넘습니다. 보낼 자료에서 원고 포함을 끄세요.</p>}<small>대화는 문서별로 저장·동기화되며 전체 백업에 포함됩니다.</small></form>
     <Modal open={sourcesOpen} onClose={()=>setSourcesOpen(false)} title="AI 참고 자료 선택" description="이 작품의 원고·설정·메모에서 최대 8개를 선택하세요. 각 자료의 앞 1,800자를 전송합니다."><input aria-label="참고 자료 검색" placeholder="제목이나 본문 검색" value={sourceQuery} onChange={e=>setSourceQuery(e.target.value)}/><div className="chat-source-picker">{work.documents.filter(d=>d.id!==doc.id&&`${d.title} ${plainText(d.content)}`.toLocaleLowerCase().includes(sourceQuery.toLocaleLowerCase())).map(d=><label key={d.id}><input type="checkbox" checked={selectedIds.includes(d.id)} disabled={!selectedIds.includes(d.id)&&selectedIds.length>=8} onChange={e=>setSourceIds(ids=>e.target.checked?[...ids,d.id]:ids.filter(id=>id!==d.id))}/><span><strong>{d.title}</strong><small>{d.kind==='wiki'?d.category||'설정':d.kind==='memo'?'메모':'원고'}</small></span></label>)}</div><div className="modal-actions"><button className="primary" onClick={()=>setSourcesOpen(false)}>선택 완료 · {selectedIds.length}개</button></div></Modal>
     <Modal open={resetOpen} onClose={()=>setResetOpen(false)} title="새 대화 시작" description="현재 문서의 대화 기록을 비웁니다. 먼저 메모로 보관하면 계속 읽거나 내보낼 수 있습니다."><div className="modal-actions"><button onClick={()=>setResetOpen(false)}>취소</button><button className="primary" onClick={()=>void(async()=>{try{await s.snapshot('AI 새 대화 시작 전');s.update(state=>({...state,works:state.works.map(w=>w.id===workId?{...w,aiConversations:(w.aiConversations||[]).filter(c=>c.docId!==doc.id)}:w)}));setPrompt('');setError('');setNotice('새 대화를 시작했습니다.');setResetOpen(false);}catch(e){setError(e instanceof Error?e.message:'새 대화를 시작하지 못했습니다.');}})()}>새 대화</button></div></Modal>
+    {settingsOpen&&<AISettingsDialog providers={providers} providerId={provider} storageAvailable={storageAvailable} systemPrompt={systemPrompt} onSavePrompt={saveSystemPrompt} onRefresh={refreshProviders} onClose={()=>setSettingsOpen(false)} onReturnFocus={()=>settingsTrigger.current?.focus()}/>}
   </div>;
 }

@@ -1,0 +1,393 @@
+{
+  "date": "2026-10-03",
+  "tests": {
+    "passed": 47,
+    "typecheck": "passed"
+  },
+  "ui": {
+    "environment": "localhost synthetic Auth/PostgREST only",
+    "providerSaveAndRemove": [
+      "openai",
+      "anthropic",
+      "gemini"
+    ],
+    "modelOnlyUpdate": true,
+    "reloadPersistence": true,
+    "promptSaveAndDefaults": true,
+    "escapeReturnsToSettingsTrigger": true
+  },
+  "security": {
+    "encryption": "AES-256-GCM",
+    "ttlDays": 30,
+    "httpOnly": true,
+    "secureInProduction": true,
+    "sameSite": "strict",
+    "accountAndProviderBound": true,
+    "plaintextKeyInWorkspaceOrBackup": false,
+    "statusReturnsKey": false
+  },
+  "measurements": [
+    {
+      "name": "violet-light-1280",
+      "dialog": {
+        "clientHeight": 793,
+        "clientWidth": 849,
+        "height": 794.5729370117188,
+        "scrollHeight": 793,
+        "scrollWidth": 849,
+        "width": 850,
+        "x": 215,
+        "y": 52.71354293823242
+      },
+      "height": 900,
+      "mode": "light",
+      "pageWidth": 1280,
+      "palette": "violet",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 1280
+    },
+    {
+      "name": "violet-light-360",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 997,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "light",
+      "pageWidth": 360,
+      "palette": "violet",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "violet-light-360-bottom",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 1076,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "light",
+      "pageWidth": 360,
+      "palette": "violet",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "violet-dark-1280",
+      "dialog": {
+        "clientHeight": 793,
+        "clientWidth": 849,
+        "height": 794.5729370117188,
+        "scrollHeight": 793,
+        "scrollWidth": 849,
+        "width": 850,
+        "x": 215,
+        "y": 52.71354293823242
+      },
+      "height": 900,
+      "mode": "dark",
+      "pageWidth": 1280,
+      "palette": "violet",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 1280
+    },
+    {
+      "name": "violet-dark-360",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 997,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "dark",
+      "pageWidth": 360,
+      "palette": "violet",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "violet-dark-360-bottom",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 1076,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "dark",
+      "pageWidth": 360,
+      "palette": "violet",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cassette-light-1280",
+      "dialog": {
+        "clientHeight": 793,
+        "clientWidth": 849,
+        "height": 794.5729370117188,
+        "scrollHeight": 793,
+        "scrollWidth": 849,
+        "width": 850,
+        "x": 215,
+        "y": 52.71354293823242
+      },
+      "height": 900,
+      "mode": "light",
+      "pageWidth": 1280,
+      "palette": "cassette",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 1280
+    },
+    {
+      "name": "cassette-light-360",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 997,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "light",
+      "pageWidth": 360,
+      "palette": "cassette",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cassette-light-360-bottom",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 1076,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "light",
+      "pageWidth": 360,
+      "palette": "cassette",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cassette-dark-1280",
+      "dialog": {
+        "clientHeight": 793,
+        "clientWidth": 849,
+        "height": 794.5729370117188,
+        "scrollHeight": 793,
+        "scrollWidth": 849,
+        "width": 850,
+        "x": 215,
+        "y": 52.71354293823242
+      },
+      "height": 900,
+      "mode": "dark",
+      "pageWidth": 1280,
+      "palette": "cassette",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 1280
+    },
+    {
+      "name": "cassette-dark-360",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 997,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "dark",
+      "pageWidth": 360,
+      "palette": "cassette",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cassette-dark-360-bottom",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 1076,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "dark",
+      "pageWidth": 360,
+      "palette": "cassette",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cyber-light-1280",
+      "dialog": {
+        "clientHeight": 793,
+        "clientWidth": 849,
+        "height": 794.5729370117188,
+        "scrollHeight": 793,
+        "scrollWidth": 849,
+        "width": 850,
+        "x": 215,
+        "y": 52.71354293823242
+      },
+      "height": 900,
+      "mode": "light",
+      "pageWidth": 1280,
+      "palette": "cyber",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 1280
+    },
+    {
+      "name": "cyber-light-360",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 997,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "light",
+      "pageWidth": 360,
+      "palette": "cyber",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cyber-light-360-bottom",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 1076,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "light",
+      "pageWidth": 360,
+      "palette": "cyber",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cyber-dark-1280",
+      "dialog": {
+        "clientHeight": 793,
+        "clientWidth": 849,
+        "height": 794.5729370117188,
+        "scrollHeight": 793,
+        "scrollWidth": 849,
+        "width": 850,
+        "x": 215,
+        "y": 52.71354293823242
+      },
+      "height": 900,
+      "mode": "dark",
+      "pageWidth": 1280,
+      "palette": "cyber",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 1280
+    },
+    {
+      "name": "cyber-dark-360",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 997,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "dark",
+      "pageWidth": 360,
+      "palette": "cyber",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    },
+    {
+      "name": "cyber-dark-360-bottom",
+      "dialog": {
+        "clientHeight": 729,
+        "clientWidth": 315,
+        "height": 730,
+        "scrollHeight": 1076,
+        "scrollWidth": 315,
+        "width": 332,
+        "x": 14,
+        "y": 25
+      },
+      "height": 780,
+      "mode": "dark",
+      "pageWidth": 360,
+      "palette": "cyber",
+      "primaryActions": 1,
+      "promptMaxLength": "4000",
+      "width": 360
+    }
+  ],
+  "realProviderCall": false,
+  "deployment": "pending"
+}
