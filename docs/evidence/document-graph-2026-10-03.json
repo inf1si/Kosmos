@@ -2,8 +2,8 @@
   "date": "2026-10-03",
   "environment": "localhost synthetic Auth/PostgREST and workspace",
   "automatedTests": {
-    "passed": 52,
-    "newGraphTests": 5,
+    "passed": 53,
+    "newGraphTests": 6,
     "typecheck": "passed",
     "productionBuild": "passed (local webpack)"
   },
@@ -141,6 +141,20 @@
     "noDependencyChange": true
   },
   "deployment": {
-    "state": "pending"
+    "state": "success",
+    "sourceCommit": "7ffb0be820363bceccf77242db1f8385ca3c3525",
+    "ciRun": "https://github.com/inf1si/Kosmos/actions/runs/37113198502",
+    "vercel": "https://vercel.com/kosmos24/kosmos/3LbQkJ29XTVGkk3tMv7SfLkhpS8o",
+    "productionReadOnlyVerification": {
+      "nodes": 12,
+      "edges": 6,
+      "width": 939,
+      "pageWidth": 939,
+      "graphMenu": true,
+      "documentInformation": true,
+      "openDocumentAndReturn": true,
+      "captionSpacing": true,
+      "noManuscriptOrCredentialEdits": true
+    }
   }
 }
