@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-03",
+  "environment": "localhost synthetic Auth/PostgREST and workspace",
+  "automatedTests": {
+    "passed": 52,
+    "newGraphTests": 5,
+    "typecheck": "passed",
+    "productionBuild": "passed (local webpack)"
+  },
+  "browser": {
+    "initialNodes": 7,
+    "initialEdges": 4,
+    "nodeSelection": true,
+    "openDocumentButton": true,
+    "doublePointerActivation": true,
+    "historyBack": true,
+    "localDepthSwitch": true,
+    "disablePovLeavesCenter": true,
+    "emptySearchNotice": true,
+    "filterReset": true,
+    "nodeDrag": true,
+    "panDelta": {
+      "x": 50,
+      "y": 20
+    },
+    "keyboardPanAndZoom": true,
+    "activeTabRevealedAfterResize": true,
+    "mobileFiltersFit": true,
+    "freshPageRuntimeErrors": 0
+  },
+  "themes": [
+    {
+      "palette": "violet",
+      "theme": "light",
+      "width": 1280,
+      "height": 900,
+      "pageWidth": 1280,
+      "nodes": 7
+    },
+    {
+      "palette": "violet",
+      "theme": "light",
+      "width": 360,
+      "height": 780,
+      "pageWidth": 360,
+      "nodes": 7
+    },
+    {
+      "palette": "violet",
+      "theme": "dark",
+      "width": 1280,
+      "height": 900,
+      "pageWidth": 1280,
+      "nodes": 7
+    },
+    {
+      "palette": "violet",
+      "theme": "dark",
+      "width": 360,
+      "height": 780,
+      "pageWidth": 360,
+      "nodes": 7
+    },
+    {
+      "palette": "cassette",
+      "theme": "light",
+      "width": 1280,
+      "height": 900,
+      "pageWidth": 1280,
+      "nodes": 7
+    },
+    {
+      "palette": "cassette",
+      "theme": "light",
+      "width": 360,
+      "height": 780,
+      "pageWidth": 360,
+      "nodes": 7
+    },
+    {
+      "palette": "cassette",
+      "theme": "dark",
+      "width": 1280,
+      "height": 900,
+      "pageWidth": 1280,
+      "nodes": 7
+    },
+    {
+      "palette": "cassette",
+      "theme": "dark",
+      "width": 360,
+      "height": 780,
+      "pageWidth": 360,
+      "nodes": 7
+    },
+    {
+      "palette": "cyber",
+      "theme": "light",
+      "width": 1280,
+      "height": 900,
+      "pageWidth": 1280,
+      "nodes": 7
+    },
+    {
+      "palette": "cyber",
+      "theme": "light",
+      "width": 360,
+      "height": 780,
+      "pageWidth": 360,
+      "nodes": 7
+    },
+    {
+      "palette": "cyber",
+      "theme": "dark",
+      "width": 1280,
+      "height": 900,
+      "pageWidth": 1280,
+      "nodes": 7
+    },
+    {
+      "palette": "cyber",
+      "theme": "dark",
+      "width": 360,
+      "height": 780,
+      "pageWidth": 360,
+      "nodes": 7
+    }
+  ],
+  "limits": {
+    "nodes": 200,
+    "edges": 800,
+    "explicitNotice": true,
+    "checkedInAutomatedTest": true
+  },
+  "dataBoundaries": {
+    "differentWorksExcluded": true,
+    "danglingAndSelfReferencesExcluded": true,
+    "ambiguousPovExcluded": true,
+    "sourceDocumentsUnchanged": true,
+    "noSchemaChange": true,
+    "noDependencyChange": true
+  },
+  "deployment": {
+    "state": "pending"
+  }
+}

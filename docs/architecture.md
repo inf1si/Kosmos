@@ -20,6 +20,8 @@ Node.js 지원 범위는 `>=22 <25`다. pnpm은 `packageManager`의 11.19.0을 �
 
 ## 데이터 경로
 
+집필실의 [문서 그래프](document-graph.md)는 현재 선택한 작품의 문서 배열을 `buildDocumentGraph`로 읽어 본문 `wikiLink`와 정확히 일치하는 유일한 시점 인물 관계를 계산한다. 필터·1~3단계 이웃 탐색·문서 200개/선 800개 제한 후 결정적인 배치를 만든다. 클라이언트 SVG에서 이동·선택·확대하고 Studio의 기존 문서 탭으로 연다. 서버 경로·공개 데이터·DB 스키마는 추가하지 않는다. 노드 위치와 보기 상태는 임시이며 백업에는 원본 링크·시점 값만 기존 방식으로 남는다.
+
 ```mermaid
 flowchart LR
   Author[작가 브라우저] --> Editor[Tiptap 편집기]

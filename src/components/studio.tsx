@@ -1,11 +1,12 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, User, X } from 'lucide-react';
+import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
 import { PlotBoard } from './plot-board';
+import { DocumentGraph } from './document-graph';
 import { WikiIcon } from './studio-icons';
 import { ThemeControls } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
@@ -18,6 +19,7 @@ import { cloudConfigured, cloud } from '@/lib/cloud';
 import { db } from '@/lib/database';
 
 const BOARD='board';
+const GRAPH='graph';
 type Reference='links'|'files'|'ai';
 const kinds={scene:'원고',wiki:'설정집',memo:'메모 · 리서치'} as const;
 // Below this width the sidebar floats over the editor and closes after a document opens.
@@ -45,28 +47,28 @@ export function Studio(){
   function openSearch(){setReference(null);setFocus(false);setSidebar(true);setSearching(true);setTimeout(()=>document.getElementById('workspace-search')?.focus(),30);}
   useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);if(media.matches)setSidebar(false);const resize=()=>{setCompact(media.matches);if(media.matches)setSidebar(false);};media.addEventListener('change',resize);return()=>media.removeEventListener('change',resize);},[]);
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&(e.code==='KeyK'||e.key.toLowerCase()==='k')){e.preventDefault();openSearch();}};window.addEventListener('keydown',onKey,true);return()=>window.removeEventListener('keydown',onKey,true);},[]);
-  useEffect(()=>{document.querySelector('.doc-tab.active')?.scrollIntoView({block:'nearest',inline:'nearest'});},[current]);
+  useEffect(()=>{const list=document.querySelector('.tab-list');if(!list)return;const reveal=()=>list.querySelector('.doc-tab.active')?.scrollIntoView({block:'nearest',inline:'nearest'});const observer=new ResizeObserver(reveal);observer.observe(list);reveal();return()=>observer.disconnect();},[current,compact,s.loading]);
   if(s.loading)return <div className="loading-screen"><NotebookPen size={28}/><p>집필실을 여는 중입니다.</p></div>;
   if(!s.canUse)return <Login/>;
   if(!s.state)return <div className="loading-screen">원고를 불러오지 못했습니다. {s.error}</div>;
   const work=s.state.works.find(w=>w.id===workId)||s.state.works[0];const docs=work.documents;
-  const onBoard=current===BOARD;
-  const active=docs.find(d=>d.id===(onBoard?lastDoc:current))||docs.find(d=>d.id===lastDoc)||docs.find(d=>d.kind==='scene')||docs[0];
-  const view=onBoard?BOARD:active.id;
-  const openTabs=[...new Set([...(tabs.length?tabs:[view]),view])].filter(id=>id===BOARD||docs.some(d=>d.id===id));
-  const split=onBoard?undefined:docs.find(d=>d.id===splitId&&d.id!==active.id);
+  const onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onBoard||onGraph;
+  const active=docs.find(d=>d.id===(onOverview?lastDoc:current))||docs.find(d=>d.id===lastDoc)||docs.find(d=>d.kind==='scene')||docs[0];
+  const view=onGraph?GRAPH:onBoard?BOARD:active.id;
+  const openTabs=[...new Set([...(tabs.length?tabs:[view]),view])].filter(id=>id===BOARD||id===GRAPH||docs.some(d=>d.id===id));
+  const split=onOverview?undefined:docs.find(d=>d.id===splitId&&d.id!==active.id);
   const scenes=docs.filter(d=>d.kind==='scene');const wiki=docs.filter(d=>d.kind==='wiki');
   const references=new Map(docs.map(d=>[d.id,wikiReferences(d.content)]));const appearances:Record<string,number>={};for(const ids of references.values())for(const id of ids)appearances[id]=(appearances[id]||0)+1;
   const linked=(references.get(active.id)||[]).map(id=>docs.find(d=>d.id===id)).filter((d):d is NovelDocument=>!!d);const backlinks=docs.filter(d=>d.id!==active.id&&references.get(d.id)?.includes(active.id));
   const siblings=docs.filter(d=>d.kind===active.kind).map(d=>d.id);const position=siblings.indexOf(active.id);
   const matches=(d:NovelDocument)=>!query||`${d.title} ${plainText(d.content)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase());
   const showSidebar=sidebar&&!focus;const readonly=!!s.conflict;const total=scenes.reduce((n,d)=>n+countChars(d),0);
-  function show(id:string){setCurrent(id);if(id!==BOARD)setLastDoc(id);setTabs(t=>[...new Set([...(t.length?t:[view]),id])]);setProperties(false);if(narrow())setSidebar(false);}
+  function show(id:string){setCurrent(id);if(id!==BOARD&&id!==GRAPH)setLastDoc(id);else setReference(null);setTabs(t=>[...new Set([...(t.length?t:[view]),id])]);setProperties(false);if(narrow())setSidebar(false);}
   function go(id:string){if(id===view)return;setBack(b=>[...b,view].slice(-50));setForward([]);show(id);}
   function goBack(){const previous=back.at(-1);if(!previous)return;setBack(b=>b.slice(0,-1));setForward(f=>[view,...f]);show(previous);}
   function goForward(){const next=forward[0];if(!next)return;setForward(f=>f.slice(1));setBack(b=>[...b,view]);show(next);}
-  function closeTab(id:string){const remaining=openTabs.filter(v=>v!==id);setTabs(remaining);if(id===view){const next=remaining.at(-1)!;setCurrent(next);if(next!==BOARD)setLastDoc(next);}}
-  function openDoc(id:string,beside=false){if(beside&&!onBoard){setSplitId(id===active.id?null:id);return;}if(id===splitId)setSplitId(active.id);go(id);}
+  function closeTab(id:string){const remaining=openTabs.filter(v=>v!==id);setTabs(remaining);if(id===view){const next=remaining.at(-1)!;show(next);setTabs(remaining);}}
+  function openDoc(id:string,beside=false){if(beside&&!onOverview){setSplitId(id===active.id?null:id);return;}if(id===splitId)setSplitId(active.id);go(id);}
   function switchWork(id:string){setWorkId(id);setCurrent('');setLastDoc('');setTabs([]);setBack([]);setForward([]);setSplitId(null);setProperties(false);setWorkMenu(false);}
   function patchDoc(id:string,patch:Partial<NovelDocument>){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,documents:w.documents.map(d=>d.id===id?{...d,...patch,updatedAt:new Date().toISOString()}:d)}:w)}));}
   function patchWork(patch:{title?:string;subtitle?:string;description?:string}){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,...patch}:w)}));}
@@ -92,6 +94,7 @@ export function Studio(){
         {searching||query?<div className="sidebar-search"><Search size={15}/><input id="workspace-search" aria-label="작품 내 검색" placeholder="제목과 본문에서 찾기" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setQuery('');setSearching(false);}}}/><IconButton label="검색 닫기" onClick={()=>{setQuery('');setSearching(false);}}><X size={14}/></IconButton></div>
           :<button type="button" className="nav-item" onClick={openSearch}><Search size={16}/><span>검색</span><kbd>Ctrl K</kbd></button>}
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
+        <button type="button" className="nav-item" aria-pressed={onGraph} onClick={()=>go(GRAPH)}><Network size={16}/><span>문서 그래프</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('backup')}><Archive size={16}/><span>백업과 복구</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('interchange')}><ArrowLeftRight size={16}/><span>가져오기 · 내보내기</span></button>
       </nav>
@@ -113,15 +116,15 @@ export function Studio(){
         <IconButton id="sidebar-toggle" label={showSidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={showSidebar} onClick={()=>{if(compact)setReference(null);if(focus){setFocus(false);setSidebar(true);}else setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton>
         <IconButton label="뒤로" className="icon-button history-button" disabled={!back.length} onClick={goBack}><ChevronLeft size={16}/></IconButton>
         <IconButton label="앞으로" className="icon-button history-button" disabled={!forward.length} onClick={goForward}><ChevronRight size={16}/></IconButton>
-        <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||'플롯보드';return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
+        <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||(id===GRAPH?'문서 그래프':'플롯보드');return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
         <span className="tab-spacer"/>
-        <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onBoard} onClick={()=>setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null)}><Columns2 size={16}/></IconButton>
-        <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onBoard} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>
+        <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onOverview} onClick={()=>setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null)}><Columns2 size={16}/></IconButton>
+        <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onOverview} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>
         <div className="menu-anchor" ref={moreMenuRef}><IconButton label="더 보기" aria-expanded={moreMenu} aria-controls="more-menu" onClick={()=>setMoreMenu(v=>!v)}><MoreHorizontal size={16}/></IconButton>
           {moreMenu&&<div id="more-menu" className="popover-menu more-menu">
             <button type="button" aria-pressed={focus} onClick={()=>{setMoreMenu(false);setFocus(v=>!v);}}><Maximize2 size={15}/>{focus?'집중 모드 끝내기':'집중 모드'}</button>
-            <button type="button" disabled={onBoard||position<=0} onClick={()=>moveDoc(-1)}><ArrowUp size={15}/>문서 위로 옮기기</button>
-            <button type="button" disabled={onBoard||position>=siblings.length-1} onClick={()=>moveDoc(1)}><ArrowDown size={15}/>문서 아래로 옮기기</button>
+            <button type="button" disabled={onOverview||position<=0} onClick={()=>moveDoc(-1)}><ArrowUp size={15}/>문서 위로 옮기기</button>
+            <button type="button" disabled={onOverview||position>=siblings.length-1} onClick={()=>moveDoc(1)}><ArrowDown size={15}/>문서 아래로 옮기기</button>
             <button type="button" onClick={()=>{setMoreMenu(false);void s.snapshot(`${active.title} · 수동 저장`).catch(e=>alert(e.message));}}><Save size={15}/>복구 지점 만들기</button>
             <span className="menu-divider"/>
             <button type="button" onClick={()=>{setMoreMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button>
@@ -131,7 +134,8 @@ export function Studio(){
         <button type="button" className="primary publish-button" onClick={()=>modal('publish')}><Send size={14}/>게시 준비</button>
       </div>
       {s.error&&<button type="button" className="studio-error" title="닫기" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {onBoard?<PlotBoard documents={docs} onOpen={id=>openDoc(id)} onCreate={chapter=>createDoc('scene',chapter,false)}/>
+      {onGraph?<DocumentGraph key={work.id} documents={docs} initialDocumentId={active.id} onOpen={id=>openDoc(id)}/>
+      :onBoard?<PlotBoard documents={docs} onOpen={id=>openDoc(id)} onCreate={chapter=>createDoc('scene',chapter,false)}/>
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={{'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
         <RichEditor key={`${active.id}-${s.epoch}`} doc={active} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} appearances={appearances}
           heading={<DocHead doc={active} wiki={wiki} linked={linked.length} backlinks={backlinks.length} attachments={active.assetIds.length} readonly={readonly} open={properties} onToggle={()=>setProperties(v=>!v)} onPatch={patch=>patchDoc(active.id,patch)} onOpenBeside={id=>openDoc(id,true)} onReference={setReference}/>}
