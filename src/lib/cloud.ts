@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Workspace, workspaceSchema, Publication, publicationSchema } from './model';
+import { applyNavigation, resolveNavigation } from './document-navigation';
 let client:SupabaseClient|null=null;
 export const cloudConfigured=!!(process.env.NEXT_PUBLIC_SUPABASE_URL&&process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 export function cloud(){
@@ -17,7 +18,9 @@ export async function initializeCloud(data:Workspace){
   return {id:String(result.id),data:workspaceSchema.parse(result.payload),version:Number(result.version)};
 }
 export async function saveCloud(id:string,baseVersion:number,payload:Workspace,requestId:string){
-  const {data,error}=await cloud().rpc('save_workspace',{p_id:id,p_base_version:baseVersion,p_payload:payload,p_request_id:requestId});
+  // Normalize old offline queues and restored backups before the server's preservation guard runs.
+  const complete={...payload,works:payload.works.map(w=>applyNavigation(w,resolveNavigation(w)))};
+  const {data,error}=await cloud().rpc('save_workspace',{p_id:id,p_base_version:baseVersion,p_payload:complete,p_request_id:requestId});
   if(error)throw error;
   return data as {status:'saved'|'conflict';version:number;payload?:Workspace};
 }

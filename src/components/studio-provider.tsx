@@ -7,6 +7,7 @@ import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publish
 import { createBackup, readBackup } from '@/lib/backup';
 import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
 import type { Work } from '@/lib/model';
+import { applyNavigation, resolveNavigation } from '@/lib/document-navigation';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
 type StudioContextValue={
@@ -63,7 +64,10 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
   const scheduleSync=useCallback(()=>{if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void syncNow(),1500);},[syncNow]);
   const update=useCallback((fn:(state:Workspace)=>Workspace)=>{
     if(!dataRef.current||conflictRef.current){if(conflictRef.current)setError('충돌 원고를 확인한 뒤 편집할 수 있습니다.');return;}
-    const data={...fn(structuredClone(dataRef.current)),updatedAt:new Date().toISOString()};setCurrent(data);setStatus('기기에 저장 중');pending.current++;
+    // Materialize legacy folders before editing properties, so the first chapter edit does not rename them.
+    const base={...dataRef.current,works:dataRef.current.works.map(w=>w.navigation?w:applyNavigation(w,resolveNavigation(w)))};
+    const edited=fn(structuredClone(base));
+    const data={...edited,works:edited.works.map(w=>applyNavigation(w,resolveNavigation(w))),updatedAt:new Date().toISOString()};setCurrent(data);setStatus('기기에 저장 중');pending.current++;
     const targetNamespace=namespaceRef.current;
     saveQueue.current=saveQueue.current.then(async()=>{
       if(conflictRef.current){pending.current--;return;}

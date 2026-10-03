@@ -1,6 +1,6 @@
 # 현재 구현 아키텍처
 
-이 문서는 0.2.1과 2026-10-03 집필 도구·AI 대화 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
+이 문서는 0.2.1과 2026-10-03 집필 도구·AI 대화·문서 트리 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
 
 ## 구성
 
@@ -19,6 +19,8 @@
 Node.js 지원 범위는 `>=22 <25`다. pnpm은 `packageManager`의 11.19.0을 사용한다. 실제 설치 버전은 [pnpm-lock.yaml](../pnpm-lock.yaml)로 고정한다. 의존성 이름과 스크립트는 [package.json](../package.json)을 기준으로 한다.
 
 ## 데이터 경로
+
+[DocumentTree](../src/components/document-tree.tsx)는 폴더와 문서를 같은 부모 후보로 다루고, 손잡이의 Pointer Events 및 이동 대화상자에서 같은 순수 이동 함수를 호출한다. StudioProvider는 기존 자료의 트리를 속성 편집 전에 확정하고, 편집 뒤에는 트리와 `documents` 순서를 맞춘다. 클라우드 저장도 같은 변환을 거쳐 오래된 백업·대기 중 전송을 수용한다. 신규 저장소·동기화 통로는 추가하지 않는다. [문서 트리 계약](document-navigation.md).
 
 집필실의 [문서 그래프](document-graph.md)는 현재 선택한 작품의 문서 배열을 `buildDocumentGraph`로 읽어 본문 `wikiLink`와 정확히 일치하는 유일한 시점 인물 관계를 계산한다. 필터·1~3단계 이웃 탐색·문서 200개/선 800개 제한 후 결정적인 배치를 만든다. 클라이언트 SVG에서 이동·선택·확대하고 Studio의 기존 문서 탭으로 연다. 서버 경로·공개 데이터·DB 스키마는 추가하지 않는다. 노드 위치와 보기 상태는 임시이며 백업에는 원본 링크·시점 값만 기존 방식으로 남는다.
 
@@ -74,6 +76,10 @@ flowchart LR
 | 파일 | 맡는 일 |
 |---|---|
 | [model.ts](../src/lib/model.ts) | Zod 모델, 공개 판본 생성, 각주·설정 참조 추출 |
+| [document-navigation-schema.ts](../src/lib/document-navigation-schema.ts) | 트리 스키마·ID·순환·깊이 검증 |
+| [document-navigation.ts](../src/lib/document-navigation.ts) | 이전 자료 변환·이동·배열 정렬·정리 되돌리기·부분 내보내기 |
+| [document-tree.tsx](../src/components/document-tree.tsx) | 중첩 탐색·하위 문서/폴더·사용자 대분류·드래그·이동 폼 |
+| [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql) | 이전 클라이언트가 새 트리 필드를 지우는 저장 거절 |
 | [seed.ts](../src/lib/seed.ts) | 샘플 작품·문서 |
 | [database.ts](../src/lib/database.ts) | IndexedDB, 로컬 기준 버전 검사, 복구 지점 |
 | [cloud.ts](../src/lib/cloud.ts) | Supabase 클라이언트·RPC |

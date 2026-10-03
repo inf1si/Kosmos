@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { conversationSchema } from './ai-conversation';
+import { navigationSchema, navigationIssues } from './document-navigation-schema';
 
 export type RichNode = { type: string; text?: string; attrs?: Record<string, unknown>; marks?: {type: string; attrs?: Record<string, unknown>}[]; content?: RichNode[] };
 const nodeTypes = new Set(['doc','text','paragraph','heading','bulletList','orderedList','listItem','hardBreak','blockquote','codeBlock','horizontalRule','footnote']);
@@ -36,6 +37,9 @@ export const workSchema = z.object({
   form:z.enum(['단편','중편','장편']), documents:z.array(documentSchema).min(1).max(5000),
   publications:z.array(publicationSchema).max(100),activePublicationId:z.uuid().nullable(),
   aiConversations:z.array(conversationSchema).max(200).optional(),
+  navigation:navigationSchema.optional(),
+}).superRefine((work,ctx)=>{
+  if(work.navigation)for(const message of navigationIssues(work.navigation,work.documents.map(d=>d.id)))ctx.addIssue({code:'custom',message,path:['navigation']});
 });
 export type Work = z.infer<typeof workSchema>;
 export const assetSchema = z.object({id:z.uuid(),workId:z.uuid(),name:z.string().max(300),type:z.enum(['image/png','image/jpeg','image/webp']),size:z.number().int().min(0).max(10*1024*1024)});
@@ -43,7 +47,7 @@ export type AssetMeta = z.infer<typeof assetSchema>;
 export const workspaceSchema = z.object({
   formatVersion:z.literal(1),id:z.uuid(),works:z.array(workSchema).min(1).max(100),assets:z.array(assetSchema).max(2000),updatedAt:z.string(),
 }).superRefine((data,ctx)=>{
-  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.assets.map(a=>a.id)];
+  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id)];
   if (new Set(ids).size !== ids.length) ctx.addIssue({code:'custom',message:'중복된 문서 ID가 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
   for(const w of data.works) {

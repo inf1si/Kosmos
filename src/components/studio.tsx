@@ -1,20 +1,22 @@
 'use client';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Folder, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, User, X } from 'lucide-react';
+import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
 import { PlotBoard } from './plot-board';
 import { DocumentGraph } from './document-graph';
+import { DocumentTree } from './document-tree';
 import { WikiIcon } from './studio-icons';
 import { ThemeControls } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
 import { AIChat } from './ai-chat';
 import { EditableCombobox } from './editable-combobox';
 import { useDrawerFocus } from './use-drawer-focus';
-import { NovelDocument, newDocument, plainText, statuses, wikiReferences } from '@/lib/model';
-import { countChars, groupScenes, sceneInsertIndex } from '@/lib/outline';
+import { NovelDocument, Work, newDocument, statuses, wikiReferences } from '@/lib/model';
+import { countChars } from '@/lib/outline';
+import { childrenOf, insertDocument, moveNavigation, resolveNavigation, siblingDestination } from '@/lib/document-navigation';
 import { cloudConfigured, cloud } from '@/lib/cloud';
 import { db } from '@/lib/database';
 
@@ -37,7 +39,7 @@ export function Studio(){
   const s=useStudio();const [workId,setWorkId]=useState('');const [current,setCurrent]=useState('');const [lastDoc,setLastDoc]=useState('');const [tabs,setTabs]=useState<string[]>([]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
-  const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);const [closedParts,setClosedParts]=useState<string[]>([]);
+  const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
   const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [workSettings,setWorkSettings]=useState(false);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const referenceRef=useRef<HTMLElement>(null);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
@@ -60,8 +62,8 @@ export function Studio(){
   const scenes=docs.filter(d=>d.kind==='scene');const wiki=docs.filter(d=>d.kind==='wiki');
   const references=new Map(docs.map(d=>[d.id,wikiReferences(d.content)]));const appearances:Record<string,number>={};for(const ids of references.values())for(const id of ids)appearances[id]=(appearances[id]||0)+1;
   const linked=(references.get(active.id)||[]).map(id=>docs.find(d=>d.id===id)).filter((d):d is NovelDocument=>!!d);const backlinks=docs.filter(d=>d.id!==active.id&&references.get(d.id)?.includes(active.id));
-  const siblings=docs.filter(d=>d.kind===active.kind).map(d=>d.id);const position=siblings.indexOf(active.id);
-  const matches=(d:NovelDocument)=>!query||`${d.title} ${plainText(d.content)}`.toLocaleLowerCase().includes(query.toLocaleLowerCase());
+  const navigation=resolveNavigation(work),placement=navigation.nodes.find(n=>n.id===active.id);
+  const siblings=placement?childrenOf(navigation,placement.parentId,placement.sectionId).map(n=>n.id):[];const position=siblings.indexOf(active.id);
   const showSidebar=sidebar&&!focus;const readonly=!!s.conflict;const total=scenes.reduce((n,d)=>n+countChars(d),0);
   function show(id:string){setCurrent(id);if(id!==BOARD&&id!==GRAPH)setLastDoc(id);else setReference(null);setTabs(t=>[...new Set([...(t.length?t:[view]),id])]);setProperties(false);if(narrow())setSidebar(false);}
   function go(id:string){if(id===view)return;setBack(b=>[...b,view].slice(-50));setForward([]);show(id);}
@@ -72,15 +74,14 @@ export function Studio(){
   function switchWork(id:string){setWorkId(id);setCurrent('');setLastDoc('');setTabs([]);setBack([]);setForward([]);setSplitId(null);setProperties(false);setWorkMenu(false);}
   function patchDoc(id:string,patch:Partial<NovelDocument>){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,documents:w.documents.map(d=>d.id===id?{...d,...patch,updatedAt:new Date().toISOString()}:d)}:w)}));}
   function patchWork(patch:{title?:string;subtitle?:string;description?:string}){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,...patch}:w)}));}
+  function organizeWork(fn:(latest:Work)=>Work){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?fn(w):w)}));}
   // A new scene joins the part it belongs to: the given one, the open scene's, or the last.
   function createDoc(kind:NovelDocument['kind'],chapter?:string,open=true){
     const d=newDocument(kind,kind==='scene'?'새 장면':kind==='wiki'?'새 설정':'새 메모');if(kind==='scene')d.chapter=chapter??(active.kind==='scene'?active.chapter:scenes.at(-1)?.chapter??'제1부');
-    s.update(state=>({...state,works:state.works.map(w=>{if(w.id!==work.id)return w;const documents=[...w.documents];documents.splice(kind==='scene'?sceneInsertIndex(documents,d.chapter):documents.length,0,d);return {...w,documents};})}));if(open)openDoc(d.id);
+    organizeWork(w=>{const nav=resolveNavigation(w),neighbor=w.documents.findLast(item=>item.kind===kind&&(kind!=='scene'||item.chapter===d.chapter)),node=nav.nodes.find(n=>n.id===neighbor?.id);return insertDocument(w,d,node?{sectionId:node.sectionId,parentId:node.parentId}:undefined);});if(open)openDoc(d.id);
   }
-  function moveDoc(direction:number){const next=siblings[position+direction];if(!next)return;s.update(state=>({...state,works:state.works.map(w=>{if(w.id!==work.id)return w;const documents=[...w.documents];const a=documents.findIndex(d=>d.id===active.id),b=documents.findIndex(d=>d.id===next);[documents[a],documents[b]]=[documents[b],documents[a]];return {...w,documents};})}));}
+  function moveDoc(direction:number){if(readonly)return;organizeWork(w=>{const to=siblingDestination(w,active.id,direction);return to?moveNavigation(w,active.id,to):w;});}
   async function downloadAsset(id:string){try{const meta=s.state!.assets.find(a=>a.id===id)!;let blob=(await db.assets.get([s.namespace,id]))?.blob;if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${s.user}/${id}`);if(result.error)throw result.error;blob=result.data||undefined;}if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.createObjectURL(blob);const a=document.createElement('a');a.href=href;a.download=meta.name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);}catch(e){alert(e instanceof Error?e.message:'첨부를 열지 못했습니다.');}}
-  const row=(d:NovelDocument,icon:ReactNode,meta:ReactNode,indent=false)=><div className={`tree-row ${indent?'indent':''} ${d.id===view?'selected':''}`} key={d.id}><button type="button" aria-current={d.id===view||undefined} onClick={()=>openDoc(d.id)}>{icon}<span className="tree-label">{d.title}</span>{meta}</button><IconButton label={`${d.title} 옆에서 열기`} onClick={()=>openDoc(d.id,true)}><Columns2 size={14}/></IconButton></div>;
-  const heading=(kind:NovelDocument['kind'],add:string)=><div className="tree-heading"><span><i className="tree-number" aria-hidden="true">{String(Object.keys(kinds).indexOf(kind)+1).padStart(2,'0')}</i>{kinds[kind]}<span>{docs.filter(d=>d.kind===kind).length}</span></span><IconButton label={add} onClick={()=>createDoc(kind)}><Plus size={14}/></IconButton></div>;
   return <TooltipProvider><div className={`studio ${focus?'focus-mode':''}`}>
     {showSidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={()=>setSidebar(false)}/>}
     {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색" ref={sidebarRef} role={compact?'dialog':undefined} aria-modal={compact||undefined}>
@@ -99,15 +100,7 @@ export function Studio(){
         <button type="button" className="nav-item" onClick={()=>modal('interchange')}><ArrowLeftRight size={16}/><span>가져오기 · 내보내기</span></button>
       </nav>
       <div className="sidebar-scroll">
-        <section className="tree-section" aria-label="원고">{heading('scene','장면 추가')}
-          {groupScenes(scenes.filter(matches),d=>d.chapter,'부 미지정').map((g,i)=>{const closed=!query&&closedParts.includes(g.key);return <div role="group" aria-label={g.key||'부 미지정'} key={`${i}-${g.key}`}>
-            <button type="button" className="tree-part" aria-expanded={!closed} onClick={()=>setClosedParts(c=>c.includes(g.key)?c.filter(v=>v!==g.key):[...c,g.key])}>{closed?<ChevronRight size={14}/>:<ChevronDown size={14}/>}<Folder size={15}/><span className="tree-label">{g.key||'부 미지정'}</span><small>{g.scenes.length}</small></button>
-            {!closed&&g.scenes.map(d=>row(d,null,<i className={`status-dot ${d.status}`} role="img" aria-label={statuses[d.status]}/>,true))}
-          </div>;})}
-        </section>
-        <section className="tree-section" aria-label="설정집">{heading('wiki','설정 추가')}{wiki.filter(matches).map(d=>row(d,<WikiIcon category={d.category}/>,<small>{d.category}</small>))}</section>
-        <section className="tree-section" aria-label="메모 · 리서치">{heading('memo','메모 추가')}{docs.filter(d=>d.kind==='memo'&&matches(d)).map(d=>row(d,<StickyNote size={15}/>,null))}</section>
-        {query&&!docs.some(matches)&&<p className="empty-text">검색 결과가 없습니다.</p>}
+        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork}/>
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
     </aside>}
@@ -123,8 +116,8 @@ export function Studio(){
         <div className="menu-anchor" ref={moreMenuRef}><IconButton label="더 보기" aria-expanded={moreMenu} aria-controls="more-menu" onClick={()=>setMoreMenu(v=>!v)}><MoreHorizontal size={16}/></IconButton>
           {moreMenu&&<div id="more-menu" className="popover-menu more-menu">
             <button type="button" aria-pressed={focus} onClick={()=>{setMoreMenu(false);setFocus(v=>!v);}}><Maximize2 size={15}/>{focus?'집중 모드 끝내기':'집중 모드'}</button>
-            <button type="button" disabled={onOverview||position<=0} onClick={()=>moveDoc(-1)}><ArrowUp size={15}/>문서 위로 옮기기</button>
-            <button type="button" disabled={onOverview||position>=siblings.length-1} onClick={()=>moveDoc(1)}><ArrowDown size={15}/>문서 아래로 옮기기</button>
+            <button type="button" disabled={readonly||onOverview||position<=0} onClick={()=>moveDoc(-1)}><ArrowUp size={15}/>문서 위로 옮기기</button>
+            <button type="button" disabled={readonly||onOverview||position>=siblings.length-1} onClick={()=>moveDoc(1)}><ArrowDown size={15}/>문서 아래로 옮기기</button>
             <button type="button" onClick={()=>{setMoreMenu(false);void s.snapshot(`${active.title} · 수동 저장`).catch(e=>alert(e.message));}}><Save size={15}/>복구 지점 만들기</button>
             <span className="menu-divider"/>
             <button type="button" onClick={()=>{setMoreMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button>
@@ -178,10 +171,11 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
       {doc.kind!=='memo'&&<button type="button" className="chip ghost" aria-expanded={open} aria-controls="doc-properties" onClick={onToggle}>{open?<X size={13}/>:<SlidersHorizontal size={13}/>}속성</button>}
     </div>
     {open&&doc.kind!=='memo'&&<div className="doc-props" id="doc-properties">{doc.kind==='scene'?<>
-      <label>부 · 장<input value={doc.chapter} disabled={readonly} placeholder="예: 제1부 · 남겨진 시간" onChange={e=>onPatch({chapter:e.target.value})}/></label>
+      <label>부 · 장 (발행 구분)<input value={doc.chapter} disabled={readonly} placeholder="예: 제1부 · 남겨진 시간" onChange={e=>onPatch({chapter:e.target.value})}/></label>
       <EditableCombobox label="시점 인물" value={doc.pov} options={wiki.filter(w=>w.category.trim()==='인물').map(w=>w.title)} disabled={readonly} onChange={pov=>onPatch({pov})}/>
       <label>작중 시간<input value={doc.storyTime} disabled={readonly} placeholder="예: 귀환일 · 08:40" onChange={e=>onPatch({storyTime:e.target.value})}/></label>
       <label className="wide">장면 요약<textarea rows={3} value={doc.summary} disabled={readonly} onChange={e=>onPatch({summary:e.target.value})}/></label>
+      <p className="field-help wide">부·장은 독서 화면의 구분입니다. 집필실 폴더와 별도로 관리합니다.</p>
     </>:<>
       <EditableCombobox label="분류" value={doc.category} options={wiki.map(w=>w.category)} disabled={readonly} onChange={category=>onPatch({category})}/>
       <label className="check-label"><input type="checkbox" checked={doc.isPublic} disabled={readonly} onChange={e=>onPatch({isPublic:e.target.checked})}/>독자용 설명 공개</label>

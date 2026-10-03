@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-03",
+  "feature": "document-navigation",
+  "data": "synthetic localhost fixture; no production manuscript changes",
+  "desktop": {
+    "width": 1280,
+    "height": 720,
+    "palettes": [
+      "violet",
+      "cassette",
+      "cyber"
+    ],
+    "modes": [
+      "light",
+      "dark"
+    ],
+    "horizontalOverflow": false
+  },
+  "mobile": {
+    "width": 360,
+    "height": 680,
+    "method": "same-origin iframe of isolated localhost synthetic Studio; temporary development header removed",
+    "palettes": [
+      "violet",
+      "cassette",
+      "cyber"
+    ],
+    "modes": [
+      "light",
+      "dark"
+    ],
+    "horizontalOverflow": false,
+    "moveModal": {
+      "width": 332,
+      "left": 14,
+      "right": 346
+    }
+  },
+  "flows": [
+    "custom section and default kind",
+    "nested document/folder creation",
+    "pointer subtree reparent/reorder",
+    "reject self/descendant drop",
+    "keyboard move",
+    "organization undo preserves body edits",
+    "search keeps ancestor path",
+    "cloud mock save and reload",
+    "mobile folder rename/reparent/undo",
+    "Escape closes modal only and returns focus"
+  ],
+  "productionDatabase": {
+    "migration": "002_document_navigation_guard.sql",
+    "trigger": "preserve_document_navigation",
+    "enabled": "O",
+    "existingPayloadChanged": false
+  },
+  "limitsNotMeasured": [
+    "physical touch device",
+    "IME composition",
+    "5000 document performance"
+  ],
+  "temporaryFilesRemoved": true,
+  "productionSecurityHeadersChanged": false
+}

@@ -10,6 +10,7 @@ Workspace
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
 │  ├─ documents[]: scene | wiki | memo
+│  ├─ navigation?: 대분류·문서/폴더 배치, version: 1
 │  ├─ publications[]: 공개 판본의 기기 사본
 │  ├─ activePublicationId
 │  └─ aiConversations[]: 선택 필드, 문서별 작가·AI 대화
@@ -19,7 +20,7 @@ Workspace
 | 객체 | 필드와 의미 |
 |---|---|
 | `Workspace` | UUID `id`, `formatVersion`, 작품 배열, 첨부 메타데이터, 갱신 시각 |
-| `Work` | UUID, 제목·부제·소개, `단편/중편/장편`, 문서 배열, 판본 배열, 활성 판본 ID, 선택적 AI 대화 배열 |
+| `Work` | UUID, 제목·부제·소개, `단편/중편/장편`, 문서 배열, 판본 배열, 활성 판본 ID, 선택적 AI 대화·문서 트리 배열 |
 | `NovelDocument` | UUID, `scene/wiki/memo`, 제목, `chapter`, 리치 본문, 요약, 작업 상태, 분류, 시점·시간, 공개 여부·설명, 첨부 ID, 갱신 시각 |
 | `Publication` | UUID, 작품 ID·소개·게시 시각, 선택 장면 사본, 공개 설정 설명 사본 |
 | `AssetMeta` | UUID, 작품 ID, 파일명, MIME 타입, 바이트 크기 |
@@ -27,7 +28,9 @@ Workspace
 
 `chapter`, `pov`, `storyTime`, `category`는 현재 자유 문자열이다. 정규화된 장·인물·시간선 엔티티가 아니다. 메모에는 연구 자료를 기록할 수 있지만 전용 출처 모델은 없다.
 
-문서 상태는 `idea` 구상, `draft` 집필 중, `review` 퇴고 중, `done` 완성이다. 배열 순서가 탐색과 게시 장면 순서를 결정한다.
+문서 상태는 `idea` 구상, `draft` 집필 중, `review` 퇴고 중, `done` 완성이다. `navigation`이 있으면 대분류와 형제 순서를 따르는 전위 순회로 `documents` 배열을 정렬한다(부모 문서가 하위 문서보다 먼저). 이 배열의 장면 순서가 다음 판본의 게시 순서가 된다. 폴더는 원고의 `chapter`와 독립된 정리 객체다. 문서 ID는 이동해도 바뀌지 않는다.
+
+[트리 스키마](../src/lib/document-navigation-schema.ts)는 대분류 ID·이름·새 문서의 기본 종류와, 노드의 ID·종류·대분류 ID·부모 ID를 저장한다. 노드 배열에서 같은 부모의 순서를 읽는다. 문서 노드 ID는 문서 UUID와 같고 폴더는 자체 UUID·제목을 갖는다. 중복 ID·없는 문서/부모·다른 대분류의 부모·순환·24단계를 넘는 깊이를 거절한다. `navigation`이 없는 이전 형식 1 자료는 세 기본 대분류와 연속된 부·장별 폴더로 변환한다. [전환·가져오기 계약](document-navigation.md).
 
 AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대화 ID는 중복할 수 없다. 한 대화의 최대 메시지 수는 40개다. 작가 메시지에는 질문, AI 메시지에는 답변·수정안·제공자·모델·원고 시점·참고 자료 제목과 ID를 보관한다. 대화를 저장해도 원고의 `updatedAt`을 바꾸지 않는다. 전체 백업에는 포함하고 공개 판본에는 포함하지 않는다. 새 필드는 선택적이므로 이전 형식 1 백업도 계속 읽는다. [AI 제한](ai.md).
 
@@ -97,6 +100,8 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 |---|---:|---|
 | 작품 | 최대 100개 | Zod |
 | 작품별 문서 | 1~5,000개 | Zod |
+| 작품별 대분류 / 문서·폴더 노드 | 40개 / 7,500개 | Zod |
+| 문서 트리 깊이 | 24단계 | Zod·이동 검증 |
 | 작품별 기기 판본 | 최대 100개 | Zod·게시 시 정리 |
 | 첨부 메타데이터 | 최대 2,000개 | Zod |
 | 문서별 첨부 | 최대 200개 | Zod |
@@ -105,3 +110,7 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 | ZIP 내용 합계 | 100MiB | 백업 코드 |
 
 이 값들은 거절 기준이며 해당 규모의 성능 보증이 아니다. JSON 저장 한도와 첨부 저장 한도도 별개다. 전체 서버 문서 검증·향후 형식 변환은 [로드맵](roadmap.md)을 따른다.
+
+## 이전 클라이언트의 트리 손실 방지
+
+[002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql)은 기존 작품의 `navigation`이 다음 저장에서 통째로 사라지면 UPDATE를 거절한다. 오래 열린 이전 버전 집필실의 Zod 파싱이 새 필드를 제거하는 경우를 막는다. 기존 권한·RLS·RPC·행 버전 검사를 유지하며 기존 원고를 수정하지 않는다. 서버는 계층 전체의 의미까지 검증하지 않으므로 현재 세부 검증의 기준은 클라이언트 스키마다.

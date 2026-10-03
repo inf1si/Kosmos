@@ -6,6 +6,8 @@ import { XMLValidator } from 'fast-xml-parser';
 import SparkMD5 from 'spark-md5';
 import { z } from 'zod';
 import { newDocument, uid, fromText, workspaceSchema, documentSchema, type RichNode, type NovelDocument, type Workspace, type Work, type AssetMeta } from './model';
+import { applyNavigation, defaultSections, resolveNavigation, subsetNavigation, type DocumentNavigation } from './document-navigation';
+import { navigationSchema, navigationIssues } from './document-navigation-schema';
 
 const MAX_BYTES=100*1024*1024, MAX_TEXT=5*1024*1024, MAX_PAGES=500;
 const encoder=new TextEncoder();
@@ -16,7 +18,7 @@ type HtmlNode=ReturnType<typeof parseDocument>['children'][number];
 type HtmlElement=HtmlNode & {name:string;attribs:Record<string,string>;children:HtmlNode[]};
 export type ImportedAsset={key:string;name:string;blob:Blob};
 export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string};
-export type ImportBundle={source:string;pages:ImportedPage[];assets:ImportedAsset[];warnings:string[]};
+export type ImportBundle={source:string;pages:ImportedPage[];assets:ImportedAsset[];warnings:string[];navigation?:DocumentNavigation;sourceIds?:Record<string,string>};
 export type ImportChoice={key:string;title:string;kind:NovelDocument['kind']};
 export type ExportFormat='markdown'|'html'|'enex';
 export type TransferDownload={blob:Blob;name:string};
@@ -136,7 +138,9 @@ export async function readInterchange(files:readonly File[]):Promise<ImportBundl
   const decoder=new TextDecoder('utf-8',{fatal:true});
   const decode=(key:string,bytes:Uint8Array,limit=MAX_TEXT)=>{if(bytes.length>limit)throw new Error(`${key}: 파일을 더 작게 나누어 주세요 (문서 5MB / ENEX 100MB).`);try{return decoder.decode(bytes).replace(/^\uFEFF/,'');}catch{throw new Error(`${key}: UTF-8로 저장한 파일을 선택하세요.`);}};
   let metadata=new Map<string,Partial<ImportedPage>>();const metaBytes=entries.get('kosmos-transfer.json');
-  if(metaBytes){const parsed=z.object({format:z.literal('kosmos-transfer'),version:z.literal(1),documents:z.array(z.object({path:z.string().min(1).max(1000),title:z.string().min(1).max(300).optional(),kind:z.enum(['scene','wiki','memo']).optional(),chapter:z.string().max(300).optional(),category:z.string().max(200).optional(),summary:z.string().max(20000).optional()})).max(MAX_PAGES)}).safeParse(JSON.parse(decode('kosmos-transfer.json',metaBytes)));if(!parsed.success)throw new Error('문서 묶음의 정보를 확인하세요.');metadata=new Map(parsed.data.documents.map(d=>[path(d.path),d]));if(metadata.size!==parsed.data.documents.length)throw new Error('문서 묶음에 중복된 경로가 있습니다.');}
+  if(metaBytes){const parsed=z.object({format:z.literal('kosmos-transfer'),version:z.literal(1),navigation:navigationSchema.optional(),documents:z.array(z.object({id:z.uuid().optional(),path:z.string().min(1).max(1000),title:z.string().min(1).max(300).optional(),kind:z.enum(['scene','wiki','memo']).optional(),chapter:z.string().max(300).optional(),category:z.string().max(200).optional(),summary:z.string().max(20000).optional()})).max(MAX_PAGES)}).safeParse(JSON.parse(decode('kosmos-transfer.json',metaBytes)));if(!parsed.success)throw new Error('문서 묶음의 정보를 확인하세요.');metadata=new Map(parsed.data.documents.map(d=>[path(d.path),d]));if(metadata.size!==parsed.data.documents.length)throw new Error('문서 묶음에 중복된 경로가 있습니다.');
+    if(parsed.data.navigation){const sourceIds=parsed.data.documents.flatMap(d=>d.id?[d.id]:[]),issue=navigationIssues(parsed.data.navigation,sourceIds)[0];if(issue||new Set(sourceIds).size!==sourceIds.length)throw new Error(issue||'문서 묶음의 ID가 중복됩니다.');bundle.navigation=parsed.data.navigation;bundle.sourceIds=Object.fromEntries(parsed.data.documents.flatMap(d=>d.id?[[path(d.path),d.id]]:[]));}
+  }
   const sources=new Map<string,string>();
   for(const [key,bytes]of entries){if(key.split('/').some(s=>s.startsWith('.')||s==='__MACOSX')||key==='kosmos-transfer.json'||key==='README-ORBIS-TERTIUS.txt')continue;
     const ext=key.split('.').pop()?.toLowerCase()||'';
@@ -181,7 +185,17 @@ export function prepareImport(state:Workspace,bundle:ImportBundle,choices:Import
     const visit=(node:RichNode)=>{if(node.type==='footnote')node.attrs={...node.attrs,noteId:uid()};if(['paragraph','heading'].includes(node.type))node.attrs={...node.attrs,blockId:uid()};node.marks=node.marks?.flatMap(mark=>{if(mark.type!=='wikiLink')return[mark];const key=String(mark.attrs?.sourceKey||'');return kinds.get(key)==='wiki'?[{type:'wikiLink',attrs:{targetId:ids.get(key)}}]:[];});node.content?.forEach(visit);};visit(d.content);
     for(const key of new Set(page.assetKeys)){const asset=bundle.assets.find(a=>a.key===key);if(!asset)throw new Error('가져올 첨부가 없습니다.');let id=assetIds.get(key);if(!id){id=uid();assetIds.set(key,id);assetMetas.push({id,workId,name:asset.name,type:asset.blob.type as AssetMeta['type'],size:asset.blob.size});blobs.push({id,blob:asset.blob});}d.assetIds.push(id);}return d;
   });
-  const next=structuredClone(state);if('workId'in target)next.works.find(w=>w.id===workId)!.documents.push(...documents);else next.works.push({id:workId,title:target.title.trim(),form:target.form,subtitle:'',description:'',documents,publications:[],activePublicationId:null});next.assets.push(...assetMetas);next.updatedAt=new Date().toISOString();workspaceSchema.parse(next);
+  const next=structuredClone(state);if('workId'in target)next.works.find(w=>w.id===workId)!.documents.push(...documents);else next.works.push({id:workId,title:target.title.trim(),form:target.form,subtitle:'',description:'',documents,publications:[],activePublicationId:null});
+  if(bundle.navigation&&bundle.sourceIds){
+    const targetWork=next.works.find(w=>w.id===workId)!,sourceToNew=new Map(choices.flatMap(c=>bundle.sourceIds?.[c.key]?[[bundle.sourceIds[c.key],ids.get(c.key)!] as [string,string]]:[]));
+    const selected=subsetNavigation(bundle.navigation,[...sourceToNew.keys()],choices.length===bundle.pages.length),nav='workId'in target?resolveNavigation(targetWork):{version:1 as const,sections:structuredClone(defaultSections),nodes:[]};
+    nav.nodes=nav.nodes.filter(n=>!documents.some(d=>d.id===n.id));
+    const sectionIds=new Map<string,string>();for(const section of selected.sections){let existing=nav.sections.find(s=>s.title===section.title&&s.defaultKind===section.defaultKind);if(!('workId'in target)&&['scene','wiki','memo'].includes(section.id)){existing=nav.sections.find(s=>s.id===section.id)!;Object.assign(existing,section);}if(!existing){existing={...section,id:uid()};nav.sections.push(existing);}sectionIds.set(section.id,existing.id);}
+    for(const n of selected.nodes)if(n.type==='folder')sourceToNew.set(n.id,uid());
+    for(const n of selected.nodes)nav.nodes.push({...n,id:sourceToNew.get(n.id)!,sectionId:sectionIds.get(n.sectionId)!,parentId:n.parentId?sourceToNew.get(n.parentId)!:null});
+    next.works=next.works.map(w=>w.id===workId?applyNavigation(w,nav):w);
+  }
+  next.assets.push(...assetMetas);next.updatedAt=new Date().toISOString();workspaceSchema.parse(next);
   if(encoder.encode(JSON.stringify(next)).length>19000000)throw new Error('원고 저장 용량을 넘습니다. 더 적은 문서를 가져오세요.');
   return{state:next,assets:blobs,workId};
 }
@@ -233,7 +247,7 @@ export async function exportInterchange(work:Work,documentIds:string[],metas:Ass
     else {const notes:string[]=[];output=`# ${mdEsc(d.title)}\n\n${mdRender(d.content,filenames,notes)}${attachments.join('\n\n')}\n\n${notes.map((n,i)=>`[^${i+1}]: ${n.replace(/\n/g,'\n    ')}`).join('\n')}`;}
     total+=encoder.encode(output).length;if(total>MAX_BYTES)throw new Error('내보내기 크기가 100MB를 넘습니다.');zip.file(filenames.get(d.id)!,output);
   }
-  zip.file('kosmos-transfer.json',JSON.stringify({format:'kosmos-transfer',version:1,workTitle:work.title,documents:docs.map(d=>({path:filenames.get(d.id),title:d.title,kind:d.kind,chapter:d.chapter,category:d.category,summary:d.summary}))},null,2));
+  zip.file('kosmos-transfer.json',JSON.stringify({format:'kosmos-transfer',version:1,workTitle:work.title,navigation:subsetNavigation(resolveNavigation(work),docs.map(d=>d.id),docs.length===work.documents.length),documents:docs.map(d=>({id:d.id,path:filenames.get(d.id),title:d.title,kind:d.kind,chapter:d.chapter,category:d.category,summary:d.summary}))},null,2));
   zip.file('README-ORBIS-TERTIUS.txt','Orbis Tertius 문서 교환용 파일입니다. 초안과 비공개 설정을 포함할 수 있습니다.\nNotion: 설정 → 가져오기 → ZIP. Obsidian: Markdown 묶음을 압축 해제하세요.\n복구 이력과 공개 판본은 포함하지 않습니다. 전체 보관은 Orbis Tertius 전체 백업을 사용하세요.\n문서 내 이미지는 Orbis Tertius에서는 별도 첨부로 가져오며, 표·데이터베이스·앱 고유 기능은 완전히 복원되지 않습니다.');
   return{blob:await zip.generateAsync({type:'blob',compression:'DEFLATE'}),name:`${safeFilename(work.title)}-${format}.zip`};
 }

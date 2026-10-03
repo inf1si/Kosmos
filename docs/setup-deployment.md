@@ -62,11 +62,13 @@ Supabase 공개 키는 RLS와 함께 사용하는 값이다. `service_role`/secr
 1. [Supabase Dashboard](https://supabase.com/dashboard)에 로그인한다.
 2. 기존 빈 프로젝트가 있으면 먼저 확인한다. 이번 연결은 사용자가 만든 `Kosmos` 서울 프로젝트를 사용했다. 새 프로젝트가 필요할 때만 생성하며 DB 비밀번호는 계정 소유자가 보관한다.
 3. SQL Editor에서 [001_studio.sql](../supabase/migrations/001_studio.sql) 전체를 **새 프로젝트에 한 번** 실행한다.
-4. 오류 없이 완료되었는지, 6개 앱 테이블과 `private-assets` 버킷이 생성되었는지 확인한다.
+4. 이어 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql)을 실행한다. 오류 없이 완료되었는지, 6개 앱 테이블과 `private-assets` 버킷 및 `preserve_document_navigation` 트리거가 있는지 확인한다.
 5. Data API를 꺼두었다면 Integrations의 Data API 설정에서 활성화하고 필요한 public 테이블·함수를 노출한다. 노출과 읽기·쓰기 권한은 별개다. SQL의 RLS·GRANT를 유지한다.
 6. Realtime publication에 `workspaces`가 포함되었는지 확인한다.
 
 이 마이그레이션은 `create table/function/policy`와 버킷 생성이 있는 최초 설치용이다. 기존 프로젝트에서 재실행하거나 이미 운영 중인 객체를 삭제해 맞추지 않는다. 기존 프로젝트 사용 시 먼저 충돌·백업을 확인하고 별도 전환 마이그레이션을 작성한다.
+
+문서 트리 이전 업데이트: `001`이 설치된 운영 프로젝트에는 `002`만 적용한 뒤 앱을 배포한다. `002`는 재실행해도 트리거를 중복 생성하지 않는다. 2026-10-03 현재 운영 프로젝트에는 적용했고 트리거 활성 상태 `O`를 확인했다. 기존 원고·작가 권한·API 키는 변경하지 않았다.
 
 ## 4. 작가 계정
 
