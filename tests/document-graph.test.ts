@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newDocument, type NovelDocument } from '../src/lib/model';
-import { buildDocumentGraph, filterDocumentGraph, layoutDocumentGraph, GRAPH_EDGE_LIMIT, type GraphOptions } from '../src/lib/document-graph';
+import { buildDocumentGraph, filterDocumentGraph, layoutDocumentGraph, graphChipWidth, GRAPH_EDGE_LIMIT, GRAPH_ROW, type GraphOptions } from '../src/lib/document-graph';
 
 const options: GraphOptions = {kinds: ['scene', 'wiki', 'memo'], query: '', category: '', includePov: true, hideIsolated: false, depth: 1};
 function link(doc: NovelDocument, ...targets: string[]) {
@@ -63,14 +63,14 @@ test('force layout is stable across document ordering and produces finite separa
   assert.ok(closest > 15, `closest nodes were ${closest} units apart`);
 });
 
-test('small graphs separate Korean node captions around a connected character', () => {
+test('small graphs separate Korean title chips around a connected character', () => {
   const person = newDocument('wiki', '시점 인물'), docs = [person, ...Array.from({length: 12}, (_, i) => newDocument('scene', `${i + 1}. 도착한 항구의 시간`))];
   docs.forEach((d, i) => {d.id = `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;});
   docs.slice(1).forEach(d => link(d, person.id));
   const points = layoutDocumentGraph(docs, buildDocumentGraph(docs).edges);
-  const halfWidth = (d: NovelDocument) => [...d.title].reduce((w, c) => w + (c.charCodeAt(0) > 255 ? 12 : 6), 0) / 2 + 8;
+  const halfWidth = (d: NovelDocument) => Math.min(220, graphChipWidth(d.title)) / 2;
   for (let i = 0; i < docs.length; i++) for (let j = i + 1; j < docs.length; j++) {
     const a = points.get(docs[i].id)!, b = points.get(docs[j].id)!;
-    assert.ok(Math.abs(a.x - b.x) >= halfWidth(docs[i]) + halfWidth(docs[j]) - 1 || Math.abs(a.y - b.y) >= 47, `captions overlap: ${i}, ${j}`);
+    assert.ok(Math.abs(a.x - b.x) >= halfWidth(docs[i]) + halfWidth(docs[j]) - 1 || Math.abs(a.y - b.y) >= GRAPH_ROW - 1, `title chips overlap: ${i}, ${j}`);
   }
 });
