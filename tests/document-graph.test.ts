@@ -62,3 +62,15 @@ test('force layout is stable across document ordering and produces finite separa
   for (let i = 0; i < coordinates.length; i++) for (let j = i + 1; j < coordinates.length; j++) closest = Math.min(closest, Math.hypot(coordinates[i].x - coordinates[j].x, coordinates[i].y - coordinates[j].y));
   assert.ok(closest > 15, `closest nodes were ${closest} units apart`);
 });
+
+test('small graphs separate Korean node captions around a connected character', () => {
+  const person = newDocument('wiki', '시점 인물'), docs = [person, ...Array.from({length: 12}, (_, i) => newDocument('scene', `${i + 1}. 도착한 항구의 시간`))];
+  docs.forEach((d, i) => {d.id = `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;});
+  docs.slice(1).forEach(d => link(d, person.id));
+  const points = layoutDocumentGraph(docs, buildDocumentGraph(docs).edges);
+  const halfWidth = (d: NovelDocument) => [...d.title].reduce((w, c) => w + (c.charCodeAt(0) > 255 ? 12 : 6), 0) / 2 + 8;
+  for (let i = 0; i < docs.length; i++) for (let j = i + 1; j < docs.length; j++) {
+    const a = points.get(docs[i].id)!, b = points.get(docs[j].id)!;
+    assert.ok(Math.abs(a.x - b.x) >= halfWidth(docs[i]) + halfWidth(docs[j]) - 1 || Math.abs(a.y - b.y) >= 47, `captions overlap: ${i}, ${j}`);
+  }
+});

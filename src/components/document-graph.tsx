@@ -8,7 +8,7 @@ import { WikiIcon } from './studio-icons';
 import styles from './document-graph.module.css';
 
 const kindNames = { scene: '원고', wiki: '설정집', memo: '메모' } as const;
-const clampZoom = (z: number) => Math.max(0.15, Math.min(4, z));
+const clampZoom = (z: number) => Math.max(0.05, Math.min(4, z));
 function Shape({kind, selected = false}: {kind: NovelDocument['kind']; selected?: boolean}) {
   const props = { className: `${styles.nodeShape} ${selected ? styles.selectedShape : ''}` };
   return kind === 'scene' ? <rect {...props} x={-8} y={-8} width={16} height={16} rx={3}/>
@@ -58,7 +58,7 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
     if (!positions.length) { setCamera({x: size.width / 2, y: size.height / 2, zoom: 1}); return; }
     const xs = positions.map(p => p.x), ys = positions.map(p => p.y);
     const left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys), bottom = Math.max(...ys);
-    const zoom = Math.min(1.5, clampZoom(Math.min(size.width / (right - left + 180), size.height / (bottom - top + 130))));
+    const zoom = Math.min(1.5, clampZoom(Math.min(size.width / (right - left + 250), size.height / (bottom - top + 130))));
     setCamera({x: size.width / 2 - (left + right) / 2 * zoom, y: size.height / 2 - (top + bottom) / 2 * zoom, zoom});
   }
   useEffect(() => { setOffsets({}); fit(); /* Fit when the visible graph or canvas changes. */

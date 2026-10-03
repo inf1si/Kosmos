@@ -88,5 +88,19 @@ export function layoutDocumentGraph(documents: NovelDocument[], edges: GraphEdge
     const step = 1 - iteration / 120;
     points.forEach((p, i) => { p.x += Math.max(-15, Math.min(15, forces[i].x)) * step; p.y += Math.max(-15, Math.min(15, forces[i].y)) * step; });
   }
+  // Separate the node plus its caption. Small graphs keep all captions visible.
+  const halfWidths = sorted.map(d => [...(d.title.length > 18 ? `${d.title.slice(0, 17)}…` : d.title)].reduce((w, c) => w + (c.charCodeAt(0) > 255 ? 12 : 6), 0) / 2 + 8);
+  for (let iteration = 0; iteration < 35; iteration++) {
+    let moved = false;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const dx = points[i].x - points[j].x, dy = points[i].y - points[j].y;
+      const overlapX = halfWidths[i] + halfWidths[j] - Math.abs(dx), overlapY = 48 - Math.abs(dy);
+      if (overlapX <= 0 || overlapY <= 0) continue;
+      moved = true;
+      if (overlapX < overlapY) { const shift = (overlapX / 2 + 0.1) * (dx >= 0 ? 1 : -1); points[i].x += shift; points[j].x -= shift; }
+      else { const shift = (overlapY / 2 + 0.1) * (dy >= 0 ? 1 : -1); points[i].y += shift; points[j].y -= shift; }
+    }
+    if (!moved) break;
+  }
   return new Map(sorted.map((d, i) => [d.id, points[i]]));
 }
