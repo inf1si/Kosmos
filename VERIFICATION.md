@@ -12,6 +12,9 @@
 
 - 최종 TypeScript 검사·전체 86개 자동 테스트·실제 Google Fonts를 사용한 Next.js 운영 빌드 통과. 문서 34개·내부 링크 329개와 기능 변경 범위의 필수 갱신 규칙이 통과했다.
 
+- 기능 소스 [`3487c5f`](https://github.com/inf1si/Kosmos/commit/3487c5ff3a3910e969618dec44a2756d89fd365f)를 main에 커밋·푸시했다. [GitHub CI](https://github.com/inf1si/Kosmos/actions/runs/37140505161)(문서 갱신·타입·86개 테스트·운영 빌드·age 왕복)와 [Vercel 운영 배포](https://vercel.com/kosmos42/kosmos/Cjm4DqPA8fAjD6f7vPUd7Q8Gk3rH)가 성공했다.
+- 로그인된 운영 집필실의 임시 탭에서 글꼴 16종, 크기 10~72px/0.5px, 문자·문단·표·특수문자·검색 도구, 조작 도움말 제거를 확인했다. 문단·표 삽입 팝오버를 열고 닫았으며 본문 검색 2개와 강조 2개가 일치했다. 가로 넘침·콘솔 오류가 없었다. 실제 원고·표·보기 설정·게시·AI 키를 변경하지 않았고 확인 탭은 닫았다. 이 완료 기록의 문서 커밋은 위 기능 배포와 구분한다.
+
 ## 2026-10-04 — 문서 그래프 디자인 정리
 
 - 로컬 클라우드 컨테이너(`next dev`, 기기 저장 미리보기 예시 작품)에서 TypeScript 검사와 **77개 자동 테스트**(칩 간격 기준으로 갱신한 그래프 배치 시험 포함)가 통과했다. 운영 빌드는 이 환경에서 Google Fonts 접속이 막혀 PR의 CI·Vercel 미리보기로 확인한다.
