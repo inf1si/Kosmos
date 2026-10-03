@@ -7,7 +7,7 @@
 | 영역 | 실제 사용 | 역할 |
 |---|---|---|
 | 앱 | Next.js 16 App Router, React, TypeScript | 화면, 공개 데이터 조회, AI 서버 API |
-| UI | Tailwind CSS, Radix Dialog·Tooltip, Lucide, 자체 CSS | 편집 도구·패널·대화상자·아이콘 |
+| UI | Tailwind CSS, Radix Dialog·Popover·DropdownMenu·ContextMenu·Tooltip, Lucide, 자체 CSS | 편집 도구·패널·팝오버·메뉴·대화상자·아이콘 |
 | 편집 | Tiptap / ProseMirror | 리치 문서, 각주 노드, 설정 링크, 문단 ID |
 | 기기 저장 | IndexedDB + Dexie | 작업본, 전송 기록, 복구 이력, 첨부 바이트 |
 | 클라우드 연결 | Supabase JS | Auth, PostgreSQL RPC·RLS, Storage, Realtime |
@@ -20,7 +20,7 @@ Node.js 지원 범위는 `>=22 <25`다. pnpm은 `packageManager`의 11.19.0을 �
 
 ## 데이터 경로
 
-[DocumentTree](../src/components/document-tree.tsx)는 폴더와 문서를 같은 부모 후보로 다루고, 손잡이의 Pointer Events 및 이동 대화상자에서 같은 순수 이동 함수를 호출한다. StudioProvider는 기존 자료의 트리를 속성 편집 전에 확정하고, 편집 뒤에는 트리와 `documents` 순서를 맞춘다. 클라우드 저장도 같은 변환을 거쳐 오래된 백업·대기 중 전송을 수용한다. 신규 저장소·동기화 통로는 추가하지 않는다. [문서 트리 계약](document-navigation.md).
+[DocumentTree](../src/components/document-tree.tsx)는 폴더와 문서를 같은 부모 후보로 다루고, 손잡이의 Pointer Events 및 이동 팝오버에서 같은 순수 이동 함수를 호출한다. StudioProvider는 기존 자료의 트리를 속성 편집 전에 확정하고, 편집 뒤에는 트리와 `documents` 순서를 맞춘다. 클라우드 저장도 같은 변환을 거쳐 오래된 백업·대기 중 전송을 수용한다. 신규 저장소·동기화 통로는 추가하지 않는다. [문서 트리 계약](document-navigation.md).
 
 집필실의 [문서 그래프](document-graph.md)는 현재 선택한 작품의 문서 배열을 `buildDocumentGraph`로 읽어 본문 `wikiLink`와 정확히 일치하는 유일한 시점 인물 관계를 계산한다. 필터·1~3단계 이웃 탐색·문서 200개/선 800개 제한 후 결정적인 배치를 만든다. 클라이언트 SVG에서 이동·선택·확대하고 Studio의 기존 문서 탭으로 연다. 서버 경로·공개 데이터·DB 스키마는 추가하지 않는다. 노드 위치와 보기 상태는 임시이며 백업에는 원본 링크·시점 값만 기존 방식으로 남는다.
 
