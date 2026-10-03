@@ -6,7 +6,7 @@ import { Publication, RichNode, footnotes, plainText } from '@/lib/model';
 import { db } from '@/lib/database';
 import { seedWorkspace } from '@/lib/seed';
 import { THEME_KEY, preferredPalette } from '@/lib/theme';
-import { Modal } from './primitives';
+import { Popover, type PopoverAnchor } from './primitives';
 import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './theme-toggle';
 
 function usePublicData(initial:Publication[],localPreview:boolean){
@@ -27,14 +27,14 @@ function NoteLink({id,text,index}:{id:string;text:string;index:number}){
   const [open,setOpen]=useState(false);
   return <span className="note-anchor" onMouseEnter={()=>setOpen(true)} onMouseLeave={()=>setOpen(false)}><a id={`ref-${id}`} href={`#note-${id}`} className="note-number" aria-label={`각주 ${index}: ${text}`} onFocus={()=>setOpen(true)} onBlur={()=>setOpen(false)}>{index}</a>{open&&<span className="note-popover" role="tooltip"><strong>각주 {index}</strong>{text}</span>}</span>;
 }
-export function RichReader({content,publication,onWiki}:{content:RichNode;publication:Publication;onWiki:(id:string)=>void}){
+export function RichReader({content,publication,onWiki}:{content:RichNode;publication:Publication;onWiki:(id:string,link:HTMLElement)=>void}){
   const notes=publication.scenes.flatMap(scene=>footnotes(scene.content));
   function node(n:RichNode,key:string):ReactNode{
     if(n.type==='text'){
       let text:ReactNode=n.text;
       for(const m of n.marks||[]){
         if(m.type==='bold')text=<strong>{text}</strong>;else if(m.type==='italic')text=<em>{text}</em>;else if(m.type==='underline')text=<u>{text}</u>;else if(m.type==='strike')text=<s>{text}</s>;else if(m.type==='code')text=<code>{text}</code>;
-        else if(m.type==='wikiLink'){const target=String(m.attrs?.targetId||'');const setting=publication.wiki.find(w=>w.id===target);if(setting)text=<button className="reader-wiki-link" title={setting.summary} onClick={()=>onWiki(target)}>{text}</button>;}
+        else if(m.type==='wikiLink'){const target=String(m.attrs?.targetId||'');const setting=publication.wiki.find(w=>w.id===target);if(setting)text=<button className="reader-wiki-link" title={setting.summary} aria-haspopup="dialog" onClick={e=>onWiki(target,e.currentTarget)}>{text}</button>;}
         else if(m.type==='link'){const href=String(m.attrs?.href||'');if(/^https?:\/\//i.test(href))text=<a href={href} target="_blank" rel="noopener noreferrer">{text}</a>;}
       }
       return <span key={key}>{text}</span>;
@@ -57,7 +57,7 @@ export function RichReader({content,publication,onWiki}:{content:RichNode;public
 }
 export function Reader({workId,initial,localPreview}:{workId:string;initial:Publication[];localPreview:boolean}){
   const {data,loading}=usePublicData(initial,localPreview);const pub=data.find(p=>p.workId===workId);
-  const [settings,setSettings]=useState(false);const [toc,setToc]=useState(false);const [wikiId,setWikiId]=useState<string|null>(null);
+  const [settings,setSettings]=useState(false);const [toc,setToc]=useState(false);const [wikiId,setWikiId]=useState<string|null>(null);const wikiAnchor:PopoverAnchor=useRef(null);
   const [font,setFont]=useState('serif');const [size,setSize]=useState(19);const [width,setWidth]=useState(680);const [theme,setTheme]=useSiteTheme();const [palette,setPalette]=useSitePalette();const [progress,setProgress]=useState(0);
   const restored=useRef(false);
   // The reader's old 밝게/어둡게 preference carries over once, until the site-wide toggle saves its own choice.
@@ -74,15 +74,15 @@ export function Reader({workId,initial,localPreview}:{workId:string;initial:Publ
   if(!pub)return <div className="public-site"><PublicHeader/><div className="public-loading"><h1>아직 공개되지 않은 작품입니다.</h1><Link href="/library">서재로 돌아가기</Link></div></div>;
   const wiki=pub.wiki.find(w=>w.id===wikiId);const notes=pub.scenes.flatMap(scene=>footnotes(scene.content)).filter((n,i,a)=>a.findIndex(x=>x.id===n.id)===i);
   return <div className="public-site reader" style={{'--reading-size':`${size}px`,'--reading-width':`${width}px`} as React.CSSProperties}><PublicHeader><Link href={`/wiki/${workId}`}>설정집</Link></PublicHeader>
-    <div className="reading-controls"><button onClick={()=>setToc(v=>!v)}><List size={17}/>목차</button><span>{pub.title}</span><button onClick={()=>setSettings(true)}><Settings2 size={17}/>읽기 설정</button></div>
+    <div className="reading-controls"><button onClick={()=>setToc(v=>!v)}><List size={17}/>목차</button><span>{pub.title}</span><Popover open={settings} onOpenChange={setSettings} align="end" width={340} title="읽기 설정" trigger={<button><Settings2 size={17}/>읽기 설정</button>}><div className="reading-preferences"><label>글꼴<select value={font} onChange={e=>setFont(e.target.value)}><option value="serif">명조</option><option value="sans">고딕</option></select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{[17,19,21,23].map(v=><option key={v}>{v}</option>)}</select></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(preferredPalette(e.target.value))}>{paletteOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div></Popover></div>
     <div className="reading-progress" style={{width:`${progress}%`}}/>
     {toc&&<aside className="reading-toc"><div><h2>목차</h2><button aria-label="목차 닫기" onClick={()=>setToc(false)}><X size={18}/></button></div>{pub.scenes.map(scene=><a key={scene.id} href={`#scene-${scene.id}`} onClick={()=>setToc(false)}>{scene.title}</a>)}</aside>}
-    <main className={`reading-page reading-${font}`}><header className="reading-title"><span>소설</span><h1>{pub.title}</h1><p>{pub.subtitle}</p></header>{pub.scenes.map(scene=><section key={scene.id} className="reading-scene" id={`scene-${scene.id}`}><div className="reading-scene-title"><span>{scene.chapter}</span><h2>{scene.title}</h2></div><div className="reading-body"><RichReader content={scene.content} publication={pub} onWiki={setWikiId}/></div></section>)}
+    <main className={`reading-page reading-${font}`}><header className="reading-title"><span>소설</span><h1>{pub.title}</h1><p>{pub.subtitle}</p></header>{pub.scenes.map(scene=><section key={scene.id} className="reading-scene" id={`scene-${scene.id}`}><div className="reading-scene-title"><span>{scene.chapter}</span><h2>{scene.title}</h2></div><div className="reading-body"><RichReader content={scene.content} publication={pub} onWiki={(id,link)=>{wikiAnchor.current=link;setWikiId(id);}}/></div></section>)}
       {notes.length>0&&<section className="reading-notes"><h2>주석</h2><ol>{notes.map((note,i)=><li id={`note-${note.id}`} key={note.id}><a href={`#ref-${note.id}`} aria-label={`각주 ${i+1} 본문으로 돌아가기`}>{i+1}</a><p>{note.text}</p></li>)}</ol></section>}
       <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><Link href="/library">작품 목록</Link><Link href={`/wiki/${workId}`}>설정집 읽기</Link></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small></footer>
     </main>
-    <Modal open={settings} onClose={()=>setSettings(false)} title="읽기 설정"><div className="reading-preferences"><label>글꼴<select value={font} onChange={e=>setFont(e.target.value)}><option value="serif">명조</option><option value="sans">고딕</option></select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{[17,19,21,23].map(v=><option key={v}>{v}</option>)}</select></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(preferredPalette(e.target.value))}>{paletteOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div></Modal>
-    <Modal open={!!wiki} onClose={()=>setWikiId(null)} title={wiki?.title||'설정'}>{wiki&&<><span className="wiki-category">{wiki.category}</span><p className="wiki-summary">{wiki.summary}</p><Link className="button" href={`/wiki/${workId}?doc=${wiki.id}`}>설정 문서 열기</Link></>}</Modal>
+    
+    <Popover open={!!wiki} onOpenChange={open=>{if(!open)setWikiId(null);}} anchor={wikiAnchor} width={320} className="wiki-card" title={wiki?.title||'설정'} onReturnFocus={()=>wikiAnchor.current instanceof HTMLElement&&wikiAnchor.current.focus()}>{wiki&&<><span className="wiki-category">{wiki.category}</span><p className="wiki-summary">{wiki.summary}</p><Link className="button" href={`/wiki/${workId}?doc=${wiki.id}`}>설정 문서 열기</Link></>}</Popover>
   </div>;
 }
 export function Wiki({workId,initial,localPreview,initialDoc}:{workId:string;initial:Publication[];localPreview:boolean;initialDoc?:string}){

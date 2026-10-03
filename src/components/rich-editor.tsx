@@ -7,7 +7,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Plugin } from '@tiptap/pm/state';
 import { Bold, Italic, Underline, Undo2, Redo2, AlignLeft, AlignCenter, List, Quote, Link2, MessageSquareText, Search, Minus, X, Columns2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NovelDocument, RichNode, plainText, uid } from '@/lib/model';
-import { IconButton, Modal } from './primitives';
+import { IconButton, Popover, type PopoverAnchor } from './primitives';
 import { WikiIcon } from './studio-icons';
 import { manuscriptFonts } from '@/lib/editor-preferences';
 import { statisticsSelection } from '@/lib/text-statistics';
@@ -56,7 +56,18 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
   function hidePreview(){window.clearTimeout(hideTimer.current);hideTimer.current=window.setTimeout(()=>setPreview(null),180);}
   useEffect(()=>()=>window.clearTimeout(hideTimer.current),[]);
   const previewDoc=preview&&wiki.find(d=>d.id===preview.id);const previewText=previewDoc?plainText(previewDoc.content).split('\n').map(t=>t.trim()).find(Boolean)||'':'';
-  function openDialog(type:'note'|'wiki'){if(!editor)return;setSelection({from:editor.state.selection.from,to:editor.state.selection.to});setDialog(type);setMessage('');}
+  const dialogAnchor:PopoverAnchor=useRef(null);
+  /** 각주·설정 연결 창은 선택한 글자 바로 아래에 붙인다. 선택 위치가 화면 밖이면 누른 도구 버튼에 붙인다. */
+  function openDialog(type:'note'|'wiki',button:HTMLElement){
+    if(!editor)return;const {from,to}=editor.state.selection;setSelection({from,to});
+    dialogAnchor.current={getBoundingClientRect:()=>{
+      const box=scrollRef.current?.getBoundingClientRect();
+      try{const a=editor.view.coordsAtPos(from),b=editor.view.coordsAtPos(to),top=Math.min(a.top,b.top),bottom=Math.max(a.bottom,b.bottom),left=a.top===b.top?Math.min(a.left,b.left):a.left;
+        if(box&&bottom>box.top&&top<box.bottom)return new DOMRect(left,top,Math.max(1,a.top===b.top?Math.abs(b.left-a.left):1),bottom-top);}catch{}
+      return button.getBoundingClientRect();
+    }};
+    setDialog(type);setMessage('');
+  }
   function searchNext(){
     if(!editor||!query)return;const matches:{from:number;to:number}[]=[];
     editor.state.doc.descendants((node,pos)=>{if(!node.isText)return;let start=0;while(node.text?.indexOf(query,start)!==-1){const index=node.text!.indexOf(query,start);if(index<0)break;matches.push({from:pos+index,to:pos+index+query.length});start=index+query.length;}});
@@ -88,8 +99,8 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
       <IconButton label="인용" disabled={readonly} onClick={()=>editor?.chain().focus().toggleBlockquote().run()}><Quote size={16}/></IconButton>
       <IconButton label="장면 구분선" disabled={readonly} onClick={()=>editor?.chain().focus().setHorizontalRule().run()}><Minus size={16}/></IconButton>
       <span className="toolbar-divider"/>
-      <IconButton label="각주 추가" disabled={readonly} onClick={()=>openDialog('note')}><MessageSquareText size={16}/></IconButton>
-      <IconButton label="설정 링크 추가" disabled={readonly||!wiki.length} onClick={()=>openDialog('wiki')}><Link2 size={16}/></IconButton>
+      <IconButton label="각주 추가" disabled={readonly} onClick={e=>openDialog('note',e.currentTarget)}><MessageSquareText size={16}/></IconButton>
+      <IconButton label="설정 링크 추가" disabled={readonly||!wiki.length} onClick={e=>openDialog('wiki',e.currentTarget)}><Link2 size={16}/></IconButton>
       <IconButton label="찾기와 바꾸기" aria-pressed={find} onClick={()=>setFind(v=>!v)}><Search size={16}/></IconButton>
       {toolbarEnd&&<div className="toolbar-end">{typeof toolbarEnd==='function'?toolbarEnd(editor?statisticsSelection(editor.state.doc,editor.state.selection.from,editor.state.selection.to):null):toolbarEnd}</div>}
     </div>
@@ -99,7 +110,7 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
     <div ref={scrollRef} className="editor-scroll" onMouseOver={e=>showPreview(e.target)} onMouseOut={e=>{if((e.target as HTMLElement).closest?.('[data-wiki-id]'))hidePreview();}}>{heading||<div className="document-heading"><span>{doc.kind==='scene'?doc.chapter:doc.category||'메모'}</span><h1>{doc.title}</h1></div>}<EditorContent editor={editor}/>
       {preview&&previewDoc&&<div className="wiki-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><WikiIcon category={previewDoc.category} size={13}/>{previewDoc.category||'설정'}</span><strong>{previewDoc.title}</strong>{previewText&&<span>{previewText.length>110?`${previewText.slice(0,110)}…`:previewText}</span>}<footer><button type="button" onClick={()=>{onWikiClick(previewDoc.id);setPreview(null);}}><Columns2 size={13}/>옆에 열기</button>{appearances&&<span>등장 {appearances[previewDoc.id]||0}곳</span>}</footer></div>}
     </div>
-    <Modal open={dialog==='note'} onClose={()=>setDialog(null)} title="각주 추가" description="공개할 원고에 포함되는 설명입니다."><textarea autoFocus value={note} onChange={e=>setNote(e.target.value)} placeholder="각주 내용을 입력하세요" rows={5}/><div className="modal-actions"><button className="primary" disabled={!note.trim()} onClick={()=>{editor?.chain().focus().setTextSelection(selection.to).insertContent({type:'footnote',attrs:{noteId:uid(),text:note.trim()}}).run();setDialog(null);setNote('');}}>각주 삽입</button></div></Modal>
-    <Modal open={dialog==='wiki'} onClose={()=>setDialog(null)} title="설정집 연결" description="선택한 단어를 작품의 설정 문서에 연결합니다."><select aria-label="연결할 설정" value={target} onChange={e=>setTarget(e.target.value)}>{wiki.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select><div className="modal-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Modal>
+    <Popover open={dialog==='note'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={320} title="각주 추가" description="공개할 원고에 포함되는 설명입니다." onReturnFocus={()=>editor?.commands.focus()}><textarea autoFocus value={note} onChange={e=>setNote(e.target.value)} placeholder="각주 내용을 입력하세요" rows={5}/><div className="popover-actions"><button className="primary" disabled={!note.trim()} onClick={()=>{editor?.chain().focus().setTextSelection(selection.to).insertContent({type:'footnote',attrs:{noteId:uid(),text:note.trim()}}).run();setDialog(null);setNote('');}}>각주 삽입</button></div></Popover>
+    <Popover open={dialog==='wiki'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={300} title="설정집 연결" description="선택한 단어를 작품의 설정 문서에 연결합니다." onReturnFocus={()=>editor?.commands.focus()}><select aria-label="연결할 설정" value={target} onChange={e=>setTarget(e.target.value)}>{wiki.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select><div className="popover-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Popover>
   </div>;
 }
