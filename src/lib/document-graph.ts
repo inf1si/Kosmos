@@ -64,6 +64,12 @@ export function filterDocumentGraph(graph: DocumentGraphData, options: GraphOpti
 }
 
 export type GraphPoint = { x: number; y: number };
+/** Vertical distance between chip centres: 28px chip and a 12px gap. */
+export const GRAPH_ROW = 40;
+/** Maps with more documents than this show icon-only chips when zoomed out below 100%. */
+export const GRAPH_FULL_LABELS = 50;
+/** Estimated chip width in px for a 12px title: Hangul 12px, other characters 6.5px, plus padding, icon and status dot. */
+export const graphChipWidth = (title: string) => [...title].reduce((w, c) => w + (c.charCodeAt(0) > 255 ? 12 : 6.5), 0) + 52;
 /** Bounded, deterministic force layout: at most GRAPH_LIMIT nodes in the UI. */
 export function layoutDocumentGraph(documents: NovelDocument[], edges: GraphEdge[]): Map<string, GraphPoint> {
   const sorted = [...documents].sort((a, b) => a.id.localeCompare(b.id));
@@ -88,13 +94,15 @@ export function layoutDocumentGraph(documents: NovelDocument[], edges: GraphEdge
     const step = 1 - iteration / 120;
     points.forEach((p, i) => { p.x += Math.max(-15, Math.min(15, forces[i].x)) * step; p.y += Math.max(-15, Math.min(15, forces[i].y)) * step; });
   }
-  // Separate the node plus its caption. Small graphs keep all captions visible.
-  const halfWidths = sorted.map(d => [...(d.title.length > 18 ? `${d.title.slice(0, 17)}…` : d.title)].reduce((w, c) => w + (c.charCodeAt(0) > 255 ? 12 : 6), 0) / 2 + 8);
+  // Separate the title chips (icon + title + status dot, 28px high, at most 220px wide) at 100% zoom.
+  // Large maps open zoomed out with 24px icon chips, so they only keep the icons apart.
+  const compact = n > GRAPH_FULL_LABELS, row = compact ? 30 : GRAPH_ROW;
+  const halfWidths = sorted.map(d => compact ? 15 : Math.min(220, graphChipWidth(d.title)) / 2 + 6);
   for (let iteration = 0; iteration < 35; iteration++) {
     let moved = false;
     for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
       const dx = points[i].x - points[j].x, dy = points[i].y - points[j].y;
-      const overlapX = halfWidths[i] + halfWidths[j] - Math.abs(dx), overlapY = 48 - Math.abs(dy);
+      const overlapX = halfWidths[i] + halfWidths[j] - Math.abs(dx), overlapY = row - Math.abs(dy);
       if (overlapX <= 0 || overlapY <= 0) continue;
       moved = true;
       if (overlapX < overlapY) { const shift = (overlapX / 2 + 0.1) * (dx >= 0 ? 1 : -1); points[i].x += shift; points[j].x -= shift; }

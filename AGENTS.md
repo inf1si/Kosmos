@@ -18,6 +18,8 @@ Run `pnpm docs:check` before finishing. CI compares changed paths to the base co
 
 Before building or changing any UI (public pages, the studio, dialogs), read [docs/design-guide.md](docs/design-guide.md) and follow it. It is the single source for colour tokens, the three palettes (violet, cassette, cyber) × light/dark, type, layout, copy rules (Korean, data-based wording, no slogans or English decorative headings) and where studio features go.
 
+- Build new screens from the existing parts listed in section 0 of the guide (board-bar, segmented, `.button`, `.chip`, `.status-dot`, document icons, the reference-panel layout, `Popover`/`.menu`). Do not invent new shapes, header rows, font sizes or weights; compare the new screen side by side with an existing one such as the plot board.
+- Shape tokens (`--ctl-r`, `--r-in`, `--panel-r`, `--led-r`) are only defined for cyber; always write a fallback such as `var(--ctl-r,6px)`.
 - Use tokens, never raw colours: `--pub-*` on public pages, the unprefixed base tokens in the studio and dialogs. Use shape tokens instead of branching on a palette name.
 - Check every new screen in all six palette × mode combinations and at 360px width.
 - Before finishing, go through section 11 (새 기능 체크리스트). If you add a token or pattern, update the guide and `CHANGELOG.md`.
