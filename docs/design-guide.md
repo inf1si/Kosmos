@@ -33,6 +33,8 @@
 
 ## 1. 적용 상태
 
+집필실의 로그인 계정 관리는 상단 `IconButton`과 기존 `Popover`·`.button`으로 구성한다. 로그인 화면의 Google 버튼도 `.button`을 사용하며 연결 상태·오류는 13px 토큰 문구를 쓴다. 계정 연결은 원고 도구와 구분해 상단 계정 버튼에 둔다.
+
 | 영역 | 상태 | 근거 |
 |---|---|---|
 | 공개 페이지: 홈·서재·독서·설정집·데이터 이용 안내 | **구현.** 보라·카세트·사이버 세 색 계열 × 라이트·다크, 웹폰트, 글자 표지 | `src/app/globals.css`의 `--pub-*`, `src/app/public-info.module.css`, `src/lib/theme.ts`, `src/components/theme-toggle.tsx` |

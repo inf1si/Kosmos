@@ -12,6 +12,7 @@ import { DocumentTree } from './document-tree';
 import { WikiIcon } from './studio-icons';
 import { ThemeControls } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
+import { Login,GoogleAccountControl } from './studio-auth';
 import { AIChat } from './ai-chat';
 import { EditableCombobox } from './editable-combobox';
 import { useDrawerFocus } from './use-drawer-focus';
@@ -112,6 +113,7 @@ export function Studio(){
         <IconButton label="앞으로" className="icon-button history-button" disabled={!forward.length} onClick={goForward}><ChevronRight size={16}/></IconButton>
         <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||(id===GRAPH?'문서 그래프':'플롯보드');return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
         <span className="tab-spacer"/>
+        <GoogleAccountControl/>
         <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onOverview} onClick={()=>setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null)}><Columns2 size={16}/></IconButton>
         <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onOverview} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>
         <div className="menu-anchor" ref={moreMenuRef}><IconButton label="더 보기" aria-expanded={moreMenu} aria-controls="more-menu" onClick={()=>setMoreMenu(v=>!v)}><MoreHorizontal size={16}/></IconButton>
@@ -186,9 +188,4 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
     {doc.kind==='scene'&&!open&&doc.summary.trim()&&<p className="doc-summary">요약 · {doc.summary}</p>}
     <div className="doc-divider"/>
   </div>;
-}
-
-function Login(){
-  const s=useStudio();const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [error,setError]=useState('');const [busy,setBusy]=useState(false);
-  return <div className="login-screen"><span className="login-mark" aria-hidden="true">◌</span><h1>Orbis Tertius 집필실</h1>{cloudConfigured?<form onSubmit={async e=>{e.preventDefault();setBusy(true);try{await s.login(email,password);}catch(e){setError(e instanceof Error?e.message:'로그인 실패');}finally{setBusy(false);}}}><label>이메일<input type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label><label>비밀번호<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy}>집필실 열기</button>{error&&<p role="alert">{error}</p>}</form>:<p>작가용 클라우드 연결을 설정한 뒤 이용할 수 있습니다.</p>}<Link href="/library">공개 서재</Link></div>;
 }

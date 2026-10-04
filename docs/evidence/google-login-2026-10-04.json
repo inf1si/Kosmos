@@ -1,0 +1,205 @@
+{
+  "environment": "isolated Chromium contexts, synthetic author and mocked Supabase OAuth",
+  "actualGoogleConsent": false,
+  "layouts": [
+    {
+      "screen": "login",
+      "width": 1280,
+      "palette": "violet",
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 1280,
+      "palette": "violet",
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 1280,
+      "palette": "cassette",
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 1280,
+      "palette": "cassette",
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 1280,
+      "palette": "cyber",
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 1280,
+      "palette": "cyber",
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 360,
+      "palette": "violet",
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 360,
+      "palette": "violet",
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 360,
+      "palette": "cassette",
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 360,
+      "palette": "cassette",
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 360,
+      "palette": "cyber",
+      "theme": "light",
+      "overflow": false
+    },
+    {
+      "screen": "login",
+      "width": 360,
+      "palette": "cyber",
+      "theme": "dark",
+      "overflow": false
+    },
+    {
+      "screen": "account",
+      "width": 1280,
+      "palette": "violet",
+      "theme": "light",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 1280,
+      "palette": "violet",
+      "theme": "dark",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 1280,
+      "palette": "cassette",
+      "theme": "light",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 1280,
+      "palette": "cassette",
+      "theme": "dark",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 1280,
+      "palette": "cyber",
+      "theme": "light",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 1280,
+      "palette": "cyber",
+      "theme": "dark",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 360,
+      "palette": "violet",
+      "theme": "light",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 360,
+      "palette": "violet",
+      "theme": "dark",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 360,
+      "palette": "cassette",
+      "theme": "light",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 360,
+      "palette": "cassette",
+      "theme": "dark",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 360,
+      "palette": "cyber",
+      "theme": "light",
+      "withinViewport": true
+    },
+    {
+      "screen": "account",
+      "width": 360,
+      "palette": "cyber",
+      "theme": "dark",
+      "withinViewport": true
+    }
+  ],
+  "flows": [
+    {
+      "name": "disabled provider",
+      "inlineError": true,
+      "passwordFormRetained": true
+    },
+    {
+      "name": "link disabled",
+      "sameWorkspace": true,
+      "inlineError": true
+    },
+    {
+      "name": "synthetic PKCE link roundtrip",
+      "sameUserId": true,
+      "authorChecked": true,
+      "linkedStatus": true,
+      "reload": true
+    },
+    {
+      "name": "cancel return",
+      "retryLink": true,
+      "existingSessionPreserved": true
+    },
+    {
+      "name": "synthetic Google login",
+      "sameAuthor": true,
+      "workspaceLoaded": true
+    }
+  ],
+  "pageErrors": [],
+  "checkedAt": "2026-10-04T04:10:12.383Z"
+}

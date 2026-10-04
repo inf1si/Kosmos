@@ -5,7 +5,7 @@ let client:SupabaseClient|null=null;
 export const cloudConfigured=!!(process.env.NEXT_PUBLIC_SUPABASE_URL&&process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 export function cloud(){
   if(!cloudConfigured)throw new Error('클라우드가 연결되지 않았습니다.');
-  return client??=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+  return client??=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{auth:{flowType:'pkce'}});
 }
 export async function fetchCloud(){
   const {data,error}=await cloud().from('workspaces').select('id,payload,version').single();

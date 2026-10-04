@@ -25,7 +25,7 @@ export default function PrivacyPage() {
 
       <main className={styles.document}>
         <h1>개인정보 및<br className={styles.mobileBreak} /> 데이터 이용 안내</h1>
-        <p className={styles.updated}>최종 수정: 2026년 10월 3일</p>
+        <p className={styles.updated}>최종 수정: 2026년 10월 4일</p>
         <p className={styles.documentLead}>
           Orbis Tertius는 개인 소설 집필과 작품 공개를 위한 사이트입니다.
           이 페이지는 현재 구현된 저장·백업·AI 기능이 어떤 데이터를 처리하는지 설명합니다.
@@ -39,6 +39,12 @@ export default function PrivacyPage() {
             원고, 작품 설정, 메모, 각주, 첨부 이미지와 복구 이력은 집필 기능에 사용됩니다.
             작업 내용은 브라우저의 기기 저장소에 보관되고, 로그인한 작가의 Supabase 작업 공간과 동기화됩니다.
             첨부 원본은 비공개 저장소에 보관합니다.
+          </p>
+          <p>
+            Google 로그인은 인증 설정을 활성화한 경우 사용할 수 있습니다. Google의 기본 계정 정보
+            (이메일과 프로필)를 Supabase에서 인증하며, 기존 작가 계정에 연결하면 같은 원고와 권한을 사용합니다.
+            이메일 주소가 다르면 기존 계정에 로그인한 뒤 Google 계정 연결을 직접 승인해야 합니다.
+            이 로그인은 Google Drive 접근 권한을 요청하거나 Drive 백업을 연결하지 않습니다.
           </p>
           <p>
             서재에 공개한 판본과 공개 설정은 로그인하지 않은 방문자도 읽을 수 있습니다.
