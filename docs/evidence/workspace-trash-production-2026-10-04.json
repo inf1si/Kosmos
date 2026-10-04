@@ -1,0 +1,55 @@
+{
+  "checkedAt": "2026-10-04T11:08:24.010Z",
+  "source": "e46cdae22cb5d6ed52d4fddc23adf22a091b1483",
+  "httpStatus": 200,
+  "realAuthorLogin": true,
+  "workspaceLoaded": true,
+  "work": {
+    "available": true,
+    "trashAction": true,
+    "lastDocumentProtected": false,
+    "oldDeleteActionAbsent": true,
+    "trashOpened": true,
+    "searchVisible": true,
+    "withinViewport": true,
+    "closeFocusReturned": true,
+    "confirmationCancel": false
+  },
+  "notes": {
+    "available": true,
+    "trashAction": true,
+    "lastDocumentProtected": false,
+    "oldDeleteActionAbsent": true,
+    "trashOpened": true,
+    "searchVisible": true,
+    "withinViewport": true,
+    "closeFocusReturned": true,
+    "confirmationCancel": false
+  },
+  "mobileNotes": {
+    "available": true,
+    "trashAction": true,
+    "lastDocumentProtected": false,
+    "oldDeleteActionAbsent": true,
+    "trashOpened": true,
+    "searchVisible": true,
+    "withinViewport": true,
+    "closeFocusReturned": true,
+    "confirmationCancel": false
+  },
+  "mobileWork": {
+    "available": true,
+    "trashAction": true,
+    "lastDocumentProtected": false,
+    "oldDeleteActionAbsent": true,
+    "trashOpened": true,
+    "searchVisible": true,
+    "withinViewport": true,
+    "closeFocusReturned": true,
+    "confirmationCancel": false
+  },
+  "reload": true,
+  "contentMutations": 0,
+  "aiCalls": 0,
+  "errors": []
+}
