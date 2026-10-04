@@ -5,6 +5,7 @@ import { TableKit } from '@tiptap/extension-table';
 import Superscript from '@tiptap/extension-superscript';
 import Subscript from '@tiptap/extension-subscript';
 import Highlight from '@tiptap/extension-highlight';
+import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Plugin } from '@tiptap/pm/state';
 import { uid } from './model';
 import { htmlParagraphAttrs,paragraphCss,inlineFontSize,listStyleType,validListStyle } from './manuscript-format';
@@ -30,5 +31,13 @@ const FontSize=Mark.create({name:'fontSize',
 const ListStyle=Extension.create({name:'listStyle',addGlobalAttributes(){return [{types:['bulletList','orderedList'],attributes:{listStyle:{default:null,
   parseHTML:el=>{const type=el.tagName==='OL'?'orderedList':'bulletList',value=el.getAttribute('data-list-style');return value&&validListStyle(type,value)?value:null;},
   renderHTML:attrs=>{const style=listStyleType({type:'bulletList',attrs})??listStyleType({type:'orderedList',attrs});return style?{'data-list-style':style,style:`list-style-type:${style}`}:{};}}}}];}});
+// Personal-note image: an attachment of the note shown in the body. The studio view resolves the private blob.
+export const NoteImage=Node.create({name:'noteImage',group:'block',atom:true,draggable:true,
+  addAttributes(){return {assetId:{default:null},alt:{default:''}};},
+  parseHTML(){return [{tag:'figure[data-note-image]',getAttrs:el=>({assetId:(el as HTMLElement).getAttribute('data-note-image'),alt:(el as HTMLElement).getAttribute('data-alt')||''})}];},
+  renderHTML({HTMLAttributes}){return ['figure',{'data-note-image':HTMLAttributes.assetId,'data-alt':HTMLAttributes.alt,class:'note-image'}];},
+});
 const SearchMarks=Extension.create({name:'searchMarks',addProseMirrorPlugins(){return [searchPlugin()];}});
 export const editorExtensions=[StarterKit,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];
+/** Personal notes add checklists and in-body images. Works keep the base set so their documents never hold these nodes. */
+export const noteExtensions=[TaskList,TaskItem.configure({nested:true})];

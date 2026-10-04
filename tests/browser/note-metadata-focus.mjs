@@ -48,7 +48,9 @@ page.on('pageerror', error => errors.push(error.message));
 const button = name => page.getByRole('button', { name, exact: true });
 const popover = () => page.locator('.popover');
 const waitSave = () => page.waitForFunction(() => document.body.textContent.includes('클라우드 동기화됨'));
-const openTags = () => page.getByRole('button', { name: /^태그 (추가|\d+)$/ }).click();
+const openTags = () => page.getByRole('button', { name: /^태그 (추가|\d+개)$/ }).click();
+// Rare note actions moved to the chip row's more menu; their panels open under the chips.
+const openMore = async (item) => { await page.getByRole('button', { name: '노트 더 보기', exact: true }).click(); await page.getByRole('menuitem', { name: item, exact: true }).click(); await popover().waitFor(); };
 const openWorks = () => page.getByRole('button', { name: /^작품 (연결|\d+)$/ }).click();
 // Detect the real painted outline against every clipping ancestor, not a CSS selector.
 async function outlineFits(control) {
@@ -120,15 +122,15 @@ try {
                 // On narrow screens the open panel covers the chips on the next row.
                 if (width === 360)
                     await close();
-                await button('작품으로 가져오기').click();
+                await openMore('작품으로 가져오기');
                 const target = page.getByRole('combobox', { name: '노트를 가져올 작품', exact: true });
                 await target.focus();
                 const copy = await outlineFits(target);
                 if (width === 360)
                     await close();
-                await button('첨부 추가').click();
-                const file = page.getByRole('button', { name: '첨부 추가', exact: true });
-                assert(await file.isVisible());
+                if (width !== 360)
+                    await close();
+                await openMore('이미지 첨부');
                 const upload = page.getByLabel('노트 이미지 첨부', { exact: true });
                 await upload.focus();
                 const attachment = await outlineFits(upload);

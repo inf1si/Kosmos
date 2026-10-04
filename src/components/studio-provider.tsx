@@ -9,7 +9,7 @@ import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice,
 import type { Work } from '@/lib/model';
 import { applyNavigation, resolveNavigation } from '@/lib/document-navigation';
 import { preserveAIPreferences } from '@/lib/ai-prompt-presets';
-import { preserveNotes, preserveNoteDetails, prepareNoteCopy } from '@/lib/personal-notes';
+import { preserveNotes, preserveNoteDetails, prepareFolderWork, prepareNoteCopy, prepareNoteImport } from '@/lib/personal-notes';
 import { materializeNoteNavigation } from '@/lib/note-navigation';
 import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
 import type { NovelDocument } from '@/lib/model';
@@ -25,7 +25,7 @@ type StudioContextValue={
   exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
-  addNoteAsset:(noteId:string,file:File)=>Promise<void>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
+  addNoteAsset:(noteId:string,file:File)=>Promise<string>;importNotes:(bundle:ImportBundle,folderTitle:string)=>Promise<{folderId:string;count:number}>;createWorkFromFolder:(folderId:string,target:{title:string;form:Work['form']})=>Promise<string>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
   trashNote:(noteId:string)=>Promise<void>;
   trashDocument:(workId:string,docId:string)=>Promise<void>;
   restoreTrash:(id:string)=>Promise<void>;purgeTrash:(ids:string[])=>Promise<void>;
@@ -216,18 +216,40 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     const meta:AssetMeta={id,noteId,name:file.name,type:file.type as AssetMeta['type'],size:file.size};
     if(conflictRef.current)throw new Error('원고 충돌을 먼저 확인하세요.');
     update(state=>({...state,assets:[...state.assets,meta],notes:(state.notes||[]).map(n=>n.id===noteId?{...n,assetIds:[...n.assetIds,id],updatedAt:new Date().toISOString()}:n)}));
-    await flush();
+    await flush();return id;
   }
-  async function copyNote(noteId:string,workId:string,kind:NovelDocument['kind']){
-    await flush();const before=structuredClone(dataRef.current!),prepared=prepareNoteCopy(before,noteId,workId,kind);
-    await checkpoint(namespace,before,'노트를 작품으로 가져오기 전');
-    for(const copy of prepared.copies){
+  /** 첨부 사본을 같은 사용자 저장소에 복제한다. 노트→작품 복사와 폴더→새 작품이 함께 쓴다. */
+  async function copyAssetBlobs(copies:{sourceId:string;id:string}[]){
+    for(const copy of copies){
       let blob=(await db.assets.get([namespace,copy.sourceId]))?.blob;
       if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${user}/${copy.sourceId}`);if(result.error)throw result.error;blob=result.data||undefined;}
       if(!blob)throw new Error('노트 첨부를 내려받지 못했습니다. 원본 노트는 유지됩니다.');
       if(cloudConfigured){const result=await cloud().storage.from('private-assets').upload(`${user}/${copy.id}`,blob,{contentType:blob.type});if(result.error)throw result.error;}
       await db.assets.put({id:copy.id,namespace,blob});
     }
+  }
+  async function importNotes(bundle:ImportBundle,folderTitle:string){
+    await flush();const before=dataRef.current!;
+    const prepared=prepareNoteImport(before,bundle,folderTitle);
+    await checkpoint(namespace,before,'노트 가져오기 전');
+    for(const asset of prepared.assets){
+      if(cloudConfigured){const result=await cloud().storage.from('private-assets').upload(`${user}/${asset.id}`,asset.blob,{contentType:asset.blob.type});if(result.error)throw new Error('첨부의 클라우드 저장을 완료하지 못했습니다. 노트는 유지됩니다.');}
+      await db.assets.put({...asset,namespace});
+    }
+    await flush();if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('가져오는 동안 노트가 바뀌었습니다. 다시 시도하세요.');
+    update(()=>prepared.state);await flush();return {folderId:prepared.folderId,count:prepared.count};
+  }
+  async function createWorkFromFolder(folderId:string,target:{title:string;form:Work['form']}){
+    await flush();const before=structuredClone(dataRef.current!),prepared=prepareFolderWork(before,folderId,target);
+    await checkpoint(namespace,before,'노트 폴더로 작품 만들기 전');
+    await copyAssetBlobs(prepared.copies);
+    await flush();if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('작품을 만드는 동안 노트가 바뀌었습니다. 다시 시도하세요.');
+    update(()=>prepared.state);await flush();return prepared.workId;
+  }
+  async function copyNote(noteId:string,workId:string,kind:NovelDocument['kind']){
+    await flush();const before=structuredClone(dataRef.current!),prepared=prepareNoteCopy(before,noteId,workId,kind);
+    await checkpoint(namespace,before,'노트를 작품으로 가져오기 전');
+    await copyAssetBlobs(prepared.copies);
     await flush();if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('가져오는 동안 작업이 바뀌었습니다. 다시 시도하세요.');
     update(()=>prepared.state);await flush();return prepared.docId;
   }
@@ -255,7 +277,7 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     update(()=>next);await flush();
   }
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,addNoteAsset,copyNote,trashNote,trashDocument,restoreTrash,purgeTrash,resolve,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,restoreTrash,purgeTrash,resolve,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});if(error)throw error;},
     logout:async()=>{await flush();await syncNow();await cloud().auth.signOut();},flush,syncNow,clearError:()=>setError('')}}>{children}</Context.Provider>;
 }
