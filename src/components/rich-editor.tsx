@@ -21,17 +21,17 @@ function footnoteAt(editor:Editor,noteId:string):{index:number;text:string}|null
   return text===null?null:{index,text};
 }
 /** heading replaces the default kicker and title; toolbarEnd sits at the right of the toolbar; appearances counts each setting's referring documents for the link preview. */
-export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode|((selection:RichNode|null)=>ReactNode);appearances?:Record<string,number>}){
+export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances,autofocus=false,contentLabel}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode|((selection:RichNode|null)=>ReactNode);appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string}){
   const [{font,size},setPreferences]=useEditorPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
   const toolbarRef=useRef<HTMLDivElement>(null);const [overflow,setOverflow]=useState({before:false,after:false});
   const [dialog,setDialog]=useState<'note'|'wiki'|null>(null);const [note,setNote]=useState('');const [target,setTarget]=useState(wiki[0]?.id||'');
   const [selection,setSelection]=useState<{from:number;to:number}>({from:0,to:0});const [,render]=useState(0);
   const scrollRef=useRef<HTMLDivElement>(null);const hideTimer=useRef<number|undefined>(undefined);const [preview,setPreview]=useState<{kind:'wiki'|'note';id:string;top:number;left:number}|null>(null);
   const lastContent=useRef<string|null>(null);
-  const editor=useEditor({immediatelyRender:false,editable:!readonly,
+  const editor=useEditor({immediatelyRender:false,editable:!readonly,autofocus:autofocus?'end':false,
     extensions:editorExtensions,
     content:doc.content,
-    editorProps:{attributes:{class:'manuscript','aria-label':`${doc.title} 원고`,spellcheck:'false'},handleClick:(_view,_pos,event)=>{const element=(event.target as HTMLElement).closest('[data-wiki-id]');if(element&&event.ctrlKey){onWikiClick(element.getAttribute('data-wiki-id')!);return true;}return false;}},
+    editorProps:{attributes:{class:'manuscript','aria-label':contentLabel||`${doc.title} 원고`,spellcheck:'false'},handleClick:(_view,_pos,event)=>{const element=(event.target as HTMLElement).closest('[data-wiki-id]');if(element&&event.ctrlKey){onWikiClick(element.getAttribute('data-wiki-id')!);return true;}return false;}},
     onUpdate:({editor:e})=>onChange(e.getJSON() as RichNode),onSelectionUpdate:()=>render(x=>x+1),onTransaction:()=>render(x=>x+1),
   });
   useEffect(()=>{editor?.setEditable(!readonly,false);},[editor,readonly]);

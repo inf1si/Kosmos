@@ -6,6 +6,8 @@ import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
 import { DocumentStatistics } from './document-statistics';
+import { PersonalNotes } from './personal-notes';
+import { addNote, newNote, noteTitle } from '@/lib/personal-notes';
 import { PlotBoard } from './plot-board';
 import { DocumentGraph } from './document-graph';
 import { DocumentTree } from './document-tree';
@@ -38,24 +40,31 @@ function useDismiss(open:boolean,setOpen:(open:boolean)=>void){
 }
 
 export function Studio(){
-  const s=useStudio();const [workId,setWorkId]=useState('');const [current,setCurrent]=useState('');const [lastDoc,setLastDoc]=useState('');const [tabs,setTabs]=useState<string[]>([]);
+  const s=useStudio();const [notesOpen,setNotesOpen]=useState(false),[selectedNote,setSelectedNote]=useState(''),[captureId,setCaptureId]=useState('');
+  const openNotes=useCallback((id='')=>{setSelectedNote(id);setNotesOpen(true);setFocus(false);window.history.replaceState(null,'',`${window.location.pathname}${window.location.search}#notes${id?`/${id}`:''}`);},[]);
+  const createNote=useCallback(()=>{if(!s.canUse||!s.state||s.conflict)return;try{const note=newNote();s.update(state=>addNote(state,note));setCaptureId(note.id);openNotes(note.id);}catch(error){alert(error instanceof Error?error.message:'노트를 만들지 못했습니다.');}},[s.canUse,s.state,s.conflict,s.update,openNotes]);
+  useEffect(()=>{const read=()=>{const hash=window.location.hash;if(hash==='#notes'||hash.startsWith('#notes/')){setSelectedNote(hash.slice(7));setNotesOpen(true);}else setNotesOpen(false);};read();window.addEventListener('hashchange',read);return()=>window.removeEventListener('hashchange',read);},[]);
+  useEffect(()=>{const key=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.code==='KeyN'){event.preventDefault();createNote();}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[createNote]);
+  const [workId,setWorkId]=useState('');const [current,setCurrent]=useState('');const [lastDoc,setLastDoc]=useState('');const [tabs,setTabs]=useState<string[]>([]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
   const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
   const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [workSettings,setWorkSettings]=useState(false);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const referenceRef=useRef<HTMLElement>(null);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
-  useDrawerFocus(compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
-  useDrawerFocus(compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,'reference-toggle');
+  useDrawerFocus(!notesOpen&&compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
+  useDrawerFocus(!notesOpen&&compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,'reference-toggle');
   const workMenuRef=useDismiss(workMenu,setWorkMenu);const moreMenuRef=useDismiss(moreMenu,setMoreMenu);
   function openSearch(){setReference(null);setFocus(false);setSidebar(true);setSearching(true);setTimeout(()=>document.getElementById('workspace-search')?.focus(),30);}
   useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);if(media.matches)setSidebar(false);const resize=()=>{setCompact(media.matches);if(media.matches)setSidebar(false);};media.addEventListener('change',resize);return()=>media.removeEventListener('change',resize);},[]);
-  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&(e.code==='KeyK'||e.key.toLowerCase()==='k')){e.preventDefault();openSearch();}};window.addEventListener('keydown',onKey,true);return()=>window.removeEventListener('keydown',onKey,true);},[]);
+  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(document.querySelector('.notes-workspace'))return;if((e.ctrlKey||e.metaKey)&&(e.code==='KeyK'||e.key.toLowerCase()==='k')){e.preventDefault();openSearch();}};window.addEventListener('keydown',onKey,true);return()=>window.removeEventListener('keydown',onKey,true);},[]);
   useEffect(()=>{const list=document.querySelector('.tab-list');if(!list)return;const reveal=()=>list.querySelector('.doc-tab.active')?.scrollIntoView({block:'nearest',inline:'nearest'});const observer=new ResizeObserver(reveal);observer.observe(list);reveal();return()=>observer.disconnect();},[current,compact,s.loading]);
   if(s.loading)return <div className="loading-screen"><NotebookPen size={28}/><p>집필실을 여는 중입니다.</p></div>;
   if(!s.canUse)return <Login/>;
   if(!s.state)return <div className="loading-screen">원고를 불러오지 못했습니다. {s.error}</div>;
   const work=s.state.works.find(w=>w.id===workId)||s.state.works[0];const docs=work.documents;
+  function returnToWork(id?:string,docId?:string){setNotesOpen(false);window.history.replaceState(null,'',`${window.location.pathname}${window.location.search}`);if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(docId?[docId]:[]);setBack([]);setForward([]);setSplitId(null);setReference(null);}}
+  if(notesOpen)return <TooltipProvider><PersonalNotes activeId={selectedNote} captureId={captureId} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs workId={work.id}/></TooltipProvider>;
   const onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onBoard||onGraph;
   const active=docs.find(d=>d.id===(onOverview?lastDoc:current))||docs.find(d=>d.id===lastDoc)||docs.find(d=>d.kind==='scene')||docs[0];
   const view=onGraph?GRAPH:onBoard?BOARD:active.id;
@@ -89,6 +98,7 @@ export function Studio(){
     {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색" ref={sidebarRef} role={compact?'dialog':undefined} aria-modal={compact||undefined}>
       <div className="sidebar-close"><IconButton label="작품 탐색 닫기" data-drawer-close onClick={closeSidebar}><X size={17}/></IconButton></div>
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
+      <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={true}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={false} onClick={()=>openNotes(selectedNote)}><StickyNote size={14}/>노트</button></div>
       <div className="work-switcher" ref={workMenuRef}>
         <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span><span className="work-tag" aria-hidden="true">ORB-{String(s.state.works.indexOf(work)+1).padStart(2,'0')}</span></button>
         {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
@@ -113,6 +123,7 @@ export function Studio(){
         <IconButton label="앞으로" className="icon-button history-button" disabled={!forward.length} onClick={goForward}><ChevronRight size={16}/></IconButton>
         <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||(id===GRAPH?'문서 그래프':'플롯보드');return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
         <span className="tab-spacer"/>
+        <IconButton label="새 노트" disabled={readonly} onClick={createNote}><StickyNote size={16}/></IconButton>
         <GoogleAccountControl/>
         <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onOverview} onClick={()=>setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null)}><Columns2 size={16}/></IconButton>
         <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onOverview} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>
@@ -139,7 +150,7 @@ export function Studio(){
         {split&&<><div className="split-divider resize-handle" role="separator" aria-label="분할 편집 폭" aria-orientation="vertical" aria-valuenow={splitWidth} aria-valuemin={30} aria-valuemax={70} tabIndex={0} onPointerDown={e=>e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={e=>{if(e.buttons){const rect=e.currentTarget.parentElement!.getBoundingClientRect();setSplitWidth(Math.max(30,Math.min(70,(e.clientX-rect.left)/rect.width*100)));}}} onKeyDown={e=>{if(e.key==='ArrowLeft')setSplitWidth(v=>Math.max(30,v-2));if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="split-pane"><div className="split-heading"><span>참고 · {split.title}</span><IconButton label="분할 닫기" onClick={()=>setSplitId(null)}><X size={15}/></IconButton></div><RichEditor key={`${split.id}-${s.epoch}`} doc={split} onChange={content=>patchDoc(split.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} toolbarEnd={selection=><DocumentStatistics doc={split} work={work} selection={selection}/>} appearances={appearances}/></div></>}
       </div>
       {reference&&!focus&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeReference}/><aside ref={referenceRef} className={`reference-panel ${reference==='ai'?'is-chat':''}`} aria-label="참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="참고 자료">{(['links','files','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={reference===p} onClick={()=>setReference(p)}>{p==='links'?'연결':p==='files'?'첨부':'AI 대화'}</button>)}<IconButton label="참고 패널 닫기" data-drawer-close onClick={closeReference}><X size={15}/></IconButton></div><div className="reference-content">
-        {reference==='links'?<><h3>연결된 설정</h3>{linked.length?linked.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id,true)}><WikiIcon category={d.category}/><span><strong>{d.title}</strong><small>{d.category||'설정'} · 옆에서 열기</small></span></button>):<p className="muted">본문에 연결한 설정이 없습니다.</p>}<h3>이 문서를 참조하는 문서</h3>{backlinks.length?backlinks.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id)}><DocIcon doc={d}/><span><strong>{d.title}</strong><small>{kinds[d.kind]}</small></span></button>):<p className="muted">아직 참조가 없습니다.</p>}</>
+        {reference==='links'?<><h3>연결된 설정</h3>{linked.length?linked.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id,true)}><WikiIcon category={d.category}/><span><strong>{d.title}</strong><small>{d.category||'설정'} · 옆에서 열기</small></span></button>):<p className="muted">본문에 연결한 설정이 없습니다.</p>}<h3>이 작품에 연결된 노트</h3>{(s.state!.notes||[]).filter(note=>note.linkedWorkIds.includes(work.id)).map(note=><button type="button" className="reference-card" key={note.id} onClick={()=>openNotes(note.id)}><StickyNote size={16}/><span><strong>{noteTitle(note)}</strong><small>개인 노트 열기</small></span></button>)}{!(s.state!.notes||[]).some(note=>note.linkedWorkIds.includes(work.id))&&<p className="muted">노트에서 이 작품을 연결하면 여기에 표시됩니다.</p>}<h3>이 문서를 참조하는 문서</h3>{backlinks.length?backlinks.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id)}><DocIcon doc={d}/><span><strong>{d.title}</strong><small>{kinds[d.kind]}</small></span></button>):<p className="muted">아직 참조가 없습니다.</p>}</>
         :reference==='files'?<><h3>첨부 자료</h3>{active.assetIds.length?<div className="asset-list">{active.assetIds.map(id=><button type="button" key={id} onClick={()=>void downloadAsset(id)}><Paperclip size={14}/>{s.state!.assets.find(a=>a.id===id)?.name}</button>)}</div>:<p className="muted">이 문서에 첨부한 이미지가 없습니다.</p>}<label className="asset-upload">이미지 첨부<input aria-label="이미지 첨부" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];if(file)void s.addAsset(work.id,active.id,file).catch(error=>alert(error.message));e.target.value='';}}/></label></>
         :<AIChat key={`${s.namespace}-${work.id}-${active.id}`} workId={work.id} doc={active} onOpen={id=>openDoc(id,true)}/>}
       </div></aside></>}

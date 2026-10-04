@@ -1,5 +1,9 @@
 # 저장·동기화·충돌
 
+## 개인 노트
+
+개인 노트는 작품과 같은 계정 작업 공간 JSON·저장 큐·기준 버전·충돌·복구 이력을 사용한다. 노트별 독립 동기화나 자동 병합은 없다. 충돌 화면은 양쪽 노트 개수와 앞 8개 본문 일부도 보여주며 전체 내용은 양쪽 ZIP에 남긴다. [노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql)은 기존 notes 배열의 누락을 차단한다. [노트 계약](personal-notes.md).
+
 구현은 [studio-provider.tsx](../src/components/studio-provider.tsx), [database.ts](../src/lib/database.ts), [cloud.ts](../src/lib/cloud.ts), [SQL](../supabase/migrations/001_studio.sql)에 있다. 실제 Supabase에 SQL과 Realtime 대상 테이블을 설치했다. 작가 세션의 저장·새로고침과 서버 쪽 시험 메모 변경의 자동 반영을 확인했다. 두 기기의 오프라인 동시 수정·충돌과 원격 첨부 복원은 미검증이다.
 
 ## 저장 순서

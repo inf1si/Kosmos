@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { Workspace, Revision, workspaceSchema, plainText } from './model';
+import { noteTitle } from './personal-notes';
 const MAX_BYTES=100*1024*1024;
 export type BackupAsset={id:string;blob:Blob};
 type Manifest={format:'orbit-novel-backup';version:1;createdAt:string;workspaceId:string;files:{path:string;bytes:number;sha256:string}[]};
@@ -16,7 +17,8 @@ export async function createBackup(data:Workspace,revisions:Revision[],assets:Ba
   const allMeta=new Map([...data.assets,...revisions.flatMap(r=>r.data.assets)].map(a=>[a.id,a]));
   for(const meta of allMeta.values()){const blob=assetMap.get(meta.id);if(!blob||blob.size!==meta.size)throw new Error(`첨부가 누락되었거나 손상되었습니다: ${meta.name}`);await add(`assets/${meta.id}`,new Uint8Array(await blob.arrayBuffer()));}
   for(const work of data.works)for(const d of work.documents)await add(`text/${work.id}/${d.id}.md`,encode(`# ${d.title}\n\n${plainText(d.content)}\n`));
-  await add('README.txt',encode('workspace.json이 원고·설정·각주·관계·공개 판본의 복원 원본입니다. assets/에는 실제 첨부, revisions.json에는 복구 이력이 있습니다. text/는 읽기 쉬운 별도 사본입니다. 이 파일에는 비공개 원고가 포함됩니다.\n'));
+  for(const note of data.notes||[])await add(`text/notes/${note.id}.md`,encode(`# ${noteTitle(note)}\n\n${plainText(note.content)}\n`));
+  await add('README.txt',encode('workspace.json이 원고·설정·독립 노트·각주·관계·공개 판본의 복원 원본입니다. assets/에는 실제 첨부, revisions.json에는 복구 이력이 있습니다. text/는 읽기 쉬운 별도 사본입니다. 이 파일에는 비공개 원고와 노트가 포함됩니다.\n'));
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
   return zip.generateAsync({type:'blob',compression:'DEFLATE'});
 }

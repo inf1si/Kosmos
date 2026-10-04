@@ -1,5 +1,9 @@
 # 백업·복구와 원고 이동
 
+## 독립 노트 보존
+
+전체 ZIP·복구 이력·Drive 서버 작업본 백업은 작품 밖의 개인 노트, 태그, 수집함/아이스박스, 작품 연결과 원본 첨부를 포함한다. ZIP의 text/notes/에 읽기 사본도 만든다. 이전 백업에 notes 필드가 없으면 현재 노트·첨부를 보존하고 복원본에 없는 작품 관계만 정리한다. 명시적 notes 배열이 있으면 백업의 노트를 복원한다. [사용법과 제한](personal-notes.md).
+
 백업 구현은 [backup.ts](../src/lib/backup.ts), 실제 파일 확보와 복원 흐름은 [studio-provider.tsx](../src/components/studio-provider.tsx)에 있다.
 
 ## 서로 다른 보존 수단

@@ -55,15 +55,32 @@ export const workSchema = z.object({
   if(work.navigation)for(const message of navigationIssues(work.navigation,work.documents.map(d=>d.id)))ctx.addIssue({code:'custom',message,path:['navigation']});
 });
 export type Work = z.infer<typeof workSchema>;
-export const assetSchema = z.object({id:z.uuid(),workId:z.uuid(),name:z.string().max(300),type:z.enum(['image/png','image/jpeg','image/webp']),size:z.number().int().min(0).max(10*1024*1024)});
+export const noteSchema = z.object({
+  id:z.uuid(),title:z.string().max(300),content:contentSchema,
+  tags:z.array(z.string().trim().min(1).max(40)).max(20),box:z.enum(['inbox','icebox']),
+  linkedWorkIds:z.array(z.uuid()).max(100),assetIds:z.array(z.uuid()).max(200),
+  createdAt:z.string(),updatedAt:z.string(),
+}).superRefine((note,ctx)=>{
+  for(const key of ['tags','linkedWorkIds','assetIds'] as const)if(new Set(note[key]).size!==note[key].length)ctx.addIssue({code:'custom',message:'노트의 중복 연결을 확인하세요.',path:[key]});
+});
+export type PersonalNote = z.infer<typeof noteSchema>;
+export const assetSchema = z.object({id:z.uuid(),workId:z.uuid().optional(),noteId:z.uuid().optional(),name:z.string().max(300),type:z.enum(['image/png','image/jpeg','image/webp']),size:z.number().int().min(0).max(10*1024*1024)}).superRefine((asset,ctx)=>{
+  if(!!asset.workId===!!asset.noteId)ctx.addIssue({code:'custom',message:'첨부의 소속을 확인하세요.'});
+});
 export type AssetMeta = z.infer<typeof assetSchema>;
 export const workspaceSchema = z.object({
   formatVersion:z.literal(1),id:z.uuid(),works:z.array(workSchema).min(1).max(100),assets:z.array(assetSchema).max(2000),updatedAt:z.string(),
   aiPreferences:aiPreferencesSchema.optional(),
+  notes:z.array(noteSchema).max(5000).optional(),
 }).superRefine((data,ctx)=>{
-  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id)];
+  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id)];
   if (new Set(ids).size !== ids.length) ctx.addIssue({code:'custom',message:'중복된 문서 ID가 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
+  const workIds=new Set(data.works.map(w=>w.id));
+  for(const note of data.notes||[]){
+    if(note.linkedWorkIds.some(id=>!workIds.has(id)))ctx.addIssue({code:'custom',message:'노트에 연결된 작품을 확인하세요.'});
+    if(note.assetIds.some(id=>assets.get(id)?.noteId!==note.id))ctx.addIssue({code:'custom',message:'노트 첨부 연결이 손상되었습니다.'});
+  }
   for(const w of data.works) {
     const conversations=w.aiConversations||[];
     if(new Set(conversations.map(c=>c.docId)).size!==conversations.length||conversations.some(c=>!w.documents.some(d=>d.id===c.docId)))ctx.addIssue({code:'custom',message:'AI 대화의 문서 연결을 확인하세요.'});
