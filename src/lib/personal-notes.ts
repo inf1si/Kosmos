@@ -1,19 +1,18 @@
 import { fromText, newDocument, noteSchema, plainText, uid, workspaceSchema, type NovelDocument, type PersonalNote, type Workspace } from './model';
+import { applySuggestion } from './ai';
+import type { ChatMessage } from './ai-conversation';
+import { materializeNoteNavigation, moveNote, noteDocument, noteTitle, type NoteDestination } from './note-navigation';
+export { noteTitle, noteDocument } from './note-navigation';
 import { insertDocument } from './document-navigation';
 
 export function newNote():PersonalNote {
   const now=new Date().toISOString();
   return {id:uid(),title:'',content:fromText(''),tags:[],box:'inbox',linkedWorkIds:[],assetIds:[],createdAt:now,updatedAt:now};
 }
-export function noteTitle(note:PersonalNote):string {
-  return note.title.trim()||plainText(note.content).split('\n').map(line=>line.trim()).find(Boolean)?.slice(0,80)||'새 노트';
-}
-export function noteDocument(note:PersonalNote):NovelDocument {
-  return {id:note.id,kind:'memo',title:noteTitle(note),content:note.content,chapter:'',summary:'',status:'idea',category:'',pov:'',storyTime:'',isPublic:false,publicSummary:'',assetIds:note.assetIds,updatedAt:note.updatedAt};
-}
-export function addNote(state:Workspace,note=newNote()):Workspace {
+export function addNote(state:Workspace,note=newNote(),to?:NoteDestination):Workspace {
   if((state.notes?.length||0)>=5000)throw new Error('노트는 최대 5,000개까지 보관할 수 있습니다.');
-  return {...state,notes:[...(state.notes||[]),noteSchema.parse(note)]};
+  const base=materializeNoteNavigation(state),next=materializeNoteNavigation({...base,notes:[...(state.notes||[]),noteSchema.parse(note)]});
+  return moveNote(next,note.id,to||{parentId:null,beforeId:base.noteNavigation?.nodes.find(n=>n.parentId===null)?.id});
 }
 export function patchNote(state:Workspace,id:string,patch:Partial<Pick<PersonalNote,'title'|'content'|'tags'|'box'|'linkedWorkIds'>>):Workspace {
   if(!state.notes?.some(note=>note.id===id))throw new Error('노트를 찾지 못했습니다.');
@@ -37,7 +36,7 @@ export function preserveNotes(candidate:Workspace,previous:Workspace):Workspace 
   const notes=structuredClone(previous.notes).map(note=>({...note,linkedWorkIds:note.linkedWorkIds.filter(id=>works.has(id))}));
   const noteIds=new Set(notes.map(note=>note.id));
   const assets=previous.assets.filter(asset=>asset.noteId&&noteIds.has(asset.noteId));
-  return {...candidate,notes,assets:[...candidate.assets.filter(asset=>!assets.some(old=>old.id===asset.id)),...structuredClone(assets)]};
+  return {...candidate,notes,noteNavigation:previous.noteNavigation,assets:[...candidate.assets.filter(asset=>!assets.some(old=>old.id===asset.id)),...structuredClone(assets)]};
 }
 /** Copy content and attachments into a new private work document; the independent source stays intact. */
 export function prepareNoteCopy(state:Workspace,noteId:string,workId:string,kind:NovelDocument['kind']) {
@@ -59,3 +58,35 @@ export function prepareNoteCopy(state:Workspace,noteId:string,workId:string,kind
   const result={...state,assets:[...state.assets,...assets],works:state.works.map(w=>w.id===workId?insertDocument(w,doc):w),notes:(state.notes||[]).map(n=>n.id===noteId?{...n,linkedWorkIds:[...new Set([...n.linkedWorkIds,workId])],updatedAt:new Date().toISOString()}:n)};
   return {state:workspaceSchema.parse(result),docId:doc.id,copies};
 }
+
+/** Old backups retain matching notes' organization and AI records; explicit fields restore exactly. */
+export function preserveNoteDetails(candidate:Workspace,previous:Workspace):Workspace {
+  const old=new Map((previous.notes||[]).map(n=>[n.id,n]));
+  let result={...candidate,notes:candidate.notes?.map(n=>n.aiMessages===undefined&&old.get(n.id)?.aiMessages!==undefined?{...n,aiMessages:structuredClone(old.get(n.id)!.aiMessages)}:n)};
+  if(candidate.noteNavigation===undefined&&previous.noteNavigation&&candidate.notes?.some(n=>old.has(n.id))){
+    const ids=new Set((candidate.notes||[]).map(n=>n.id));
+    const nav=structuredClone(previous.noteNavigation);nav.nodes=nav.nodes.filter(n=>n.type==='folder'||ids.has(n.id));
+    const kept=new Set(nav.nodes.map(n=>n.id));for(const n of nav.nodes)if(n.parentId&&!kept.has(n.parentId))n.parentId=null;
+    result={...result,noteNavigation:nav};
+  }
+  return materializeNoteNavigation(result);
+}
+
+export function noteAISources(state:Workspace,noteId:string):NovelDocument[] {
+  const note=state.notes?.find(n=>n.id===noteId);if(!note)throw new Error('노트를 찾지 못했습니다.');
+  return [...(state.notes||[]).filter(n=>n.id!==noteId).map(noteDocument),...state.works.filter(w=>note.linkedWorkIds.includes(w.id)).flatMap(w=>w.documents.map(d=>({...d,title:`${w.title} / ${d.title}`.slice(0,300)})))];
+}
+export function appendNoteExchange(state:Workspace,id:string,expectedCount:number,question:string,answer:Extract<ChatMessage,{role:'assistant'}>):Workspace {
+  const note=state.notes?.find(n=>n.id===id);if(!note)throw new Error('대화 중 노트를 찾지 못했습니다.');
+  if((note.aiMessages?.length||0)!==expectedCount)throw new Error('다른 창에서 대화가 바뀌었습니다. 다시 보내세요.');
+  if(!note.aiMessages?.length&&(state.notes||[]).filter(n=>n.aiMessages?.length).length>=200)throw new Error('노트 대화는 최대 200개입니다. 대화를 노트로 보관하고 새 대화를 시작하세요.');
+  const aiMessages=[...(note.aiMessages||[]),{id:uid(),role:'user' as const,text:question,createdAt:new Date().toISOString()},answer];
+  return {...state,notes:state.notes!.map(n=>n.id===id?noteSchema.parse({...n,aiMessages}):n)};
+}
+export function applyNoteSuggestion(state:Workspace,id:string,message:Extract<ChatMessage,{role:'assistant'}>,index:number):Workspace {
+  const note=state.notes?.find(n=>n.id===id);if(!note)throw new Error('노트를 찾지 못했습니다.');
+  if(note.updatedAt!==message.version)throw new Error('답변 이후 노트가 바뀌었습니다. 새로 질문하거나 직접 비교하세요.');
+  const suggestion=message.result.suggestions[index];if(!suggestion)throw new Error('수정안을 찾지 못했습니다.');
+  return patchNote(state,id,{content:applySuggestion(note.content,suggestion.quote,suggestion.replacement)});
+}
+export function clearNoteConversation(state:Workspace,id:string):Workspace {return {...state,notes:(state.notes||[]).map(n=>n.id===id?{...n,aiMessages:[]}:n)};}

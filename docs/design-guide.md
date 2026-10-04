@@ -1,6 +1,6 @@
 # 디자인 가이드
 
-개인 노트는 사이드바의 기존 segmented로 집필실과 전환하며 같은 RichEditor·doc-head·chip·Popover·reference-card·저장 상태·ThemeControls를 쓴다. 제목·태그·작품 선택은 선택 사항이다. 새 노트는 상단 IconButton에서 바로 연다. 노트 아이콘은 메모와 같은 StickyNote, 수집함은 Inbox, 아이스박스는 Snowflake다. 좁은 화면의 노트 목록은 기존 사이드바 서랍과 초점 규칙을 따른다. [노트 사용법](personal-notes.md).
+개인 노트는 사이드바의 기존 segmented로 집필실과 전환하며 같은 RichEditor·doc-head·chip·Popover·DocumentTree·AIChat·저장 상태·ThemeControls를 쓴다. 제목·태그·작품 선택은 선택 사항이다. 새 노트는 상단 IconButton에서 바로 연다. 노트 아이콘은 메모와 같은 StickyNote, 수집함은 Inbox, 아이스박스는 Snowflake다. 좁은 화면의 노트 트리와 AI 창은 기존 사이드바·참고 패널 서랍과 초점 규칙을 따른다. 검색·보기·태그/작품 필터는 묶음 간 여백을 두고 검색 아래 최소 12px을 확보한다. 노트 트리의 손잡이·메뉴·들여쓰기는 집필실과 같다. [노트 사용법](personal-notes.md).
 
 기준일: 2026-10-04. 새 화면이나 기능을 추가할 때 기존 화면과 같은 색·글꼴·간격·문구를 쓰기 위한 규칙이다. 화면 시안은 작가 계정의 [디자인 캔버스](https://claude.ai/artifact/8JQvgoZDiTun4ZQ4Cp8FEW)(비공개)에, 여섯 테마의 토큰과 컴포넌트 미리보기는 [디자인 시스템](https://claude.ai/artifact/XVVsdiqKsa5D99pgd6gc1P)(비공개, main `a7ee675` 기준)에 있고, 참고 서비스 연구는 [디자인 레퍼런스](design-references.md)에 있다. 두 아티팩트는 레포 밖에 있어 다른 도구에서는 열리지 않을 수 있으며, 값이 다르면 이 문서와 CSS가 기준이다.
 

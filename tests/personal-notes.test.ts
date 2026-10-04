@@ -51,7 +51,7 @@ test('전체 ZIP과 이력은 노트·태그·관계·첨부 바이트를 보존
 });
 test('노트 필드가 없는 이전 백업 복원은 현재 노트와 첨부를 보존하며 사라진 작품 연결을 정리한다',()=>{
   const {state,note}=fixture(),id=uid();state.notes![0].assetIds=[id];state.notes![0].linkedWorkIds=state.works.map(w=>w.id);state.assets.push({id,noteId:note.id,name:'현재첨부.png',type:'image/png',size:4});
-  const legacy=structuredClone(state);delete legacy.notes;legacy.assets=[];legacy.works=legacy.works.slice(0,1);assert(workspaceSchema.safeParse(legacy).success);
+  const legacy=structuredClone(state);delete legacy.notes;delete legacy.noteNavigation;legacy.assets=[];legacy.works=legacy.works.slice(0,1);assert(workspaceSchema.safeParse(legacy).success);
   const kept=preserveNotes(legacy,state);assert.equal(kept.notes!.length,1);assert.deepEqual(kept.notes![0].linkedWorkIds,[legacy.works[0].id]);assert.equal(kept.assets[0].noteId,note.id);assert(workspaceSchema.safeParse(kept).success);
   assert.equal(preserveNotes({...legacy,notes:[]},state).notes!.length,0);
 });

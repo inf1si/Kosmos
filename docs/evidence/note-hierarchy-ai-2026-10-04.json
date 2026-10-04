@@ -1,0 +1,500 @@
+{
+  "checkedAt": "2026-10-04",
+  "base": "8bc11fed7caf27d782f5e25050dc016df7e2279c",
+  "local": {
+    "typecheck": true,
+    "tests": 104,
+    "build": true,
+    "browser": {
+      "environment": "localhost:3210 synthetic account, isolated Chromium, synthetic AI responses",
+      "flows": [
+        "capture and independent root folder",
+        "subnote capture and child folder",
+        "move subtree rename and keyboard focus",
+        "collapse search ancestors and folder matches restore collapse",
+        "real drag drop undo preserves later body edit",
+        "icebox filter keeps inbox ancestors and spacing",
+        "note AI starters sources presets and structured response",
+        "AI suggestion applies only current note with recovery and stale lock",
+        "AI failure keeps question and conversation survives reload",
+        "conversation archive creates subnote and reset preserves archive",
+        "workspace ZIP download restores hierarchy and AI messages",
+        "shared writing tree and AI still open",
+        "mobile tree move and AI drawer focus"
+      ],
+      "saves": 15,
+      "aiRequests": [
+        {
+          "scope": "note",
+          "sources": 1,
+          "history": 0,
+          "promptPresetId": "builtin:development"
+        },
+        {
+          "scope": "note",
+          "sources": 1,
+          "history": 2,
+          "promptPresetId": "builtin:development"
+        }
+      ],
+      "errors": []
+    },
+    "layout": {
+      "environment": "local production build, isolated Chromium synthetic account, synthetic configured AI",
+      "comparisons": 12,
+      "screenshots": 36,
+      "layouts": [
+        {
+          "width": 1280,
+          "scroll": 1280,
+          "gap": 13,
+          "palette": "violet",
+          "theme": "light",
+          "sidebar": {
+            "x": 8,
+            "right": 272
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 260,
+            "y": 459,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 928,
+            "y": 392,
+            "width": 340,
+            "height": 496.21875
+          },
+          "ai": {
+            "x": 912,
+            "y": 8,
+            "width": 360,
+            "height": 884
+          },
+          "settings": {
+            "x": 215,
+            "y": 25,
+            "width": 850,
+            "height": 850
+          }
+        },
+        {
+          "width": 1280,
+          "scroll": 1280,
+          "gap": 13,
+          "palette": "violet",
+          "theme": "dark",
+          "sidebar": {
+            "x": 8,
+            "right": 272
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 260,
+            "y": 459,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 928,
+            "y": 392,
+            "width": 340,
+            "height": 496.21875
+          },
+          "ai": {
+            "x": 912,
+            "y": 8,
+            "width": 360,
+            "height": 884
+          },
+          "settings": {
+            "x": 215,
+            "y": 25,
+            "width": 850,
+            "height": 850
+          }
+        },
+        {
+          "width": 1280,
+          "scroll": 1280,
+          "gap": 13,
+          "palette": "cassette",
+          "theme": "light",
+          "sidebar": {
+            "x": 8,
+            "right": 272
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 260,
+            "y": 483,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 928,
+            "y": 392,
+            "width": 340,
+            "height": 496.21875
+          },
+          "ai": {
+            "x": 912,
+            "y": 8,
+            "width": 360,
+            "height": 884
+          },
+          "settings": {
+            "x": 215,
+            "y": 25,
+            "width": 850,
+            "height": 850
+          }
+        },
+        {
+          "width": 1280,
+          "scroll": 1280,
+          "gap": 13,
+          "palette": "cassette",
+          "theme": "dark",
+          "sidebar": {
+            "x": 8,
+            "right": 272
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 260,
+            "y": 483,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 928,
+            "y": 392,
+            "width": 340,
+            "height": 496.21875
+          },
+          "ai": {
+            "x": 912,
+            "y": 8,
+            "width": 360,
+            "height": 884
+          },
+          "settings": {
+            "x": 215,
+            "y": 25,
+            "width": 850,
+            "height": 850
+          }
+        },
+        {
+          "width": 1280,
+          "scroll": 1280,
+          "gap": 13,
+          "palette": "cyber",
+          "theme": "light",
+          "sidebar": {
+            "x": 8,
+            "right": 272
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 260,
+            "y": 481,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 928,
+            "y": 392,
+            "width": 340,
+            "height": 496.21875
+          },
+          "ai": {
+            "x": 912,
+            "y": 8,
+            "width": 360,
+            "height": 884
+          },
+          "settings": {
+            "x": 215,
+            "y": 25,
+            "width": 850,
+            "height": 850
+          }
+        },
+        {
+          "width": 1280,
+          "scroll": 1280,
+          "gap": 13,
+          "palette": "cyber",
+          "theme": "dark",
+          "sidebar": {
+            "x": 8,
+            "right": 272
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 260,
+            "y": 481,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 928,
+            "y": 392,
+            "width": 340,
+            "height": 496.21875
+          },
+          "ai": {
+            "x": 912,
+            "y": 8,
+            "width": 360,
+            "height": 884
+          },
+          "settings": {
+            "x": 215,
+            "y": 25,
+            "width": 850,
+            "height": 850
+          }
+        },
+        {
+          "width": 360,
+          "scroll": 360,
+          "gap": 13,
+          "palette": "violet",
+          "theme": "light",
+          "sidebar": {
+            "x": 0,
+            "right": 280
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 68,
+            "y": 511,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 12,
+            "y": 380,
+            "width": 336,
+            "height": 508.21875
+          },
+          "ai": {
+            "x": 0,
+            "y": 0,
+            "width": 360,
+            "height": 900
+          },
+          "settings": {
+            "x": 14,
+            "y": 25,
+            "width": 332,
+            "height": 850
+          }
+        },
+        {
+          "width": 360,
+          "scroll": 360,
+          "gap": 13,
+          "palette": "violet",
+          "theme": "dark",
+          "sidebar": {
+            "x": 0,
+            "right": 280
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 68,
+            "y": 511,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 12,
+            "y": 380,
+            "width": 336,
+            "height": 508.21875
+          },
+          "ai": {
+            "x": 0,
+            "y": 0,
+            "width": 360,
+            "height": 900
+          },
+          "settings": {
+            "x": 14,
+            "y": 25,
+            "width": 332,
+            "height": 850
+          }
+        },
+        {
+          "width": 360,
+          "scroll": 360,
+          "gap": 13,
+          "palette": "cassette",
+          "theme": "light",
+          "sidebar": {
+            "x": 0,
+            "right": 280
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 68,
+            "y": 535,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 12,
+            "y": 380,
+            "width": 336,
+            "height": 508.21875
+          },
+          "ai": {
+            "x": 0,
+            "y": 0,
+            "width": 360,
+            "height": 900
+          },
+          "settings": {
+            "x": 14,
+            "y": 25,
+            "width": 332,
+            "height": 850
+          }
+        },
+        {
+          "width": 360,
+          "scroll": 360,
+          "gap": 13,
+          "palette": "cassette",
+          "theme": "dark",
+          "sidebar": {
+            "x": 0,
+            "right": 280
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 68,
+            "y": 535,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 12,
+            "y": 380,
+            "width": 336,
+            "height": 508.21875
+          },
+          "ai": {
+            "x": 0,
+            "y": 0,
+            "width": 360,
+            "height": 900
+          },
+          "settings": {
+            "x": 14,
+            "y": 25,
+            "width": 332,
+            "height": 850
+          }
+        },
+        {
+          "width": 360,
+          "scroll": 360,
+          "gap": 13,
+          "palette": "cyber",
+          "theme": "light",
+          "sidebar": {
+            "x": 0,
+            "right": 280
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 68,
+            "y": 533,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 12,
+            "y": 380,
+            "width": 336,
+            "height": 508.21875
+          },
+          "ai": {
+            "x": 0,
+            "y": 0,
+            "width": 360,
+            "height": 900
+          },
+          "settings": {
+            "x": 14,
+            "y": 25,
+            "width": 332,
+            "height": 850
+          }
+        },
+        {
+          "width": 360,
+          "scroll": 360,
+          "gap": 13,
+          "palette": "cyber",
+          "theme": "dark",
+          "sidebar": {
+            "x": 0,
+            "right": 280
+          },
+          "rows": 3,
+          "folderPopup": {
+            "x": 68,
+            "y": 533,
+            "width": 280,
+            "height": 186.375
+          },
+          "sources": {
+            "x": 12,
+            "y": 380,
+            "width": 336,
+            "height": 508.21875
+          },
+          "ai": {
+            "x": 0,
+            "y": 0,
+            "width": 360,
+            "height": 900
+          },
+          "settings": {
+            "x": 14,
+            "y": 25,
+            "width": 332,
+            "height": 850
+          }
+        }
+      ],
+      "errors": []
+    }
+  },
+  "productionDatabase": {
+    "migration": "20261004074609_note_hierarchy_ai_guard.sql",
+    "triggerEnabled": true,
+    "securityInvoker": true,
+    "clientExecuteRevoked": true,
+    "rpcSavedHierarchyAndAI": true,
+    "hierarchyOmissionRejected": true,
+    "conversationOmissionRejected": true,
+    "transactionRolledBack": true,
+    "syntheticNoteAbsentAfterRollback": true,
+    "securityAdvisorsUnchanged": true
+  },
+  "unverified": [
+    "real paid AI calls and response quality",
+    "real touch devices",
+    "multiple devices editing offline"
+  ]
+}

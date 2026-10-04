@@ -1,7 +1,10 @@
 'use client';
-import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowLeft, Cloud, StickyNote, Globe2, HardDrive, Inbox, Link2, NotebookPen, PanelLeft, Paperclip, Plus, Search, Snowflake, Tag, X } from 'lucide-react';
+import { Archive, ArrowLeft, Cloud, StickyNote, Globe2, HardDrive, Inbox, Link2, NotebookPen, PanelLeft, Paperclip, Plus, Search, Snowflake, Sparkles, Tag, X } from 'lucide-react';
+import { DocumentTree } from './document-tree';
+import { AIChat } from './ai-chat';
+import { editNoteTree, noteTreeWork, treeDestination, type NoteDestination } from '@/lib/note-navigation';
 import { useStudio } from './studio-provider';
 import { GoogleAccountControl } from './studio-auth';
 import { IconButton, Popover, TooltipProvider } from './primitives';
@@ -16,21 +19,26 @@ import { db } from '@/lib/database';
 const EMPTY_NOTES:PersonalNote[]=[];
 const EMPTY_WIKI:NovelDocument[]=[];
 const ignoreWiki=()=>{};
-type Props={activeId:string;captureId:string;onSelect:(id:string)=>void;onReturn:()=>void;onNew:()=>void;onOpenWork:(workId:string,docId?:string)=>void};
+type Props={activeId:string;captureId:string;onSelect:(id:string)=>void;onReturn:()=>void;onNew:(to?:NoteDestination)=>void;onOpenWork:(workId:string,docId?:string)=>void};
 
 export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpenWork}:Props){
   const s=useStudio(),notes=s.state?.notes||EMPTY_NOTES;
-  const [sidebar,setSidebar]=useState(false),[compact,setCompact]=useState(true);
+  const [sidebar,setSidebar]=useState(false),[compact,setCompact]=useState(true),[aiOpen,setAiOpen]=useState(false);
   const [query,setQuery]=useState(''),[box,setBox]=useState<'all'|'inbox'|'icebox'>('all'),[tag,setTag]=useState(''),[workId,setWorkId]=useState('');
   const sidebarRef=useRef<HTMLElement>(null),closeSidebar=useCallback(()=>setSidebar(false),[]);
+  const aiRef=useRef<HTMLElement>(null),closeAI=useCallback(()=>setAiOpen(false),[]);
+  useDrawerFocus(compact&&aiOpen,aiRef,closeAI,'note-ai-toggle');
   useDrawerFocus(compact&&sidebar,sidebarRef,closeSidebar,'sidebar-toggle');
-  const search=useDeferredValue(query),visible=filterNotes(notes,{query:search,box,tag,workId});
+  const search=useDeferredValue(query),visible=useMemo(()=>filterNotes(notes,{query:search,box,tag,workId}),[notes,search,box,tag,workId]);
+  const eligible=useMemo(()=>filterNotes(notes,{box,tag,workId}).map(n=>n.id),[notes,box,tag,workId]);
+  const tree=useMemo(()=>s.state?noteTreeWork(s.state):null,[s.state]);
   const active=notes.find(n=>n.id===activeId)||visible[0]||notes[0],readonly=!!s.conflict;
   useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);setSidebar(!media.matches);const change=()=>{setCompact(media.matches);setSidebar(!media.matches);};media.addEventListener('change',change);return()=>media.removeEventListener('change',change);},[]);
-  useEffect(()=>{const key=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.code==='KeyK'){event.preventDefault();setSidebar(true);setTimeout(()=>document.getElementById('notes-search')?.focus(),30);}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
+  useEffect(()=>{const key=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.code==='KeyK'){event.preventDefault();setAiOpen(false);setSidebar(true);setTimeout(()=>document.getElementById('notes-search')?.focus(),30);}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
   if(!s.state)return null;
   const works=s.state.works,allTags=[...new Set(notes.flatMap(n=>n.tags))].sort((a,b)=>a.localeCompare(b));
   const inbox=notes.filter(n=>n.box==='inbox').length,icebox=notes.length-inbox;
+  function create(to?:NoteDestination){setQuery('');setBox('all');setTag('');setWorkId('');onNew(to);if(compact)setSidebar(false);}
   function select(id:string){onSelect(id);if(compact)setSidebar(false);}
   function patch(id:string,change:Parameters<typeof patchNote>[2]){s.update(state=>patchNote(state,id,change));}
   return <TooltipProvider><div className="studio notes-workspace">
@@ -39,26 +47,27 @@ export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpen
       <div className="sidebar-close"><IconButton label="노트 탐색 닫기" data-drawer-close onClick={closeSidebar}><X size={17}/></IconButton></div>
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={false} onClick={onReturn}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={true}><StickyNote size={14}/>노트</button></div>
-      <nav className="studio-tools" aria-label="노트 도구">
-        <button type="button" className="nav-item" disabled={readonly} onClick={()=>{setQuery('');setBox('all');setTag('');setWorkId('');onNew();if(compact)setSidebar(false);}}><Plus size={16}/><span>새 노트</span></button>
-        <div className="sidebar-search"><Search size={15}/><input id="notes-search" aria-label="전체 노트 검색" placeholder="제목 · 본문 · 태그 검색" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<IconButton label="노트 검색 지우기" onClick={()=>setQuery('')}><X size={14}/></IconButton>}</div>
-        <button type="button" className="nav-item" aria-pressed={box==='all'} onClick={()=>setBox('all')}><StickyNote size={16}/><span>전체 노트</span><small>{notes.length}</small></button>
+      <nav className="studio-tools notes-tools" aria-label="노트 도구">
+        <button type="button" className="nav-item" disabled={readonly} onClick={()=>create()}><Plus size={16}/><span>새 노트</span></button>
+        <div className="sidebar-search"><Search size={15}/><input id="notes-search" aria-label="전체 노트 검색" placeholder="제목 · 본문 · 태그 · 폴더 검색" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<IconButton label="노트 검색 지우기" onClick={()=>setQuery('')}><X size={14}/></IconButton>}</div>
+        <div className="notes-views" role="group" aria-label="노트 보기"><button type="button" className="nav-item" aria-pressed={box==='all'} onClick={()=>setBox('all')}><StickyNote size={16}/><span>전체 노트</span><small>{notes.length}</small></button>
         <button type="button" className="nav-item" aria-pressed={box==='inbox'} onClick={()=>setBox('inbox')}><Inbox size={16}/><span>수집함</span><small>{inbox}</small></button>
-        <button type="button" className="nav-item" aria-pressed={box==='icebox'} onClick={()=>setBox('icebox')}><Snowflake size={16}/><span>아이스박스</span><small>{icebox}</small></button>
+        <button type="button" className="nav-item" aria-pressed={box==='icebox'} onClick={()=>setBox('icebox')}><Snowflake size={16}/><span>아이스박스</span><small>{icebox}</small></button></div>
         <div className="notes-filters"><label><Tag size={14}/><select aria-label="태그로 노트 찾기" value={tag} onChange={e=>setTag(e.target.value)}><option value="">모든 태그</option>{allTags.map(value=><option key={value}>{value}</option>)}</select></label><label><Link2 size={14}/><select aria-label="연결된 작품으로 노트 찾기" value={workId} onChange={e=>setWorkId(e.target.value)}><option value="">모든 작품</option>{works.map(work=><option value={work.id} key={work.id}>{work.title}</option>)}</select></label></div>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'backup'}))}><Archive size={16}/><span>백업과 복구</span></button>
       </nav>
-      <div className="sidebar-scroll notes-list" aria-label="노트 목록">{visible.map(note=><button type="button" className="reference-card" key={note.id} aria-current={note.id===active?.id?'page':undefined} onClick={()=>select(note.id)}>{note.box==='icebox'?<Snowflake size={16}/>:<StickyNote size={16}/>}<span><strong>{noteTitle(note)}</strong><small>{plainText(note.content).replace(/\s+/g,' ').slice(0,70)||'본문 없음'}</small>{note.tags.length>0&&<small>{note.tags.map(value=>`#${value}`).join(' ')}</small>}</span></button>)}{!visible.length&&<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'아직 노트가 없습니다. 새 노트에서 바로 입력하세요.'}</p>}</div>
+      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to))}}/>{!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">아직 노트가 없습니다. 새 노트에서 바로 입력하세요.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재"><Globe2 size={16}/></Link></div><ThemeControls/></footer>
     </aside>}
     <main className="studio-panel">
-      <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>setSidebar(v=>!v)}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active"><StickyNote size={14}/><span>{active?noteTitle(active):'노트'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={onNew}><Plus size={16}/></IconButton></div>
+      <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setAiOpen(false);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active"><StickyNote size={14}/><span>{active?noteTitle(active):'노트'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
       {active?<RichEditor key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={EMPTY_WIKI} onWikiClick={ignoreWiki} onChange={content=>patch(active.id,{content})}
         heading={<NoteHead key={active.id} note={active} readonly={readonly} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork}/>}
-        toolbarEnd={<span className="char-count">{plainText(active.content).replace(/\s/g,'').length.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span>}/>
-        :<div className="notes-welcome"><p className="muted">작품을 고르지 않고 생각과 자료를 담아두세요.</p><button type="button" className="button" disabled={readonly} onClick={onNew}><Plus size={15}/>새 노트</button></div>}
+        toolbarEnd={<><span className="char-count">{plainText(active.content).replace(/\s/g,'').length.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={aiOpen} onClick={()=>{setAiOpen(v=>!v);if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
+        :<div className="notes-welcome"><p className="muted">작품을 고르지 않고 생각과 자료를 담아두세요.</p><button type="button" className="button" disabled={readonly} onClick={()=>create()}><Plus size={15}/>새 노트</button></div>}
     </main>
+    {aiOpen&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className="reference-panel is-chat" aria-label="노트 AI 대화" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs"><span>AI 대화</span><IconButton label="노트 AI 대화 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content"><AIChat key={`${s.namespace}-${active.id}-${s.epoch}`} noteId={active.id} doc={noteDocument(active)} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);return;}const work=works.find(w=>w.documents.some(d=>d.id===id));if(work)onOpenWork(work.id,id);}}/></div></aside></>}
   </div></TooltipProvider>;
 }
 

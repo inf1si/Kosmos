@@ -1,5 +1,7 @@
 # 저장·동기화·충돌
 
+노트 계층·형제 순서와 aiMessages도 작업 공간 전체 버전을 공유한다. 본문 편집 전에 레거시 트리를 고정하고 AI 기록 저장은 본문 updatedAt을 유지한다. [추가 보호 SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql)은 구버전 탭의 계층·대화 누락 저장을 거절한다. 최신 버전은 이전 백업의 공통 ID 노트 계층·대화를 보존하며 명시된 필드는 그대로 복원한다.
+
 ## 개인 노트
 
 개인 노트는 작품과 같은 계정 작업 공간 JSON·저장 큐·기준 버전·충돌·복구 이력을 사용한다. 노트별 독립 동기화나 자동 병합은 없다. 충돌 화면은 양쪽 노트 개수와 앞 8개 본문 일부도 보여주며 전체 내용은 양쪽 ZIP에 남긴다. [노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql)은 기존 notes 배열의 누락을 차단한다. [노트 계약](personal-notes.md).
