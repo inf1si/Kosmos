@@ -1,5 +1,7 @@
 # 다음 연결: Google Drive와 AI
 
+집필실 **Google 로그인**은 Drive 백업과 다른 연결이다. 로그인·기존 Naver 이메일 작가 계정 연결은 [Google 로그인 안내](google-login.md)를 따른다. 이 페이지의 Drive OAuth 클라이언트·refresh token은 로그인 설정으로 복사하거나 변경하지 않는다.
+
 Supabase·Vercel과 작가 로그인은 연결됐다. 외부 문서 기능은 파일만으로 바로 사용한다. Drive 연결 절차는 아래 기록을 참고하고 실제 최신 상태는 [구현 상태](status.md)와 [검증 기록](../VERIFICATION.md)을 따른다. AI는 키를 만든 제공자부터 활성화한다. 비밀번호·API 키·refresh token은 채팅에 보내지 않는다. API 키는 본인이 집필실의 AI 설정 또는 Vercel 기본 설정에 직접 넣고, 백업 비밀은 Vercel Production 변수에 넣는다.
 
 2026-10-01에 Google Cloud의 전용 **Kosmos Backup** 프로젝트와 Google Drive API 활성화를 완료했다. 사용자가 앱·웹 OAuth 클라이언트를 만들고 값을 복사해 보관했으며 JSON 다운로드는 완료되지 않았다. 원래 비밀값이 비공개 도구 결과에 포함된 뒤, 사용자가 새 비밀키를 보관하고 기존 키를 비활성화한 상태를 확인했다.
