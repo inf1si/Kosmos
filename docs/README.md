@@ -26,6 +26,7 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 | DB·첨부 암호화 백업·누락 감시·실제 복원 | [재해 복구 절차](disaster-recovery.md) |
 | AI 연결·제한·API 이해 | [AI 기능](ai.md) · [프롬프트 설계·평가](ai-prompts.md) |
 | 문서 변경·감사·CI 규칙 | [유지 규칙](maintenance.md) · [2026-10-03 감사](documentation-audit-2026-10-03.md) |
+| UI 결과·적용 범위·연속 조작의 완료 기준 | [실제 조작 검증](interaction-verification.md) |
 | 다음 개발 순서 결정 | [로드맵](roadmap.md) · [설계 결정 기록](decisions.md) |
 | 어떤 검증이 실제로 끝났는지 확인 | [검증 기록](../VERIFICATION.md) |
 | 초기 기술 제안과 운영비 근거 확인 | [기술 제안 원문](technical-proposal.md) |

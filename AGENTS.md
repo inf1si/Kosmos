@@ -24,3 +24,12 @@ Before building or changing any UI (public pages, the studio, dialogs), read [do
 - Check every new screen in all six palette × mode combinations and at 360px width.
 - Before finishing, go through section 11 (새 기능 체크리스트). If you add a token or pattern, update the guide and `CHANGELOG.md`.
 - Mockups and the design-system artifact live on claude.ai and may not be reachable from your tool; the guide's values are authoritative.
+
+# Implementation acceptance
+
+Follow [interaction verification](docs/interaction-verification.md) for UI changes.
+
+- Fetch the current main revision and inspect intervening changes before implementing or publishing. Preserve changes made by other agents and designers; do not rebuild from an older local snapshot.
+- Define each changed control's target and expected outcome, including selected text versus the whole document and device preferences versus persisted content.
+- Verify the real browser workflow, including consecutive controls, focus/selection, visible results, undo and persistence where relevant. A control in the DOM, a click without an outcome, schema tests or a build alone do not establish UI completion. Check computed styles and the actual browser control when rendering matters.
+- Check shared controls in their affected consumers. Keep local, CI, deployed and user-reported evidence separate, and name unverified behaviors. Add regression checks for defects that actually occurred; do not claim that a documentation checklist automatically tests the UI.
