@@ -1,0 +1,582 @@
+{
+  "base": "ae59823c6de3b36009d87c9b3148c04897f60af3",
+  "typecheck": true,
+  "tests": 109,
+  "newTests": 5,
+  "productionBuild": true,
+  "browser": {
+    "environment": "localhost:3210 isolated Chromium, synthetic author and Supabase responses",
+    "flows": [
+      "note cancel and Escape preserve content and restore menu focus",
+      "recovery checkpoint failure blocks deletion",
+      "delete active note preserves children sibling order and unrelated data",
+      "reload retains deletion and UI history restores note AI hierarchy and attachment metadata",
+      "filtered note deletion uses the clicked note rather than editor note",
+      "mobile delete cancel and last-note removal keep folders and allow new capture",
+      "work split-pane document deletion clears only the deleted pane",
+      "delete active scene keeps child documents AI shared assets and published snapshot",
+      "memo deletion and reload remove the correct document from the working tree",
+      "last document is protected with an actionable explanation"
+    ],
+    "saves": 9,
+    "aiRequests": 0,
+    "errors": []
+  },
+  "race": {
+    "flow": "new capture during delayed recovery checkpoint blocks stale deletion and preserves both notes",
+    "oldNoteRetained": true,
+    "newNoteRetained": true,
+    "aiRequests": 0,
+    "errors": []
+  },
+  "layout": {
+    "environment": "local production build, isolated Chromium synthetic account",
+    "layouts": [
+      {
+        "width": 1280,
+        "palette": "violet",
+        "theme": "light",
+        "notes": {
+          "dialog": {
+            "x": 380,
+            "y": 333.1640625,
+            "width": 520,
+            "height": 233.671875
+          },
+          "colors": {
+            "text": "rgb(69, 68, 79)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 9.58
+        },
+        "work": {
+          "dialog": {
+            "x": 380,
+            "y": 325.96875,
+            "width": 520,
+            "height": 248.0625
+          },
+          "colors": {
+            "text": "rgb(69, 68, 79)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 9.58
+        },
+        "menu": {
+          "x": 235,
+          "y": 561,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 240,
+          "y": 501,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "violet",
+        "theme": "dark",
+        "notes": {
+          "dialog": {
+            "x": 380,
+            "y": 333.1640625,
+            "width": 520,
+            "height": 233.671875
+          },
+          "colors": {
+            "text": "rgb(183, 182, 194)",
+            "background": "rgb(24, 24, 31)",
+            "modal": "rgb(24, 24, 31)"
+          },
+          "deleteButtonContrast": 8.82
+        },
+        "work": {
+          "dialog": {
+            "x": 380,
+            "y": 325.96875,
+            "width": 520,
+            "height": 248.0625
+          },
+          "colors": {
+            "text": "rgb(183, 182, 194)",
+            "background": "rgb(24, 24, 31)",
+            "modal": "rgb(24, 24, 31)"
+          },
+          "deleteButtonContrast": 8.82
+        },
+        "menu": {
+          "x": 235,
+          "y": 561,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 240,
+          "y": 501,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cassette",
+        "theme": "light",
+        "notes": {
+          "dialog": {
+            "x": 380,
+            "y": 333.1640625,
+            "width": 520,
+            "height": 233.671875
+          },
+          "colors": {
+            "text": "rgb(79, 66, 52)",
+            "background": "rgb(255, 254, 246)",
+            "modal": "rgb(248, 247, 230)"
+          },
+          "deleteButtonContrast": 9.6
+        },
+        "work": {
+          "dialog": {
+            "x": 380,
+            "y": 325.96875,
+            "width": 520,
+            "height": 248.0625
+          },
+          "colors": {
+            "text": "rgb(79, 66, 52)",
+            "background": "rgb(255, 254, 246)",
+            "modal": "rgb(248, 247, 230)"
+          },
+          "deleteButtonContrast": 9.6
+        },
+        "menu": {
+          "x": 235,
+          "y": 585,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 240,
+          "y": 550,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cassette",
+        "theme": "dark",
+        "notes": {
+          "dialog": {
+            "x": 380,
+            "y": 333.1640625,
+            "width": 520,
+            "height": 233.671875
+          },
+          "colors": {
+            "text": "rgb(214, 198, 173)",
+            "background": "rgb(36, 30, 24)",
+            "modal": "rgb(31, 26, 21)"
+          },
+          "deleteButtonContrast": 9.84
+        },
+        "work": {
+          "dialog": {
+            "x": 380,
+            "y": 325.96875,
+            "width": 520,
+            "height": 248.0625
+          },
+          "colors": {
+            "text": "rgb(214, 198, 173)",
+            "background": "rgb(36, 30, 24)",
+            "modal": "rgb(31, 26, 21)"
+          },
+          "deleteButtonContrast": 9.84
+        },
+        "menu": {
+          "x": 235,
+          "y": 585,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 240,
+          "y": 550,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cyber",
+        "theme": "light",
+        "notes": {
+          "dialog": {
+            "x": 380,
+            "y": 333.1640625,
+            "width": 520,
+            "height": 233.671875
+          },
+          "colors": {
+            "text": "rgb(44, 52, 72)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 12.41
+        },
+        "work": {
+          "dialog": {
+            "x": 380,
+            "y": 325.96875,
+            "width": 520,
+            "height": 248.0625
+          },
+          "colors": {
+            "text": "rgb(44, 52, 72)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 12.41
+        },
+        "menu": {
+          "x": 235,
+          "y": 583,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 240,
+          "y": 545,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cyber",
+        "theme": "dark",
+        "notes": {
+          "dialog": {
+            "x": 380,
+            "y": 333.1640625,
+            "width": 520,
+            "height": 233.671875
+          },
+          "colors": {
+            "text": "rgb(201, 196, 230)",
+            "background": "rgb(13, 11, 22)",
+            "modal": "rgb(13, 11, 22)"
+          },
+          "deleteButtonContrast": 11.63
+        },
+        "work": {
+          "dialog": {
+            "x": 380,
+            "y": 325.96875,
+            "width": 520,
+            "height": 248.0625
+          },
+          "colors": {
+            "text": "rgb(201, 196, 230)",
+            "background": "rgb(13, 11, 22)",
+            "modal": "rgb(13, 11, 22)"
+          },
+          "deleteButtonContrast": 11.63
+        },
+        "menu": {
+          "x": 235,
+          "y": 583,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 240,
+          "y": 545,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 360,
+        "palette": "violet",
+        "theme": "light",
+        "notes": {
+          "dialog": {
+            "x": 14,
+            "y": 305.5234375,
+            "width": 332,
+            "height": 288.953125
+          },
+          "colors": {
+            "text": "rgb(69, 68, 79)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 9.58
+        },
+        "work": {
+          "dialog": {
+            "x": 14,
+            "y": 288.1328125,
+            "width": 332,
+            "height": 323.734375
+          },
+          "colors": {
+            "text": "rgb(69, 68, 79)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 9.58
+        },
+        "menu": {
+          "x": 158,
+          "y": 589,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 158,
+          "y": 529,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 360,
+        "palette": "violet",
+        "theme": "dark",
+        "notes": {
+          "dialog": {
+            "x": 14,
+            "y": 305.5234375,
+            "width": 332,
+            "height": 288.953125
+          },
+          "colors": {
+            "text": "rgb(183, 182, 194)",
+            "background": "rgb(24, 24, 31)",
+            "modal": "rgb(24, 24, 31)"
+          },
+          "deleteButtonContrast": 8.82
+        },
+        "work": {
+          "dialog": {
+            "x": 14,
+            "y": 288.1328125,
+            "width": 332,
+            "height": 323.734375
+          },
+          "colors": {
+            "text": "rgb(183, 182, 194)",
+            "background": "rgb(24, 24, 31)",
+            "modal": "rgb(24, 24, 31)"
+          },
+          "deleteButtonContrast": 8.82
+        },
+        "menu": {
+          "x": 158,
+          "y": 589,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 158,
+          "y": 529,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cassette",
+        "theme": "light",
+        "notes": {
+          "dialog": {
+            "x": 14,
+            "y": 305.5234375,
+            "width": 332,
+            "height": 288.953125
+          },
+          "colors": {
+            "text": "rgb(79, 66, 52)",
+            "background": "rgb(255, 254, 246)",
+            "modal": "rgb(248, 247, 230)"
+          },
+          "deleteButtonContrast": 9.6
+        },
+        "work": {
+          "dialog": {
+            "x": 14,
+            "y": 288.1328125,
+            "width": 332,
+            "height": 323.734375
+          },
+          "colors": {
+            "text": "rgb(79, 66, 52)",
+            "background": "rgb(255, 254, 246)",
+            "modal": "rgb(248, 247, 230)"
+          },
+          "deleteButtonContrast": 9.6
+        },
+        "menu": {
+          "x": 158,
+          "y": 613,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 158,
+          "y": 578,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cassette",
+        "theme": "dark",
+        "notes": {
+          "dialog": {
+            "x": 14,
+            "y": 305.5234375,
+            "width": 332,
+            "height": 288.953125
+          },
+          "colors": {
+            "text": "rgb(214, 198, 173)",
+            "background": "rgb(36, 30, 24)",
+            "modal": "rgb(31, 26, 21)"
+          },
+          "deleteButtonContrast": 9.84
+        },
+        "work": {
+          "dialog": {
+            "x": 14,
+            "y": 288.1328125,
+            "width": 332,
+            "height": 323.734375
+          },
+          "colors": {
+            "text": "rgb(214, 198, 173)",
+            "background": "rgb(36, 30, 24)",
+            "modal": "rgb(31, 26, 21)"
+          },
+          "deleteButtonContrast": 9.84
+        },
+        "menu": {
+          "x": 158,
+          "y": 613,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 158,
+          "y": 578,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cyber",
+        "theme": "light",
+        "notes": {
+          "dialog": {
+            "x": 14,
+            "y": 305.5234375,
+            "width": 332,
+            "height": 288.953125
+          },
+          "colors": {
+            "text": "rgb(44, 52, 72)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 12.41
+        },
+        "work": {
+          "dialog": {
+            "x": 14,
+            "y": 288.1328125,
+            "width": 332,
+            "height": 323.734375
+          },
+          "colors": {
+            "text": "rgb(44, 52, 72)",
+            "background": "rgb(255, 255, 255)",
+            "modal": "rgb(255, 255, 255)"
+          },
+          "deleteButtonContrast": 12.41
+        },
+        "menu": {
+          "x": 158,
+          "y": 611,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 158,
+          "y": 573,
+          "width": 190,
+          "height": 264
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cyber",
+        "theme": "dark",
+        "notes": {
+          "dialog": {
+            "x": 14,
+            "y": 305.5234375,
+            "width": 332,
+            "height": 288.953125
+          },
+          "colors": {
+            "text": "rgb(201, 196, 230)",
+            "background": "rgb(13, 11, 22)",
+            "modal": "rgb(13, 11, 22)"
+          },
+          "deleteButtonContrast": 11.63
+        },
+        "work": {
+          "dialog": {
+            "x": 14,
+            "y": 288.1328125,
+            "width": 332,
+            "height": 323.734375
+          },
+          "colors": {
+            "text": "rgb(201, 196, 230)",
+            "background": "rgb(13, 11, 22)",
+            "modal": "rgb(13, 11, 22)"
+          },
+          "deleteButtonContrast": 11.63
+        },
+        "menu": {
+          "x": 158,
+          "y": 611,
+          "width": 190,
+          "height": 231
+        },
+        "workMenu": {
+          "x": 158,
+          "y": 573,
+          "width": 190,
+          "height": 264
+        }
+      }
+    ],
+    "screenshots": 24,
+    "aiRequests": 0,
+    "errors": []
+  },
+  "liveContentMutations": 0,
+  "liveDeletionTested": false
+}

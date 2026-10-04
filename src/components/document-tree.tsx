@@ -5,7 +5,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns2, FileText, Folder, FolderPlus, GripVertical, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import { type NovelDocument, type Work, statuses, plainText, uid } from '@/lib/model';
 import { applyNavigation, createNavigationDocument, descendantsOf, insertFolder, moveNavigation, navigationSnapshot, resolveNavigation, restoreNavigation, siblingDestination, type DocumentDestination, type NavigationNode, type NavigationSnapshot } from '@/lib/document-navigation';
-import { IconButton, Popover } from './primitives';
+import { IconButton, Modal, Popover } from './primitives';
 import { WikiIcon } from './studio-icons';
 import styles from './document-tree.module.css';
 
@@ -18,7 +18,7 @@ const labels={scene:'원고',wiki:'설정 문서',memo:'메모 · 리서치'};
 const menuClose=(keep:{current:boolean})=>(e:Event)=>{if(keep.current){e.preventDefault();keep.current=false;}};
 
 type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void};
-export function DocumentTree({work,query,activeId,readonly,onOpen,onChange,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;noteView?:NoteView}){
+export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onDelete,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onDelete?:(id:string)=>Promise<void>;noteView?:NoteView}){
   const noun=noteView?'노트':'문서',filtered=noteView?noteView.filtered:!!query.trim();
   const nav=useMemo(()=>resolveNavigation(work),[work]);const root=useRef<HTMLDivElement>(null);
   const [closed,setClosed]=useState<Set<string>>(new Set());const [dialog,setDialog]=useState<FormState|null>(null);
@@ -27,6 +27,8 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange,noteV
   const [name,setName]=useState('');const [kind,setKind]=useState<NovelDocument['kind']>('memo');
   const [destination,setDestination]=useState('');const [place,setPlace]=useState('last');
   const [error,setError]=useState('');const [undo,setUndo]=useState<NavigationSnapshot|null>(null);
+  const [deleteTarget,setDeleteTarget]=useState<{id:string;title:string;hasChildren:boolean}|null>(null),[deleting,setDeleting]=useState(false),[deleteError,setDeleteError]=useState('');
+  const readonly=isReadonly||deleting,deleteFocus=useRef<HTMLElement|null>(null);
   const [drag,setDrag]=useState<Drag|null>(null);const dragRef=useRef<Drag|null>(null);const suppressClick=useRef<{id:string;until:number}|null>(null);
   const documents=new Map(work.documents.map(d=>[d.id,d])),nodes=new Map(nav.nodes.map(n=>[n.id,n]));
   const branches=new Map<string,NavigationNode[]>();for(const n of nav.nodes){const key=`${n.sectionId}/${n.parentId||''}`;branches.set(key,[...(branches.get(key)||[]),n]);}
@@ -62,6 +64,16 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange,noteV
   }
   function toggle(id:string){setClosed(v=>{const next=new Set(v);if(next.has(id))next.delete(id);else next.add(id);return next;});}
   function expand(id:string|null){if(id)setClosed(v=>{const next=new Set(v);next.delete(id);return next;});}
+  function requestDelete(node:NavigationNode){
+    deleteFocus.current=menuButtonOf({id:node.id});setDeleteError('');
+    setDeleteTarget({id:node.id,title:title(node),hasChildren:!!childNodes(node.id,node.sectionId).length});
+  }
+  async function confirmDelete(){
+    if(!deleteTarget||readonly||!onDelete)return;setDeleting(true);setDeleteError('');
+    try{await onDelete(deleteTarget.id);setDeleteTarget(null);}
+    catch(error){setDeleteError(error instanceof Error?error.message:`${noun}를 삭제하지 못했습니다.`);}
+    finally{setDeleting(false);}
+  }
   function detectDrop(id:string,x:number,y:number):Drop|undefined {
     const element=document.elementFromPoint(x,y)?.closest<HTMLElement>('[data-navigation-row],[data-navigation-section]');if(!element||!root.current?.contains(element))return;
     let targetId:string,edge:Drop['edge'],to:DocumentDestination;
@@ -107,6 +119,7 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange,noteV
     }
     if(section||node?.type==='folder')entries.push({key:'rename',label:'이름 변경',icon:<Pencil size={15}/>,disabled:readonly,divider:!!section,run:()=>afterMenu(()=>startRename(t))});
     if(section){const index=nav.sections.findIndex(s=>s.id===section.id);for(const direction of [-1,1] as const)entries.push({key:`section${direction}`,label:direction<0?'대분류 위로':'대분류 아래로',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||index+direction<0||index+direction>=nav.sections.length,run:()=>{mutate(latest=>{const next=resolveNavigation(latest),i=next.sections.findIndex(s=>s.id===section.id);[next.sections[i],next.sections[i+direction]]=[next.sections[i+direction],next.sections[i]];return applyNavigation(latest,next);});}});}
+    if(node?.type==='document'&&onDelete)entries.push({key:'delete-document',label:`${noun} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>afterMenu(()=>requestDelete(node))});
     if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'대분류':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);if(section)next.sections=next.sections.filter(s=>s.id!==section.id);else next.nodes=next.nodes.filter(n=>n.id!==node!.id);return applyNavigation(latest,next);});}});
     return entries;
   }
@@ -160,6 +173,14 @@ export function DocumentTree({work,query,activeId,readonly,onOpen,onChange,noteV
     })}
     {filtered&&!nav.nodes.some(show)&&<p className="empty-text">검색 결과가 없습니다.</p>}
     {!dialog&&error&&<p className={styles.error} role="alert">{error}</p>}
+    <Modal open={!!deleteTarget} onClose={()=>{if(!deleting)setDeleteTarget(null);}} title={`${noun} 삭제`} description={`‘${deleteTarget?.title||''}’ ${noun}의 본문·${noteView?'태그·작품 연결':'속성'}·첨부 목록·AI 대화를 삭제합니다.`} onReturnFocus={()=>{if(deleteFocus.current?.isConnected)deleteFocus.current.focus();else root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="대분류 추가"]')?.focus();}}>
+      {deleteTarget?.hasChildren&&<p className="field-help">하위 {noun}와 폴더는 삭제하지 않고 이 {noun}가 있던 위치로 옮깁니다.</p>}
+      {!noteView&&work.publications.some(p=>[...p.scenes,...p.wiki].some(d=>d.id===deleteTarget?.id))&&<p className="field-help">이미 공개한 판본의 내용은 그대로 남습니다. 공개 내용도 바꾸려면 새 판본을 게시하세요.</p>}
+      {!noteView&&work.documents.length<=1&&<p className="field-help">작품에는 문서를 최소 1개 남겨야 합니다. 다른 문서를 만든 뒤 삭제하세요.</p>}
+      <p className="field-help">삭제 전 상태를 이 브라우저의 복구 이력에 보관합니다. 백업과 복구에서 해당 시점의 전체 작업 공간을 복원할 수 있습니다.</p>
+      {deleteError&&<p className="danger" role="alert">{deleteError}</p>}
+      <div className="modal-actions"><button type="button" className="button" disabled={deleting} onClick={()=>setDeleteTarget(null)}>취소</button><button type="button" className="button danger" disabled={readonly||!nodes.has(deleteTarget?.id||'')||!noteView&&work.documents.length<=1} onClick={()=>void confirmDelete()}>{deleting?'삭제 중':'삭제'}</button></div>
+    </Modal>
     {drag?.active&&<div className={styles.ghost} style={{left:Math.max(4,Math.min(drag.x+12,typeof window==='undefined'?0:window.innerWidth-190)),top:drag.y+15}}>{nodes.get(drag.id)?title(nodes.get(drag.id)!):'문서'}<small>{drag.drop?.error|| (drag.drop?drag.drop.edge==='inside'?'하위에 넣기':drag.drop.edge==='before'?'앞에 놓기':'뒤에 놓기':'놓을 위치를 선택하세요.')}</small></div>}
     <Popover open={!!dialog} onOpenChange={open=>{if(!open){setDialog(null);setError('');}}} anchor={anchor} side={typeof window!=='undefined'&&window.innerWidth<700?'bottom':'right'} width={dialog?.type==='move'?340:280} title={formTitle} description={dialog?.type==='move'?(noteView?'하위 노트와 폴더도 함께 이동합니다.':'하위 문서와 폴더도 함께 이동합니다. 문서 종류와 부·장은 유지됩니다.'):undefined} onReturnFocus={()=>{const target=returnFocus.current;if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButtonElement>(`[data-navigation-row="${activeId}"] button`)||document.getElementById('sidebar-toggle'))?.focus();}}>
       <form onSubmit={e=>{e.preventDefault();formSubmit();}} className={styles.form}>

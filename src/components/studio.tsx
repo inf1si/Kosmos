@@ -87,6 +87,14 @@ export function Studio(){
   function patchDoc(id:string,patch:Partial<NovelDocument>){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,documents:w.documents.map(d=>d.id===id?{...d,...patch,updatedAt:new Date().toISOString()}:d)}:w)}));}
   function patchWork(patch:{title?:string;subtitle?:string;description?:string}){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,...patch}:w)}));}
   function organizeWork(fn:(latest:Work)=>Work){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?fn(w):w)}));}
+  async function deleteDocument(id:string){
+    await s.deleteDocument(work.id,id);
+    const remaining=docs.filter(d=>d.id!==id),next=remaining[Math.min(docs.findIndex(d=>d.id===id),remaining.length-1)].id;
+    setTabs(t=>t.filter(tab=>tab!==id));setBack(t=>t.filter(item=>item!==id));setForward(t=>t.filter(item=>item!==id));
+    if(view===id){setCurrent(next);setLastDoc(next);setProperties(false);setReference(null);}
+    else if(lastDoc===id)setLastDoc(next);
+    if(splitId===id)setSplitId(null);
+  }
   // A new scene joins the part it belongs to: the given one, the open scene's, or the last.
   function createDoc(kind:NovelDocument['kind'],chapter?:string,open=true){
     const d=newDocument(kind,kind==='scene'?'새 장면':kind==='wiki'?'새 설정':'새 메모');if(kind==='scene')d.chapter=chapter??(active.kind==='scene'?active.chapter:scenes.at(-1)?.chapter??'제1부');
@@ -113,7 +121,7 @@ export function Studio(){
         <button type="button" className="nav-item" onClick={()=>modal('interchange')}><ArrowLeftRight size={16}/><span>가져오기 · 내보내기</span></button>
       </nav>
       <div className="sidebar-scroll">
-        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork}/>
+        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onDelete={deleteDocument}/>
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
     </aside>}

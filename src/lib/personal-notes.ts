@@ -1,7 +1,7 @@
 import { fromText, newDocument, noteSchema, plainText, uid, workspaceSchema, type NovelDocument, type PersonalNote, type Workspace } from './model';
 import { applySuggestion } from './ai';
 import type { ChatMessage } from './ai-conversation';
-import { materializeNoteNavigation, moveNote, noteDocument, noteTitle, type NoteDestination } from './note-navigation';
+import { applyNoteNavigation, materializeNoteNavigation, moveNote, noteDocument, noteTitle, type NoteDestination } from './note-navigation';
 export { noteTitle, noteDocument } from './note-navigation';
 import { insertDocument } from './document-navigation';
 
@@ -18,6 +18,14 @@ export function patchNote(state:Workspace,id:string,patch:Partial<Pick<PersonalN
   if(!state.notes?.some(note=>note.id===id))throw new Error('노트를 찾지 못했습니다.');
   if(patch.linkedWorkIds?.some(id=>!state.works.some(work=>work.id===id)))throw new Error('연결할 작품을 찾지 못했습니다.');
   return {...state,notes:state.notes.map(note=>note.id===id?noteSchema.parse({...note,...patch,updatedAt:new Date().toISOString()}):note)};
+}
+/** Remove only this note; promote its direct children into its previous sibling position. */
+export function removeNote(state:Workspace,id:string):Workspace {
+  if(!state.notes?.some(note=>note.id===id))throw new Error('삭제할 노트를 찾지 못했습니다.');
+  const base=materializeNoteNavigation(state),nav=base.noteNavigation!,node=nav.nodes.find(n=>n.id===id)!;
+  const children=nav.nodes.filter(n=>n.parentId===id).map(n=>({...n,parentId:node.parentId}));
+  const nodes=nav.nodes.flatMap(n=>n.id===id?children:n.parentId===id?[]:[n]);
+  return applyNoteNavigation({...base,notes:base.notes!.filter(note=>note.id!==id),assets:base.assets.filter(asset=>asset.noteId!==id)},{...nav,nodes});
 }
 export function filterNotes(notes:PersonalNote[],filter:{query?:string;box?:PersonalNote['box']|'all';tag?:string;workId?:string}):PersonalNote[] {
   const words=(filter.query||'').trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
