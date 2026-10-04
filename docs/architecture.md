@@ -1,5 +1,7 @@
 # 현재 구현 아키텍처
 
+공유 휴지통은 Workspace.trash에 노트·문서 사본과 원래 위치를 보관한다. 활성 목록과 분리해 검색/AI 자료에서 제외하며 단독 복원은 다른 후속 편집을 유지한다. 첨부 메타데이터를 보존해 기존 ZIP/Drive 첨부 수집을 공유하고 영구 삭제만 이력 저장을 필수로 한다. [휴지통 계약](workspace-trash.md).
+
 노트 정리 계층은 작품 소속 없이 Workspace.noteNavigation에 저장한다. DocumentTree에는 일시적인 표시 어댑터만 제공하며 작품을 생성하거나 works 배열에 넣지 않는다. AIChat은 작품 문서와 노트 대화를 공유하고 서버에서 대상과 참고 자료 권한을 각각 검사한다. 노트별 aiMessages도 같은 저장·충돌·백업 경로를 따른다.
 
 개인 노트 공간을 작품 집필실 옆에 추가했다. Workspace.notes가 작품과 같은 상위 수준이고 linkedWorkIds로 작품을 참조한다. 편집기·저장 큐·IndexedDB·클라우드·백업 경로는 공유한다. 첨부는 workId 또는 noteId 중 하나에 소속하며 작품 가져오기는 새 첨부 ID와 비공개 문서를 만든다. `/studio#notes/<ID>`에서 열고 [개인 노트 안내](personal-notes.md)를 따른다.

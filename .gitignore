@@ -8,3 +8,4 @@ test-results/
 backup-output/
 *.agekey
 *.age
+supabase/.temp/

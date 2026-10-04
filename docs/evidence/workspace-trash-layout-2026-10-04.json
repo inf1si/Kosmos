@@ -1,0 +1,609 @@
+{
+  "layout": {
+    "environment": "local production build, isolated synthetic Chromium account",
+    "layouts": [
+      {
+        "width": 1280,
+        "palette": "violet",
+        "theme": "light",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(69, 68, 79)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.58
+          },
+          "notes": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(69, 68, 79)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.58
+          }
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "violet",
+        "theme": "dark",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(183, 182, 194)",
+              "background": "rgb(24, 24, 31)",
+              "modal": "rgb(24, 24, 31)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 8.82
+          },
+          "notes": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(183, 182, 194)",
+              "background": "rgb(24, 24, 31)",
+              "modal": "rgb(24, 24, 31)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 8.82
+          }
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cassette",
+        "theme": "light",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(79, 66, 52)",
+              "background": "rgb(255, 254, 246)",
+              "modal": "rgb(248, 247, 230)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.6
+          },
+          "notes": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(79, 66, 52)",
+              "background": "rgb(255, 254, 246)",
+              "modal": "rgb(248, 247, 230)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.6
+          }
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cassette",
+        "theme": "dark",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(214, 198, 173)",
+              "background": "rgb(36, 30, 24)",
+              "modal": "rgb(31, 26, 21)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.84
+          },
+          "notes": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(214, 198, 173)",
+              "background": "rgb(36, 30, 24)",
+              "modal": "rgb(31, 26, 21)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.84
+          }
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cyber",
+        "theme": "light",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(44, 52, 72)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 12.41
+          },
+          "notes": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(44, 52, 72)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 12.41
+          }
+        }
+      },
+      {
+        "width": 1280,
+        "palette": "cyber",
+        "theme": "dark",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(201, 196, 230)",
+              "background": "rgb(13, 11, 22)",
+              "modal": "rgb(13, 11, 22)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 11.63
+          },
+          "notes": {
+            "list": {
+              "x": 215,
+              "y": 263.25,
+              "width": 850,
+              "height": 373.5
+            },
+            "permanent": {
+              "x": 380,
+              "y": 338.3046875,
+              "width": 520,
+              "height": 223.390625
+            },
+            "styles": {
+              "text": "rgb(201, 196, 230)",
+              "background": "rgb(13, 11, 22)",
+              "modal": "rgb(13, 11, 22)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 11.63
+          }
+        }
+      },
+      {
+        "width": 360,
+        "palette": "violet",
+        "theme": "light",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(69, 68, 79)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.58
+          },
+          "notes": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(69, 68, 79)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.58
+          }
+        }
+      },
+      {
+        "width": 360,
+        "palette": "violet",
+        "theme": "dark",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(183, 182, 194)",
+              "background": "rgb(24, 24, 31)",
+              "modal": "rgb(24, 24, 31)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 8.82
+          },
+          "notes": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(183, 182, 194)",
+              "background": "rgb(24, 24, 31)",
+              "modal": "rgb(24, 24, 31)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 8.82
+          }
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cassette",
+        "theme": "light",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(79, 66, 52)",
+              "background": "rgb(255, 254, 246)",
+              "modal": "rgb(248, 247, 230)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.6
+          },
+          "notes": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(79, 66, 52)",
+              "background": "rgb(255, 254, 246)",
+              "modal": "rgb(248, 247, 230)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.6
+          }
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cassette",
+        "theme": "dark",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(214, 198, 173)",
+              "background": "rgb(36, 30, 24)",
+              "modal": "rgb(31, 26, 21)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.84
+          },
+          "notes": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(214, 198, 173)",
+              "background": "rgb(36, 30, 24)",
+              "modal": "rgb(31, 26, 21)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 9.84
+          }
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cyber",
+        "theme": "light",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(44, 52, 72)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 12.41
+          },
+          "notes": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(44, 52, 72)",
+              "background": "rgb(255, 255, 255)",
+              "modal": "rgb(255, 255, 255)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 12.41
+          }
+        }
+      },
+      {
+        "width": 360,
+        "palette": "cyber",
+        "theme": "dark",
+        "screens": {
+          "work": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(201, 196, 230)",
+              "background": "rgb(13, 11, 22)",
+              "modal": "rgb(13, 11, 22)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 11.63
+          },
+          "notes": {
+            "list": {
+              "x": 14,
+              "y": 268.25,
+              "width": 332,
+              "height": 363.5
+            },
+            "permanent": {
+              "x": 14,
+              "y": 343.3046875,
+              "width": 332,
+              "height": 213.390625
+            },
+            "styles": {
+              "text": "rgb(201, 196, 230)",
+              "background": "rgb(13, 11, 22)",
+              "modal": "rgb(13, 11, 22)",
+              "fontSize": "14px"
+            },
+            "contrastRatio": 11.63
+          }
+        }
+      }
+    ],
+    "screenshots": 24,
+    "aiRequests": 0,
+    "errors": [],
+    "minimumButtonContrast": 8.82
+  },
+  "restorationAndRace": {
+    "environment": "local production build, synthetic Chromium author",
+    "restoredBodyVisible": true,
+    "restoredAIVisible": true,
+    "restoredAttachmentBytesEqual": true,
+    "checkpointRaceBlocked": true,
+    "trashAndNewNotePreserved": true,
+    "aiRequests": 0,
+    "errors": []
+  }
+}

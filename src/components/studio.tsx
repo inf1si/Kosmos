@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, User, X } from 'lucide-react';
+import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
@@ -87,8 +87,8 @@ export function Studio(){
   function patchDoc(id:string,patch:Partial<NovelDocument>){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,documents:w.documents.map(d=>d.id===id?{...d,...patch,updatedAt:new Date().toISOString()}:d)}:w)}));}
   function patchWork(patch:{title?:string;subtitle?:string;description?:string}){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,...patch}:w)}));}
   function organizeWork(fn:(latest:Work)=>Work){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?fn(w):w)}));}
-  async function deleteDocument(id:string){
-    await s.deleteDocument(work.id,id);
+  async function trashDocument(id:string){
+    await s.trashDocument(work.id,id);
     const remaining=docs.filter(d=>d.id!==id),next=remaining[Math.min(docs.findIndex(d=>d.id===id),remaining.length-1)].id;
     setTabs(t=>t.filter(tab=>tab!==id));setBack(t=>t.filter(item=>item!==id));setForward(t=>t.filter(item=>item!==id));
     if(view===id){setCurrent(next);setLastDoc(next);setProperties(false);setReference(null);}
@@ -117,11 +117,12 @@ export function Studio(){
           :<button type="button" className="nav-item" onClick={openSearch}><Search size={16}/><span>검색</span><kbd>Ctrl K</kbd></button>}
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
         <button type="button" className="nav-item" aria-pressed={onGraph} onClick={()=>go(GRAPH)}><Network size={16}/><span>문서 그래프</span></button>
+        <button type="button" className="nav-item" onClick={()=>modal('trash')}><Trash2 size={16}/><span>휴지통</span><small>{s.state!.trash?.length||0}</small></button>
         <button type="button" className="nav-item" onClick={()=>modal('backup')}><Archive size={16}/><span>백업과 복구</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('interchange')}><ArrowLeftRight size={16}/><span>가져오기 · 내보내기</span></button>
       </nav>
       <div className="sidebar-scroll">
-        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onDelete={deleteDocument}/>
+        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument}/>
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
     </aside>}

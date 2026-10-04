@@ -10,6 +10,7 @@ Workspace
 ├─ aiPreferences?: version: 1, activePresetId, presets[], updatedAt
 ├─ notes[]?: 개인 노트 · 태그 · 수집함/아이스박스 · 작품 연결 · aiMessages?
 ├─ noteNavigation?: version: 1, 노트/폴더 ID·부모·형제 순서
+├─ trash?: 노트/문서 사본·시각·원래 위치·AI 기록 (최대 5,000개)
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
 │  ├─ documents[]: scene | wiki | memo
@@ -38,9 +39,11 @@ Workspace
 
 AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대화 ID는 중복할 수 없다. 한 대화의 최대 메시지 수는 40개다. 작가 메시지에는 질문, AI 메시지에는 답변·수정안·제공자·모델·원고 시점·참고 자료 제목과 ID를 보관한다. 대화를 저장해도 원고의 `updatedAt`을 바꾸지 않는다. 전체 백업에는 포함하고 공개 판본에는 포함하지 않는다. 새 필드는 선택적이므로 이전 형식 1 백업도 계속 읽는다. [AI 제한](ai.md).
 
-## 삭제 계약
+## 휴지통 계약
 
-노트·작품 문서 삭제는 notes/documents 배열·해당 탐색 노드·해당 AI 기록·단독 첨부 메타데이터를 현재 작업본에서 제거한다. 직접 하위 항목은 삭제한 노드의 부모로 올려 기존 형제 위치를 잇는다. 공개 판본·사본·다른 문서가 공유하는 첨부와 나머지 본문은 유지한다. notes: []는 허용하고 작품 documents는 최소 1개다. 삭제 전 브라우저 복구 이력과 첨부 Blob/Storage 바이트는 보관하며 새 필드·DB 구조·형식 버전은 추가하지 않는다.
+선택적 `Workspace.trash`는 note/document 구분, 원본과 같은 UUID, deletedAt(ISO), 전체 note/document 사본, 원래 parentId·다음 형제 beforeId·직접 childIds를 저장한다. 문서는 workId·workTitle·대분류 사본·별도 aiMessages도 보관한다. [모델](../src/lib/model.ts)과 [변환](../src/lib/workspace-trash.ts)은 활성 자료와 휴지통 ID 중복, 손상 첨부 연결, 하위 자기 참조를 거절한다. 총 5,000개·기존 20MB 서버 JSON 한도를 공유하며 형식 버전은 1이다.
+
+이동은 활성 notes/documents·탐색 노드·해당 작품 AI 대화를 제거하고 직접 하위 항목을 기존 부모로 올린다. 첨부 메타데이터는 휴지통 복원을 위해 유지한다. notes: []는 허용하고 작품 documents는 최소 1개다. 복원은 저장한 부모/형제·대분류를 사용하고 유효한 후속 변경을 보존한다. 영구 삭제는 선택 사본과 현재/남은 휴지통에서 쓰지 않는 첨부 목록만 제거한다. 공개 판본·사본·복구 이력·Blob/Storage 바이트는 유지한다. [사용·호환성](workspace-trash.md).
 
 ## 계정의 독립 노트
 
