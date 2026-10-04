@@ -1,5 +1,7 @@
 # 현재 구현 아키텍처
 
+개인 노트 공간을 작품 집필실 옆에 추가했다. Workspace.notes가 작품과 같은 상위 수준이고 linkedWorkIds로 작품을 참조한다. 편집기·저장 큐·IndexedDB·클라우드·백업 경로는 공유한다. 첨부는 workId 또는 noteId 중 하나에 소속하며 작품 가져오기는 새 첨부 ID와 비공개 문서를 만든다. `/studio#notes/<ID>`에서 열고 [개인 노트 안내](personal-notes.md)를 따른다.
+
 이 문서는 0.2.1과 2026-10-03 집필 도구·AI 프리셋·문서 트리 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
 
 ## 구성

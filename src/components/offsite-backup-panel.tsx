@@ -26,10 +26,10 @@ export function OffsiteBackupPanel({open}:{open:boolean}){
     <div className="modal-actions">
       <button className="button" disabled={busy} onClick={()=>void run(async()=>{setRestoreResult('');setDownload(null);await s.flush();await s.syncNow();const response=await fetch('/api/backup/run',{method:'POST',headers:await authHeaders()});const result=await response.json();if(!response.ok)throw new Error(result.error);setReport(result.report);})}>{busy?'백업 작업 중…':'지금 클라우드 백업'}</button>
       <button className="button" disabled={busy||!report?.archiveKey} onClick={()=>void run(async()=>{await loadArchive();})}>저장된 백업 내려받기</button>
-      <button className="button" disabled={busy||!report?.archiveKey} onClick={()=>void run(async()=>{setRestoreResult('');const file=await loadArchive();const result=await verifyBackupRestore(file.blob);setRestoreResult(`기기 저장소 복원 시험 완료: ${result.works}개 작품 · ${result.documents}개 문서 · ${result.revisions}개 이력 · ${result.assets}개 첨부. 별도 시험 공간에 복원해 다시 읽고 비교했습니다. 현재 원고는 유지됩니다.`);})}>저장된 백업 복원 시험</button>
+      <button className="button" disabled={busy||!report?.archiveKey} onClick={()=>void run(async()=>{setRestoreResult('');const file=await loadArchive();const result=await verifyBackupRestore(file.blob);setRestoreResult(`기기 저장소 복원 시험 완료: ${result.works}개 작품 · ${result.documents}개 문서 · ${result.notes}개 개인 노트 · ${result.revisions}개 이력 · ${result.assets}개 첨부. 별도 시험 공간에 복원해 다시 읽고 비교했습니다. 현재 원고는 유지됩니다.`);})}>저장된 백업 복원 시험</button>
     </div>
     {report&&!report.archiveKey&&<p>백업을 한 번 새로 만들면 내려받기와 복원 시험을 사용할 수 있습니다.</p>}
     <DownloadLink file={open?download:null}/>{restoreResult&&<p className="success-message" role="status">{restoreResult}</p>}
-    <p>기기에만 남은 수정은 작품 전체 ZIP에도 보관하세요. 위 복원 시험은 앱 데이터와 첨부 검사이며 DB·로그인·권한의 복원 훈련은 별도로 진행합니다.</p>
+    <p>기기에만 남은 수정은 작업 공간 전체 ZIP에도 보관하세요. 위 복원 시험은 앱 데이터와 첨부 검사이며 DB·로그인·권한의 복원 훈련은 별도로 진행합니다.</p>
   </>:<p>{checked?'별도 저장소는 아직 연결하지 않았습니다.':'백업 연결 상태 확인 중…'}</p>}{error&&<p className="error-message" role="alert">{error}</p>}</section>;
 }

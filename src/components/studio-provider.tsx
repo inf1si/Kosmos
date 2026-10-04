@@ -9,6 +9,8 @@ import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice,
 import type { Work } from '@/lib/model';
 import { applyNavigation, resolveNavigation } from '@/lib/document-navigation';
 import { preserveAIPreferences } from '@/lib/ai-prompt-presets';
+import { preserveNotes, prepareNoteCopy } from '@/lib/personal-notes';
+import type { NovelDocument } from '@/lib/model';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
 type StudioContextValue={
@@ -21,6 +23,7 @@ type StudioContextValue={
   exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
+  addNoteAsset:(noteId:string,file:File)=>Promise<void>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
   flush:()=>Promise<void>;syncNow:()=>Promise<void>;clearError:()=>void;
 };
@@ -67,7 +70,7 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     if(!dataRef.current||conflictRef.current){if(conflictRef.current)setError('충돌 원고를 확인한 뒤 편집할 수 있습니다.');return;}
     // Materialize legacy folders before editing properties, so the first chapter edit does not rename them.
     const base={...dataRef.current,works:dataRef.current.works.map(w=>w.navigation?w:applyNavigation(w,resolveNavigation(w)))};
-    const edited=preserveAIPreferences(fn(structuredClone(base)),base);
+    const edited=preserveNotes(preserveAIPreferences(fn(structuredClone(base)),base),base);
     const data={...edited,works:edited.works.map(w=>applyNavigation(w,resolveNavigation(w))),updatedAt:new Date().toISOString()};setCurrent(data);setStatus('기기에 저장 중');pending.current++;
     const targetNamespace=namespaceRef.current;
     saveQueue.current=saveQueue.current.then(async()=>{
@@ -197,6 +200,32 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     const meta:AssetMeta={id,workId,name:file.name,type:file.type as AssetMeta['type'],size:file.size};
     update(s=>({...s,assets:[...s.assets,meta],works:s.works.map(w=>w.id===workId?{...w,documents:w.documents.map(d=>d.id===docId?{...d,assetIds:[...d.assetIds,id]}:d)}:w)}));
   }
+  async function addNoteAsset(noteId:string,file:File){
+    await flush();const note=dataRef.current?.notes?.find(n=>n.id===noteId);
+    if(!note)throw new Error('노트를 찾지 못했습니다.');
+    if((dataRef.current?.assets.length||0)>=2000)throw new Error('작업 공간 첨부는 최대 2,000개입니다.');
+    if(note.assetIds.length>=200)throw new Error('노트 첨부는 최대 200개입니다.');
+    if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024)throw new Error('PNG, JPEG, WebP 이미지 10MB 이하만 첨부할 수 있습니다.');
+    const id=uid();await db.assets.put({id,namespace,blob:file});
+    if(cloudConfigured){const result=await cloud().storage.from('private-assets').upload(`${user}/${id}`,file,{contentType:file.type});if(result.error)throw result.error;}
+    const meta:AssetMeta={id,noteId,name:file.name,type:file.type as AssetMeta['type'],size:file.size};
+    if(conflictRef.current)throw new Error('원고 충돌을 먼저 확인하세요.');
+    update(state=>({...state,assets:[...state.assets,meta],notes:(state.notes||[]).map(n=>n.id===noteId?{...n,assetIds:[...n.assetIds,id],updatedAt:new Date().toISOString()}:n)}));
+    await flush();
+  }
+  async function copyNote(noteId:string,workId:string,kind:NovelDocument['kind']){
+    await flush();const before=structuredClone(dataRef.current!),prepared=prepareNoteCopy(before,noteId,workId,kind);
+    await checkpoint(namespace,before,'노트를 작품으로 가져오기 전');
+    for(const copy of prepared.copies){
+      let blob=(await db.assets.get([namespace,copy.sourceId]))?.blob;
+      if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${user}/${copy.sourceId}`);if(result.error)throw result.error;blob=result.data||undefined;}
+      if(!blob)throw new Error('노트 첨부를 내려받지 못했습니다. 원본 노트는 유지됩니다.');
+      if(cloudConfigured){const result=await cloud().storage.from('private-assets').upload(`${user}/${copy.id}`,blob,{contentType:blob.type});if(result.error)throw result.error;}
+      await db.assets.put({id:copy.id,namespace,blob});
+    }
+    await flush();if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('가져오는 동안 작업이 바뀌었습니다. 다시 시도하세요.');
+    update(()=>prepared.state);await flush();return prepared.docId;
+  }
   async function resolve(choice:'local'|'remote'){
     const c=conflictRef.current;if(!c)return;
     await checkpoint(namespace,c.local,'충돌 해결 전 · 기기 원고');await checkpoint(namespace,c.remote,'충돌 해결 전 · 다른 원고');
@@ -205,7 +234,7 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     conflictRef.current=null;setConflict(null);update(()=>structuredClone(choice==='local'?c.local:c.remote));await flush();setEpoch(x=>x+1);
   }
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,resolve,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,addNoteAsset,copyNote,resolve,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});if(error)throw error;},
     logout:async()=>{await flush();await syncNow();await cloud().auth.signOut();},flush,syncNow,clearError:()=>setError('')}}>{children}</Context.Provider>;
 }

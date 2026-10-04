@@ -8,6 +8,7 @@
 Workspace
 ├─ id, formatVersion: 1, updatedAt
 ├─ aiPreferences?: version: 1, activePresetId, presets[], updatedAt
+├─ notes[]?: 개인 노트 · 태그 · 수집함/아이스박스 · 작품 연결
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
 │  ├─ documents[]: scene | wiki | memo
@@ -24,7 +25,8 @@ Workspace
 | `Work` | UUID, 제목·부제·소개, `단편/중편/장편`, 문서 배열, 판본 배열, 활성 판본 ID, 선택적 AI 대화·문서 트리 배열 |
 | `NovelDocument` | UUID, `scene/wiki/memo`, 제목, `chapter`, 리치 본문, 요약, 작업 상태, 분류, 시점·시간, 공개 여부·설명, 첨부 ID, 갱신 시각 |
 | `Publication` | UUID, 작품 ID·소개·게시 시각, 선택 장면 사본, 공개 설정 설명 사본 |
-| `AssetMeta` | UUID, 작품 ID, 파일명, MIME 타입, 바이트 크기 |
+| `PersonalNote` | UUID, 선택 제목, 리치 본문, tags, box(inbox/icebox), linkedWorkIds, assetIds, 생성·갱신 시각 |
+| `AssetMeta` | UUID, 작품 workId 또는 독립 노트 noteId 중 하나, 파일명, MIME 타입, 바이트 크기 |
 | `Revision` | UUID, 기기 namespace, 생성 시각·설명, 작업 공간 전체 사본 |
 
 `chapter`, `pov`, `storyTime`, `category`는 현재 자유 문자열이다. 정규화된 장·인물·시간선 엔티티가 아니다. 메모에는 연구 자료를 기록할 수 있지만 전용 출처 모델은 없다.
@@ -34,6 +36,10 @@ Workspace
 [트리 스키마](../src/lib/document-navigation-schema.ts)는 대분류 ID·이름·새 문서의 기본 종류와, 노드의 ID·종류·대분류 ID·부모 ID를 저장한다. 노드 배열에서 같은 부모의 순서를 읽는다. 문서 노드 ID는 문서 UUID와 같고 폴더는 자체 UUID·제목을 갖는다. 중복 ID·없는 문서/부모·다른 대분류의 부모·순환·24단계를 넘는 깊이를 거절한다. `navigation`이 없는 이전 형식 1 자료는 세 기본 대분류와 연속된 부·장별 폴더로 변환한다. [전환·가져오기 계약](document-navigation.md).
 
 AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대화 ID는 중복할 수 없다. 한 대화의 최대 메시지 수는 40개다. 작가 메시지에는 질문, AI 메시지에는 답변·수정안·제공자·모델·원고 시점·참고 자료 제목과 ID를 보관한다. 대화를 저장해도 원고의 `updatedAt`을 바꾸지 않는다. 전체 백업에는 포함하고 공개 판본에는 포함하지 않는다. 새 필드는 선택적이므로 이전 형식 1 백업도 계속 읽는다. [AI 제한](ai.md).
+
+## 계정의 독립 노트
+
+선택적 Workspace.notes 배열은 최대 5,000개이며 제목은 빈 문자열을 허용하고 본문 첫 줄로 표시한다. 태그 최대 20개/40자, 작품 연결 최대 100개, 첨부 최대 200개다. 중복 ID·태그·연결, 없는 작품, 다른 소속의 첨부를 클라이언트에서 거절한다. 작품에 연결해도 원본은 계정 소속이고 여러 작품이 공유한다. 기존 작품 메모는 그대로 작품 문서다. 전체 ZIP·이력에 포함하고 공개판·자동 AI 자료에는 포함하지 않는다. [저장·복원·서버 보호 계약](personal-notes.md).
 
 ## 계정의 AI 프리셋
 

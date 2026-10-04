@@ -1,0 +1,613 @@
+{
+  "environment": "synthetic Supabase routes + isolated Chromium context, localhost:3210",
+  "saves": 8,
+  "flows": 11,
+  "layouts": [
+    {
+      "width": 1280,
+      "scroll": 1280,
+      "palette": "violet",
+      "theme": "light",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 1280,
+      "scroll": 1280,
+      "palette": "violet",
+      "theme": "dark",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 1280,
+      "scroll": 1280,
+      "palette": "cassette",
+      "theme": "light",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 1280,
+      "scroll": 1280,
+      "palette": "cassette",
+      "theme": "dark",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 1280,
+      "scroll": 1280,
+      "palette": "cyber",
+      "theme": "light",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 1280,
+      "scroll": 1280,
+      "palette": "cyber",
+      "theme": "dark",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 360,
+      "scroll": 360,
+      "palette": "violet",
+      "theme": "light",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 360,
+      "scroll": 360,
+      "palette": "violet",
+      "theme": "dark",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 360,
+      "scroll": 360,
+      "palette": "cassette",
+      "theme": "light",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 360,
+      "scroll": 360,
+      "palette": "cassette",
+      "theme": "dark",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 360,
+      "scroll": 360,
+      "palette": "cyber",
+      "theme": "light",
+      "editor": true,
+      "overlay": false
+    },
+    {
+      "width": 360,
+      "scroll": 360,
+      "palette": "cyber",
+      "theme": "dark",
+      "editor": true,
+      "overlay": false
+    }
+  ],
+  "errors": [],
+  "layoutComparisons": {
+    "environment": "local production build, synthetic account, isolated Chromium",
+    "comparisons": 12,
+    "screenshots": 24,
+    "popovers": 48,
+    "layouts": [
+      {
+        "width": 1280,
+        "palette": "보라",
+        "theme": "light",
+        "sidebar": {
+          "x": 8,
+          "y": 8,
+          "width": 264,
+          "height": 884
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 569,
+            "y": 269,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 646,
+            "y": 269,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 722,
+            "y": 269,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 856,
+            "y": 269,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 1280,
+        "palette": "보라",
+        "theme": "dark",
+        "sidebar": {
+          "x": 8,
+          "y": 8,
+          "width": 264,
+          "height": 884
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 569,
+            "y": 269,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 646,
+            "y": 269,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 722,
+            "y": 269,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 856,
+            "y": 269,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 1280,
+        "palette": "카세트",
+        "theme": "light",
+        "sidebar": {
+          "x": 8,
+          "y": 8,
+          "width": 264,
+          "height": 884
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 571,
+            "y": 275,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 650,
+            "y": 275,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 728,
+            "y": 275,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 864,
+            "y": 275,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 1280,
+        "palette": "카세트",
+        "theme": "dark",
+        "sidebar": {
+          "x": 8,
+          "y": 8,
+          "width": 264,
+          "height": 884
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 571,
+            "y": 275,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 650,
+            "y": 275,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 728,
+            "y": 275,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 864,
+            "y": 275,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 1280,
+        "palette": "사이버",
+        "theme": "light",
+        "sidebar": {
+          "x": 8,
+          "y": 8,
+          "width": 264,
+          "height": 884
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 571,
+            "y": 289,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 650,
+            "y": 289,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 728,
+            "y": 289,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 864,
+            "y": 289,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 1280,
+        "palette": "사이버",
+        "theme": "dark",
+        "sidebar": {
+          "x": 8,
+          "y": 8,
+          "width": 264,
+          "height": 884
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 571,
+            "y": 289,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 650,
+            "y": 289,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 728,
+            "y": 289,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 864,
+            "y": 289,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 360,
+        "palette": "보라",
+        "theme": "light",
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 900
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 28,
+            "y": 228,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 28,
+            "y": 228,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 20,
+            "y": 262,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 28,
+            "y": 262,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 360,
+        "palette": "보라",
+        "theme": "dark",
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 900
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 28,
+            "y": 228,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 28,
+            "y": 228,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 20,
+            "y": 262,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 28,
+            "y": 262,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 360,
+        "palette": "카세트",
+        "theme": "light",
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 900
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 28,
+            "y": 234,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 28,
+            "y": 234,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 20,
+            "y": 268,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 28,
+            "y": 268,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 360,
+        "palette": "카세트",
+        "theme": "dark",
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 900
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 28,
+            "y": 234,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 28,
+            "y": 234,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 20,
+            "y": 268,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 28,
+            "y": 268,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 360,
+        "palette": "사이버",
+        "theme": "light",
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 900
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 28,
+            "y": 248,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 28,
+            "y": 248,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 28,
+            "y": 282,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 28,
+            "y": 282,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      },
+      {
+        "width": 360,
+        "palette": "사이버",
+        "theme": "dark",
+        "sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 900
+        },
+        "popovers": [
+          {
+            "title": "노트 태그",
+            "x": 28,
+            "y": 248,
+            "width": 320,
+            "height": 145.1875
+          },
+          {
+            "title": "작품에 연결",
+            "x": 28,
+            "y": 248,
+            "width": 320,
+            "height": 143.171875
+          },
+          {
+            "title": "작품 문서로 가져오기",
+            "x": 28,
+            "y": 282,
+            "width": 320,
+            "height": 353.75
+          },
+          {
+            "title": "노트 첨부",
+            "x": 28,
+            "y": 282,
+            "width": 320,
+            "height": 138.765625
+          }
+        ]
+      }
+    ],
+    "errors": []
+  },
+  "database": {
+    "migration": "20261004063340_independent_notes_guard.sql",
+    "productionInstalled": true,
+    "rpcSyntheticSaveThenMissingNotesRejected": true,
+    "rolledBack": true,
+    "securityInvoker": true,
+    "newSecurityAdvisories": 0
+  }
+}
