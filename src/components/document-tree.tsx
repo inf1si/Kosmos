@@ -2,7 +2,7 @@
 import { Fragment, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Columns2, FileText, Folder, FolderPlus, GripVertical, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookPlus, ChevronDown, ChevronRight, Columns2, FileText, Folder, FolderPlus, GripVertical, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import { type NovelDocument, type Work, statuses, plainText, uid } from '@/lib/model';
 import { applyNavigation, createNavigationDocument, descendantsOf, insertFolder, moveNavigation, navigationSnapshot, resolveNavigation, restoreNavigation, siblingDestination, type DocumentDestination, type NavigationNode, type NavigationSnapshot } from '@/lib/document-navigation';
 import { IconButton, Popover } from './primitives';
@@ -17,7 +17,7 @@ type Drag = {id:string;startX:number;startY:number;x:number;y:number;active:bool
 const labels={scene:'원고',wiki:'설정 문서',memo:'메모 · 리서치'};
 const menuClose=(keep:{current:boolean})=>(e:Event)=>{if(keep.current){e.preventDefault();keep.current=false;}};
 
-type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void};
+type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void;onFolderWork?:(folderId:string,at:HTMLElement|null)=>void};
 export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onTrash,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onTrash?:(id:string)=>Promise<void>;noteView?:NoteView}){
   const noun=noteView?'노트':'문서',filtered=noteView?noteView.filtered:!!query.trim();
   const nav=useMemo(()=>resolveNavigation(work),[work]);const root=useRef<HTMLDivElement>(null);
@@ -112,6 +112,7 @@ export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onC
       entries.push({key:'move',label:'이동 · 순서 변경',icon:<GripVertical size={15}/>,disabled:readonly,divider:true,run:form({type:'move',id:node.id})});
       for(const direction of [-1,1] as const)entries.push({key:`order${direction}`,label:direction<0?'위로 옮기기':'아래로 옮기기',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||!siblingDestination(work,node.id,direction),run:()=>{mutate(latest=>{const next=siblingDestination(latest,node.id,direction);return next?moveNavigation(latest,node.id,next):latest;});}});
     }
+    if(node?.type==='folder'&&noteView?.onFolderWork){const open=noteView.onFolderWork;entries.push({key:'folder-work',label:'새 작품으로 만들기',icon:<BookPlus size={15}/>,disabled:readonly||!childNodes(node.id,node.sectionId).length,run:()=>afterMenu(()=>open(node.id,rowOf(t)))});}
     if(section||node?.type==='folder')entries.push({key:'rename',label:'이름 변경',icon:<Pencil size={15}/>,disabled:readonly,divider:!!section,run:()=>afterMenu(()=>startRename(t))});
     if(section){const index=nav.sections.findIndex(s=>s.id===section.id);for(const direction of [-1,1] as const)entries.push({key:`section${direction}`,label:direction<0?'대분류 위로':'대분류 아래로',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||index+direction<0||index+direction>=nav.sections.length,run:()=>{mutate(latest=>{const next=resolveNavigation(latest),i=next.sections.findIndex(s=>s.id===section.id);[next.sections[i],next.sections[i+direction]]=[next.sections[i+direction],next.sections[i]];return applyNavigation(latest,next);});}});}
     if(node?.type==='document'&&onTrash)entries.push({key:'trash-document',label:'휴지통으로 이동',title:!noteView&&work.documents.length<=1?'마지막 문서는 유지해야 합니다':undefined,icon:<Trash2 size={15}/>,disabled:readonly||!noteView&&work.documents.length<=1,divider:true,run:()=>afterMenu(()=>void moveToTrash(node))});

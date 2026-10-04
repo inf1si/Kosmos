@@ -18,7 +18,7 @@ markdown.use(markdownFootnote as unknown as (md:typeof markdown)=>void);
 type HtmlNode=ReturnType<typeof parseDocument>['children'][number];
 type HtmlElement=HtmlNode & {name:string;attribs:Record<string,string>;children:HtmlNode[]};
 export type ImportedAsset={key:string;name:string;blob:Blob};
-export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string};
+export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string;tags?:string[];created?:string;updated?:string};
 export type ImportBundle={source:string;pages:ImportedPage[];assets:ImportedAsset[];warnings:string[];navigation?:DocumentNavigation;sourceIds?:Record<string,string>};
 export type ImportChoice={key:string;title:string;kind:NovelDocument['kind']};
 export type ExportFormat='markdown'|'html'|'enex';
@@ -65,10 +65,10 @@ function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode
         const raw=tag==='en-media'?`enex:${page.key}:${attrs.hash?.toLowerCase()}`:resolve(page.key,attrs.src||'');
         const asset=bundle.assets.find(a=>a.key===raw);
         if(asset){if(!page.assetKeys.includes(asset.key))page.assetKeys.push(asset.key);appendInline(out,{type:'text',text:`[첨부: ${asset.name}]`});}
-        else {warning(bundle,`${page.title}: 이미지·첨부를 찾지 못했거나 지원하지 않습니다 (${attrs.alt||attrs.src||attrs.type||'이름 없음'}).`);appendInline(out,{type:'text',text:`[첨부 확인 필요: ${attrs.alt||attrs.type||'이미지'}]`});}continue;
+        else {warning(bundle,`${page.title}: 이미지·첨부를 찾지 못했거나 지원하지 않습니다 (${attrs.alt||attrs.src||attrs.type||'이름 없음'}).`);appendInline(out,{type:'text',text:`[첨부 확인 필요: ${attrs.alt||attrs.type||'이미지'}]`});}if(tag==='en-media')inline(n.children,marks,depth+1).forEach(v=>appendInline(out,v));continue;
       }
       if(tag==='br'){out.push({type:'hardBreak'});continue;}
-      if(tag==='en-todo'||(tag==='input'&&attrs.type==='checkbox')){appendInline(out,{type:'text',text:(attrs.checked==='true'||attrs.checked!==undefined&&attrs.checked!=='false')?'☑ ':'☐ '});continue;}
+      if(tag==='en-todo'||(tag==='input'&&attrs.type==='checkbox')){appendInline(out,{type:'text',text:(attrs.checked==='true'||attrs.checked!==undefined&&attrs.checked!=='false')?'☑ ':'☐ '});inline(n.children,marks,depth+1).forEach(v=>appendInline(out,v));continue;}
       const ownNote=attrs['data-kosmos-note'];
       if(ownNote!==undefined){out.push({type:'footnote',attrs:{noteId:uid(),text:ownNote}});continue;}
       if(tag==='a'&&attrs.href?.startsWith('#')&&notes.has(attrs.href.slice(1))){out.push({type:'footnote',attrs:{noteId:uid(),text:notes.get(attrs.href.slice(1))}});continue;}
@@ -166,7 +166,7 @@ export async function readInterchange(files:readonly File[]):Promise<ImportBundl
       const tree=parseDocument(xml,{xmlMode:true});const root=elements(tree,'en-export')[0];if(!root)throw new Error(`${key}: Evernote ENEX 형식이 아닙니다.`);
       for(const [i,note]of elements(root,'note').entries()){
         const page:ImportedPage={key:`${key}/note-${i+1}`,title:text(elements(note,'title')[0]||note).slice(0,300)||'제목 없는 노트',kind:'memo',content:fromText(''),assetKeys:[],chapter:'',category:'',summary:''};
-        const tags=elements(note,'tag').map(text);page.summary=tags.length?`원본 태그: ${tags.join(', ')}`.slice(0,20000):'';
+        const tags=elements(note,'tag').map(text);page.summary=tags.length?`원본 태그: ${tags.join(', ')}`.slice(0,20000):'';page.tags=tags;page.created=elements(note,'created')[0]?text(elements(note,'created')[0]).trim():undefined;page.updated=elements(note,'updated')[0]?text(elements(note,'updated')[0]).trim():undefined;
         if(tags.includes('kosmos:scene'))page.kind='scene';else if(tags.includes('kosmos:wiki'))page.kind='wiki';
         for(const [j,resource]of elements(note,'resource').entries()){
           const mimeElement=elements(resource,'mime')[0],filename=elements(resource,'file-name')[0];const mime=mimeElement?text(mimeElement):'',data=elements(resource,'data')[0],name=(filename?text(filename):`첨부-${j+1}`).slice(0,300);

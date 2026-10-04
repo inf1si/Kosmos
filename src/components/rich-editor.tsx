@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
-import type { Editor } from '@tiptap/core';
-import { Bold, Italic, Underline, Undo2, Redo2, AlignLeft, AlignCenter, Quote, Link2, MessageSquareText, Minus, Columns2, ChevronLeft, ChevronRight } from 'lucide-react';
+import type { AnyExtension, Editor } from '@tiptap/core';
+import { Bold, Italic, Underline, Undo2, Redo2, AlignLeft, AlignCenter, Quote, Link2, MessageSquareText, Minus, Columns2, ChevronLeft, ChevronRight, ListChecks, ImagePlus } from 'lucide-react';
 import { NovelDocument, RichNode, plainText, uid } from '@/lib/model';
 import { IconButton, Popover, type PopoverAnchor } from './primitives';
 import { WikiIcon } from './studio-icons';
@@ -20,16 +20,21 @@ function footnoteAt(editor:Editor,noteId:string):{index:number;text:string}|null
   editor.state.doc.descendants(node=>{if(text!==null)return false;if(node.type.name!=='footnote')return;index++;if(node.attrs.noteId===noteId)text=String(node.attrs.text||'');});
   return text===null?null:{index,text};
 }
+/** The link tool targets settings in a work and other notes in the notes space. */
+type LinkCopy={tool:string;title:string;description:string;select:string;open:string};
+const SETTING_LINK_COPY:LinkCopy={tool:'설정 링크 추가',title:'설정집 연결',description:'선택한 단어를 작품의 설정 문서에 연결합니다.',select:'연결할 설정',open:'옆에 열기'};
+/** Notes-only tools: checklists and in-body images. onImage stores the file as a note attachment and returns its id. */
+export type NoteTools={extensions:AnyExtension[];onImage:(file:File)=>Promise<string>};
 /** heading replaces the default kicker and title; toolbarEnd sits at the right of the toolbar; appearances counts each setting's referring documents for the link preview. */
-export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances,autofocus=false,contentLabel}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode|((selection:RichNode|null)=>ReactNode);appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string}){
+export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances,autofocus=false,contentLabel,linkCopy=SETTING_LINK_COPY,noteTools}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode|((selection:RichNode|null)=>ReactNode);appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string;linkCopy?:LinkCopy;noteTools?:NoteTools}){
   const [{font,size},setPreferences]=useEditorPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
   const toolbarRef=useRef<HTMLDivElement>(null);const [overflow,setOverflow]=useState({before:false,after:false});
   const [dialog,setDialog]=useState<'note'|'wiki'|null>(null);const [note,setNote]=useState('');const [target,setTarget]=useState(wiki[0]?.id||'');
   const [selection,setSelection]=useState<{from:number;to:number}>({from:0,to:0});const [,render]=useState(0);
   const scrollRef=useRef<HTMLDivElement>(null);const hideTimer=useRef<number|undefined>(undefined);const [preview,setPreview]=useState<{kind:'wiki'|'note';id:string;top:number;left:number}|null>(null);
-  const lastContent=useRef<string|null>(null);
+  const lastContent=useRef<string|null>(null);const imageInput=useRef<HTMLInputElement>(null);const [imageBusy,setImageBusy]=useState(false);
   const editor=useEditor({immediatelyRender:false,editable:!readonly,autofocus:autofocus?'end':false,
-    extensions:editorExtensions,
+    extensions:noteTools?[...editorExtensions,...noteTools.extensions]:editorExtensions,
     content:doc.content,
     editorProps:{attributes:{class:'manuscript','aria-label':contentLabel||`${doc.title} 원고`,spellcheck:'false'},handleClick:(_view,_pos,event)=>{const element=(event.target as HTMLElement).closest('[data-wiki-id]');if(element&&event.ctrlKey){onWikiClick(element.getAttribute('data-wiki-id')!);return true;}return false;}},
     onUpdate:({editor:e})=>onChange(e.getJSON() as RichNode),onSelectionUpdate:()=>render(x=>x+1),onTransaction:()=>render(x=>x+1),
@@ -78,21 +83,24 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
       <IconButton label="왼쪽 정렬" disabled={readonly} onClick={()=>editor?.chain().focus().setTextAlign('left').run()}><AlignLeft size={16}/></IconButton>
       <IconButton label="가운데 정렬" disabled={readonly} onClick={()=>editor?.chain().focus().setTextAlign('center').run()}><AlignCenter size={16}/></IconButton>
       <ListMenu editor={editor} readonly={readonly}/>
+      {noteTools&&<><IconButton label="체크리스트" aria-pressed={editor?.isActive('taskList')} disabled={readonly} onClick={()=>editor?.chain().focus().toggleTaskList().run()}><ListChecks size={16}/></IconButton>
+        <IconButton label="본문에 이미지 넣기" disabled={readonly||imageBusy} onClick={()=>imageInput.current?.click()}><ImagePlus size={16}/></IconButton>
+        <input ref={imageInput} type="file" hidden aria-label="본문에 넣을 이미지" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(!file||!editor)return;setImageBusy(true);void noteTools.onImage(file).then(id=>{editor.chain().focus().insertContent({type:'noteImage',attrs:{assetId:id,alt:file.name}}).run();}).catch(error=>alert(error instanceof Error?error.message:'이미지를 넣지 못했습니다.')).finally(()=>setImageBusy(false));}}/></>}
       <IconButton label="인용" disabled={readonly} onClick={()=>editor?.chain().focus().toggleBlockquote().run()}><Quote size={16}/></IconButton>
       <IconButton label="장면 구분선" disabled={readonly} onClick={()=>editor?.chain().focus().setHorizontalRule().run()}><Minus size={16}/></IconButton>
       <span className="toolbar-divider"/>
       <IconButton label="각주 추가" disabled={readonly} onClick={e=>openDialog('note',e.currentTarget)}><MessageSquareText size={16}/></IconButton>
-      <IconButton label="설정 링크 추가" disabled={readonly||!wiki.length} onClick={e=>openDialog('wiki',e.currentTarget)}><Link2 size={16}/></IconButton>
+      <IconButton label={linkCopy.tool} disabled={readonly||!wiki.length} onClick={e=>openDialog('wiki',e.currentTarget)}><Link2 size={16}/></IconButton>
       <EditorSearch editor={editor} readonly={readonly}/>
       {toolbarEnd&&<div className="toolbar-end">{typeof toolbarEnd==='function'?toolbarEnd(editor?statisticsSelection(editor.state.doc,editor.state.selection.from,editor.state.selection.to):null):toolbarEnd}</div>}
     </div>
     {overflow.after&&<div className="toolbar-scroll after"><IconButton label="다음 편집 도구" onClick={()=>toolbarRef.current?.scrollBy({left:240,behavior:'smooth'})}><ChevronRight size={16}/></IconButton></div>}
     </div>
     <div ref={scrollRef} className="editor-scroll" onMouseOver={e=>showPreview(e.target)} onMouseOut={e=>{if((e.target as HTMLElement).closest?.('[data-wiki-id],[data-note-id]'))hidePreview();}}>{heading||<div className="document-heading"><span>{doc.kind==='scene'?doc.chapter:doc.category||'메모'}</span><h1>{doc.title}</h1></div>}<EditorContent editor={editor}/>
-      {preview&&previewDoc&&<div className="wiki-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><WikiIcon category={previewDoc.category} size={13}/>{previewDoc.category||'설정'}</span><strong>{previewDoc.title}</strong>{previewText&&<span>{previewText.length>110?`${previewText.slice(0,110)}…`:previewText}</span>}<footer><button type="button" onClick={()=>{onWikiClick(previewDoc.id);setPreview(null);}}><Columns2 size={13}/>옆에 열기</button>{appearances&&<span>등장 {appearances[previewDoc.id]||0}곳</span>}</footer></div>}
+      {preview&&previewDoc&&<div className="wiki-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><WikiIcon category={previewDoc.category} size={13}/>{previewDoc.category||'설정'}</span><strong>{previewDoc.title}</strong>{previewText&&<span>{previewText.length>110?`${previewText.slice(0,110)}…`:previewText}</span>}<footer><button type="button" onClick={()=>{onWikiClick(previewDoc.id);setPreview(null);}}><Columns2 size={13}/>{linkCopy.open}</button>{appearances&&<span>등장 {appearances[previewDoc.id]||0}곳</span>}</footer></div>}
       {preview&&previewNote&&<div className="wiki-preview note-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><MessageSquareText size={13}/>각주 {previewNote.index}</span><p>{previewNote.text||'내용 없는 각주'}</p></div>}
     </div>
     <Popover open={dialog==='note'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={320} title="각주 추가" description="공개할 원고에 포함되는 설명입니다." onReturnFocus={()=>editor?.commands.focus()}><textarea autoFocus value={note} onChange={e=>setNote(e.target.value)} placeholder="각주 내용을 입력하세요" rows={5}/><div className="popover-actions"><button className="primary" disabled={!note.trim()} onClick={()=>{editor?.chain().focus().setTextSelection(selection.to).insertContent({type:'footnote',attrs:{noteId:uid(),text:note.trim()}}).run();setDialog(null);setNote('');}}>각주 삽입</button></div></Popover>
-    <Popover open={dialog==='wiki'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={300} title="설정집 연결" description="선택한 단어를 작품의 설정 문서에 연결합니다." onReturnFocus={()=>editor?.commands.focus()}><select aria-label="연결할 설정" value={target} onChange={e=>setTarget(e.target.value)}>{wiki.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select><div className="popover-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Popover>
+    <Popover open={dialog==='wiki'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={300} title={linkCopy.title} description={linkCopy.description} onReturnFocus={()=>editor?.commands.focus()}><select aria-label={linkCopy.select} value={target} onChange={e=>setTarget(e.target.value)}>{wiki.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select><div className="popover-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Popover>
   </div>;
 }

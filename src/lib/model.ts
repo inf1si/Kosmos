@@ -8,8 +8,10 @@ import { inlineFontSize, validListStyle } from './manuscript-format';
 
 export type RichNode = { type: string; text?: string; attrs?: Record<string, unknown>; marks?: {type: string; attrs?: Record<string, unknown>}[]; content?: RichNode[] };
 const nodeTypes = new Set(['doc','text','paragraph','heading','bulletList','orderedList','listItem','hardBreak','blockquote','codeBlock','horizontalRule','footnote','table','tableRow','tableCell','tableHeader']);
+// Personal notes also keep checklists and in-body images; works and publications never accept these nodes.
+const noteNodeTypes = new Set(['taskList','taskItem','noteImage']);
 const markTypes = new Set(['bold','italic','strike','underline','code','link','wikiLink','superscript','subscript','highlight','fontSize']);
-export function isRichDocument(value: unknown): value is RichNode {
+export function isRichDocument(value: unknown, noteNodes = false): value is RichNode {
   let count = 0;
   function visit(n: unknown, depth: number): boolean {
     if (!n || typeof n !== 'object' || depth > 40 || ++count > 60000) return false;
@@ -25,13 +27,20 @@ export function isRichDocument(value: unknown): value is RichNode {
       for(const key of ['colspan','rowspan']){const span=attrs[key];if(span!==undefined&&(typeof span!=='number'||!Number.isInteger(span)||span<1||span>40))return false;}
       const widths=attrs.colwidth;if(widths!==undefined&&widths!==null&&(!Array.isArray(widths)||widths.length!==(attrs.colspan??1)||!widths.every(w=>typeof w==='number'&&Number.isInteger(w)&&w>0&&w<=2000)))return false;
     }
-    return nodeTypes.has(v.type) && (v.text === undefined || (typeof v.text === 'string' && v.text.length <= 200000))
+    if(noteNodeTypes.has(v.type)){
+      if(!noteNodes)return false;
+      if(v.type==='taskList'&&(!Array.isArray(v.content)||!v.content.length||v.content.some(c=>c?.type!=='taskItem')))return false;
+      if(v.type==='taskItem'&&(attrs.checked!==undefined&&typeof attrs.checked!=='boolean'||!Array.isArray(v.content)||!v.content.length))return false;
+      if(v.type==='noteImage'&&(typeof attrs.assetId!=='string'||attrs.assetId.length>100||attrs.alt!==undefined&&attrs.alt!==null&&(typeof attrs.alt!=='string'||attrs.alt.length>300)||v.content))return false;
+    }
+    return (nodeTypes.has(v.type)||noteNodeTypes.has(v.type)) && (v.text === undefined || (typeof v.text === 'string' && v.text.length <= 200000))
       && (!v.marks || (Array.isArray(v.marks) && v.marks.every(m => m && typeof m==='object' && markTypes.has(m.type) && (m.type!=='fontSize' || inlineFontSize(m.attrs?.size)!==undefined))))
       && (!v.content || (Array.isArray(v.content) && v.content.every(c => visit(c, depth + 1))));
   }
   return !!value && (value as RichNode).type === 'doc' && visit(value, 0);
 }
 const contentSchema = z.custom<RichNode>(isRichDocument, '지원하지 않는 원고 형식입니다.');
+const noteContentSchema = z.custom<RichNode>(value=>isRichDocument(value,true), '지원하지 않는 노트 형식입니다.');
 export const documentSchema = z.object({
   id: z.uuid(), kind: z.enum(['scene','wiki','memo']), title: z.string().min(1).max(300),
   chapter: z.string().max(300), content: contentSchema, summary: z.string().max(20000),
@@ -58,10 +67,10 @@ export const workSchema = z.object({
 });
 export type Work = z.infer<typeof workSchema>;
 export const noteSchema = z.object({
-  id:z.uuid(),title:z.string().max(300),content:contentSchema,
+  id:z.uuid(),title:z.string().max(300),content:noteContentSchema,
   tags:z.array(z.string().trim().min(1).max(40)).max(20),box:z.enum(['inbox','icebox']),
   linkedWorkIds:z.array(z.uuid()).max(100),assetIds:z.array(z.uuid()).max(200),
-  createdAt:z.string(),updatedAt:z.string(),aiMessages:chatMessagesSchema.optional(),
+  createdAt:z.string(),updatedAt:z.string(),aiMessages:chatMessagesSchema.optional(),pinned:z.boolean().optional(),
 }).superRefine((note,ctx)=>{
   for(const key of ['tags','linkedWorkIds','assetIds'] as const)if(new Set(note[key]).size!==note[key].length)ctx.addIssue({code:'custom',message:'노트의 중복 연결을 확인하세요.',path:[key]});
 });
