@@ -62,11 +62,13 @@ async function outlineFits(control) {
                     clipped.push(p.className);
             }
         }
-        return { focused: el === document.activeElement, outline: style.outlineStyle, width: style.outlineWidth, offset: style.outlineOffset, clipped, rect: { width: r.width, height: r.height } };
+        return { focused: el === document.activeElement, type: el.type, outline: style.outlineStyle, width: style.outlineWidth, offset: style.outlineOffset, clipped, rect: { width: r.width, height: r.height } };
     });
     assert(metrics.focused, 'Control must actually have focus');
     assert.notEqual(metrics.outline, 'none');
     assert(metrics.clipped.length === 0, `Focus outline clipped by ${metrics.clipped.join(', ')}`);
+    if (metrics.type === 'checkbox')
+        assert(metrics.rect.width >= 12 && metrics.rect.height >= 12, 'Long labels must not collapse a native checkbox');
     return metrics;
 }
 async function close() { await page.keyboard.press('Escape'); await popover().waitFor({ state: 'hidden' }); await page.waitForFunction(() => document.querySelector('[aria-label="노트 본문"]') === document.activeElement); }
@@ -169,7 +171,7 @@ try {
     await openWorks();
     const last = page.getByRole('checkbox').last();
     await last.focus();
-    await outlineFits(last);
+    const lastCheckbox = await outlineFits(last);
     await page.keyboard.press('Shift+Tab');
     await outlineFits(page.getByRole('checkbox').nth(18));
     await page.keyboard.press('Tab');
@@ -181,7 +183,7 @@ try {
     await page.screenshot({ path: resolve(output, 'long-work-list.png') });
     await close();
     assert.deepEqual(errors, []);
-    const result = { environment: 'isolated Chromium synthetic author and Supabase responses', base, layouts, screenshots: 25, tagAndWorkReloadPreserved: true, bodyUnchanged: true, longWorkList: scroll, saves, errors };
+    const result = { environment: 'isolated Chromium synthetic author and Supabase responses', base, layouts, screenshots: 25, tagAndWorkReloadPreserved: true, bodyUnchanged: true, longWorkList: { ...scroll, lastCheckbox }, saves, errors };
     await writeFile(resolve(output, 'evidence.json'), JSON.stringify(result, null, 2) + '\n');
     console.log(JSON.stringify({ layouts: layouts.length, screenshots: 25, persistence: true, errors }));
 }
