@@ -1,5 +1,12 @@
 # 구현 검증
 
+## 2026-10-05 — 커서 명령 main·운영 확인
+
+- [PR #14](https://github.com/inf1si/Kosmos/pull/14)의 `e9efc04ae09830e829535b6820d436fe74b52e83`을 [CI 통과](https://github.com/inf1si/Kosmos/actions/runs/37220780443) 후 main `dfaa170bc2eef50b1d7fb4a8720a742515b22e4c`로 병합했다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37221058092)도 성공했다.
+- Vercel 운영 배포 `dpl_7PnULsqoqUGWpT3xcKv2cwANJb6V`의 READY, 정확한 main SHA와 `kosmos-ashy.vercel.app` 별칭을 확인했다. [배포](https://kosmos-qfwkc2wlk-kosmos42.vercel.app)·[운영 노트](https://kosmos-ashy.vercel.app/studio#notes).
+- 허용 작가 로그인으로 운영 Chromium의 1280/360px에서 Alt+Enter → 현재 문단 커서 AI → 질문 초점 → Esc 후 본문 복귀와 화면 경계를 확인했다. 사이트 HTTP 200, 제공자 상태 GET 200 두 번, 페이지 오류 0, 작업 공간 저장/게시 0, AI 호출 0.
+- 운영 노트 본문이 비어 있어 선택 글/우클릭은 이 운영 점검에서 확인하지 않았다. 해당 흐름과 `/`의 본문 변경·AI 적용·저장/되돌리기는 아래 합성 로컬 운영 빌드에서 검증했다. 실제 원고에 시험 글을 추가하지 않았다. 실제 제공자 품질·비용과 맥/터치는 미검증이다.
+
 ## 2026-10-05 — 노트 `/` 명령·커서 AI·선택 글 메뉴
 
 - 기준 main `c671a7762b6901b77a3dfd5e2c62a818b39a5b6e`를 fetch하고 Claude의 노트 홈·보드·링크·체크리스트·이미지·가져오기와 현재 안내를 읽어 보존했다.
