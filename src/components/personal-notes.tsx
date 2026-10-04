@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowLeft, Cloud, StickyNote, Globe2, HardDrive, Inbox, Link2, NotebookPen, PanelLeft, Paperclip, Plus, Search, Snowflake, Sparkles, Tag, X } from 'lucide-react';
+import { Archive, ArrowLeft, Cloud, StickyNote, Trash2, Globe2, HardDrive, Inbox, Link2, NotebookPen, PanelLeft, Paperclip, Plus, Search, Snowflake, Sparkles, Tag, X } from 'lucide-react';
 import { DocumentTree } from './document-tree';
 import { AIChat } from './ai-chat';
 import { editNoteTree, noteTreeWork, treeDestination, type NoteDestination } from '@/lib/note-navigation';
@@ -41,8 +41,8 @@ export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpen
   function create(to?:NoteDestination){setQuery('');setBox('all');setTag('');setWorkId('');onNew(to);if(compact)setSidebar(false);}
   function select(id:string){onSelect(id);if(compact)setSidebar(false);}
   function patch(id:string,change:Parameters<typeof patchNote>[2]){s.update(state=>patchNote(state,id,change));}
-  async function deleteNote(id:string){
-    await s.deleteNote(id);
+  async function trashNote(id:string){
+    await s.trashNote(id);
     if(active?.id===id){onSelect(visible.find(n=>n.id!==id)?.id||notes.find(n=>n.id!==id)?.id||'');setAiOpen(false);}
   }
   return <TooltipProvider><div className="studio notes-workspace">
@@ -58,9 +58,10 @@ export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpen
         <button type="button" className="nav-item" aria-pressed={box==='inbox'} onClick={()=>setBox('inbox')}><Inbox size={16}/><span>수집함</span><small>{inbox}</small></button>
         <button type="button" className="nav-item" aria-pressed={box==='icebox'} onClick={()=>setBox('icebox')}><Snowflake size={16}/><span>아이스박스</span><small>{icebox}</small></button></div>
         <div className="notes-filters"><label><Tag size={14}/><select aria-label="태그로 노트 찾기" value={tag} onChange={e=>setTag(e.target.value)}><option value="">모든 태그</option>{allTags.map(value=><option key={value}>{value}</option>)}</select></label><label><Link2 size={14}/><select aria-label="연결된 작품으로 노트 찾기" value={workId} onChange={e=>setWorkId(e.target.value)}><option value="">모든 작품</option>{works.map(work=><option value={work.id} key={work.id}>{work.title}</option>)}</select></label></div>
+        <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'trash'}))}><Trash2 size={16}/><span>휴지통</span><small>{s.state.trash?.length||0}</small></button>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'backup'}))}><Archive size={16}/><span>백업과 복구</span></button>
       </nav>
-      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onDelete={deleteNote} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to))}}/>{!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">아직 노트가 없습니다. 새 노트에서 바로 입력하세요.</p>}</div>
+      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onTrash={trashNote} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to))}}/>{!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">아직 노트가 없습니다. 새 노트에서 바로 입력하세요.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재"><Globe2 size={16}/></Link></div><ThemeControls/></footer>
     </aside>}
     <main className="studio-panel">

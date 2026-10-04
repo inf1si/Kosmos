@@ -1,0 +1,17 @@
+{
+  "environment": "local production build, isolated Chromium synthetic author and Supabase responses",
+  "flows": [
+    "one-click note trash preserves body AI assets children and other works",
+    "trash persists across reload; search and restore return hierarchy without overwriting later edits",
+    "filtered and right-click menus target the clicked note",
+    "permanent-delete cancel and Escape keep the item and return focus",
+    "checkpoint failure blocks permanent deletion; retry removes only chosen item",
+    "writing-document trash cleans tabs split AI but preserves child and publication",
+    "shared trash spans documents and notes; empty uses short confirmation and retains shared assets",
+    "mobile last-note trash and restore keep folders and expose no overflow",
+    "last writing document has a disabled trash action with a short reason"
+  ],
+  "saves": 14,
+  "aiRequests": 0,
+  "errors": []
+}

@@ -70,18 +70,32 @@ export const assetSchema = z.object({id:z.uuid(),workId:z.uuid().optional(),note
   if(!!asset.workId===!!asset.noteId)ctx.addIssue({code:'custom',message:'첨부의 소속을 확인하세요.'});
 });
 export type AssetMeta = z.infer<typeof assetSchema>;
+const trashPlacementSchema=z.object({parentId:z.uuid().nullable(),beforeId:z.uuid().optional(),childIds:z.array(z.uuid()).max(7500)});
+export const trashItemSchema=z.discriminatedUnion('type',[
+  z.object({id:z.uuid(),type:z.literal('note'),deletedAt:z.iso.datetime(),note:noteSchema,placement:trashPlacementSchema}),
+  z.object({id:z.uuid(),type:z.literal('document'),deletedAt:z.iso.datetime(),workId:z.uuid(),workTitle:z.string().min(1).max(300),document:documentSchema,aiMessages:chatMessagesSchema.optional(),placement:trashPlacementSchema.extend({section:z.object({id:z.string().min(1).max(100),title:z.string().min(1).max(200),defaultKind:z.enum(['scene','wiki','memo'])})})}),
+]).superRefine((item,ctx)=>{
+  if(item.id!==(item.type==='note'?item.note.id:item.document.id))ctx.addIssue({code:'custom',message:'휴지통 항목 ID를 확인하세요.'});
+  const p=item.placement;if(p.parentId===item.id||p.beforeId===item.id||p.childIds.includes(item.id)||new Set(p.childIds).size!==p.childIds.length)ctx.addIssue({code:'custom',message:'휴지통 하위 항목을 확인하세요.'});
+});
+export type TrashItem=z.infer<typeof trashItemSchema>;
 export const workspaceSchema = z.object({
   formatVersion:z.literal(1),id:z.uuid(),works:z.array(workSchema).min(1).max(100),assets:z.array(assetSchema).max(2000),updatedAt:z.string(),
   aiPreferences:aiPreferencesSchema.optional(),
   notes:z.array(noteSchema).max(5000).optional(),
   noteNavigation:noteNavigationSchema.optional(),
+  trash:z.array(trashItemSchema).max(5000).optional(),
 }).superRefine((data,ctx)=>{
-  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[])];
+  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...(data.trash||[]).map(t=>t.id)];
   if (new Set(ids).size !== ids.length) ctx.addIssue({code:'custom',message:'중복된 문서 ID가 있습니다.'});
   if(data.noteNavigation)for(const message of noteNavigationIssues(data.noteNavigation,(data.notes||[]).map(n=>n.id)))ctx.addIssue({code:'custom',message,path:['noteNavigation']});
   if((data.notes||[]).filter(n=>n.aiMessages?.length).length>200)ctx.addIssue({code:'custom',message:'노트 대화는 최대 200개까지 보관할 수 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
   const workIds=new Set(data.works.map(w=>w.id));
+  for(const item of data.trash||[]){
+    const content=item.type==='note'?item.note:item.document;
+    if(content.assetIds.some(id=>item.type==='note'?assets.get(id)?.noteId!==item.id:assets.get(id)?.workId!==item.workId))ctx.addIssue({code:'custom',message:'휴지통 첨부 연결을 확인하세요.',path:['trash']});
+  }
   for(const note of data.notes||[]){
     if(note.linkedWorkIds.some(id=>!workIds.has(id)))ctx.addIssue({code:'custom',message:'노트에 연결된 작품을 확인하세요.'});
     if(note.assetIds.some(id=>assets.get(id)?.noteId!==note.id))ctx.addIssue({code:'custom',message:'노트 첨부 연결이 손상되었습니다.'});
