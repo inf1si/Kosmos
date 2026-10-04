@@ -25,7 +25,7 @@ export default function PrivacyPage() {
 
       <main className={styles.document}>
         <h1>개인정보 및<br className={styles.mobileBreak} /> 데이터 이용 안내</h1>
-        <p className={styles.updated}>최종 수정: 2026년 10월 4일</p>
+        <p className={styles.updated}>최종 수정: 2026년 10월 5일</p>
         <p className={styles.documentLead}>
           Orbis Tertius는 개인 소설 집필과 작품 공개를 위한 사이트입니다.
           이 페이지는 현재 구현된 저장·백업·AI 기능이 어떤 데이터를 처리하는지 설명합니다.
@@ -49,6 +49,7 @@ export default function PrivacyPage() {
           <p>
             서재에 공개한 판본과 공개 설정은 로그인하지 않은 방문자도 읽을 수 있습니다.
             개인 노트와 원본 첨부는 비공개이며 작품 연결만으로 공개되거나 AI로 전송되지 않습니다. 노트 AI 대화를 보내면 현재 노트(포함 선택 시)와 직접 고른 다른 노트·연결 작품 자료, 최근 대화와 질문을 선택 제공자에게 전송합니다.
+            커서 AI는 노트 전체 대신 선택한 글이나 현재 문단, 최근 대화·질문·선택 프리셋을 전송하며 다른 자료를 자동으로 추가하지 않습니다.
             공개는 작가가 선택한 판본을 기준으로 하며, 집필실의 수정 내용이 자동으로 공개되지는 않습니다.
           </p>
         </section>

@@ -13,6 +13,8 @@ import { manuscriptFontVariables } from './manuscript-fonts';
 import { editorExtensions } from '@/lib/editor-extensions';
 import { EditorFormatTools,FontSizeControl,ListMenu } from './editor-format-tools';
 import { EditorSearch } from './editor-search';
+import { NoteEditorCommands } from './note-editor-commands';
+import { captureNoteTarget,targetIsCurrent } from '@/lib/note-editor-target';
 
 /** A footnote's number (in document order, as the reader numbers them) and text. */
 function footnoteAt(editor:Editor,noteId:string):{index:number;text:string}|null{
@@ -24,7 +26,7 @@ function footnoteAt(editor:Editor,noteId:string):{index:number;text:string}|null
 type LinkCopy={tool:string;title:string;description:string;select:string;open:string};
 const SETTING_LINK_COPY:LinkCopy={tool:'설정 링크 추가',title:'설정집 연결',description:'선택한 단어를 작품의 설정 문서에 연결합니다.',select:'연결할 설정',open:'옆에 열기'};
 /** Notes-only tools: checklists and in-body images. onImage stores the file as a note attachment and returns its id. */
-export type NoteTools={extensions:AnyExtension[];onImage:(file:File)=>Promise<string>};
+export type NoteTools={extensions:AnyExtension[];onImage:(file:File)=>Promise<string>;onContinueAI:()=>void};
 /** heading replaces the default kicker and title; toolbarEnd sits at the right of the toolbar; appearances counts each setting's referring documents for the link preview. */
 export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances,autofocus=false,contentLabel,linkCopy=SETTING_LINK_COPY,noteTools}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode|((selection:RichNode|null)=>ReactNode);appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string;linkCopy?:LinkCopy;noteTools?:NoteTools}){
   const [{font,size},setPreferences]=useEditorPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
@@ -85,7 +87,7 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
       <ListMenu editor={editor} readonly={readonly}/>
       {noteTools&&<><IconButton label="체크리스트" aria-pressed={editor?.isActive('taskList')} disabled={readonly} onClick={()=>editor?.chain().focus().toggleTaskList().run()}><ListChecks size={16}/></IconButton>
         <IconButton label="본문에 이미지 넣기" disabled={readonly||imageBusy} onClick={()=>imageInput.current?.click()}><ImagePlus size={16}/></IconButton>
-        <input ref={imageInput} type="file" hidden aria-label="본문에 넣을 이미지" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(!file||!editor)return;setImageBusy(true);void noteTools.onImage(file).then(id=>{editor.chain().focus().insertContent({type:'noteImage',attrs:{assetId:id,alt:file.name}}).run();}).catch(error=>alert(error instanceof Error?error.message:'이미지를 넣지 못했습니다.')).finally(()=>setImageBusy(false));}}/></>}
+        <input ref={imageInput} type="file" hidden aria-label="본문에 넣을 이미지" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(!file||!editor)return;const position=captureNoteTarget(editor),imageSelection=editor.state.selection.empty?position.cursor:{from:position.from,to:position.to};setImageBusy(true);void noteTools.onImage(file).then(id=>{if(!targetIsCurrent(editor,position))throw new Error('노트가 바뀌었습니다. 첨부는 보관했으니 원하는 위치에 다시 넣으세요.');editor.chain().focus().setTextSelection(imageSelection).insertContent({type:'noteImage',attrs:{assetId:id,alt:file.name}}).run();}).catch(error=>alert(error instanceof Error?error.message:'이미지를 넣지 못했습니다.')).finally(()=>setImageBusy(false));}}/></>}
       <IconButton label="인용" disabled={readonly} onClick={()=>editor?.chain().focus().toggleBlockquote().run()}><Quote size={16}/></IconButton>
       <IconButton label="장면 구분선" disabled={readonly} onClick={()=>editor?.chain().focus().setHorizontalRule().run()}><Minus size={16}/></IconButton>
       <span className="toolbar-divider"/>
@@ -100,6 +102,7 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
       {preview&&previewDoc&&<div className="wiki-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><WikiIcon category={previewDoc.category} size={13}/>{previewDoc.category||'설정'}</span><strong>{previewDoc.title}</strong>{previewText&&<span>{previewText.length>110?`${previewText.slice(0,110)}…`:previewText}</span>}<footer><button type="button" onClick={()=>{onWikiClick(previewDoc.id);setPreview(null);}}><Columns2 size={13}/>{linkCopy.open}</button>{appearances&&<span>등장 {appearances[previewDoc.id]||0}곳</span>}</footer></div>}
       {preview&&previewNote&&<div className="wiki-preview note-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><MessageSquareText size={13}/>각주 {previewNote.index}</span><p>{previewNote.text||'내용 없는 각주'}</p></div>}
     </div>
+    {noteTools&&editor&&!readonly&&<NoteEditorCommands editor={editor} noteId={doc.id} onLink={()=>openDialog('wiki',editor.view.dom)} onImage={()=>{const input=imageInput.current;if(input?.showPicker)input.showPicker();else input?.click();}} onContinue={noteTools.onContinueAI}/>}
     <Popover open={dialog==='note'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={320} title="각주 추가" description="공개할 원고에 포함되는 설명입니다." onReturnFocus={()=>editor?.commands.focus()}><textarea autoFocus value={note} onChange={e=>setNote(e.target.value)} placeholder="각주 내용을 입력하세요" rows={5}/><div className="popover-actions"><button className="primary" disabled={!note.trim()} onClick={()=>{editor?.chain().focus().setTextSelection(selection.to).insertContent({type:'footnote',attrs:{noteId:uid(),text:note.trim()}}).run();setDialog(null);setNote('');}}>각주 삽입</button></div></Popover>
     <Popover open={dialog==='wiki'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={300} title={linkCopy.title} description={linkCopy.description} onReturnFocus={()=>editor?.commands.focus()}><select aria-label={linkCopy.select} value={target} onChange={e=>setTarget(e.target.value)}>{wiki.map(d=><option key={d.id} value={d.id}>{d.title}</option>)}</select><div className="popover-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Popover>
   </div>;
