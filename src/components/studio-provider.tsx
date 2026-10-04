@@ -9,8 +9,9 @@ import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice,
 import type { Work } from '@/lib/model';
 import { applyNavigation, resolveNavigation } from '@/lib/document-navigation';
 import { preserveAIPreferences } from '@/lib/ai-prompt-presets';
-import { preserveNotes, preserveNoteDetails, prepareNoteCopy } from '@/lib/personal-notes';
+import { preserveNotes, preserveNoteDetails, prepareNoteCopy, removeNote, noteTitle } from '@/lib/personal-notes';
 import { materializeNoteNavigation } from '@/lib/note-navigation';
+import { removeDocument } from '@/lib/document-deletion';
 import type { NovelDocument } from '@/lib/model';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
@@ -25,6 +26,8 @@ type StudioContextValue={
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
   addNoteAsset:(noteId:string,file:File)=>Promise<void>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
+  deleteNote:(noteId:string)=>Promise<void>;
+  deleteDocument:(workId:string,docId:string)=>Promise<void>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
   flush:()=>Promise<void>;syncNow:()=>Promise<void>;clearError:()=>void;
 };
@@ -234,8 +237,24 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     recordRef.current={...row,cloudVersion:c.remoteCloudVersion??row.cloudVersion};await db.workspaces.put(recordRef.current);
     conflictRef.current=null;setConflict(null);update(()=>structuredClone(choice==='local'?c.local:c.remote));await flush();setEpoch(x=>x+1);
   }
+  async function deleteNote(noteId:string){
+    await flush();const before=dataRef.current!,targetNamespace=namespaceRef.current;
+    const note=before.notes?.find(n=>n.id===noteId);if(!note)throw new Error('삭제할 노트를 찾지 못했습니다.');
+    const next=removeNote(before,noteId);
+    await checkpoint(targetNamespace,before,`노트 삭제 전 · ${noteTitle(note)}`);
+    if(conflictRef.current||namespaceRef.current!==targetNamespace||dataRef.current!==before)throw new Error('삭제 준비 중 원고가 바뀌었습니다. 노트를 확인하고 다시 시도하세요.');
+    update(()=>next);await flush();
+  }
+  async function deleteDocument(workId:string,docId:string){
+    await flush();const before=dataRef.current!,targetNamespace=namespaceRef.current;
+    const doc=before.works.find(w=>w.id===workId)?.documents.find(d=>d.id===docId);if(!doc)throw new Error('삭제할 문서를 찾지 못했습니다.');
+    const next=removeDocument(before,workId,docId);
+    await checkpoint(targetNamespace,before,`문서 삭제 전 · ${doc.title}`);
+    if(conflictRef.current||namespaceRef.current!==targetNamespace||dataRef.current!==before)throw new Error('삭제 준비 중 원고가 바뀌었습니다. 문서를 확인하고 다시 시도하세요.');
+    update(()=>next);await flush();
+  }
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,addNoteAsset,copyNote,resolve,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,addNoteAsset,copyNote,deleteNote,deleteDocument,resolve,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});if(error)throw error;},
     logout:async()=>{await flush();await syncNow();await cloud().auth.signOut();},flush,syncNow,clearError:()=>setError('')}}>{children}</Context.Provider>;
 }
