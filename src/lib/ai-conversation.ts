@@ -18,8 +18,10 @@ export const chatInputSchema=z.object({
   history:z.array(z.object({role:z.enum(['user','assistant']),content:z.string().min(1).max(15000)})).max(10),
   systemPrompt:systemPromptSchema.optional(),
   promptPresetId:promptPresetIdSchema.optional(),
+  noteRange:z.object({kind:z.enum(['selection','paragraph']),from:z.number().int().nonnegative(),to:z.number().int().nonnegative(),text:z.string().max(12000)}).optional(),
 }).superRefine((v,ctx)=>{
   if(!!v.workId===!!v.noteId||(v.noteId&&v.noteId!==v.docId))ctx.addIssue({code:'custom',message:'대화할 작품 문서 또는 노트를 선택하세요.'});
+  if(v.noteRange&&(!v.noteId||!v.includeManuscript||v.noteRange.to<v.noteRange.from||(v.noteRange.kind==='selection'&&v.noteRange.from===v.noteRange.to)))ctx.addIssue({code:'custom',message:'선택한 노트 글의 범위를 확인하세요.'});
   if(v.history.some((m,i)=>m.role!==(i%2?'assistant':'user'))||v.history.length%2)ctx.addIssue({code:'custom',message:'대화 순서를 확인하세요.'});
   if(v.history.reduce((n,m)=>n+m.content.length,0)>24000)ctx.addIssue({code:'custom',message:'이전 대화가 너무 깁니다.'});
 });

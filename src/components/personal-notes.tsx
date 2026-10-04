@@ -47,7 +47,7 @@ export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpen
   const linkTargets=useMemo(()=>notes.filter(n=>n.id!==activeId).map(n=>({...noteDocument(n),category:'노트'})),[notes,activeId]);
   const noteLinkCount=useMemo(()=>{const a=notes.find(n=>n.id===activeId);if(!a)return 0;const ids=new Set(notes.map(n=>n.id));return wikiReferences(a.content).filter(id=>ids.has(id)&&id!==a.id).length+noteBacklinks(notes,a.id).length;},[notes,activeId]);
   const activeNoteId=active?.id,addNoteAsset=s.addNoteAsset;
-  const noteTools=useMemo<NoteTools|undefined>(()=>activeNoteId?{extensions:NOTE_EXTENSIONS,onImage:file=>addNoteAsset(activeNoteId,file)}:undefined,[activeNoteId,addNoteAsset]);
+  const noteTools=useMemo<NoteTools|undefined>(()=>activeNoteId?{extensions:NOTE_EXTENSIONS,onImage:file=>addNoteAsset(activeNoteId,file),onContinueAI:()=>{setSide('ai');if(compact)setSidebar(false);}}:undefined,[activeNoteId,addNoteAsset,compact]);
   if(!s.state)return null;
   const works=s.state.works,allTags=[...new Set(notes.flatMap(n=>n.tags))].sort((a,b)=>a.localeCompare(b));
   const inbox=notes.filter(n=>n.box==='inbox').length,icebox=notes.length-inbox,filters=(tag?1:0)+(workId?1:0);

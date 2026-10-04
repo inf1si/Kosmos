@@ -10,6 +10,12 @@ UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권
 
 선택 적용은 인용이 단일 텍스트 노드에서 정확히 한 번 나타날 때만 가능하다. 각주·설정 mark를 보존한다. 한 제안을 적용한 뒤 다른 제안은 새로 질문하거나 직접 비교해야 한다. AI 실패는 원고 저장을 멈추지 않는다. 전송 실패 시 질문을 유지한다. 답변을 기다리다 다른 문서를 열어도 결과는 원래 문서에 저장한다.
 
+## 커서에서 선택한 글에 질문
+
+개인 노트에서 Alt+Enter 또는 `/AI`, 선택 글 우클릭 메뉴로 커서 AI를 연다. [조작과 적용 범위](personal-notes.md#-입력-명령과-커서-ai). 이 창은 전체 노트 대신 선택 범위 또는 현재 문단을 보낸다. 서버는 노트 ID·저장 버전·편집기 위치·원문을 대조해 불일치 시 AI 호출/한도 예약 전에 409로 거절한다. 12,000자보다 긴 노트에서도 선택 범위만 한도 안에 있으면 요청할 수 있다. 각주 설명과 이미지 바이트는 포함하지 않는다.
+
+기존 최근 대화·계정 프리셋·제공자 연결·요청 한도·노트 대화 저장을 공유한다. 제공자 선택은 `kosmos:ai-provider:<namespace>` 기기 설정이며 백업·공개판에는 포함하지 않는다. 연결의 키·모델 보관 방식은 같다. 답변은 사용자가 편집·비교한 뒤 창을 열었던 범위에 교체하거나 커서에 삽입하며, 편집기 기록으로 한 번에 되돌린다. 본문이 바뀌거나 적용 전에 창을 닫으면 적용하지 않는다. 커서 답변은 오른쪽 대화에도 보이지만 그곳에는 인용 검색 기반의 자동 적용 제안을 저장하지 않는다.
+
 ## 개인 노트에서 사용
 
 노트 편집기의 **AI 대화**는 같은 제공자 연결·프리셋·요청 한도를 사용한다. 아이디어 확장·브레인스토밍·생각 정리·문장 다듬기·자료 질문으로 시작하며 현재 노트와 선택한 다른 노트 또는 연결 작품 자료만 전송한다. 참고 자료는 처음에 선택하지 않는다. 계층 부모·하위 노트를 자동으로 포함하지 않는다. 연결하지 않은 작품 ID와 대상 위조는 서버에서 거절한다.
@@ -101,3 +107,5 @@ goal은 style 또는 continuity, provider는 openai / anthropic / gemini이며 �
 외부 제공자 계약은 모의 HTTP 응답으로 테스트했다. 대화 백업 왕복·공개 판본 제외·다른 작품 자료 차단·시점/길이/역할 경계와 키 암호화·계정/제공자 구분·만료·변조·Origin·쿠키 속성·비밀값 미반환·세 제공자의 사용자 프롬프트를 테스트했다. 실제 키로 성공·거부·한도·비용을 시험한 결과가 아니다. 선택 문단 전송·작품 전체 자동 검색·스트리밍·장편 작업 큐는 후속 기능이다.
 
 구현: [어댑터](../src/lib/ai-provider.ts), [대화 라우트](../src/app/api/ai/chat/route.ts), [화면](../src/components/ai-chat.tsx), [기록](../src/lib/ai-conversation.ts), [자료 경계](../src/lib/ai-chat-context.ts), [적용 로직](../src/lib/ai.ts). 공식 계약: [OpenAI 대화 상태](https://developers.openai.com/api/docs/guides/conversation-state)·[구조화 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Claude](https://platform.claude.com/docs/en/api/messages/create), [Gemini](https://ai.google.dev/api/generate-content).
+
+노트 커서 요청에는 선택 필드 `noteRange: { kind: "selection" | "paragraph", from, to, text }`를 추가한다. `from/to`는 ProseMirror 위치(중첩 블록·인라인 원자·UTF-16 길이 포함)이며 text와 서버 저장본의 범위 글이 같아야 한다. `noteId === docId`, `includeManuscript: true`일 때만 사용한다. 전송용 필드라 작업 공간·백업 스키마는 바꾸지 않는다. 제공자에 보낼 문서 메타의 `scope`는 선택/문단만 읽었다는 뜻이며 고정 지침에서도 전체 노트로 해석하지 않는다.

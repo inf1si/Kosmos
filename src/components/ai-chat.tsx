@@ -10,11 +10,9 @@ import { useStudio } from './studio-provider';
 import { IconButton,Modal,Popover } from './primitives';
 import { AISettingsDialog } from './ai-settings-dialog';
 import { addNote, newNote, appendNoteExchange, applyNoteSuggestion, clearNoteConversation, noteAISources } from '@/lib/personal-notes';
-import { type AIProviderStatus } from '@/lib/ai-settings';
+import { useAIConnection } from './use-ai-connection';
 import { activePromptPreset,activatePromptPreset,promptCatalog } from '@/lib/ai-prompt-presets';
 
-type Provider=AIProviderStatus;
-const initialProviders:Provider[]=(['openai','anthropic','gemini'] as const).map(id=>({id,label:({openai:'OpenAI',anthropic:'Claude',gemini:'Gemini'})[id],configured:false,model:null,source:null,browserStored:false,browserInvalid:false}));
 const starters=[
   {title:'문장 퇴고',text:'현재 원고의 문체와 시점을 유지하면서 호흡과 어색한 문장을 살펴봐 줘. 필요한 곳만 수정안을 제안해 줘.'},
   {title:'설정 점검',text:'원고와 선택한 자료 사이의 시간, 인물의 지식, 기술 설정의 모순을 찾아줘. 확실한 모순과 확인이 필요한 부분을 구분해 줘.'},
@@ -28,17 +26,16 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
   const s=useStudio(),work=s.state!.works.find(w=>w.id===workId),note=s.state!.notes?.find(n=>n.id===noteId);
   const noun=noteId?'노트':'원고',materials=useMemo(()=>noteId?noteAISources(s.state!,noteId):work!.documents,[s.state,noteId,work]);
   const messages=noteId?note?.aiMessages||[]:work!.aiConversations?.find(c=>c.docId===doc.id)?.messages||[];
-  const [providers,setProviders]=useState(initialProviders);const [provider,setProvider]=useState<AIProvider>('openai');const [loadingProviders,setLoadingProviders]=useState(cloudConfigured);
-  const [settingsOpen,setSettingsOpen]=useState(false),[storageAvailable,setStorageAvailable]=useState(false);
+  const {providers,provider,setProvider,loadingProviders,storageAvailable,connectionError,refreshProviders,currentProvider}=useAIConnection();
+  const [settingsOpen,setSettingsOpen]=useState(false);
   const activePreset=activePromptPreset(s.state?.aiPreferences),systemPrompt=activePreset.prompt;
   const [prompt,setPrompt]=useState('');const [busy,setBusy]=useState(false);const [pending,setPending]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');
   const [includeManuscript,setIncludeManuscript]=useState(true);const [sourceIds,setSourceIds]=useState(()=>noteId?[]:[...new Set([...wikiReferences(doc.content),...work!.documents.filter(d=>d.kind==='wiki'&&d.title===doc.pov).map(d=>d.id)])].slice(0,8));
   const [sourcesOpen,setSourcesOpen]=useState(false);const [sourceQuery,setSourceQuery]=useState('');const [resetOpen,setResetOpen]=useState(false);
   const log=useRef<HTMLDivElement>(null);const textarea=useRef<HTMLTextAreaElement>(null);const disposed=useRef(false);const settingsTrigger=useRef<HTMLElement|null>(null);
-  const currentProvider=providers.find(p=>p.id===provider)!;const availableIds=new Set(materials.filter(d=>d.id!==doc.id).map(d=>d.id));const selectedIds=sourceIds.filter(id=>availableIds.has(id));
+  const availableIds=new Set(materials.filter(d=>d.id!==doc.id).map(d=>d.id));const selectedIds=sourceIds.filter(id=>availableIds.has(id));
   const full=messages.length>=40||(!messages.length&&(noteId?(s.state!.notes||[]).filter(n=>n.aiMessages?.length).length:(work!.aiConversations?.length||0))>=200);const configured=cloudConfigured&&currentProvider.configured;const chars=plainText(doc.content).length;
-  useEffect(()=>{disposed.current=false;let active=true;if(cloudConfigured)void (async()=>{try{const session=(await cloud().auth.getSession()).data.session;if(!session)throw new Error('작가 로그인이 필요합니다.');const response=await fetch('/api/ai/providers',{headers:{Authorization:`Bearer ${session.access_token}`}});const body=await response.json();if(!response.ok)throw new Error(body.error||'AI 연결 상태를 확인하지 못했습니다.');if(active){setProviders(body.providers);setStorageAvailable(!!body.storageAvailable);const first=body.providers.find((p:Provider)=>p.configured);if(first)setProvider(first.id);}}catch(e){if(active)setError(e instanceof Error?e.message:'AI 연결을 확인하지 못했습니다.');}finally{if(active)setLoadingProviders(false);}})();return()=>{active=false;disposed.current=true;};},[]);
-  async function refreshProviders(selected:AIProvider){const session=(await cloud().auth.getSession()).data.session;if(!session)throw new Error('작가 로그인이 필요합니다.');const response=await fetch('/api/ai/providers',{headers:{Authorization:`Bearer ${session.access_token}`}});const body=await response.json();if(!response.ok)throw new Error(body.error||'AI 연결 상태를 읽지 못했습니다.');if(!disposed.current){setProviders(body.providers);setStorageAvailable(!!body.storageAvailable);setProvider(selected);setError('');}}
+  useEffect(()=>{disposed.current=false;return()=>{disposed.current=true;};},[]);
   useEffect(()=>{if(messages.length||pending)log.current?.scrollTo({top:log.current.scrollHeight,behavior:'smooth'});},[messages.length,pending]);
   async function send(){
     const question=prompt.trim();if(!question||busy||!configured||full||s.conflict)return;
@@ -83,7 +80,7 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
       {pending&&<article className="chat-message user"><header>작가</header><p>{pending}</p></article>}{busy&&<p className="chat-working" role="status">답변을 준비하고 있어요…</p>}
     </div>
     {messages.length>0&&<button type="button" className="chat-save-memo" disabled={busy||!!s.conflict} onClick={saveAsMemo}><FileText size={13}/>대화를 {noteId?'노트':'메모'}로 보관 · {messages.length/2}회 / 20회</button>}
-    {error&&<p role="alert" className="chat-error">{error}</p>}{notice&&<p role="status" className="chat-notice">{notice}</p>}
+    {(error||connectionError)&&<p role="alert" className="chat-error">{error||connectionError}</p>}{notice&&<p role="status" className="chat-notice">{notice}</p>}
     <form className="chat-composer" onSubmit={e=>{e.preventDefault();void send();}}><textarea ref={textarea} aria-label="AI에게 질문" rows={3} maxLength={2000} disabled={busy||!!s.conflict} placeholder={noteId?'아이디어와 자료에 대해 이야기해 보세요…':'원고와 설정에 대해 이야기해 보세요…'} value={prompt} onChange={e=>setPrompt(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}}}/><div><span>{full?`대화를 ${noteId?'노트':'메모'}로 보관한 뒤 새 대화를 시작하세요.`:'Enter 전송 · Shift+Enter 줄바꿈'}<small>{prompt.length.toLocaleString()} / 2,000자 · 하루 10회</small></span><button type="submit" className="primary" aria-label="질문 보내기" disabled={!configured||busy||full||!prompt.trim()||!!s.conflict||(includeManuscript&&chars>12000)}><ArrowUp size={17}/></button></div>{includeManuscript&&chars>12000&&<p className="chat-error">{noun}가 12,000자를 넘습니다. 보낼 자료에서 {noun} 포함을 끄세요.</p>}<small>대화는 {noteId?'노트':'문서'}별로 저장·동기화되며 전체 백업에 포함됩니다.</small></form>
     
     <Modal open={resetOpen} onClose={()=>setResetOpen(false)} title="새 대화 시작" description={noteId?'현재 노트의 대화 기록을 비웁니다. 먼저 하위 노트로 보관하면 계속 읽을 수 있습니다.':'현재 문서의 대화 기록을 비웁니다. 먼저 메모로 보관하면 계속 읽거나 내보낼 수 있습니다.'}><div className="modal-actions"><button onClick={()=>setResetOpen(false)}>취소</button><button className="primary" onClick={()=>void(async()=>{try{await s.snapshot('AI 새 대화 시작 전');s.update(state=>noteId?clearNoteConversation(state,noteId):({...state,works:state.works.map(w=>w.id===workId?{...w,aiConversations:(w.aiConversations||[]).filter(c=>c.docId!==doc.id)}:w)}));setPrompt('');setError('');setNotice('새 대화를 시작했습니다.');setResetOpen(false);}catch(e){setError(e instanceof Error?e.message:'새 대화를 시작하지 못했습니다.');}})()}>새 대화</button></div></Modal>
