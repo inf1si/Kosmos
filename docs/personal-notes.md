@@ -11,6 +11,8 @@
 - **태그 추가**에서 선택적으로 분류한다. 태그 칩으로 제거한다. 제목·태그·작품 연결을 입력하기 전에 본문부터 쓸 수 있다.
 - **첨부 추가**에서 PNG/JPEG/WebP 이미지를 보관하고 목록에서 내려받는다. 본문 안 이미지 삽입은 아니며 기존 집필실과 같은 별도 참고 첨부다.
 
+태그·작품 연결·첨부 팝오버는 바깥 Popover의 여백과 높이 제한·스크롤을 공유한다. 내부 목록에 별도 스크롤을 겹치지 않아 태그 입력란의 선택/초점 테두리와 작품 체크박스의 초점 테두리가 잘리지 않는다. Tab으로 이동하고 작품 연결은 Space, 태그 추가는 Enter를 사용할 수 있다. 긴 작품 제목은 체크박스 크기를 유지한 채 줄바꿈하고 긴 목록은 팝오버 안에서 스크롤한다.
+
 ## 폴더와 하위 노트
 
 **노트 정리 → 최상위 폴더 추가**로 디렉토리를 만든다. 노트·폴더의 `…` 또는 우클릭 메뉴에서 **하위 노트 추가**, **하위 폴더 추가**, **이동 · 순서 변경**을 쓴다. 하위 노트는 제목 입력 없이 빈 본문으로 바로 열린다. 폴더 이름은 메뉴의 **이름 변경**으로 행 안에서 고친다(Enter 저장, Esc 취소). 빈 폴더만 삭제할 수 있다.
@@ -54,3 +56,11 @@
 ## 검증
 
 검증 환경과 실제 조작 결과는 [검증 기록](../VERIFICATION.md)과 [상태](status.md)를 따른다. 단위 테스트는 [personal-notes.test.ts](../tests/personal-notes.test.ts)와 [계층·AI 테스트](../tests/note-hierarchy-ai.test.ts), UI는 [personal-notes.tsx](../src/components/personal-notes.tsx), 모델·복사·검색은 [personal-notes.ts](../src/lib/personal-notes.ts)에 있다.
+
+[메타 항목 강조 회귀 검사](../tests/browser/note-metadata-focus.mjs)는 실행 중인 로컬 앱과 별도로 설치된 `playwright-core`/Chromium이 필요하다. 아래 명령은 Playwright 모듈 경로·브라우저 실행 파일을 해당 환경에 맞게 지정해 실행한다. 기본 앱 주소는 `http://127.0.0.1:3210`이며 `KOSMOS_TEST_BASE_URL`로 바꿀 수 있다. 테스트 앱의 공개 Supabase 설정에 맞는 로그인 캐시 키는 `KOSMOS_TEST_AUTH_STORAGE_KEY`로 지정한다. 실제 계정 대신 격리된 합성 로그인·Supabase 응답을 사용하고 화면과 측정은 무시되는 `test-results/note-metadata-focus`에 저장한다. CI의 Node 테스트에 자동 포함되지는 않는다.
+
+```sh
+KOSMOS_PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core \
+KOSMOS_CHROMIUM_PATH=/absolute/path/to/chromium \
+pnpm exec tsx tests/browser/note-metadata-focus.mjs
+```
