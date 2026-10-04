@@ -8,7 +8,8 @@
 Workspace
 ├─ id, formatVersion: 1, updatedAt
 ├─ aiPreferences?: version: 1, activePresetId, presets[], updatedAt
-├─ notes[]?: 개인 노트 · 태그 · 수집함/아이스박스 · 작품 연결
+├─ notes[]?: 개인 노트 · 태그 · 수집함/아이스박스 · 작품 연결 · aiMessages?
+├─ noteNavigation?: version: 1, 노트/폴더 ID·부모·형제 순서
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
 │  ├─ documents[]: scene | wiki | memo
@@ -25,7 +26,7 @@ Workspace
 | `Work` | UUID, 제목·부제·소개, `단편/중편/장편`, 문서 배열, 판본 배열, 활성 판본 ID, 선택적 AI 대화·문서 트리 배열 |
 | `NovelDocument` | UUID, `scene/wiki/memo`, 제목, `chapter`, 리치 본문, 요약, 작업 상태, 분류, 시점·시간, 공개 여부·설명, 첨부 ID, 갱신 시각 |
 | `Publication` | UUID, 작품 ID·소개·게시 시각, 선택 장면 사본, 공개 설정 설명 사본 |
-| `PersonalNote` | UUID, 선택 제목, 리치 본문, tags, box(inbox/icebox), linkedWorkIds, assetIds, 생성·갱신 시각 |
+| `PersonalNote` | UUID, 선택 제목, 리치 본문, tags, box(inbox/icebox), linkedWorkIds, assetIds, 생성·갱신 시각, 선택적 aiMessages |
 | `AssetMeta` | UUID, 작품 workId 또는 독립 노트 noteId 중 하나, 파일명, MIME 타입, 바이트 크기 |
 | `Revision` | UUID, 기기 namespace, 생성 시각·설명, 작업 공간 전체 사본 |
 
@@ -39,7 +40,7 @@ AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대
 
 ## 계정의 독립 노트
 
-선택적 Workspace.notes 배열은 최대 5,000개이며 제목은 빈 문자열을 허용하고 본문 첫 줄로 표시한다. 태그 최대 20개/40자, 작품 연결 최대 100개, 첨부 최대 200개다. 중복 ID·태그·연결, 없는 작품, 다른 소속의 첨부를 클라이언트에서 거절한다. 작품에 연결해도 원본은 계정 소속이고 여러 작품이 공유한다. 기존 작품 메모는 그대로 작품 문서다. 전체 ZIP·이력에 포함하고 공개판·자동 AI 자료에는 포함하지 않는다. [저장·복원·서버 보호 계약](personal-notes.md).
+선택적 Workspace.notes 배열은 최대 5,000개이며 제목은 빈 문자열을 허용하고 본문 첫 줄로 표시한다. 태그 최대 20개/40자, 작품 연결 최대 100개, 첨부 최대 200개다. 중복 ID·태그·연결, 없는 작품, 다른 소속의 첨부를 클라이언트에서 거절한다. 작품에 연결해도 원본은 계정 소속이고 여러 작품이 공유한다. 기존 작품 메모는 그대로 작품 문서다. 계정의 noteNavigation은 version: 1, nodes[]에 노트/폴더 UUID·parentId(null은 최상위)·폴더 title을 저장한다. 노드 순서는 형제 순서이며 7,500노드/24단계, 작품 및 노트·폴더 전체 ID 충돌·유실·순환을 검사한다. 이전 노트는 최근 순으로 최상위에 보충한다. aiMessages는 기존 질문/답변 스키마로 40메시지/노트, 대화 200노트 한도다. 전체 ZIP·이력에 포함하고 공개판에서 제외하며 노트 AI는 현재 노트와 선택한 다른 노트/연결 작품 자료만 보낸다. [저장·복원·서버 보호 계약](personal-notes.md).
 
 ## 계정의 AI 프리셋
 

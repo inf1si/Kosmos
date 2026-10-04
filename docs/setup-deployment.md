@@ -2,7 +2,7 @@
 
 ## 개인 노트 배포
 
-앱 배포와 함께 [개인 노트 보호 마이그레이션](../supabase/migrations/20261004063340_independent_notes_guard.sql)을 설치한다. 테이블·Auth·RLS·Storage 정책은 바꾸지 않는다. 버전 1 JSON에 선택적 notes 배열과 첨부 noteId 소속을 추가하며 이전 자료를 계속 읽는다. 기존 notes를 누락하는 오래된 탭은 저장을 멈추고 새로고침을 안내한다. 운영 설치·배포 확인은 [검증 기록](../VERIFICATION.md)을 따른다.
+앱 배포와 함께 [개인 노트 보호 마이그레이션](../supabase/migrations/20261004063340_independent_notes_guard.sql)을 설치한다. 테이블·Auth·RLS·Storage 정책은 바꾸지 않는다. 버전 1 JSON에 선택적 notes 배열과 첨부 noteId 소속을 추가하며 이전 자료를 계속 읽는다. 기존 notes를 누락하는 오래된 탭은 저장을 멈추고 새로고침을 안내한다. 이어 [노트 계층·AI 보호 SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql)을 설치해 noteNavigation·aiMessages 누락을 막는다. 운영 설치·배포 확인은 [검증 기록](../VERIFICATION.md)을 따른다.
 
 2026-10-01에 실제 Supabase 서울 프로젝트에 최초 SQL을 적용했다. 6개 테이블의 RLS, RPC 4개, 비공개 버킷과 Realtime 대상 테이블을 확인했고 공개 회원가입을 닫았다. 익명 REST 접근 검사 7개가 통과했다. 이후 작가 계정 1명·허용 목록·로그인, Vercel GitHub 연결·운영 배포와 기본 클라우드 시험까지 완료했다. 다른 기기 첨부·충돌과 운영 ZIP 파일 복원은 남아 있다. 기존 시험 ZIP의 원고·첨부 복원은 별도 로컬 origin에서 확인했다. 아래 설치 절차를 이미 적용한 프로젝트에 반복 실행하지 않는다. 새 비밀번호 입력·등록은 계정 소유자가 직접 수행한다. [검증 기록](../VERIFICATION.md).
 
@@ -66,7 +66,7 @@ Supabase 공개 키는 RLS와 함께 사용하는 값이다. `service_role`/secr
 1. [Supabase Dashboard](https://supabase.com/dashboard)에 로그인한다.
 2. 기존 빈 프로젝트가 있으면 먼저 확인한다. 이번 연결은 사용자가 만든 `Kosmos` 서울 프로젝트를 사용했다. 새 프로젝트가 필요할 때만 생성하며 DB 비밀번호는 계정 소유자가 보관한다.
 3. SQL Editor에서 [001_studio.sql](../supabase/migrations/001_studio.sql) 전체를 **새 프로젝트에 한 번** 실행한다.
-4. 이어 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql), [003_ai_preferences_guard.sql](../supabase/migrations/003_ai_preferences_guard.sql), [개인 노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql)을 순서대로 실행한다. 6개 앱 테이블·private-assets 버킷·preserve_document_navigation·preserve_ai_preferences·preserve_personal_notes 트리거를 확인한다. 기존 프로젝트에는 미적용 번호만 추가하고 001을 다시 실행하지 않는다.
+4. 이어 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql), [003_ai_preferences_guard.sql](../supabase/migrations/003_ai_preferences_guard.sql), [개인 노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql), [노트 계층·AI SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql)을 순서대로 실행한다. 6개 앱 테이블·private-assets 버킷·preserve_document_navigation·preserve_ai_preferences·preserve_personal_notes·preserve_note_details 트리거를 확인한다. 기존 프로젝트에는 미적용 번호만 추가하고 001을 다시 실행하지 않는다.
 5. Data API를 꺼두었다면 Integrations의 Data API 설정에서 활성화하고 필요한 public 테이블·함수를 노출한다. 노출과 읽기·쓰기 권한은 별개다. SQL의 RLS·GRANT를 유지한다.
 6. Realtime publication에 `workspaces`가 포함되었는지 확인한다.
 

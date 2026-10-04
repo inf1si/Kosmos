@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { conversationSchema } from './ai-conversation';
+import { noteNavigationSchema, noteNavigationIssues } from './note-navigation-schema';
+import { chatMessagesSchema } from './ai-conversation';
 import { navigationSchema, navigationIssues } from './document-navigation-schema';
 import { aiPreferencesSchema } from './ai-prompt-presets';
 import { inlineFontSize, validListStyle } from './manuscript-format';
@@ -59,7 +61,7 @@ export const noteSchema = z.object({
   id:z.uuid(),title:z.string().max(300),content:contentSchema,
   tags:z.array(z.string().trim().min(1).max(40)).max(20),box:z.enum(['inbox','icebox']),
   linkedWorkIds:z.array(z.uuid()).max(100),assetIds:z.array(z.uuid()).max(200),
-  createdAt:z.string(),updatedAt:z.string(),
+  createdAt:z.string(),updatedAt:z.string(),aiMessages:chatMessagesSchema.optional(),
 }).superRefine((note,ctx)=>{
   for(const key of ['tags','linkedWorkIds','assetIds'] as const)if(new Set(note[key]).size!==note[key].length)ctx.addIssue({code:'custom',message:'노트의 중복 연결을 확인하세요.',path:[key]});
 });
@@ -72,9 +74,12 @@ export const workspaceSchema = z.object({
   formatVersion:z.literal(1),id:z.uuid(),works:z.array(workSchema).min(1).max(100),assets:z.array(assetSchema).max(2000),updatedAt:z.string(),
   aiPreferences:aiPreferencesSchema.optional(),
   notes:z.array(noteSchema).max(5000).optional(),
+  noteNavigation:noteNavigationSchema.optional(),
 }).superRefine((data,ctx)=>{
-  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id)];
+  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[])];
   if (new Set(ids).size !== ids.length) ctx.addIssue({code:'custom',message:'중복된 문서 ID가 있습니다.'});
+  if(data.noteNavigation)for(const message of noteNavigationIssues(data.noteNavigation,(data.notes||[]).map(n=>n.id)))ctx.addIssue({code:'custom',message,path:['noteNavigation']});
+  if((data.notes||[]).filter(n=>n.aiMessages?.length).length>200)ctx.addIssue({code:'custom',message:'노트 대화는 최대 200개까지 보관할 수 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
   const workIds=new Set(data.works.map(w=>w.id));
   for(const note of data.notes||[]){

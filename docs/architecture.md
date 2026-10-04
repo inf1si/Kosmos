@@ -1,5 +1,7 @@
 # 현재 구현 아키텍처
 
+노트 정리 계층은 작품 소속 없이 Workspace.noteNavigation에 저장한다. DocumentTree에는 일시적인 표시 어댑터만 제공하며 작품을 생성하거나 works 배열에 넣지 않는다. AIChat은 작품 문서와 노트 대화를 공유하고 서버에서 대상과 참고 자료 권한을 각각 검사한다. 노트별 aiMessages도 같은 저장·충돌·백업 경로를 따른다.
+
 개인 노트 공간을 작품 집필실 옆에 추가했다. Workspace.notes가 작품과 같은 상위 수준이고 linkedWorkIds로 작품을 참조한다. 편집기·저장 큐·IndexedDB·클라우드·백업 경로는 공유한다. 첨부는 workId 또는 noteId 중 하나에 소속하며 작품 가져오기는 새 첨부 ID와 비공개 문서를 만든다. `/studio#notes/<ID>`에서 열고 [개인 노트 안내](personal-notes.md)를 따른다.
 
 이 문서는 0.2.1과 2026-10-03 집필 도구·AI 프리셋·문서 트리 코드 기준이다. 향후 목표는 [기술 제안](technical-proposal.md)과 구분한다.
