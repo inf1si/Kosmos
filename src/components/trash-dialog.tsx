@@ -30,7 +30,7 @@ export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:(
   }
   return <>
     <Modal open={open} onClose={()=>{if(!busy&&!confirm)onClose();}} title="휴지통" description="자동으로 비우지 않습니다. 필요할 때 복원하세요." wide onReturnFocus={onReturnFocus}>
-      <div className="trash-tools"><label className="sidebar-search"><Search size={15}/><input ref={search} autoFocus aria-label="휴지통 검색" placeholder="제목 · 작품 검색" value={query} onChange={e=>setQuery(e.target.value)}/></label><span className="field-help">{items.length}개</span><button type="button" className="button" disabled={readonly||!items.length} onClick={e=>requestPurge(items.map(item=>item.id),e.currentTarget)}>비우기</button></div>
+      <div className="trash-tools"><div className="sidebar-search"><Search size={15}/><input ref={search} autoFocus aria-label="휴지통 검색" placeholder="제목 · 작품 검색" value={query} onChange={e=>setQuery(e.target.value)}/></div><span className="field-help">{items.length}개</span><button type="button" className="button" disabled={readonly||!items.length} onClick={e=>requestPurge(items.map(item=>item.id),e.currentTarget)}>비우기</button></div>
       <div className="trash-list" aria-label="휴지통 목록">
         {visible.map(item=><div className="reference-card trash-row" key={item.id} data-trash-id={item.id}>
           {item.type==='note'?<StickyNote size={16}/>:<FileText size={16}/>}
