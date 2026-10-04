@@ -8,6 +8,7 @@ import { RichEditor } from './rich-editor';
 import { DocumentStatistics } from './document-statistics';
 import type { NoteDestination } from '@/lib/note-navigation';
 import { PersonalNotes } from './personal-notes';
+import { QuickNote } from './quick-note';
 import { addNote, newNote, noteTitle } from '@/lib/personal-notes';
 import { PlotBoard } from './plot-board';
 import { DocumentGraph } from './document-graph';
@@ -41,11 +42,12 @@ function useDismiss(open:boolean,setOpen:(open:boolean)=>void){
 }
 
 export function Studio(){
-  const s=useStudio();const [notesOpen,setNotesOpen]=useState(false),[selectedNote,setSelectedNote]=useState(''),[captureId,setCaptureId]=useState('');
+  const s=useStudio();const [notesOpen,setNotesOpen]=useState(false),[selectedNote,setSelectedNote]=useState(''),[captureId,setCaptureId]=useState(''),[quickNote,setQuickNote]=useState(false);
   const openNotes=useCallback((id='')=>{setSelectedNote(id);setNotesOpen(true);setFocus(false);window.history.replaceState(null,'',`${window.location.pathname}${window.location.search}#notes${id?`/${id}`:''}`);},[]);
   const createNote=useCallback((to?:NoteDestination)=>{if(!s.canUse||!s.state||s.conflict)return;try{const note=newNote();s.update(state=>addNote(state,note,to));setCaptureId(note.id);openNotes(note.id);}catch(error){alert(error instanceof Error?error.message:'노트를 만들지 못했습니다.');}},[s.canUse,s.state,s.conflict,s.update,openNotes]);
   useEffect(()=>{const read=()=>{const hash=window.location.hash;if(hash==='#notes'||hash.startsWith('#notes/')){setSelectedNote(hash.slice(7));setNotesOpen(true);}else setNotesOpen(false);};read();window.addEventListener('hashchange',read);return()=>window.removeEventListener('hashchange',read);},[]);
-  useEffect(()=>{const key=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.code==='KeyN'){event.preventDefault();createNote();}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[createNote]);
+  // Browsers reserve Ctrl/Cmd+Shift+N for private windows, so Alt+N (Option+N) is the note key.
+  useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.code==='KeyN'){event.preventDefault();if(notesOpen)createNote();else if(s.canUse&&!s.conflict)setQuickNote(true);}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[createNote,notesOpen,s.canUse,s.conflict]);
   const [workId,setWorkId]=useState('');const [current,setCurrent]=useState('');const [lastDoc,setLastDoc]=useState('');const [tabs,setTabs]=useState<string[]>([]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
@@ -133,7 +135,7 @@ export function Studio(){
         <IconButton label="앞으로" className="icon-button history-button" disabled={!forward.length} onClick={goForward}><ChevronRight size={16}/></IconButton>
         <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||(id===GRAPH?'문서 그래프':'플롯보드');return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
         <span className="tab-spacer"/>
-        <IconButton label="새 노트" disabled={readonly} onClick={()=>createNote()}><StickyNote size={16}/></IconButton>
+        <QuickNote open={quickNote} onOpenChange={setQuickNote} disabled={readonly} onOpenNote={id=>{setCaptureId(id);openNotes(id);}}/>
         <GoogleAccountControl/>
         <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onOverview} onClick={()=>setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null)}><Columns2 size={16}/></IconButton>
         <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onOverview} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>

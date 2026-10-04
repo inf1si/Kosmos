@@ -1,7 +1,10 @@
 /* 기존 집필실 부품을 재사용하며 노트의 배치와 줄임만 정한다. */
 .notes-mode{margin:0 12px 12px;flex-shrink:0}.notes-mode button{display:flex;align-items:center;justify-content:center;gap:6px;flex:1}
-.notes-filters{display:flex;flex-direction:column;gap:6px;padding:6px 10px}.notes-filters label{display:flex;flex-direction:row;align-items:center;gap:8px;min-width:0}.notes-filters select{width:100%;min-width:0}
-/* Search, views and filters retain separate breathing room without growing the header. */
-.notes-tools .sidebar-search{margin:8px 2px 12px;flex-shrink:0}.notes-views{display:flex;flex-direction:column;gap:2px}.notes-filters{padding-top:10px;padding-bottom:10px}.notes-list{padding:4px 5px 12px}.notes-tools> .nav-item:last-child{margin-top:4px}.notes-workspace .reference-tabs>span{flex:1;padding:12px;color:var(--ink);font-size:13px}
+/* 검색 옆 필터 버튼, 그 아래 보기 segmented 한 줄. 필터는 팝오버로 접어 트리 자리를 남긴다. */
+.notes-search-row{display:flex;align-items:center;gap:4px;margin:8px 2px 12px;flex-shrink:0}.notes-search-row .sidebar-search{flex:1;min-width:0}.notes-filter{position:relative;flex-shrink:0}.notes-filter-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--brand)}
+.notes-views{margin:0 2px 8px;flex-shrink:0}.notes-views button{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 6px}.notes-views small{font-size:11px;font-variant-numeric:tabular-nums;opacity:.8}.notes-list{padding:4px 5px 12px}.notes-tools> .nav-item:last-child{margin-top:4px}.notes-workspace .reference-tabs>span{flex:1;padding:12px;color:var(--ink);font-size:13px}
 .notes-empty{padding:10px;line-height:1.7}.notes-welcome{display:flex;flex:1;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px;text-align:center}.notes-popover{display:flex;flex-direction:column;gap:12px}.notes-tag-form{display:flex;gap:8px}.notes-tag-form input{flex:1;min-width:0}.notes-popover .check-label{align-items:flex-start;overflow-wrap:anywhere}.notes-popover .check-label input{flex-shrink:0}.notes-popover .reference-card>span{overflow-wrap:anywhere}.notes-workspace .doc-title::placeholder{font-size:24px}.notes-workspace .doc-tab>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:50vw}
 @media(max-width:700px){.notes-workspace .doc-title::placeholder{font-size:22px}}
+/* 노트는 메모·나열이 많아 원고의 첫 줄 들여쓰기와 넓은 문단 간격을 쓰지 않는다. */
+.notes-workspace .manuscript{line-height:1.85}.notes-workspace .manuscript p{margin:0 0 .6em}.notes-workspace .manuscript p:not(:first-child){text-indent:0}
+.notes-tag-summary{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.notes-head-more{width:28px;height:28px}

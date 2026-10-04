@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import JSZip from 'jszip';
-import { addNote, filterNotes, newNote, noteTitle, patchNote, prepareNoteCopy, preserveNotes } from '../src/lib/personal-notes';
+import { addNote, filterNotes, newNote, noteFromText, noteTitle, patchNote, prepareNoteCopy, preserveNotes } from '../src/lib/personal-notes';
 import { fromText, makePublication, uid, workspaceSchema } from '../src/lib/model';
 import { seedWorkspace } from '../src/lib/seed';
 import { createBackup, readBackup } from '../src/lib/backup';
@@ -66,4 +66,16 @@ test('서버 트리거는 이전 클라이언트의 노트 누락을 막고 정�
     const broken=structuredClone(state);broken.notes![0].linkedWorkIds=[uid()];await assert.rejects(()=>pg.query('update public.workspaces set payload=$1 where id=1',[JSON.stringify(broken)]),/작품/);
     assert.equal((await pg.query<{payload:typeof state}>('select payload from workspaces')).rows[0].payload.notes!.length,1);
   }finally{await pg.close();}
+});
+
+test('quick capture keeps each line as a paragraph and lands first in the inbox',()=>{
+  const note=noteFromText('  우산 두 개를 든 노인\r\n\n지하철 2호선   \n');
+  assert.deepEqual(note.content.content?.map(p=>p.content?.[0]?.text),['우산 두 개를 든 노인','지하철 2호선']);
+  assert.equal(noteTitle(note),'우산 두 개를 든 노인');
+  assert.equal(note.box,'inbox');
+  const state=addNote(addNote(seedWorkspace(),newNote()),note);
+  assert.equal(state.noteNavigation?.nodes.find(n=>n.parentId===null)?.id,note.id);
+  assert.equal(workspaceSchema.parse(state).notes?.length,2);
+  const empty=noteFromText(' \n ').content.content!;
+  assert.equal(empty.length,1);assert.equal(empty[0].type,'paragraph');assert.deepEqual(empty[0].content,[]);
 });

@@ -9,6 +9,12 @@ export function newNote():PersonalNote {
   const now=new Date().toISOString();
   return {id:uid(),title:'',content:fromText(''),tags:[],box:'inbox',linkedWorkIds:[],assetIds:[],createdAt:now,updatedAt:now};
 }
+/** A quick capture keeps each non-empty line as its own paragraph; the first line becomes the list title. */
+export function noteFromText(text:string):PersonalNote {
+  const note=newNote(),lines=text.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+  note.content={type:'doc',content:(lines.length?lines:['']).map(line=>({type:'paragraph',attrs:{blockId:uid()},content:line?[{type:'text',text:line}]:[]}))};
+  return note;
+}
 export function addNote(state:Workspace,note=newNote(),to?:NoteDestination):Workspace {
   if((state.notes?.length||0)>=5000)throw new Error('노트는 최대 5,000개까지 보관할 수 있습니다.');
   const base=materializeNoteNavigation(state),next=materializeNoteNavigation({...base,notes:[...(state.notes||[]),noteSchema.parse(note)]});
