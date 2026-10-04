@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-10-04 — Google 설정 활성화·운영 배포와 최초 연결 준비
+
+- 사용자가 Google OAuth·수동 연결·Site URL·복귀 주소를 저장했다고 보고했다. 실제 Google 제공자 활성화·공개 회원가입 비활성을 확인했고, 기존 작가의 연결 시작 API가 정상적으로 Google 인증 URL을 반환해 수동 연결 활성화를 확인했다. 복귀 주소 등록 완료 자체는 사용자 보고 기준이다.
+- [PR #6](https://github.com/inf1si/Kosmos/pull/6)의 `bb74bb2` CI·Vercel 미리보기 검사가 성공했다. main 변경이 없음을 확인하고 병합했으며, 소스 `56c65d7076f07e28f8fe3e52237150e022073df7`의 [운영 배포](https://vercel.com/kosmos42/kosmos/TJeX4KowTexidCnSaJBndhfbYvpP)가 `READY`이고 운영 도메인에 연결됨을 확인했다.
+- 운영 Chromium 별도 context에서 Google 로그인 버튼 표시, 실제 기존 이메일·비밀번호 로그인, 기존 작가 작업 공간 불러오기와 클라우드 동기화 표시, 로그인 계정 팝오버·연결 버튼을 확인했다. 연결 버튼 클릭 후 `accounts.google.com` 인증 화면으로 이동했고 `redirect_uri_mismatch`가 없었다. 실제 원고·계정 identity를 변경하지 않았다. [운영 확인 결과](docs/evidence/google-login-production-2026-10-04.json).
+- 작가 허용 목록 1명·Google identity 연결 0명을 읽기 전용으로 확인했다. 실제 Google 계정 선택·동의는 계정 소유자가 최초 한 번 수행해야 한다. 승인 후 같은 작가 UUID·원고·Google 로그인·새로고침을 추가 확인한다.
+- 이 문서 갱신 이후의 문서 전용 커밋 배포는 위 소스 배포 확인과 구분한다. [최초 연결 순서](docs/google-login.md).
+
 ## 2026-10-04 — Google 집필실 로그인·기존 작가 연결
 
 - 후속 설정 확인: 사용자의 OAuth 설정 저장 보고 후 실제 `/auth/v1/settings`에서 Google 활성화·공개 회원가입 비활성을 확인했다. 기존 작가 세션을 갱신하고 연결 시작 요청을 보냈으며 `manual_linking_disabled`가 반환돼 수동 연결 비활성을 확인했다. Google 연결·동의는 수행하지 않았다. 최초 제공자 비활성 확인과 이후 활성화를 구분한다. 허용 복귀 주소 저장·실제 Google 승인·운영 배포는 남아 있다.
