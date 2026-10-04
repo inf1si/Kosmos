@@ -1,0 +1,115 @@
+{
+  "checkedAt": "2026-10-04T11:34:09.686Z",
+  "source": "a96b70d9e22bf04c544ea9729f09a4e9594d1fb9",
+  "httpStatus": 200,
+  "realAuthorLogin": true,
+  "readOnly": true,
+  "layouts": [
+    {
+      "width": 1280,
+      "tag": {
+        "focused": true,
+        "type": "text",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 223.015625,
+          "height": 40.796875
+        }
+      },
+      "work": {
+        "focused": true,
+        "type": "checkbox",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 13,
+          "height": 13
+        }
+      },
+      "copy": {
+        "focused": true,
+        "type": "select-one",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 286,
+          "height": 41
+        }
+      },
+      "attachment": {
+        "focused": true,
+        "type": "file",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 286,
+          "height": 33.1875
+        }
+      }
+    },
+    {
+      "width": 360,
+      "tag": {
+        "focused": true,
+        "type": "text",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 223.015625,
+          "height": 40.796875
+        }
+      },
+      "work": {
+        "focused": true,
+        "type": "checkbox",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 13,
+          "height": 13
+        }
+      },
+      "copy": {
+        "focused": true,
+        "type": "select-one",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 286,
+          "height": 41
+        }
+      },
+      "attachment": {
+        "focused": true,
+        "type": "file",
+        "outline": "solid",
+        "width": "2px",
+        "offset": "1px",
+        "clipped": [],
+        "rect": {
+          "width": 286,
+          "height": 33.1875
+        }
+      }
+    }
+  ],
+  "reload": true,
+  "contentMutations": 0,
+  "aiCalls": 0,
+  "errors": []
+}
