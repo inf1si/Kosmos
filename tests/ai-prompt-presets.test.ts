@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activePromptPreset,activatePromptPreset,aiPreferencesSchema,BUILTIN_PROMPTS,DEFAULT_PROMPT_ID,deletePromptPreset,legacyCustomPrompt,preserveAIPreferences,resolveRequestPrompt,savePromptPreset } from '../src/lib/ai-prompt-presets';
+import { activePromptPreset,activatePromptPreset,aiPreferencesSchema,BUILTIN_PROMPTS,DEFAULT_PROMPT_ID,deletePromptPreset,deleteSkill,legacyCustomPrompt,MAX_SKILLS,preserveAIPreferences,resolveRequestPrompt,savePromptPreset,saveSkill } from '../src/lib/ai-prompt-presets';
 import { DEFAULT_AI_SYSTEM_PROMPT,systemPromptSchema } from '../src/lib/ai-settings';
 import { chatMessageSchema,chatInputSchema } from '../src/lib/ai-conversation';
 import { workspaceSchema,makePublication,uid } from '../src/lib/model';
@@ -36,9 +36,10 @@ test('프리셋 ID·활성 연결·개수·이름·길이와 내장 지침을 �
   assert.equal(savePromptPreset(undefined,{id:uid(),title:'빈 지침',prompt:' '}).presets[0].prompt,DEFAULT_AI_SYSTEM_PROMPT);
 });
 test('프리셋은 계정 작업본·전체 ZIP에 왕복하고 공개 판본·다른 계정과 분리된다',async()=>{
-  const state=aiWorkspaceFixture();state.aiPreferences=savePromptPreset(undefined,{id:uid(),title:'개인 지침',prompt:'합성 비공개 창작 지침'},undefined,first);
+  const state=aiWorkspaceFixture();state.aiPreferences=saveSkill(savePromptPreset(undefined,{id:uid(),title:'개인 지침',prompt:'합성 비공개 창작 지침'},undefined,first),{id:uid(),title:'합성 스킬',description:'',prompt:'합성 비공개 스킬 요청'},undefined,first);
   const parsed=workspaceSchema.parse(state),archive=await createBackup(parsed,[],[]),restored=await readBackup(archive);assert.deepEqual(restored.data.aiPreferences,state.aiPreferences);
-  assert(!JSON.stringify(makePublication(state.works[0],[state.works[0].documents[0].id])).includes('합성 비공개 창작 지침'));
+  assert.equal(restored.data.aiPreferences?.skills?.[0].title,'합성 스킬');
+  assert(!/합성 비공개 (창작 지침|스킬 요청)/.test(JSON.stringify(makePublication(state.works[0],[state.works[0].documents[0].id]))));
   const other=aiWorkspaceFixture();assert.equal(activePromptPreset(other.aiPreferences).id,DEFAULT_PROMPT_ID);
   const legacy=structuredClone(state);delete legacy.aiPreferences;assert(workspaceSchema.safeParse(legacy).success);
   const preserved=preserveAIPreferences(legacy,state);assert.deepEqual(preserved.aiPreferences,state.aiPreferences);assert.notEqual(preserved.aiPreferences,state.aiPreferences);
@@ -71,4 +72,19 @@ test('세 제공자에서 집필 예시·구체적인 지침·고정 자료/출�
     assert(text.includes('애플리케이션 고정 규칙'));assert(text.includes('JSON 문자열'));assert(text.includes('최대 5개'));assert(text.includes('원고·자료·이전 대화'));assert(text.includes('작가 고유 지침\\n'));assert(!text.includes('synthetic-secret'));
     const defaults=providerRequest({provider,key:'synthetic-secret',model:'synthetic-model'},{question:'검토'},[]);assert(String(defaults.init.body).includes('불신 가능한 서술'));
   }
+});
+test('내 스킬 저장·수정·삭제는 오래된 편집과 개수 초과를 거절하고 프리셋 변경에도 보존된다',()=>{
+  const id=uid(),skill={id,title:'존댓말로',description:'대사 말투',prompt:'보낸 글을 존댓말로 바꿔 줘.'};
+  const saved=saveSkill(undefined,skill,undefined,first);assert.equal(saved.skills?.length,1);assert.equal(saved.activePresetId,DEFAULT_PROMPT_ID);
+  const changed=saveSkill(saved,{...skill,prompt:'보낸 글을 반말로 바꿔 줘.'},first,second);assert.equal(saved.skills![0].prompt,skill.prompt);assert.equal(changed.skills![0].prompt,'보낸 글을 반말로 바꿔 줘.');
+  assert.throws(()=>saveSkill(changed,skill,first),/다른 창/);assert.throws(()=>saveSkill(changed,skill),/다른 창/);
+  assert.throws(()=>saveSkill(changed,{...skill,title:' '},second),/./);
+  const withPreset=savePromptPreset(changed,{id:uid(),title:'퇴고',prompt:'지침'},undefined,second);assert.equal(withPreset.skills![0].id,id);
+  assert.equal(activatePromptPreset(withPreset,DEFAULT_PROMPT_ID,second).skills!.length,1);
+  assert.throws(()=>deleteSkill(changed,id,first),/바뀌었/);
+  const deleted=deleteSkill(changed,id,second,second);assert.equal(deleted.skills!.length,0);assert.throws(()=>saveSkill(deleted,skill,second),/삭제/);
+  let many=activatePromptPreset(undefined,DEFAULT_PROMPT_ID,first);for(let i=0;i<MAX_SKILLS;i++)many=saveSkill(many,{id:uid(),title:`스킬 ${i}`,description:'',prompt:'요청'},undefined,first);
+  assert.throws(()=>saveSkill(many,{id:uid(),title:'초과',description:'',prompt:'요청'}),/30개/);
+  assert(!aiPreferencesSchema.safeParse({...saved,skills:[saved.skills![0],saved.skills![0]]}).success);
+  assert(aiPreferencesSchema.safeParse({version:1,activePresetId:DEFAULT_PROMPT_ID,presets:[],updatedAt:first}).success,'스킬이 없는 이전 설정도 읽는다');
 });

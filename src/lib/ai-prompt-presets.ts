@@ -9,8 +9,13 @@ export const MAX_CUSTOM_PRESETS=20;
 export const promptPresetIdSchema=z.union([z.enum(BUILTIN_PROMPT_IDS),z.uuid()]);
 const timestamp=z.iso.datetime();
 export const customPromptPresetSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(80),prompt:systemPromptSchema.trim().min(1),updatedAt:timestamp});
-export const aiPreferencesSchema=z.object({version:z.literal(1),activePresetId:promptPresetIdSchema,presets:z.array(customPromptPresetSchema).max(MAX_CUSTOM_PRESETS),updatedAt:timestamp}).superRefine((v,ctx)=>{
+export const MAX_SKILLS=30;
+/** A skill is a saved request; the selected text (or current paragraph) is sent with it as the range. */
+export const aiSkillSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(40),description:z.string().trim().max(120),prompt:z.string().trim().min(1).max(2000),updatedAt:timestamp});
+export type AISkill=z.infer<typeof aiSkillSchema>;
+export const aiPreferencesSchema=z.object({version:z.literal(1),activePresetId:promptPresetIdSchema,presets:z.array(customPromptPresetSchema).max(MAX_CUSTOM_PRESETS),skills:z.array(aiSkillSchema).max(MAX_SKILLS).optional(),updatedAt:timestamp}).superRefine((v,ctx)=>{
   if(new Set(v.presets.map(p=>p.id)).size!==v.presets.length)ctx.addIssue({code:'custom',message:'프리셋 ID가 중복되었습니다.'});
+  if(v.skills&&new Set(v.skills.map(p=>p.id)).size!==v.skills.length)ctx.addIssue({code:'custom',message:'스킬 ID가 중복되었습니다.'});
   if(!BUILTIN_PROMPT_IDS.includes(v.activePresetId as typeof BUILTIN_PROMPT_IDS[number])&&!v.presets.some(p=>p.id===v.activePresetId))ctx.addIssue({code:'custom',message:'적용할 프리셋을 찾지 못했습니다.'});
 });
 export type AIPreferences=z.infer<typeof aiPreferencesSchema>;
@@ -42,6 +47,19 @@ export function deletePromptPreset(preferences:AIPreferences|undefined,id:string
   const next=preferencesOrDefault(preferences,now),preset=next.presets.find(p=>p.id===id);
   if(!preset||preset.updatedAt!==expectedRevision)throw new Error('프리셋이 바뀌었습니다. 최신 내용을 확인하세요.');
   next.presets=next.presets.filter(p=>p.id!==id);if(next.activePresetId===id)next.activePresetId=DEFAULT_PROMPT_ID;next.updatedAt=now;return aiPreferencesSchema.parse(next);
+}
+export function saveSkill(preferences:AIPreferences|undefined,skill:{id:string;title:string;description:string;prompt:string},expectedRevision?:string,now=new Date().toISOString()):AIPreferences {
+  const next=preferencesOrDefault(preferences,now),skills=next.skills||[],existing=skills.find(p=>p.id===skill.id);
+  if(existing&&existing.updatedAt!==expectedRevision)throw new Error('다른 창에서 스킬이 바뀌었습니다. 최신 내용을 불러오세요.');
+  if(!existing&&expectedRevision)throw new Error('스킬이 삭제되었습니다. 새 스킬로 저장하세요.');
+  if(!existing&&skills.length>=MAX_SKILLS)throw new Error(`스킬은 ${MAX_SKILLS}개까지 보관할 수 있습니다. 기존 스킬을 수정하거나 정리하세요.`);
+  const saved=aiSkillSchema.parse({...skill,updatedAt:now});
+  next.skills=existing?skills.map(p=>p.id===saved.id?saved:p):[...skills,saved];next.updatedAt=now;return aiPreferencesSchema.parse(next);
+}
+export function deleteSkill(preferences:AIPreferences|undefined,id:string,expectedRevision:string,now=new Date().toISOString()):AIPreferences {
+  const next=preferencesOrDefault(preferences,now),skill=next.skills?.find(p=>p.id===id);
+  if(!skill||skill.updatedAt!==expectedRevision)throw new Error('스킬이 바뀌었습니다. 최신 내용을 확인하세요.');
+  next.skills=next.skills!.filter(p=>p.id!==id);next.updatedAt=now;return aiPreferencesSchema.parse(next);
 }
 /** Old manuscript-only backups retain the current account's prompt library. */
 export function preserveAIPreferences(next:Workspace,previous:Workspace):Workspace {

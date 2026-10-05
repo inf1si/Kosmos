@@ -57,9 +57,11 @@
 
 **Alt+Enter**는 글이 선택되어 있으면 그 범위, 선택이 없으면 커서가 있는 현재 문단을 대상으로 작은 AI 창을 연다. 선택한 글 위에서 우클릭하면 **요약·문장 다듬기·아이디어 확장·질문하기**와 복사·잘라내기·붙여넣기가 나온다. 기능을 고르면 질문을 준비하며 전송은 직접 한다. 메뉴의 붙여넣기는 한 줄이면 현재 문단 안에, 여러 줄이면 줄마다 문단으로 넣는다. 키보드의 기본 복사·붙여넣기는 그대로 사용한다.
 
+**내 스킬**은 자주 하는 요청을 저장해 두고 부르는 기능이다. `/스킬 관리`나 AI 설정에서 이름·설명(선택)·요청을 저장하면 `/`에 이름이나 설명 일부를 쳐서(**내 스킬** 묶음), 선택한 글 우클릭 메뉴에서, AI 질문 창의 **스킬** 선택에서 부른다. 요청이 질문 칸에 채워지고 선택한 글(없으면 현재 문단)이 함께 가며 전송은 직접 한다. 현재 프리셋을 그대로 쓴다. [저장·제한](ai.md#내-스킬). 우클릭 메뉴의 기본 AI 항목은 요약 ListCollapse·문장 다듬기 PenLine·아이디어 확장 Lightbulb·질문하기 MessageCircleQuestionMark, 내 스킬은 WandSparkles 아이콘이다.
+
 제공자·프리셋·최근 대화·하루 10회 한도를 기존 AI 대화와 공유한다. 답변을 편집하고 **선택 부분/문단 바꾸기** 또는 **커서에 삽입**을 누르면 창을 연 문서의 정확한 위치에 적용하며, 한 번에 실행 취소할 수 있다. 본문이 바뀌면 적용을 막는다. 분할 창의 실행 취소도 해당 문서에만 적용한다. 답변은 질문한 문서의 기존 대화에 저장하고, **AI 대화에서 계속**은 그 문서를 주 편집기로 열어 대화를 보여준다. 창을 닫거나 문서를 전환한 뒤 도착한 응답도 원래 문서에 보관한다. [전송 범위·저장·제한](ai.md).
 
-합성 브라우저 회귀 검사는 [studio-inline-commands.mjs](../tests/browser/studio-inline-commands.mjs)를 개발/운영 서버에서 실행한다. `KOSMOS_PLAYWRIGHT_MODULE`은 설치한 `playwright-core` 경로, `KOSMOS_CHROMIUM_PATH`는 Chromium 실행 파일, `KOSMOS_TEST_BASE_URL`은 서버 주소(기본 `http://127.0.0.1:3210`), `KOSMOS_BROWSER_OUTPUT`은 증거 출력 위치다. 인증·서버 저장·AI 응답은 모두 합성이다. `pnpm exec tsx tests/browser/studio-inline-commands.mjs`로 실행한다.
+합성 브라우저 회귀 검사는 [studio-inline-commands.mjs](../tests/browser/studio-inline-commands.mjs)를 개발/운영 서버에서 실행한다. `KOSMOS_PLAYWRIGHT_MODULE`은 설치한 `playwright-core` 경로, `KOSMOS_CHROMIUM_PATH`는 Chromium 실행 파일, `KOSMOS_TEST_BASE_URL`은 서버 주소(기본 `http://127.0.0.1:3210`), `KOSMOS_BROWSER_OUTPUT`은 증거 출력 위치다. 인증·서버 저장·AI 응답은 모두 합성이다. `pnpm exec tsx tests/browser/studio-inline-commands.mjs`로 실행한다. 내 스킬은 같은 환경 변수로 [ai-skills.mjs](../tests/browser/ai-skills.mjs)를 실행한다.
 
 ## 보관·호환 경계
 
