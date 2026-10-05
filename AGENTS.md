@@ -10,6 +10,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Documentation
 
+## Installed agent tools
+
+Read [the agent tools guide](docs/agent-tools.md). Before coding, follow [Karpathy Guidelines](.agents/skills/karpathy-guidelines/SKILL.md); before a completion claim, commit or PR, follow [Verification Before Completion](.agents/skills/verification-before-completion/SKILL.md). For Anti Slop installation or updates, follow [its official installer skill](.agents/skills/install-anti-slop/SKILL.md).
+
+Use [Attention Span's Attention-kind style](.agents/styles/attention-kind.md) for replies, subject to higher-priority instructions and these local adaptations: keep the user's language (Korean by default), do not assume a medical diagnosis, and finish authorized work with full verification. Brevity governs the report, not the investigation. The other Attention Span skills are available when explicitly requested.
+
 Read [docs/status.md](docs/status.md) and the relevant feature guide before changing behavior. For a functional change, update the feature guide, [CHANGELOG.md](CHANGELOG.md), [VERIFICATION.md](VERIFICATION.md), and [docs/status.md](docs/status.md) in the same commit. Separate goals, local tests, deployed checks, and user reports. Do not mark unperformed checks complete.
 
 Run `pnpm docs:check` before finishing. CI compares changed paths to the base commit and requires those documentation updates. This checks links and changed files, not factual accuracy; review feature, storage/sync, import/export/backup, privacy, deployment, and design documentation for semantic consistency. Follow [docs/maintenance.md](docs/maintenance.md). Never record credentials or private manuscript text.

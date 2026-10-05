@@ -1,5 +1,10 @@
 # 변경 기록
 
+## 2026-10-05 — 에이전트 스킬·Anti Slop linter 설치
+
+- Attention Span·Karpathy Guidelines·Verification Before Completion을 저장소의 Codex·Claude 진입점에 연결했다. 기본 출력은 Attention-kind이며 한국어와 상위 지침을 따른다.
+- 사용자 지정 dmmulroy/anti-slop의 원본 플러그인·설치 스킬·라이선스·커밋/해시를 보존하고 Oxlint/SDK 1.86.0, `pnpm lint`, 전체 검사 CI 진단 결과물을 추가했다. 일반 18개와 native 1개 규칙은 error다. 초기 3,023건의 기존 위반을 기록하고 lint만 advisory로 도입한다. [설치·사용 안내](docs/agent-tools.md).
+
 ## 2026-10-05 — 홈 바닥글 정리
 
 - 홈 화면 우측 하단의 GitHub·데이터 이용 안내 링크를 제거하고 사이트 이름만 표시한다. [홈 이용 안내](docs/user-guide.md)·[비공개 저장소와 배포](docs/setup-deployment.md#6-소스-보관과-vercel).
