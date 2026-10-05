@@ -8,6 +8,9 @@ import { readInterchange, type ImportBundle, type ImportChoice, type ExportForma
 import { plainText } from '@/lib/model';
 
 const kinds={scene:'원고',wiki:'설정집',memo:'메모 · 리서치'} as const;
+const transferFileTypes='.zip,.enex,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.hwp,.hwpx,.epub,.png,.jpg,.jpeg,.webp';
+// Browsers expose folder picking only through this non-standard attribute.
+const folderPicker={webkitdirectory:'',directory:''} as Record<string,string>;
 export function InterchangeDialog({workId}:{workId:string}){
   const s=useStudio();const [open,setOpen]=useState(false),[mode,setMode]=useState<'import'|'export'>('import');
   const [bundle,setBundle]=useState<ImportBundle|null>(null),[choices,setChoices]=useState<ImportChoice[]>([]),[target,setTarget]=useState('new'),[title,setTitle]=useState('');
@@ -16,13 +19,22 @@ export function InterchangeDialog({workId}:{workId:string}){
   const work=s.state?.works.find(w=>w.id===workId);
   useEffect(()=>{const listener=(event:Event)=>{if((event as CustomEvent).detail!=='interchange')return;operation.current++;setOpen(true);setBundle(null);setChoices([]);setDownload(null);setTarget('new');setTitle('');setError('');setMessage('');setPreview('');setIds(work?.documents.filter(d=>d.kind==='scene').map(d=>d.id)||[]);};window.addEventListener('studio-modal',listener);return()=>window.removeEventListener('studio-modal',listener);},[work]);
   async function run(fn:()=>Promise<void>){setBusy(true);setError('');setMessage('');try{await fn();}catch(e){setError(e instanceof Error?e.message:'문서를 옮기지 못했습니다.');}finally{setBusy(false);}}
+  function pick(list:FileList|null,input:HTMLInputElement){const files=Array.from(list||[]);input.value='';if(!files.length)return;const op=++operation.current;setBundle(null);setChoices([]);void run(async()=>{const parsed=await readInterchange(files);if(operation.current!==op)return;setBundle(parsed);setChoices(parsed.pages.map(p=>({key:p.key,title:p.title,kind:p.kind})));setTitle((files[0].webkitRelativePath.split('/')[0]||files[0].name).replace(/\.(scriv|zip|enex|epub|docx|hwpx?|rtf|md|markdown|html?|txt|csv)$/i,'').slice(0,300));setPreview(parsed.pages[0].key);});}
   function selectAll(kind:ImportChoice['kind']){if(bundle)setChoices(bundle.pages.map(p=>({key:p.key,title:p.title,kind})));}
   const selectedKeys=new Set(choices.map(c=>c.key));
-  return <Modal open={open} onClose={()=>{if(!busy){operation.current++;setOpen(false);setDownload(null);}}} title="문서 가져오기 · 내보내기" description="Notion·Evernote와 원고를 파일로 옮깁니다. 가져온 문서는 비공개로 추가됩니다." wide>
+  return <Modal open={open} onClose={()=>{if(!busy){operation.current++;setOpen(false);setDownload(null);}}} title="문서 가져오기 · 내보내기" description="Notion·Evernote·Word·한글 등과 원고를 파일로 옮깁니다. 가져온 문서는 비공개로 추가됩니다." wide>
     <div className="transfer-tabs" role="tablist" aria-label="문서 이동"><button role="tab" aria-selected={mode==='import'} disabled={busy} onClick={()=>{setMode('import');setError('');setMessage('');setDownload(null);}}><Upload size={16}/>가져오기</button><button role="tab" aria-selected={mode==='export'} disabled={busy} onClick={()=>{setMode('export');setError('');setMessage('');}}><Download size={16}/>내보내기</button></div>
     {mode==='import'?<>
-      <div className="transfer-guide"><p><strong>Notion</strong> · 페이지 메뉴 → 내보내기 → Markdown & CSV 또는 HTML → 하위 페이지 포함</p><p><strong>Evernote</strong> · 노트 / 노트북 내보내기 → ENEX</p><p className="muted">Markdown·HTML·TXT·CSV, ENEX 또는 ZIP을 선택하세요. 100MB · 500개 문서까지, 이미지 첨부는 PNG/JPEG/WebP 10MB 이하를 지원합니다.</p></div>
-      <label className="backup-upload">외부 문서 파일 선택<input type="file" aria-label="외부 문서 파일" multiple accept=".zip,.enex,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.hwp,.hwpx,.epub,.png,.jpg,.jpeg,.webp" disabled={busy} onChange={e=>{const files=Array.from(e.target.files||[]);e.target.value='';if(!files.length)return;const op=++operation.current;setBundle(null);setChoices([]);void run(async()=>{const parsed=await readInterchange(files);if(operation.current!==op)return;setBundle(parsed);setChoices(parsed.pages.map(p=>({key:p.key,title:p.title,kind:p.kind})));setTitle(files[0].name.replace(/\.[^.]+$/,'').slice(0,300));setPreview(parsed.pages[0].key);});}}/></label>
+      <div className="transfer-guide">
+        <p><strong>Notion</strong> · 내보내기(Markdown &amp; CSV 또는 HTML, 하위 페이지 포함) → 받은 ZIP 그대로</p>
+        <p><strong>Evernote</strong> · 노트 / 노트북 내보내기 → ENEX</p>
+        <p><strong>Obsidian · 스크리브너</strong> · 보관함이나 .scriv 폴더를 선택. 맥의 스크리브너 프로젝트는 압축한 ZIP</p>
+        <p className="muted">그 밖에 Word(docx), 한글(hwp·hwpx), RTF, EPUB, Markdown·HTML·TXT·CSV를 읽습니다. 100MB · 500개 문서까지, 이미지 첨부는 PNG/JPEG/WebP 10MB 이하를 지원합니다.</p>
+      </div>
+      <div className="transfer-pick">
+        <label className="backup-upload">파일 선택<input type="file" aria-label="외부 문서 파일" multiple accept={transferFileTypes} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
+        <label className="backup-upload">폴더 선택<input type="file" aria-label="외부 문서 폴더" multiple {...folderPicker} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
+      </div>
       {bundle&&<>
         <div className="transfer-summary"><strong>{choices.length} / {bundle.pages.length}개 문서 선택 · {bundle.assets.filter(a=>bundle.pages.some(p=>selectedKeys.has(p.key)&&p.assetKeys.includes(a.key))).length}개 첨부</strong><span>기존 문서는 유지됩니다. 같은 파일을 다시 가져오면 사본이 추가됩니다.</span></div>
         <div className="transfer-target"><label>가져올 위치<select aria-label="가져올 작품" value={target} disabled={busy} onChange={e=>setTarget(e.target.value)}><option value="new">새 작품 만들기</option>{s.state?.works.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}</select></label>{target==='new'&&<label>새 작품 제목<input aria-label="가져올 새 작품 제목" value={title} maxLength={300} disabled={busy} onChange={e=>setTitle(e.target.value)}/></label>}</div>
