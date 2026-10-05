@@ -90,7 +90,7 @@ test('표의 행·열 추가와 셀 병합·분할은 정상적인 문서 구조
 });
 test('표 안의 통계는 셀 사이 어절 경계를 유지하고 글꼴·0.5px 크기를 검증한다',()=>{
   const table=formattedContent().content![2],stats=textStatistics(doc(table));assert.equal(stats.words,4);assert.equal(stats.paragraphs,3);
-  assert.equal(manuscriptFonts.length,16);assert(validFontSize(10));assert(validFontSize(72));assert(validFontSize(22.5));assert(!validFontSize(9));assert(!validFontSize(72.5));assert(!validFontSize(20.1));assert(!validFontSize(Infinity));
+  assert.equal(manuscriptFonts.length,20);assert(validFontSize(10));assert(validFontSize(72));assert(validFontSize(22.5));assert(!validFontSize(9));assert(!validFontSize(72.5));assert(!validFontSize(20.1));assert(!validFontSize(Infinity));
   assert.equal(parseEditorPreferences('{"font":"hahmlet","size":22.5}').font,'hahmlet');assert.equal(parseEditorPreferences('{"size":22.5}').size,22.5);
 });
 test('선택한 글자 크기와 목록 모양은 검증되어 판본·교환 파일에 남는다',async()=>{
