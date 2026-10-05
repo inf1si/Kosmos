@@ -72,7 +72,7 @@ try {
                 await page.setViewportSize({ width, height: 860 });
                 await page.evaluate(([palette, theme]) => { document.documentElement.dataset.palette = palette; document.documentElement.dataset.theme = theme; }, [palette, theme]);
                 await page.waitForTimeout(150);
-                const layout = await page.locator('.notes-import-pick').evaluate(el => { const [a, b] = [...el.querySelectorAll('label')].map(l => l.getBoundingClientRect()); const dialog = el.closest('[role=dialog]').getBoundingClientRect(); return { sideBySide: Math.abs(a.top - b.top) < 2, stacked: b.top >= a.bottom, inside: a.left >= dialog.left && b.right <= dialog.right + 0.5 }; });
+                const layout = await page.locator('.transfer-pick').evaluate(el => { const [a, b] = [...el.querySelectorAll('label')].map(l => l.getBoundingClientRect()); const dialog = el.closest('[role=dialog]').getBoundingClientRect(); return { sideBySide: Math.abs(a.top - b.top) < 2, stacked: b.top >= a.bottom, inside: a.left >= dialog.left && b.right <= dialog.right + 0.5 }; });
                 assert(width > 600 ? layout.sideBySide : layout.stacked, `file and folder pickers at ${width}px`);
                 assert(layout.inside, 'pickers stay inside the dialog');
                 assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

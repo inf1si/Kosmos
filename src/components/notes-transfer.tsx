@@ -27,7 +27,7 @@ export function NotesImportDialog({open,onClose,onImported}:{open:boolean;onClos
       <p><strong>Obsidian · 스크리브너</strong> · 보관함이나 .scriv 폴더를 선택. 맥의 스크리브너 프로젝트는 압축한 ZIP</p>
       <p className="muted">그 밖에 Word(docx), 한글(hwp·hwpx), RTF, EPUB, Markdown·HTML·TXT를 읽습니다. 하위 폴더는 노트 폴더로, 파일 사이 링크는 노트 링크로 옮기고 이미지는 PNG/JPEG/WebP 10MB 이하만 보관합니다.</p>
     </div>
-    <div className="notes-import-pick">
+    <div className="transfer-pick">
       <label className="backup-upload">파일 선택<input type="file" aria-label="가져올 노트 파일" multiple accept={noteFileTypes} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
       <label className="backup-upload">폴더 선택<input type="file" aria-label="가져올 노트 폴더" multiple {...folderPicker} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
     </div>
