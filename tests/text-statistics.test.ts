@@ -41,8 +41,16 @@ test('작품 합계는 원고만 더하고 200자 환산은 문서별 올림을 
   const total=manuscriptStatistics([a,b,wiki]);assert.equal(total.charactersWithSpaces,200);assert.equal(total.sheets,1);assert.equal(total.paragraphs,2);
   assert.equal(countChars(a),101);a.content=document(paragraph('👩‍🚀'));assert.equal(countChars(a),1);
 });
-test('이전 표시 설정·손상된 값은 글꼴을 보존하고 공백 제외로 시작한다',()=>{
-  assert.deepEqual(parseEditorPreferences('{"font":"ibm-plex","size":20}'),{font:'ibm-plex',size:20,countMetric:'charactersWithoutSpaces'});
+test('이전 표시 설정·손상된 값은 글꼴을 보존하고 공백 포함으로 시작한다',()=>{
+  assert.deepEqual(parseEditorPreferences('{"font":"ibm-plex","size":20}'),{font:'ibm-plex',size:20,countMetric:'charactersWithSpaces'});
+  assert.equal(parseEditorPreferences(null).countMetric,'charactersWithSpaces');
+  assert.equal(parseEditorPreferences('broken').countMetric,'charactersWithSpaces');
+  assert.equal(parseEditorPreferences('{"countMetric":"charactersWithoutSpaces"}').countMetric,'charactersWithSpaces');
   assert.equal(parseEditorPreferences('{"countMetric":"words"}').countMetric,'words');
-  assert.equal(parseEditorPreferences('{"countMetric":"unknown"}').countMetric,'charactersWithoutSpaces');
+  assert.equal(parseEditorPreferences('{"countMetric":"unknown"}').countMetric,'charactersWithSpaces');
+  assert.equal(parseEditorPreferences('{"countMetric":"charactersWithoutSpaces","countMetricVersion":1}').countMetric,'charactersWithoutSpaces');
+});
+test('작품·플롯보드 기본 글자 수는 공백을 포함하고 줄바꿈·각주를 제외한다',()=>{
+  const scene=newDocument('scene','원고');scene.content=document(paragraph('가 나 🙂'),{type:'paragraph',content:[{type:'text',text:'둘째'},{type:'footnote',attrs:{noteId:'note',text:'본문 집계 제외'}}]});
+  assert.equal(countChars(scene),7);
 });

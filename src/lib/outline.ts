@@ -3,8 +3,8 @@ import { textStatistics } from './text-statistics';
 
 export type SceneGroup={key:string;kicker:string;title:string;scenes:NovelDocument[]};
 
-/** Body characters without whitespace; sidebar and plot cards keep this fixed comparison basis. */
-export function countChars(doc:NovelDocument){return textStatistics(doc.content).charactersWithoutSpaces;}
+/** Sidebar and plot cards use the default body count: spaces included, line breaks excluded. */
+export function countChars(doc:NovelDocument){return textStatistics(doc.content).charactersWithSpaces;}
 
 /** "제1부 · 남겨진 시간" → kicker "제1부", title "남겨진 시간". A label without "·" is all title. */
 export function splitLabel(label:string,empty:string):{kicker:string;title:string}{
