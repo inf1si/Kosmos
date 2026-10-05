@@ -23,3 +23,7 @@
 trash 필드 없는 이전 백업은 현재 휴지통과 참조 첨부를 보존하고 같은 ID를 활성 자료로 복원한 항목은 휴지통에서 제외한다. 명시된 배열은 빈 배열을 포함해 복원한다. 형식 버전은 1이다. [서버 보호 SQL](../supabase/migrations/20261004104045_workspace_trash_guard.sql)은 기존 배열을 누락한 구버전 탭을 거절하고 ID·사본·위치·첨부 연결을 검사한다. 구버전 탭의 미저장 글은 따로 보관하고 새로고침한다.
 
 [검증 기록](../VERIFICATION.md) · [화면 회귀 검사](../tests/browser/trash-dialog-layout.mjs) · [모델/변환 테스트](../tests/workspace-trash.test.ts) · [노트](personal-notes.md) · [집필실 트리](document-navigation.md) · [백업](backup-restore.md)
+
+## 오래된 저장 대기 요청
+
+휴지통 필드를 빠뜨린 요청의 확정 거절만 호환 복구한다. 서버가 같은 버전이고 휴지통이 비었거나 기기 목록과 같으면 최신 기기 원고를 새 요청으로 저장한다. 다른 휴지통·서버 버전·다른 창의 기기 수정은 양쪽 원고 충돌로 보존한다. 휴지통 보호 SQL·본문·첨부·백업 형식은 같다. [저장 절차](synchronization.md#재전송)·[브라우저 회귀 검사](../tests/browser/sync-recovery.mjs).
