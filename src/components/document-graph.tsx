@@ -7,6 +7,7 @@ import { buildDocumentGraph, filterDocumentGraph, GRAPH_EDGE_LIMIT, GRAPH_FULL_L
 import { Popover } from './primitives';
 import { WikiIcon } from './studio-icons';
 import styles from './document-graph.module.css';
+import { useAppPreferences } from './use-app-preferences';
 
 const kindNames = { scene: '원고', wiki: '설정집', memo: '메모' } as const;
 const clampZoom = (z: number) => Math.max(0.05, Math.min(4, z));
@@ -19,12 +20,13 @@ function mergeEdges(edges: GraphEdge[]) {
 }
 
 export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents: NovelDocument[]; initialDocumentId: string; onOpen: (id: string) => void}) {
-  const [mode, setMode] = useState<'all' | 'local'>('all');
+  const [defaults] = useAppPreferences();
+  const [mode, setMode] = useState<'all' | 'local'>(defaults.graphScope);
   const [center, setCenter] = useState(initialDocumentId);
   const [selected, setSelected] = useState(initialDocumentId);
   const [query, setQuery] = useState(''), [category, setCategory] = useState('');
   const [kinds, setKinds] = useState<NovelDocument['kind'][]>(['scene', 'wiki', 'memo']);
-  const [depth, setDepth] = useState(1), [includePov, setIncludePov] = useState(true), [hideIsolated, setHideIsolated] = useState(false);
+  const [depth, setDepth] = useState<number>(defaults.graphDepth), [includePov, setIncludePov] = useState(defaults.graphIncludePov), [hideIsolated, setHideIsolated] = useState(false);
   const [filters, setFilters] = useState(false);
   const [size, setSize] = useState({width: 800, height: 500});
   const [camera, setCamera] = useState({x: 400, y: 250, zoom: 1});
@@ -100,7 +102,7 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
     drag.current = null;
     if (canvas.current?.hasPointerCapture(e.pointerId)) canvas.current.releasePointerCapture(e.pointerId);
   }
-  function resetFilters() { setQuery(''); setCategory(''); setKinds(['scene', 'wiki', 'memo']); setHideIsolated(false); setIncludePov(true); }
+  function resetFilters() { setQuery(''); setCategory(''); setKinds(['scene', 'wiki', 'memo']); setHideIsolated(false); setIncludePov(defaults.graphIncludePov); }
   function selectNeighbor(id: string) { setSelected(id); resetFilters(); if (mode === 'local' || !visible.documents.some(d => d.id === id)) {setCenter(id); setMode('local');} }
   // 큰 지도와 좁은 화면은 축소 상태에서 선택한 문서만 제목을 보여 칩이 겹치지 않게 한다.
   const compact = (visible.documents.length > GRAPH_FULL_LABELS || size.width < 520) && camera.zoom < 1;

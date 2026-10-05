@@ -1,5 +1,7 @@
 'use client';
 import { useMemo, useState, type DragEvent } from 'react';
+import { useStoredChoice } from './use-app-preferences';
+import { NOTES_HOME_VIEW_KEY, notesHomeViews } from '@/lib/app-preferences';
 import { BookOpen, BookPlus, Clapperboard, Folder, Globe2, Inbox, Lightbulb, Plus, Snowflake, UserRound } from 'lucide-react';
 import { NoteCard } from './notes-reference';
 import { IconButton } from './primitives';
@@ -8,18 +10,14 @@ import type { NoteDestination } from '@/lib/note-navigation';
 import { noteTemplates } from '@/lib/note-templates';
 import type { PersonalNote, Workspace } from '@/lib/model';
 
-type HomeView='home'|'board';
 const templateIcons={character:UserRound,world:Globe2,logline:BookOpen,scene:Clapperboard,brainstorm:Lightbulb};
-const VIEW_KEY='kosmos-notes-home-view';
-function storedView():HomeView{try{return localStorage.getItem(VIEW_KEY)==='board'?'board':'home';}catch{return 'home';}}
 
 /** 노트 공간의 첫 화면. 최근·고정·수집함과 템플릿을 보여주고, 보드에서는 최상위 폴더별 카드로 펼친다. */
 export function NotesHome({state,readonly,onOpen,onNew,onTemplate,onMove,onFolderWork}:{state:Workspace;readonly:boolean;onOpen:(id:string)=>void;onNew:(to?:NoteDestination)=>void;onTemplate:(id:string)=>void;onMove:(id:string,to:NoteDestination)=>void;onFolderWork:(folderId:string,anchor:HTMLElement|null)=>void}){
-  const [view,setView]=useState<HomeView>(storedView);
+  const [view,choose]=useStoredChoice(NOTES_HOME_VIEW_KEY,notesHomeViews,'home');
   const notes=state.notes||[];
   const recent=useMemo(()=>[...notes].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)),[notes]);
   const pinned=recent.filter(n=>n.pinned),inbox=recent.filter(n=>n.box==='inbox');
-  function choose(next:HomeView){setView(next);try{localStorage.setItem(VIEW_KEY,next);}catch{}}
   return <div className="plot-board notes-home">
     <div className="board-bar"><div className="segmented" role="group" aria-label="노트 첫 화면 보기"><button type="button" aria-pressed={view==='home'} onClick={()=>choose('home')}>최근</button><button type="button" aria-pressed={view==='board'} onClick={()=>choose('board')}>보드</button></div><span>노트 {notes.length} · 수집함 {inbox.length}</span><button type="button" className="button" disabled={readonly} onClick={()=>onNew()}><Plus size={15}/>새 노트</button></div>
     {view==='board'?<NotesBoard state={state} readonly={readonly} onOpen={onOpen} onNew={onNew} onMove={onMove} onFolderWork={onFolderWork}/>

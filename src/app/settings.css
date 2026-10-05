@@ -1,0 +1,37 @@
+/* Settings dialog: layout only. Colours, buttons, segmented and nav-item come from existing parts. */
+.modal.settings-modal{display:flex;flex-direction:column;height:min(680px,calc(100dvh - 50px));overflow:hidden}
+.settings-layout{flex:1;min-height:0;display:grid;grid-template-columns:168px minmax(0,1fr);gap:20px;margin-top:16px}
+.settings-nav{display:flex;flex-direction:column;gap:2px;padding-right:12px;border-right:1px solid var(--line)}
+.settings-nav .nav-item{font-size:13px}
+.settings-body{min-height:0;overflow-y:auto;padding:0 4px 8px 0}
+.settings-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.settings-head p{margin:0;font-size:12px;line-height:1.7;color:var(--muted)}
+.settings-head .button{flex-shrink:0;min-height:30px;padding:5px 10px;font-size:12px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;padding:11px 0;border-bottom:1px solid var(--line)}
+.settings-row-label{display:flex;flex-direction:column;gap:3px;min-width:0}
+.settings-row-label span{font-size:13px;color:var(--ink)}
+.settings-row-label small{font-size:12px;color:var(--muted)}
+.settings-row-control{display:flex;justify-content:flex-end;max-width:100%;margin-left:auto}
+.settings-row-control select{min-width:180px;max-width:100%}
+.settings-row-control .segmented{flex-wrap:wrap;max-width:100%}
+.settings-fixed{font-size:13px;color:var(--ink2)}
+.settings-preview{margin-top:16px;padding:18px 20px;max-height:230px;overflow:hidden;border:1px solid var(--line);border-radius:var(--r-in,8px);background:var(--side)}
+.settings-preview .manuscript{min-height:0;max-width:100%}
+.settings-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.settings-links .button{font-size:13px}
+.settings-keys{margin:0}
+.settings-keys>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.settings-keys dt{font-size:13px;color:var(--ink)}
+.settings-keys dd{margin:0;flex-shrink:0}
+.settings-keys kbd{margin:0;padding:2px 7px;border:1px solid var(--line);border-radius:var(--ctl-r,4px);font-size:12px;color:var(--ink2)}
+.settings-body .ai-settings{margin-top:20px}
+.settings-body .ai-settings h3,.settings-body h3{margin:20px 0 2px;font-size:12px;font-weight:600;color:var(--muted)}
+.settings-body .ai-settings h3{margin:0 0 10px}
+@media(max-width:700px){
+  .modal.settings-modal{height:calc(100dvh - 28px)}
+  .settings-layout{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:12px;margin-top:12px}
+  .settings-nav{flex-direction:row;overflow-x:auto;padding:0 0 8px;border-right:0;border-bottom:1px solid var(--line)}
+  .settings-nav .nav-item{width:auto;flex-shrink:0}
+  .settings-row-control{margin-left:0;width:100%;justify-content:flex-start}
+  .settings-row-control select{width:100%}
+}

@@ -12,6 +12,7 @@ import { AISettingsDialog } from './ai-settings-dialog';
 import { addNote, newNote, applyNoteSuggestion, clearNoteConversation, noteAISources } from '@/lib/personal-notes';
 import { appendEditorExchange } from '@/lib/editor-ai-conversation';
 import { useAIConnection } from './use-ai-connection';
+import { useAppPreferences } from './use-app-preferences';
 import { activePromptPreset,activatePromptPreset,promptCatalog } from '@/lib/ai-prompt-presets';
 
 const starters=[
@@ -31,7 +32,7 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
   const [settingsOpen,setSettingsOpen]=useState(false);
   const activePreset=activePromptPreset(s.state?.aiPreferences),systemPrompt=activePreset.prompt;
   const [prompt,setPrompt]=useState('');const [busy,setBusy]=useState(false);const [pending,setPending]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');
-  const [includeManuscript,setIncludeManuscript]=useState(true);const [sourceIds,setSourceIds]=useState(()=>noteId?[]:[...new Set([...wikiReferences(doc.content),...work!.documents.filter(d=>d.kind==='wiki'&&d.title===doc.pov).map(d=>d.id)])].slice(0,8));
+  const [aiDefaults]=useAppPreferences();const [includeManuscript,setIncludeManuscript]=useState(aiDefaults.aiIncludeManuscript);const [sourceIds,setSourceIds]=useState(()=>noteId||!aiDefaults.aiAttachLinked?[]:[...new Set([...wikiReferences(doc.content),...work!.documents.filter(d=>d.kind==='wiki'&&d.title===doc.pov).map(d=>d.id)])].slice(0,8));
   const [sourcesOpen,setSourcesOpen]=useState(false);const [sourceQuery,setSourceQuery]=useState('');const [resetOpen,setResetOpen]=useState(false);
   const log=useRef<HTMLDivElement>(null);const textarea=useRef<HTMLTextAreaElement>(null);const disposed=useRef(false);const settingsTrigger=useRef<HTMLElement|null>(null);
   const availableIds=new Set(materials.filter(d=>d.id!==doc.id).map(d=>d.id));const selectedIds=sourceIds.filter(id=>availableIds.has(id));

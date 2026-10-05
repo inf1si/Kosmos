@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useAppPreferences } from './use-app-preferences';
 import { Clock3, Link2, Plus, User } from 'lucide-react';
 import { NovelDocument, statuses, wikiReferences } from '@/lib/model';
 import { countChars, groupScenes, nextPartLabel, storyDay, type SceneGroup } from '@/lib/outline';
@@ -9,7 +10,7 @@ const modes:[BoardMode,string][]=[['part','부와 장'],['status','진행 상태
 
 /** Scene cards in columns by part (default), progress status or story day. */
 export function PlotBoard({documents,onOpen,onCreate}:{documents:NovelDocument[];onOpen:(id:string)=>void;onCreate:(chapter:string)=>void}){
-  const [mode,setMode]=useState<BoardMode>('part');
+  const [{plotBoardMode}]=useAppPreferences();const [mode,setMode]=useState<BoardMode>(plotBoardMode);
   const scenes=documents.filter(d=>d.kind==='scene');const wiki=new Map(documents.filter(d=>d.kind==='wiki').map(d=>[d.id,d.title]));
   const columns:SceneGroup[]=mode==='part'?groupScenes(scenes,d=>d.chapter,'부 미지정',true)
     :mode==='status'?(Object.keys(statuses) as NovelDocument['status'][]).map(status=>({key:status,kicker:'',title:statuses[status],scenes:scenes.filter(d=>d.status===status)}))

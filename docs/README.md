@@ -16,6 +16,7 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 | 작품 밖의 아이디어·자료·아이스박스 | [개인 노트](personal-notes.md) |
 | 문서·폴더·사용자 대분류 정리 | [문서 트리](document-navigation.md) |
 | 글꼴·표·문단 서식·특수문자·찾기/바꾸기 | [원고 편집 도구](editor-tools.md) |
+| 화면·원고 표시·기본 보기·AI·자동 복구 지점 설정 | [설정](settings.md) |
 | 글자·단어 수와 선택 영역·작품 합계 | [문서 통계](document-statistics.md) |
 | 제품의 목적과 SF 집필 방향 이해 | [제품 요구사항](product.md) · [상세 목표 설계](product-spec.md) |
 | UI 참고 자료와 선택한 방향 확인 | [디자인 레퍼런스](design-references.md) |
