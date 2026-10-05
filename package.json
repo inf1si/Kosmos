@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1143.0",
+    "@kfonts/maruburi": "0.1.0",
+    "@kfonts/nanum-barun-gothic": "0.3.0",
     "@radix-ui/react-context-menu": "^2.3.7",
     "@radix-ui/react-dialog": "^1.1.0",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
@@ -41,9 +43,11 @@
     "markdown-it": "^15.0.2",
     "markdown-it-footnote": "^4.0.0",
     "next": "^16.3.8",
+    "pretendard": "1.3.9",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "spark-md5": "^3.0.2",
+    "wanted-sans": "1.0.3",
     "zod": "^4.0.0"
   },
   "devDependencies": {
