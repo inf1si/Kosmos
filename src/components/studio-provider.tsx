@@ -13,6 +13,7 @@ import { preserveNotes, preserveNoteDetails, prepareFolderWork, prepareNoteCopy,
 import { materializeNoteNavigation } from '@/lib/note-navigation';
 import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
 import type { NovelDocument } from '@/lib/model';
+import { isRejectedLegacyTrashSave,recoverLegacyTrash } from '@/lib/sync-recovery';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
 type StudioContextValue={
@@ -44,6 +45,7 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
   const channelRef=useRef<BroadcastChannel|null>(null);const cloudId=useRef<string|null>(null);
   const syncing=useRef(false);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);const pending=useRef(0);
   const openedFor=useRef<string|null|undefined>(undefined);
+  const syncError=useRef<string|null>(null);
   const canUse=cloudConfigured?!!user:localPreview;
   const showConflict=useCallback((value:Conflict)=>{conflictRef.current=value;setConflict(value);setStatus('충돌 확인 필요');},[]);
   const setCurrent=useCallback((data:Workspace)=>{dataRef.current=data;setState(data);},[]);
@@ -51,12 +53,15 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     if(!cloudConfigured||!cloudId.current||syncing.current||conflictRef.current)return;
     await saveQueue.current;
     if(!navigator.onLine){setStatus('연결 끊김 · 이 기기에 저장됨');return;}
-    const r=await db.workspaces.get(namespaceRef.current);if(!r?.dirty)return;
+    const targetNamespace=namespaceRef.current,targetCloudId=cloudId.current;
+    const r=await db.workspaces.get(targetNamespace);if(!r?.dirty||syncing.current||conflictRef.current)return;
     syncing.current=true;setStatus('클라우드 동기화 중');
+    const operation=r.pendingRequest?.baseVersion===r.cloudVersion?r.pendingRequest:{id:uid(),localVersion:r.localVersion,baseVersion:r.cloudVersion,data:r.data};
+    let recovered=false;
     try{
-      const operation=r.pendingRequest?.baseVersion===r.cloudVersion?r.pendingRequest:{id:uid(),localVersion:r.localVersion,baseVersion:r.cloudVersion,data:r.data};
-      await db.transaction('rw',db.workspaces,async()=>{const row=await db.workspaces.get(namespaceRef.current);if(row)await db.workspaces.put({...row,pendingRequest:operation});});
-      const result=await saveCloud(cloudId.current,operation.baseVersion,operation.data,operation.id);
+      await db.transaction('rw',db.workspaces,async()=>{const row=await db.workspaces.get(targetNamespace);if(row)await db.workspaces.put({...row,pendingRequest:operation});});
+      const result=await saveCloud(targetCloudId,operation.baseVersion,operation.data,operation.id);
+      if(namespaceRef.current!==targetNamespace)return;
       if(result.status==='conflict'){
         try{await checkpoint(namespaceRef.current,dataRef.current!,'클라우드 충돌 · 기기 원고');}catch{setError('충돌 원고를 이력에 저장하지 못했습니다. ZIP으로 보관하세요.');}
         showConflict({local:dataRef.current!,remote:result.payload!,remoteCloudVersion:result.version});return;
@@ -67,9 +72,32 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
         await db.workspaces.put(next);recordRef.current=next;
         setStatus(next.dirty?'이 기기에 저장됨 · 전송 대기':'클라우드 동기화됨');
       });
-    }catch(e){setError(e instanceof Error?e.message:'클라우드 저장을 완료하지 못했습니다.');setStatus('이 기기에 저장됨 · 클라우드 재시도 필요');}
-    finally{syncing.current=false;}
-  },[showConflict]);
+      const message=syncError.current;setError(value=>value===message?'':value);syncError.current=null;
+    }catch(e){
+      try{
+        if(!isRejectedLegacyTrashSave(e,operation.data))throw e;
+        const remote=await fetchCloud();
+        if(!remote||remote.id!==targetCloudId||namespaceRef.current!==targetNamespace)throw e;
+        // Serialize recovery with edits: use the latest local body, not the rejected snapshot.
+        const recovery=saveQueue.current.then(async()=>{
+          await db.transaction('rw',db.workspaces,async()=>{
+            const current=await db.workspaces.get(targetNamespace);
+            if(namespaceRef.current!==targetNamespace||cloudId.current!==targetCloudId||!current||current.pendingRequest?.id!==operation.id||current.cloudVersion!==operation.baseVersion)return;
+            if(current.localVersion!==recordRef.current?.localVersion){showConflict({local:dataRef.current!,remote:current.data,remoteLocalVersion:current.localVersion});return;}
+            const data=remote.version===current.cloudVersion?recoverLegacyTrash(current.data,remote.data):null;
+            if(!data){showConflict({local:dataRef.current!,remote:remote.data,remoteCloudVersion:remote.version});return;}
+            const next={...current,data,pendingRequest:undefined};
+            await db.workspaces.put(next);if(namespaceRef.current!==targetNamespace)return;recordRef.current=next;
+            // Only an absent empty field is added; preserve edits already displayed/queued.
+            if(dataRef.current&&dataRef.current.trash===undefined)setCurrent({...dataRef.current,trash:data.trash});
+            recovered=true;setStatus('이 기기에 저장됨 · 전송 대기');
+          });
+        });
+        // A failed compatibility read/write must not poison subsequent local saves.
+        saveQueue.current=recovery.catch(()=>{});await recovery;
+      }catch(failure){const message=failure instanceof Error?failure.message:'클라우드 저장을 완료하지 못했습니다.';syncError.current=message;setError(message);setStatus('이 기기에 저장됨 · 클라우드 재시도 필요');}
+    }finally{syncing.current=false;if(recovered)queueMicrotask(()=>void syncNow());}
+  },[setCurrent,showConflict]);
   const scheduleSync=useCallback(()=>{if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void syncNow(),1500);},[syncNow]);
   const update=useCallback((fn:(state:Workspace)=>Workspace)=>{
     if(!dataRef.current||conflictRef.current){if(conflictRef.current)setError('충돌 원고를 확인한 뒤 편집할 수 있습니다.');return;}

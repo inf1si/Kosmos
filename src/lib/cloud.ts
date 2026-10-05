@@ -21,8 +21,11 @@ export async function saveCloud(id:string,baseVersion:number,payload:Workspace,r
   // Normalize old offline queues and restored backups before the server's preservation guard runs.
   const complete={...payload,notes:payload.notes||[],works:payload.works.map(w=>applyNavigation(w,resolveNavigation(w)))};
   const {data,error}=await cloud().rpc('save_workspace',{p_id:id,p_base_version:baseVersion,p_payload:complete,p_request_id:requestId});
-  if(error)throw new Error(error.message);
+  if(error)throw new CloudSaveError(error.message,error.code);
   return data as {status:'saved'|'conflict';version:number;payload?:Workspace};
+}
+export class CloudSaveError extends Error {
+  constructor(message:string,public code:string){super(message);}
 }
 export async function publishCloud(id:string,workId:string,sceneIds:string[]):Promise<Publication>{
   const {data,error}=await cloud().rpc('publish_work',{p_id:id,p_work_id:workId,p_scene_ids:sceneIds});

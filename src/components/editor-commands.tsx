@@ -47,20 +47,24 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
   function command(id:string){
     if(!slash||!editor.isEditable)return;
     if(slash.to>editor.state.doc.content.size||editor.state.doc.textBetween(slash.from,slash.to)!==`/${slash.query}`){close();return;}
-    const chain=editor.chain().focus().command(({tr})=>{closeHistory(tr);return true;}).deleteRange({from:slash.from,to:slash.to});
+    const chain=editor.chain().focus().setTextSelection(slash.to).command(({tr})=>{closeHistory(tr);return true;});
+    const insertsBlock=id==='table'||id==='rule';
+    if(insertsBlock)chain.deleteRange({from:slash.from,to:slash.to});
     switch(id){
-      case 'paragraph':chain.setParagraph().run();break;
-      case 'h1':chain.setHeading({level:1}).run();break;
-      case 'h2':chain.setHeading({level:2}).run();break;
-      case 'h3':chain.setHeading({level:3}).run();break;
-      case 'bullet':chain.toggleBulletList().run();break;
-      case 'ordered':chain.toggleOrderedList().run();break;
-      case 'task':chain.toggleTaskList().run();break;
-      case 'quote':chain.toggleBlockquote().run();break;
-      case 'table':chain.insertTable({rows:3,cols:3,withHeaderRow:true}).run();break;
-      case 'rule':chain.setHorizontalRule().run();break;
-      default:chain.run();
+      case 'paragraph':chain.setParagraph();break;
+      case 'h1':chain.setHeading({level:1});break;
+      case 'h2':chain.setHeading({level:2});break;
+      case 'h3':chain.setHeading({level:3});break;
+      case 'bullet':chain.toggleBulletList();break;
+      case 'ordered':chain.toggleOrderedList();break;
+      case 'task':chain.toggleTaskList();break;
+      case 'quote':chain.toggleBlockquote();break;
+      case 'table':chain.insertTable({rows:3,cols:3,withHeaderRow:true});break;
+      case 'rule':chain.setHorizontalRule();break;
     }
+    // List lifting uses its transaction mapping; remove the query after formatting to avoid mapping it twice.
+    if(!insertsBlock)chain.command(({tr})=>{tr.delete(tr.mapping.map(slash.from),tr.mapping.map(slash.to));return true;});
+    chain.run();
     editor.view.dispatch(closeHistory(editor.state.tr));setSlash(null);dismissed.current=null;
     if(id==='ai')openAI('ask');else if(id==='link')onLink();else if(id==='footnote')onFootnote();else if(id==='image')onImage?.();
   }
@@ -92,9 +96,14 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
       const {$from,from}=editor.state.selection;
       if(!['paragraph','heading'].includes($from.parent.type.name)){setSlash(null);return;}
       const before=$from.parent.textBetween(0,$from.parentOffset,'','\ufffc');
-      if(!/^\/[^/\n]{0,40}$/.test(before)){dismissed.current=null;setSlash(null);return;}
-      if(dismissed.current===$from.start())return;
-      setSlash(old=>{const next={from:$from.start(),to:from,query:before.slice(1)};if(old?.query!==next.query)setIndex(0);return next;});
+      const offset=before.lastIndexOf('/'),query=before.slice(offset+1),prefix=before.slice(0,offset);
+      // UTF-16/leaf placeholders keep the absolute range correct across marks and inline atoms.
+      // URL/path slashes stay literal; a slash after ordinary text needs no leading space.
+      const token=prefix.match(/\S*$/)?.[0]||'';
+      if(offset<0||!/^[^/\n\ufffc]{0,40}$/.test(query)||token.includes('/')||/^(?:[a-z][a-z\d+.-]*:|www\.)/i.test(token)){dismissed.current=null;setSlash(null);return;}
+      const trigger=$from.start()+offset;
+      if(dismissed.current===trigger)return;
+      setSlash(old=>{const next={from:trigger,to:from,query};if(old?.query!==next.query)setIndex(0);return next;});
     };
     const blur=()=>setSlash(null);editor.on('transaction',update);editor.on('focus',update);editor.on('blur',blur);
     return()=>{editor.unregisterPlugin(key);editor.off('transaction',update);editor.off('focus',update);editor.off('blur',blur);};
