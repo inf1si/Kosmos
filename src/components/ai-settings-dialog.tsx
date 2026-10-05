@@ -4,8 +4,9 @@ import { cloud,cloudConfigured } from '@/lib/cloud';
 import { type AIProviderStatus } from '@/lib/ai-settings';
 import { Modal } from './primitives';
 import { AIPromptEditor } from './ai-prompt-editor';
+import { AISkillEditor } from './ai-skill-editor';
 
-export function AISettingsDialog({providers,providerId,storageAvailable,onRefresh,onClose,onReturnFocus}:{providers:AIProviderStatus[];providerId:AIProviderStatus['id'];storageAvailable:boolean;onRefresh:(provider:AIProviderStatus['id'])=>Promise<void>;onClose:()=>void;onReturnFocus:()=>void}){
+export function AISettingsDialog({providers,providerId,storageAvailable,onRefresh,onClose,onReturnFocus,section}:{providers:AIProviderStatus[];providerId:AIProviderStatus['id'];storageAvailable:boolean;onRefresh:(provider:AIProviderStatus['id'])=>Promise<void>;onClose:()=>void;onReturnFocus:()=>void;section?:'skills'}){
   const [provider,setProvider]=useState(providerId),[model,setModel]=useState(''),[key,setKey]=useState('');
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const selected=providers.find(p=>p.id===provider)!;
@@ -20,7 +21,7 @@ export function AISettingsDialog({providers,providerId,storageAvailable,onRefres
     }catch(e){setError(e instanceof Error?e.message:'AI 설정을 저장하지 못했습니다.');}
     finally{setBusy(false);}
   }
-  return <Modal open onClose={onClose} onReturnFocus={onReturnFocus} title="AI 설정" description="제공자 연결과 시스템 프롬프트를 설정하세요. 원고를 보내거나 AI를 호출하지 않고 저장합니다." wide>
+  return <Modal open onClose={onClose} onReturnFocus={onReturnFocus} title="AI 설정" description="제공자 연결·시스템 프롬프트·내 스킬을 설정하세요. 원고를 보내거나 AI를 호출하지 않고 저장합니다." wide>
     <div className="ai-settings">
       <section aria-labelledby="ai-connection-title"><h3 id="ai-connection-title">제공자 연결</h3>
         <form onSubmit={e=>{e.preventDefault();void change();}}>
@@ -34,6 +35,7 @@ export function AISettingsDialog({providers,providerId,storageAvailable,onRefres
         </form>
       </section>
       <AIPromptEditor/>
+      <AISkillEditor focus={section==='skills'}/>
       {error&&<p role="alert" className="ai-settings-error">{error}</p>}{notice&&<p role="status" className="ai-settings-notice">{notice}</p>}
     </div>
   </Modal>;

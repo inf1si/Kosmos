@@ -1,5 +1,12 @@
 # 구현 검증
 
+## 2026-10-05 — 내 스킬
+
+- 기준 main `39b9591`. 내 스킬 저장·수정·삭제, `/`·우클릭·AI 질문 창의 스킬 선택, AI 설정의 관리 구역, 우클릭 AI 항목 아이콘을 추가했다. 서버 API·SQL은 바꾸지 않았다.
+- 타입·141개 Node 테스트 통과. 새 단위 검사는 스킬 저장/오래된 편집·삭제 거절/30개 초과/중복 ID 거절/스킬 없는 이전 설정 읽기/프리셋 변경 시 스킬 보존과 전체 ZIP 왕복·공개 판본 제외를 확인한다.
+- 로컬 개발 서버의 [합성 Chromium 검사](tests/browser/ai-skills.mjs) 통과: `/스킬 관리` → 내 스킬 구역 초점·입력한 `/스킬` 제거, 저장 후 합성 클라우드 저장, 집필실 원고 `/존댓` → 현재 문단 범위로 저장한 요청 그대로 전송·문단 바꾸기·실행 취소, 설명 검색, 우클릭(선택 범위)·스킬 select로 기본 동작 전환, 노트에서 같은 스킬 실행(noteRange), 새로고침 후 유지, 이름 수정·삭제 후 `/` 메뉴 반영. 여섯 테마 × 1280/360px에서 `/` 메뉴·우클릭 메뉴·AI 질문 창·AI 설정 내 스킬 구역 48개 화면의 경계·가로 넘침을 확인하고 화면을 직접 봤다. 합성 AI 요청 3회·저장 9회·페이지 오류 0.
+- `pnpm lint`(advisory)는 기존 3,023건에서 3,120건으로 97건 늘었다. 새 파일이 주변 코드의 빈 줄 없는 형식을 따른 `require-readable-spacing` 위반이 대부분이다. 기존 [집필실](tests/browser/studio-inline-commands.mjs)·[노트](tests/browser/note-inline-commands.mjs) 입력 명령 브라우저 검사도 각각 12개 배치·오류 0으로 통과했다. 운영 빌드(로컬은 Google Fonts 차단)·CI·배포·실제 계정·실제 AI 답변 품질은 미확인이다.
+
 ## 2026-10-05 — 저장소 에이전트 도구와 Anti Slop
 
 - 기준 main `4f71cdbbf4d1ac95856d78d3c71780abebf000e4`. Attention Span·Karpathy Guidelines·Verification Before Completion과 사용자 지정 dmmulroy/anti-slop을 원본 커밋으로 고정했다. 스킬·라이선스·파일 해시·Codex/Claude 진입점과 Oxlint 설정을 추가한다. 앱 소스·로그인·개인 설정은 변경하지 않는다.

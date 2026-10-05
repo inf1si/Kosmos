@@ -39,6 +39,7 @@ html:has(.public-site) .popover{background:var(--pub-popover);color:var(--pub-te
 .note-ai-settings{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .note-ai-settings label,.note-ai-answer{display:flex;flex-direction:column;gap:6px;min-width:0}
 .note-ai-settings select{width:100%;min-width:0}
+.note-ai-settings .note-ai-request{grid-column:1/-1}
 .note-ai-target{white-space:pre-wrap;overflow-wrap:anywhere;max-height:100px;overflow:auto}
 .note-ai-answer textarea{resize:vertical;min-height:120px;max-height:220px;line-height:1.65}
 .note-inline-ai .chat-composer{padding:0;border:0;background:transparent}.note-inline-ai .chat-context,.note-inline-ai .chat-connection{margin:0}
