@@ -1,14 +1,17 @@
 'use client';
-import { useEffect,useId,useRef,useState } from 'react';
+import { Fragment,useEffect,useId,useRef,useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { Plugin,PluginKey } from '@tiptap/pm/state';
 import { closeHistory } from '@tiptap/pm/history';
 import { DOMSerializer } from '@tiptap/pm/model';
 import * as Popup from '@radix-ui/react-popover';
-import { Heading1,Heading2,Heading3,MessageSquareText,List,ListOrdered,ListChecks,Table2,ImagePlus,Link2,Sparkles,Quote,Minus,Type,Copy,Scissors,Clipboard } from 'lucide-react';
+import { Heading1,Heading2,Heading3,MessageSquareText,List,ListOrdered,ListChecks,Table2,ImagePlus,Link2,Sparkles,Quote,Minus,Type,Copy,Scissors,Clipboard,Settings2,WandSparkles } from 'lucide-react';
 import type { EditorAIScope } from '@/lib/ai-conversation';
 import { captureEditorTarget,targetIsCurrent,type EditorTarget } from '@/lib/editor-target';
 import { EditorInlineAI,editorAIActions,type EditorAIAction } from './editor-inline-ai';
+import { useStudio } from './studio-provider';
+import { useAIConnection } from './use-ai-connection';
+import { AISettingsDialog } from './ai-settings-dialog';
 
 const commandItems=[
   {id:'paragraph',label:'일반 문단',words:'텍스트 text paragraph',icon:Type},
@@ -34,7 +37,12 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
   const [slash,setSlash]=useState<Slash|null>(null),[index,setIndex]=useState(0),[panel,setPanel]=useState<Panel>(null),[notice,setNotice]=useState('');
   const hasPanel=useRef(false);hasPanel.current=!!panel;
   const popup=useRef<HTMLDivElement>(null),dismissed=useRef<number|null>(null),handlers=useRef<{key:(event:KeyboardEvent)=>boolean;context:(event:MouseEvent)=>boolean}>({key:()=>false,context:()=>false});
-  const available=commandItems.filter(item=>(item.id!=='task'||!!editor.schema.nodes.taskList)&&(item.id!=='image'||!!onImage)).map(item=>item.id==='link'&&!scope.noteId?{...item,label:'설정 링크'}:item);
+  const skills=useStudio().state?.aiPreferences?.skills||[],[manage,setManage]=useState(false);
+  const available:{id:string;label:string;words:string;icon:typeof Type;hint?:string}[]=[
+    ...commandItems.filter(item=>(item.id!=='task'||!!editor.schema.nodes.taskList)&&(item.id!=='image'||!!onImage)).map(item=>item.id==='link'&&!scope.noteId?{...item,label:'설정 링크'}:item),
+    ...skills.map(p=>({id:`skill:${p.id}`,label:p.title,words:`${p.description} 내 스킬 skill`,icon:WandSparkles,hint:p.description||undefined})),
+    {id:'skills',label:'스킬 관리',words:'내 스킬 만들기 추가 skill',icon:Settings2},
+  ];
   const filtered=slash?available.filter(item=>`${item.label} ${item.words}`.toLowerCase().includes(slash.query.trim().toLowerCase())):[];
   const chosen=Math.min(index,Math.max(0,filtered.length-1));
   function close(restore=true){
@@ -66,7 +74,7 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
     if(!insertsBlock)chain.command(({tr})=>{tr.delete(tr.mapping.map(slash.from),tr.mapping.map(slash.to));return true;});
     chain.run();
     editor.view.dispatch(closeHistory(editor.state.tr));setSlash(null);dismissed.current=null;
-    if(id==='ai')openAI('ask');else if(id==='link')onLink();else if(id==='footnote')onFootnote();else if(id==='image')onImage?.();
+    if(id==='ai')openAI('ask');else if(id.startsWith('skill:'))openAI(id as EditorAIAction);else if(id==='skills')setManage(true);else if(id==='link')onLink();else if(id==='footnote')onFootnote();else if(id==='image')onImage?.();
   }
   handlers.current={
     key:event=>{
@@ -146,10 +154,16 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
     {notice&&<p className="note-command-notice" role="status">{notice}</p>}
     <Popup.Root open={(!!slash&&filtered.length>0)||!!panel} onOpenChange={open=>{if(!open)close(false);}}>
       <Popup.Anchor virtualRef={anchor}/><Popup.Portal><Popup.Content ref={popup} className={panel?.kind==='ai'?'popover note-ai-popover':'menu note-command-menu'} side="bottom" align="start" sideOffset={6} collisionPadding={12} aria-label={panel?.kind==='ai'?'AI 질문':panel?.kind==='context'?'선택한 글 메뉴':menuLabel} onKeyDown={event=>{const dialog=(event.target as HTMLElement).closest('[role=dialog]');if(event.key==='Escape'&&(!dialog||dialog===popup.current)){event.preventDefault();event.stopPropagation();close();}}} onOpenAutoFocus={event=>{if(slash)event.preventDefault();}} onFocusOutside={event=>{if((slash||panel?.kind==='ai')&&editor.view.dom.contains(event.target as globalThis.Node))event.preventDefault();}} onCloseAutoFocus={event=>{event.preventDefault();if(!editor.isDestroyed&&document.activeElement===document.body)editor.view.focus();}} onInteractOutside={event=>{if(panel?.kind==='ai'&&(editor.view.dom.contains(event.target as globalThis.Node)||(event.target as HTMLElement)?.closest('[role=dialog]')))event.preventDefault();}} onEscapeKeyDown={()=>{if(slash)dismissed.current=slash.from;}}>
-        {slash&&filtered.length>0&&<><div className="note-command-caption">입력 명령 <kbd>↑↓ 선택 · Enter 실행</kbd></div><div role="listbox" id={listId} aria-label={menuLabel}>{filtered.map((item,i)=><button type="button" role="option" tabIndex={-1} aria-selected={chosen===i} id={`${listId}-${item.id}`} className="menu-item" data-highlighted={chosen===i?'':undefined} key={item.id} onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} onClick={()=>command(item.id)}><item.icon size={15}/>{item.label}{item.id==='ai'&&<kbd>Alt+Enter</kbd>}</button>)}</div></>}
-        {panel?.kind==='context'&&<div role="menu" aria-label="선택한 글 메뉴" onKeyDown={e=>{const buttons=Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button'));if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const i=buttons.indexOf(document.activeElement as HTMLButtonElement);buttons[(i+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}}}>{editorAIActions.map(action=><button className="menu-item" role="menuitem" key={action.id} onClick={()=>openAI(action.id,panel.target)}><Sparkles size={15}/>{action.label}</button>)}<div className="menu-separator"/>{([{id:'copy',label:'복사',icon:Copy},{id:'cut',label:'잘라내기',icon:Scissors},{id:'paste',label:'붙여넣기',icon:Clipboard}] as const).map(item=><button className="menu-item" role="menuitem" key={item.id} onClick={()=>void clipboard(item.id)}><item.icon size={15}/>{item.label}</button>)}</div>}
+        {slash&&filtered.length>0&&<><div className="note-command-caption">입력 명령 <kbd>↑↓ 선택 · Enter 실행</kbd></div><div role="listbox" id={listId} aria-label={menuLabel}>{filtered.map((item,i)=><Fragment key={item.id}>{item.id.startsWith('skill:')&&!filtered[i-1]?.id.startsWith('skill:')&&<div className="note-command-caption" role="presentation">내 스킬</div>}<button type="button" role="option" tabIndex={-1} aria-selected={chosen===i} id={`${listId}-${item.id}`} className="menu-item" data-highlighted={chosen===i?'':undefined} title={item.hint} onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} onClick={()=>command(item.id)}><item.icon size={15}/>{item.label}{item.id==='ai'&&<kbd>Alt+Enter</kbd>}</button></Fragment>)}</div></>}
+        {panel?.kind==='context'&&<div role="menu" aria-label="선택한 글 메뉴" onKeyDown={e=>{const buttons=Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button'));if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const i=buttons.indexOf(document.activeElement as HTMLButtonElement);buttons[(i+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}}}>{editorAIActions.map(action=><button className="menu-item" role="menuitem" key={action.id} onClick={()=>openAI(action.id,panel.target)}><action.icon size={15}/>{action.label}</button>)}{skills.length>0&&<><div className="menu-separator"/>{skills.map(p=><button className="menu-item" role="menuitem" key={p.id} title={p.description||undefined} onClick={()=>openAI(`skill:${p.id}`,panel.target)}><WandSparkles size={15}/>{p.title}</button>)}</>}<div className="menu-separator"/>{([{id:'copy',label:'복사',icon:Copy},{id:'cut',label:'잘라내기',icon:Scissors},{id:'paste',label:'붙여넣기',icon:Clipboard}] as const).map(item=><button className="menu-item" role="menuitem" key={item.id} onClick={()=>void clipboard(item.id)}><item.icon size={15}/>{item.label}</button>)}</div>}
         {panel?.kind==='ai'&&<EditorInlineAI key={`${scope.docId}-${panel.action}-${panel.target.from}-${panel.target.to}`} editor={editor} scope={scope} target={panel.target} action={panel.action} onClose={()=>close()} onContinue={()=>{close(false);onContinue();}}/>}
       </Popup.Content></Popup.Portal>
     </Popup.Root>
+    {manage&&<SkillSettings onClose={()=>setManage(false)} onReturnFocus={()=>{if(!editor.isDestroyed)editor.view.focus();}}/>}
   </>;
+}
+/** Mounted only while open so the `/` menu does not query AI providers on every editor. */
+function SkillSettings({onClose,onReturnFocus}:{onClose:()=>void;onReturnFocus:()=>void}){
+  const {providers,provider,storageAvailable,refreshProviders}=useAIConnection();
+  return <AISettingsDialog providers={providers} providerId={provider} storageAvailable={storageAvailable} onRefresh={refreshProviders} onClose={onClose} onReturnFocus={onReturnFocus} section="skills"/>;
 }
