@@ -35,10 +35,6 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <span>Orbis Tertius</span>
-        <div>
-          <Link href="/privacy">데이터 이용 안내</Link>
-          <a href="https://github.com/inf1si/Kosmos">GitHub</a>
-        </div>
       </footer>
     </div>
   );
