@@ -14,6 +14,7 @@ import { materializeNoteNavigation } from '@/lib/note-navigation';
 import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
 import type { NovelDocument } from '@/lib/model';
 import { isRejectedLegacyTrashSave,recoverLegacyTrash } from '@/lib/sync-recovery';
+import { useAppPreferences } from './use-app-preferences';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
 type StudioContextValue={
@@ -37,6 +38,7 @@ const Context=createContext<StudioContextValue|null>(null);
 export function useStudio(){const c=useContext(Context);if(!c)throw new Error('Studio provider missing');return c;}
 export function StudioProvider({children,localPreview}:{children:ReactNode;localPreview:boolean}){
   const [state,setState]=useState<Workspace|null>(null);const dataRef=useRef<Workspace|null>(null);
+  const [{checkpointMinutes}]=useAppPreferences();
   const [namespace,setNamespace]=useState('preview');const namespaceRef=useRef('preview');
   const [user,setUser]=useState<string|null>(null);const [loading,setLoading]=useState(true);
   const [status,setStatus]=useState('불러오는 중');const [error,setError]=useState('');const [conflict,setConflict]=useState<Conflict|null>(null);
@@ -165,12 +167,18 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
     const offline=()=>setStatus('연결 끊김 · 이 기기에 저장됨');window.addEventListener('offline',offline);
     let subscription:ReturnType<ReturnType<typeof cloud>['channel']>|null=null;
     if(cloudConfigured&&user)subscription=cloud().channel(`workspace:${user}`).on('postgres_changes',{event:'UPDATE',schema:'public',table:'workspaces',filter:`owner_id=eq.${user}`},()=>void reconnect()).subscribe();
-    const backupTimer=setInterval(()=>{if(dataRef.current)void checkpoint(namespace,dataRef.current,'자동 복구 지점').catch(()=>setError('자동 복구 지점을 만들지 못했습니다. ZIP 백업을 보관하세요.'));},10*60*1000);
     const syncTimer=setInterval(()=>void syncNow(),12000);
-    return()=>{channel.close();channelRef.current=null;clearInterval(backupTimer);clearInterval(syncTimer);window.removeEventListener('beforeunload',onUnload);window.removeEventListener('online',reconnect);window.removeEventListener('focus',reconnect);window.removeEventListener('offline',offline);if(subscription)void cloud().removeChannel(subscription);};
+    return()=>{channel.close();channelRef.current=null;clearInterval(syncTimer);window.removeEventListener('beforeunload',onUnload);window.removeEventListener('online',reconnect);window.removeEventListener('focus',reconnect);window.removeEventListener('offline',offline);if(subscription)void cloud().removeChannel(subscription);};
   // The workspace changes often; subscriptions depend only on its availability and identity.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[!!state,namespace,user,setCurrent,syncNow]);
+  // The interval comes from the settings dialog; changing it restarts the timer without touching sync.
+  useEffect(()=>{
+    if(!state)return;
+    const backupTimer=setInterval(()=>{if(dataRef.current)void checkpoint(namespace,dataRef.current,'자동 복구 지점').catch(()=>setError('자동 복구 지점을 만들지 못했습니다. ZIP 백업을 보관하세요.'));},checkpointMinutes*60*1000);
+    return()=>clearInterval(backupTimer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[!!state,namespace,checkpointMinutes]);
   async function restore(data:Workspace){await flush();await checkpoint(namespace,dataRef.current!,'복원 전 원고');update(()=>structuredClone(data));await flush();setEpoch(x=>x+1);}
   async function exportBackup(){
     // A recovery export must remain available when local saving or conflict resolution fails.

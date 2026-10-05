@@ -6,7 +6,14 @@ import { Modal } from './primitives';
 import { AIPromptEditor } from './ai-prompt-editor';
 import { AISkillEditor } from './ai-skill-editor';
 
-export function AISettingsDialog({providers,providerId,storageAvailable,onRefresh,onClose,onReturnFocus,section}:{providers:AIProviderStatus[];providerId:AIProviderStatus['id'];storageAvailable:boolean;onRefresh:(provider:AIProviderStatus['id'])=>Promise<void>;onClose:()=>void;onReturnFocus:()=>void;section?:'skills'}){
+type PanelProps={providers:AIProviderStatus[];providerId:AIProviderStatus['id'];storageAvailable:boolean;onRefresh:(provider:AIProviderStatus['id'])=>Promise<void>;section?:'skills'};
+export function AISettingsDialog({onClose,onReturnFocus,...panel}:PanelProps&{onClose:()=>void;onReturnFocus:()=>void}){
+  return <Modal open onClose={onClose} onReturnFocus={onReturnFocus} title="AI 설정" description="제공자 연결·시스템 프롬프트·내 스킬을 설정하세요. 원고를 보내거나 AI를 호출하지 않고 저장합니다." wide>
+    <AISettingsPanel {...panel}/>
+  </Modal>;
+}
+/** The AI settings body, shared by the AI settings dialog and the AI section of the settings dialog. */
+export function AISettingsPanel({providers,providerId,storageAvailable,onRefresh,section}:PanelProps){
   const [provider,setProvider]=useState(providerId),[model,setModel]=useState(''),[key,setKey]=useState('');
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   const selected=providers.find(p=>p.id===provider)!;
@@ -21,8 +28,7 @@ export function AISettingsDialog({providers,providerId,storageAvailable,onRefres
     }catch(e){setError(e instanceof Error?e.message:'AI 설정을 저장하지 못했습니다.');}
     finally{setBusy(false);}
   }
-  return <Modal open onClose={onClose} onReturnFocus={onReturnFocus} title="AI 설정" description="제공자 연결·시스템 프롬프트·내 스킬을 설정하세요. 원고를 보내거나 AI를 호출하지 않고 저장합니다." wide>
-    <div className="ai-settings">
+  return <div className="ai-settings">
       <section aria-labelledby="ai-connection-title"><h3 id="ai-connection-title">제공자 연결</h3>
         <form onSubmit={e=>{e.preventDefault();void change();}}>
           <div className="ai-settings-grid"><label>제공자<select aria-label="설정할 AI 제공자" value={provider} disabled={busy} onChange={e=>{setProvider(e.target.value as AIProviderStatus['id']);setError('');setNotice('');}}>{providers.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label><label>모델 ID<input aria-label="AI 모델 ID" value={model} maxLength={200} required disabled={busy} autoComplete="off" spellCheck={false} placeholder="제공자의 모델 ID" onChange={e=>setModel(e.target.value)}/></label></div>
@@ -37,6 +43,5 @@ export function AISettingsDialog({providers,providerId,storageAvailable,onRefres
       <AIPromptEditor/>
       <AISkillEditor focus={section==='skills'}/>
       {error&&<p role="alert" className="ai-settings-error">{error}</p>}{notice&&<p role="status" className="ai-settings-notice">{notice}</p>}
-    </div>
-  </Modal>;
+    </div>;
 }

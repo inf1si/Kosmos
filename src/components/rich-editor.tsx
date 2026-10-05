@@ -9,6 +9,8 @@ import { WikiIcon } from './studio-icons';
 import { manuscriptFonts } from '@/lib/editor-preferences';
 import { statisticsSelection } from '@/lib/text-statistics';
 import { useEditorPreferences } from './use-editor-preferences';
+import { useAppPreferences } from './use-app-preferences';
+import { manuscriptLayoutStyle } from '@/lib/app-preferences';
 import { manuscriptFontVariables } from './manuscript-fonts';
 import { editorExtensions } from '@/lib/editor-extensions';
 import { EditorFormatTools,FontSizeControl,ListMenu } from './editor-format-tools';
@@ -25,7 +27,7 @@ const SETTING_LINK_COPY:LinkCopy={tool:'설정 링크 추가',title:'설정집 �
 export type NoteTools={extensions:AnyExtension[];onImage:(file:File)=>Promise<string>};
 /** heading replaces the default kicker and title; toolbarEnd sits at the right of the toolbar; appearances counts each setting's referring documents for the link preview. */
 export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,appearances,autofocus=false,contentLabel,linkCopy=SETTING_LINK_COPY,noteTools,aiTools}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode|((selection:RichNode|null)=>ReactNode);appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string;linkCopy?:LinkCopy;noteTools?:NoteTools;aiTools?:{scope:EditorAIScope;onContinue:()=>void}}){
-  const [{font,size},setPreferences]=useEditorPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
+  const [{font,size},setPreferences]=useEditorPreferences();const [appPreferences]=useAppPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
   const toolbarRef=useRef<HTMLDivElement>(null);const [overflow,setOverflow]=useState({before:false,after:false});
   const [dialog,setDialog]=useState<'note'|'wiki'|null>(null);const [note,setNote]=useState('');const [target,setTarget]=useState(wiki[0]?.id||'');
   const [selection,setSelection]=useState<{from:number;to:number}>({from:0,to:0});const [,render]=useState(0);
@@ -66,7 +68,7 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
     }};
     setDialog(type);
   }
-  return <div className={`editor-shell ${manuscriptFontVariables}`} style={{'--manuscript-size':`${size}px`,'--manuscript-font':selectedFont.family} as React.CSSProperties}>
+  return <div className={`editor-shell ${manuscriptFontVariables}`} style={{'--manuscript-size':`${size}px`,'--manuscript-font':selectedFont.family,...manuscriptLayoutStyle(appPreferences)} as React.CSSProperties}>
     <div className="editor-toolbar-frame">
     {overflow.before&&<div className="toolbar-scroll before"><IconButton label="이전 편집 도구" onClick={()=>toolbarRef.current?.scrollBy({left:-240,behavior:'smooth'})}><ChevronLeft size={16}/></IconButton></div>}
     <div className="editor-toolbar" ref={toolbarRef}>
