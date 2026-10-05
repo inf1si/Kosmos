@@ -73,7 +73,7 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
       if(event.isComposing||editor.view.composing||!editor.isEditable)return false;
       if(event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.key==='Enter'){openAI('ask');return true;}
       if(event.key==='Escape'&&panel){close();return true;}
-      // Prose such as `그/그녀` or `1/2` keeps ordinary arrows/Escape once nothing matches.
+      // Unmatched prose keeps ordinary arrows/Escape.
       if(!slash||!filtered.length)return false;
       if(event.key==='ArrowDown'||event.key==='ArrowUp'){setIndex(v=>(v+(event.key==='ArrowDown'?1:-1)+Math.max(filtered.length,1))%Math.max(filtered.length,1));return true;}
       if(event.key==='Enter'){command(filtered[chosen].id);return true;}
@@ -101,7 +101,9 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
       // UTF-16/leaf placeholders keep the absolute range correct across marks and inline atoms.
       // URL/path slashes stay literal; a slash after ordinary text needs no leading space.
       const token=prefix.match(/\S*$/)?.[0]||'';
-      if(offset<0||!/^[^/\n\ufffc]{0,40}$/.test(query)||token.includes('/')||/^(?:[a-z][a-z\d+.-]*:|www\.)/i.test(token)){dismissed.current=null;setSlash(null);return;}
+      // Read both sides of a numeric slash, including when the caret is just before its denominator.
+      const numericSlash=offset>=0&&/\p{Nd}\s*$/u.test(prefix)&&/^\s*\p{Nd}/u.test($from.parent.textBetween(offset+1,$from.parent.content.size,'','\ufffc'));
+      if(offset<0||numericSlash||!/^[^/\n\ufffc]{0,40}$/.test(query)||token.includes('/')||/^(?:[a-z][a-z\d+.-]*:|www\.)/i.test(token)){dismissed.current=null;setSlash(null);return;}
       const trigger=$from.start()+offset;
       if(dismissed.current===trigger)return;
       setSlash(old=>{const next={from:trigger,to:from,query};if(old?.query!==next.query)setIndex(0);return next;});
