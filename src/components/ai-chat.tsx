@@ -9,7 +9,8 @@ import type { AIProvider } from '@/lib/ai-provider';
 import { useStudio } from './studio-provider';
 import { IconButton,Modal,Popover } from './primitives';
 import { AISettingsDialog } from './ai-settings-dialog';
-import { addNote, newNote, appendNoteExchange, applyNoteSuggestion, clearNoteConversation, noteAISources } from '@/lib/personal-notes';
+import { addNote, newNote, applyNoteSuggestion, clearNoteConversation, noteAISources } from '@/lib/personal-notes';
+import { appendEditorExchange } from '@/lib/editor-ai-conversation';
 import { useAIConnection } from './use-ai-connection';
 import { activePromptPreset,activatePromptPreset,promptCatalog } from '@/lib/ai-prompt-presets';
 
@@ -47,13 +48,7 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
       const answer=chatMessageSchema.parse({id:uid(),role:'assistant',createdAt:new Date().toISOString(),result:reviewSchema.parse(body.result),provider,model:body.model,version:body.version,sources:body.sources,promptPreset:body.promptPreset});
       if(answer.role!=='assistant')throw new Error('답변 형식을 확인하세요.');
       // Capture the originating document so switching tabs cannot attach an answer elsewhere.
-      s.update(state=>noteId?appendNoteExchange(state,noteId,messages.length,question,answer):({...state,works:state.works.map(w=>{
-        if(w.id!==workId)return w;if(!w.documents.some(d=>d.id===doc.id))throw new Error('대화 중 문서가 바뀌었습니다.');
-        const threads=w.aiConversations||[];const thread=threads.find(c=>c.docId===doc.id);if((thread?.messages.length||0)!==messages.length)throw new Error('다른 창에서 대화가 바뀌었습니다. 다시 보내세요.');
-        if(!thread&&threads.length>=200)throw new Error('작품당 대화 200개 한도입니다. 대화를 메모로 보관하고 새 대화를 시작하세요.');
-        const next={docId:doc.id,messages:[...(thread?.messages||[]),{id:uid(),role:'user' as const,text:question,createdAt:new Date().toISOString()},answer]};
-        return {...w,aiConversations:thread?threads.map(c=>c.docId===doc.id?next:c):[...threads,next]};
-      })}));
+      s.update(state=>appendEditorExchange(state,noteId?{noteId,docId:doc.id}:{workId:workId!,docId:doc.id},messages.length,question,answer));
       await s.flush();if(!disposed.current)setPrompt('');
     }catch(e){if(!disposed.current)setError(e instanceof Error?e.message:'AI 대화를 완료하지 못했습니다.');}
     finally{if(!disposed.current){setBusy(false);setPending('');}}

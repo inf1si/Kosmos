@@ -142,4 +142,4 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 
 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql)은 기존 작품의 `navigation`이 다음 저장에서 통째로 사라지면 UPDATE를 거절한다. 오래 열린 이전 버전 집필실의 Zod 파싱이 새 필드를 제거하는 경우를 막는다. 기존 권한·RLS·RPC·행 버전 검사를 유지하며 기존 원고를 수정하지 않는다. 서버는 계층 전체의 의미까지 검증하지 않으므로 현재 세부 검증의 기준은 클라이언트 스키마다.
 
-커서 AI 요청의 `noteRange`(선택/문단, 편집기 from/to, 원문)는 임시 API 입력이다. 저장되는 답변은 기존 노트 aiMessages 형식이며 범위 검색으로 다른 반복 문장을 적용하지 않도록 suggestions를 비운다. 본문은 기존 리치 노드로 저장하므로 DB 마이그레이션·백업 버전 변경이 없다. AI 제공자 선택은 계정별 브라우저 설정이고 키·모델과 함께 작업 공간에 넣지 않는다.
+커서 AI 요청의 작품 `documentRange`·노트 `noteRange`(선택/문단, 편집기 from/to, 원문)는 임시 API 입력이다. 저장되는 답변은 기존 작품 aiConversations/노트 aiMessages 형식이며 범위 검색으로 다른 반복 문장을 적용하지 않도록 suggestions를 비운다. 본문은 기존 리치 노드로 저장하므로 DB 마이그레이션·백업 버전 변경이 없다. AI 제공자 선택은 계정별 브라우저 설정이고 키·모델과 함께 작업 공간에 넣지 않는다.

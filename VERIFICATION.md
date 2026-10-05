@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-10-05 — 집필실 `/` 명령·커서 AI·선택 글 메뉴
+
+- 기준 main `d10ff79`를 fetch했고 중간 변경은 없었다. 노트 개선·기존 원고 서식/설정 링크/각주·분할 창과 AI 저장/제공자/프리셋 구조를 보존했다. 편집 도구·AI·디자인·조작 검증 안내와 현재 Next.js 가이드를 읽었다.
+- TypeScript·전체 Node 테스트 134개·`NODE_USE_ENV_PROXY=1 pnpm build` 통과. [작품 범위/대화 검사](tests/studio-inline-ai.test.ts)는 원고/설정/메모의 긴 본문에서 짧은 범위만 전송, 작품 정보 보존, 다른 작품/범위 위조/시점 불일치 거절, 원래 문서 대화 저장·본문/시점 보존·동시 변경/삭제/20회 한도 거절을 확인한다. 노트 범위 회귀 검사도 통과했다.
+- 개발 서버의 합성 로그인·Supabase 저장·AI 응답 Chromium으로 [집필실 조작](tests/browser/studio-inline-commands.mjs)을 확인했다. 슬래시 입력/검색/Enter/Esc·표/제목3/목록/인용/구분선·설정 링크/각주·실행 취소, 반복 문장의 두 번째만 교체·다른 서식/링크/각주 보존·실행 취소/다시 실행·저장/새로고침, 우클릭 4개 기능의 질문 준비, 현재 문단·문자 그대로 삽입·전송 실패 질문 보존, 분할 창 표/AI/별도 실행 취소·원래 문서 대화로 계속, 전환 후 원래 메모에 응답 보관·응답 중 본문 변경 적용 차단을 검증했다. 합성 AI 요청 7회·저장 RPC 14회·오류 0.
+- 같은 검사에서 여섯 테마 × 1280/360px 12개 조합의 실제 슬래시/AI/우클릭 메뉴 경계·초점·활성 색·가로 넘침을 확인했다. [기존 노트 조작](tests/browser/note-inline-commands.mjs)도 통과(합성 요청 4회·저장 6회·12개 조합·오류 0). UI 검사 초기 실패는 비동기 적용 완료 전의 단언과 원고 상태 아이콘이 포함된 접근성 이름을 잘못 찾은 시험 코드였다. 결과 창 닫힘/정확한 문서 행을 기다리도록 보완했다.
+- 로컬 운영 빌드에서도 집필실의 같은 브라우저 흐름 통과(합성 요청 7회·저장 7회·12개 조합·오류 0). 노트 회귀 검사도 통과(합성 요청 4회·저장 3회·12개 조합·오류 0). 선택 글 우클릭 시험은 실제 DOM 선택을 확인하고 선택 글자의 좌표로 누르도록 보완했다. 공개 가능한 합성 증거: [집필실 슬래시](docs/evidence/studio-cursor/slash-violet-light-1280.png)·[모바일 커서 AI](docs/evidence/studio-cursor/cyber-dark-360.png)·[모바일 선택 메뉴](docs/evidence/studio-cursor/context-cassette-light-360.png).
+- 실제 유료 제공자 호출·한국어 답변 품질·비용, 맥 Option+Enter·터치/가상 키보드·다른 브라우저·실제 다중 기기는 미검증이다. 운영 원고는 시험 글로 변경하지 않는다. CI·배포·운영 확인은 완료 후 후속 기록으로 구분한다.
+
 ## 2026-10-05 — 커서 명령 main·운영 확인
 
 - [PR #14](https://github.com/inf1si/Kosmos/pull/14)의 `e9efc04ae09830e829535b6820d436fe74b52e83`을 [CI 통과](https://github.com/inf1si/Kosmos/actions/runs/37220780443) 후 main `dfaa170bc2eef50b1d7fb4a8720a742515b22e4c`로 병합했다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37221058092)도 성공했다.

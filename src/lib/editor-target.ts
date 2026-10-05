@@ -5,17 +5,17 @@ import { TextSelection } from '@tiptap/pm/state';
 import { editorExtensions, noteExtensions, NoteImage } from './editor-extensions';
 import type { RichNode } from './model';
 
-export type NoteRange={kind:'selection'|'paragraph';from:number;to:number;text:string};
-export type NoteTarget=NoteRange&{cursor:number;document:PMNode};
-let schema:ReturnType<typeof getSchema>|undefined;
+export type EditorRange={kind:'selection'|'paragraph';from:number;to:number;text:string};
+export type EditorTarget=EditorRange&{cursor:number;document:PMNode};
+const schemas:Partial<Record<'work'|'note',ReturnType<typeof getSchema>>>={};
 /** Positions include nested blocks, inline atoms and UTF-16 text. */
-export function noteRangeText(content:RichNode,from:number,to:number){
-  schema??=getSchema([...editorExtensions,...noteExtensions,NoteImage]);
+export function editorRangeText(content:RichNode,from:number,to:number,scope:'work'|'note'){
+  const schema=schemas[scope]??=getSchema(scope==='note'?[...editorExtensions,...noteExtensions,NoteImage]:editorExtensions);
   const doc=PMNode.fromJSON(schema,content);
   if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<from||to>doc.content.size)throw new Error('글의 범위를 확인하세요.');
   return doc.textBetween(from,to,'\n',node=>node.type.name==='hardBreak'?'\n':'');
 }
-export function captureNoteTarget(editor:Editor):NoteTarget{
+export function captureEditorTarget(editor:Editor):EditorTarget{
   // A native Home/End or pointer move may precede ProseMirror's selectionchange observer.
   const domSelection=editor.view.dom.ownerDocument.getSelection();
   if(editor.isFocused&&domSelection?.anchorNode&&domSelection.focusNode&&editor.view.dom.contains(domSelection.anchorNode)&&editor.view.dom.contains(domSelection.focusNode)){
@@ -27,12 +27,12 @@ export function captureNoteTarget(editor:Editor):NoteTarget{
   const start=empty?$from.start():from,end=empty?$from.end():to;
   return {kind:empty?'paragraph':'selection',from:start,to:end,cursor:to,text:editor.state.doc.textBetween(start,end,'\n',node=>node.type.name==='hardBreak'?'\n':''),document:editor.state.doc};
 }
-export function targetIsCurrent(editor:Editor,target:NoteTarget){
+export function targetIsCurrent(editor:Editor,target:EditorTarget){
   return !editor.isDestroyed&&editor.isEditable&&editor.state.doc.eq(target.document);
 }
 /** JSON text nodes never interpret a response as HTML. One application is one undo step. */
-export function applyNoteTarget(editor:Editor,target:NoteTarget,text:string,mode:'replace'|'insert'){
-  if(!targetIsCurrent(editor,target))throw new Error('노트가 바뀌었습니다. 현재 글에서 다시 질문하세요.');
+export function applyEditorTarget(editor:Editor,target:EditorTarget,text:string,mode:'replace'|'insert'){
+  if(!targetIsCurrent(editor,target))throw new Error('글이 바뀌었습니다. 현재 글에서 다시 질문하세요.');
   if(!text.trim())throw new Error('적용할 답변을 입력하세요.');
   const from=mode==='replace'?target.from:target.cursor,to=mode==='replace'?target.to:target.cursor;
   const lines=text.replace(/\r\n?/g,'\n').split('\n');
