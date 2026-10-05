@@ -108,6 +108,10 @@ insert into public.authors(user_id) values ('작가의-실제-UUID');
 
 소스는 Git 저장소에 넣어 Vercel에서 가져오거나 Vercel CLI로 배포할 수 있다. 공개 저장소에는 소스·예시 자료만 넣고 원고와 비밀 값은 별도로 보관한다. 소스 저장소는 [inf1si/Kosmos](https://github.com/inf1si/Kosmos)이며 새 Next.js 프로젝트는 저장소 루트에 있다. Supabase 초기 설치와 Vercel GitHub 연결·프로젝트 가져오기·환경 변수·첫 운영 배포를 완료했다. 운영 주소는 [kosmos-ashy.vercel.app](https://kosmos-ashy.vercel.app)이다. GitHub 앱 연결은 해당 저장소 하나만 선택한다. 기존 main 보관·교체·되돌림은 [저장소 안내](repository-transition.md)를 따른다.
 
+2026-10-05 확인: `inf1si/Kosmos`는 개인 계정 소유 저장소이며 현재 공개 상태다. 비공개 저장소도 Vercel GitHub 앱의 접근 권한과 연결을 유지하면 배포할 수 있다. 공개 여부는 배포된 사이트·Supabase 로그인/원고 저장·AI 실행에 쓰이지 않는다. 조직의 비공개 저장소를 Hobby 팀으로 배포하는 제한은 개인 계정 저장소에 해당하지 않는다. [Vercel 비공개 Git 저장소 안내](https://vercel.com/docs/git#deploying-private-git-repositories)를 따른다. 이번 확인에서는 저장소 공개 여부를 변경하지 않았다.
+
+비공개 저장소의 GitHub Actions는 계정 요금제의 실행 시간·저장 공간 한도를 사용한다(GitHub Free는 표준 호스팅 러너 월 2,000분). 이 저장소의 CI·DB 예약 백업은 Actions에서 실행하므로 해당 한도를 확인한다. Vercel의 GitHub 자동 배포는 Actions 워크플로와 별도다. [GitHub Actions 과금·한도](https://docs.github.com/en/billing/managing-billing-for-your-products/managing-billing-for-github-actions/about-billing-for-github-actions) 기준, 2026-10-05 확인.
+
 Vercel 프로젝트 설정:
 
 | 항목 | 값 |
