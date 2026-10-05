@@ -13,7 +13,7 @@ import { searchPlugin } from './editor-search';
 
 const Note=Node.create({name:'footnote',priority:1000,group:'inline',inline:true,atom:true,
   addAttributes(){return {noteId:{default:null},text:{default:''}};},parseHTML(){return [{tag:'sup[data-note-id]'}];},
-  renderHTML({HTMLAttributes}){return ['sup',mergeAttributes({'data-note-id':HTMLAttributes.noteId,class:'editor-note'}), '*'];},
+  renderHTML({HTMLAttributes}){return ['sup',mergeAttributes({'data-note-id':HTMLAttributes.noteId,class:'editor-note',tabindex:0,role:'button','aria-label':'각주 내용 보기'}), '*'];},
 });
 const WikiLink=Mark.create({name:'wikiLink',inclusive:false,addAttributes(){return {targetId:{default:null}};},
   parseHTML(){return [{tag:'span[data-wiki-id]'}];},renderHTML({HTMLAttributes}){return ['span',mergeAttributes({'data-wiki-id':HTMLAttributes.targetId,class:'editor-wiki-link'}),0];},

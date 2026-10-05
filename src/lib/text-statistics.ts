@@ -2,8 +2,8 @@ import type { RichNode, NovelDocument } from './model';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 
 export const countMetrics=[
-  {id:'charactersWithoutSpaces',label:'글자 수 · 공백 제외',unit:'자',suffix:'공백 제외'},
   {id:'charactersWithSpaces',label:'글자 수 · 공백 포함',unit:'자',suffix:'공백 포함'},
+  {id:'charactersWithoutSpaces',label:'글자 수 · 공백 제외',unit:'자',suffix:'공백 제외'},
   {id:'words',label:'단어 수 (어절)',unit:'단어',suffix:'어절 기준'},
   {id:'paragraphs',label:'문단 수',unit:'문단',suffix:''},
   {id:'sheets',label:'200자 원고지 환산',unit:'매',suffix:'200자 환산'},

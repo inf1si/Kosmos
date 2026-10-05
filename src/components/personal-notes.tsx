@@ -15,6 +15,7 @@ import { RichEditor, type NoteTools } from './rich-editor';
 import { NoteImageView } from './note-image';
 import { FolderWorkPopover, NotesImportDialog } from './notes-transfer';
 import { noteExtensions } from '@/lib/editor-extensions';
+import { textStatistics } from '@/lib/text-statistics';
 import { ThemeControls } from './theme-toggle';
 import { useDrawerFocus } from './use-drawer-focus';
 import { filterNotes, noteBacklinks, noteDocument, noteTitle, patchNote } from '@/lib/personal-notes';
@@ -88,7 +89,7 @@ export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpen
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
       {active?<RichEditor key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');if(compact)setSidebar(false);}}} onChange={content=>patch(active.id,{content})}
         heading={<NoteHead key={active.id} note={active} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork}/>}
-        toolbarEnd={<><span className="char-count">{plainText(active.content).replace(/\s/g,'').length.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={side==='ai'} onClick={()=>{setSide(v=>v==='ai'?null:'ai');if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
+        toolbarEnd={<><span className="char-count" aria-label="글자 수 · 공백 포함">{textStatistics(active.content).charactersWithSpaces.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={side==='ai'} onClick={()=>{setSide(v=>v==='ai'?null:'ai');if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
         :<NotesHome state={s.state} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
     </main>
     {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<NoteLinks note={active} notes={notes} onOpen={select}/>

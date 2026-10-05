@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
-import type { AnyExtension, Editor } from '@tiptap/core';
+import type { AnyExtension } from '@tiptap/core';
 import { Bold, Italic, Underline, Undo2, Redo2, AlignLeft, AlignCenter, Quote, Link2, MessageSquareText, Minus, Columns2, ChevronLeft, ChevronRight, ListChecks, ImagePlus } from 'lucide-react';
 import { NovelDocument, RichNode, plainText, uid } from '@/lib/model';
 import { IconButton, Popover, type PopoverAnchor } from './primitives';
@@ -16,13 +16,8 @@ import { EditorSearch } from './editor-search';
 import type { EditorAIScope } from '@/lib/ai-conversation';
 import { EditorCommands } from './editor-commands';
 import { captureEditorTarget,targetIsCurrent } from '@/lib/editor-target';
+import { EditorFootnotePopover } from './editor-footnote-popover';
 
-/** A footnote's number (in document order, as the reader numbers them) and text. */
-function footnoteAt(editor:Editor,noteId:string):{index:number;text:string}|null{
-  let index=0,text:string|null=null;
-  editor.state.doc.descendants(node=>{if(text!==null)return false;if(node.type.name!=='footnote')return;index++;if(node.attrs.noteId===noteId)text=String(node.attrs.text||'');});
-  return text===null?null:{index,text};
-}
 /** The link tool targets settings in a work and other notes in the notes space. */
 type LinkCopy={tool:string;title:string;description:string;select:string;open:string};
 const SETTING_LINK_COPY:LinkCopy={tool:'설정 링크 추가',title:'설정집 연결',description:'선택한 단어를 작품의 설정 문서에 연결합니다.',select:'연결할 설정',open:'옆에 열기'};
@@ -35,6 +30,7 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
   const [dialog,setDialog]=useState<'note'|'wiki'|null>(null);const [note,setNote]=useState('');const [target,setTarget]=useState(wiki[0]?.id||'');
   const [selection,setSelection]=useState<{from:number;to:number}>({from:0,to:0});const [,render]=useState(0);
   const scrollRef=useRef<HTMLDivElement>(null);const hideTimer=useRef<number|undefined>(undefined);const [preview,setPreview]=useState<{kind:'wiki'|'note';id:string;top:number;left:number}|null>(null);
+  const previewLocked=useRef(false);
   const lastContent=useRef<string|null>(null);const imageInput=useRef<HTMLInputElement>(null);const [imageBusy,setImageBusy]=useState(false);
   const editor=useEditor({immediatelyRender:false,editable:!readonly,autofocus:autofocus?'end':false,
     extensions:noteTools?[...editorExtensions,...noteTools.extensions]:editorExtensions,
@@ -51,11 +47,13 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
   },[editor,doc.content]);
   useEffect(()=>{const bar=toolbarRef.current;if(!bar)return;const measure=()=>setOverflow({before:bar.scrollLeft>2,after:bar.scrollWidth-bar.clientWidth-bar.scrollLeft>2});const observer=new ResizeObserver(measure);observer.observe(bar);bar.addEventListener('scroll',measure);measure();return()=>{observer.disconnect();bar.removeEventListener('scroll',measure);};},[toolbarEnd]);
   // Hovering a setting link or a footnote mark shows its card; the card stays while the pointer moves onto it.
-  function showPreview(target:EventTarget){const link=(target as HTMLElement).closest?.('[data-wiki-id],[data-note-id]');const box=scrollRef.current;if(!link||!box)return;window.clearTimeout(hideTimer.current);const r=link.getBoundingClientRect(),b=box.getBoundingClientRect(),wikiId=link.getAttribute('data-wiki-id');setPreview({kind:wikiId?'wiki':'note',id:wikiId||link.getAttribute('data-note-id')||'',top:r.bottom-b.top+box.scrollTop+8,left:Math.max(8,Math.min(r.left-b.left+box.scrollLeft-12,box.clientWidth-308))});}
-  function hidePreview(){window.clearTimeout(hideTimer.current);hideTimer.current=window.setTimeout(()=>setPreview(null),180);}
+  function showPreview(target:EventTarget){if(previewLocked.current)return;const link=(target as HTMLElement).closest?.('[data-wiki-id],[data-note-id]');const box=scrollRef.current;if(!link||!box)return;window.clearTimeout(hideTimer.current);const r=link.getBoundingClientRect(),b=box.getBoundingClientRect(),wikiId=link.getAttribute('data-wiki-id');setPreview({kind:wikiId?'wiki':'note',id:wikiId||link.getAttribute('data-note-id')||'',top:r.bottom-b.top+box.scrollTop+8,left:Math.max(8,Math.min(r.left-b.left+box.scrollLeft-12,box.clientWidth-308))});}
+  function hidePreview(){window.clearTimeout(hideTimer.current);if(previewLocked.current)return;hideTimer.current=window.setTimeout(()=>setPreview(null),180);}
+  function closePreview(){window.clearTimeout(hideTimer.current);previewLocked.current=false;setPreview(null);}
+  useEffect(()=>{window.clearTimeout(hideTimer.current);previewLocked.current=false;setPreview(null);},[doc.id]);
   useEffect(()=>()=>window.clearTimeout(hideTimer.current),[]);
   const previewDoc=preview?.kind==='wiki'?wiki.find(d=>d.id===preview.id):undefined;
-  const previewNote=preview?.kind==='note'&&editor?footnoteAt(editor,preview.id):null;const previewText=previewDoc?plainText(previewDoc.content).split('\n').map(t=>t.trim()).find(Boolean)||'':'';
+  const previewText=previewDoc?plainText(previewDoc.content).split('\n').map(t=>t.trim()).find(Boolean)||'':'';
   const dialogAnchor:PopoverAnchor=useRef(null);
   /** 각주·설정 연결 창은 선택한 글자 바로 아래에 붙인다. 선택 위치가 화면 밖이면 누른 도구 버튼에 붙인다. */
   function openDialog(type:'note'|'wiki',button:HTMLElement){
@@ -99,9 +97,9 @@ export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading
     </div>
     {overflow.after&&<div className="toolbar-scroll after"><IconButton label="다음 편집 도구" onClick={()=>toolbarRef.current?.scrollBy({left:240,behavior:'smooth'})}><ChevronRight size={16}/></IconButton></div>}
     </div>
-    <div ref={scrollRef} className="editor-scroll" onMouseOver={e=>showPreview(e.target)} onMouseOut={e=>{if((e.target as HTMLElement).closest?.('[data-wiki-id],[data-note-id]'))hidePreview();}}>{heading||<div className="document-heading"><span>{doc.kind==='scene'?doc.chapter:doc.category||'메모'}</span><h1>{doc.title}</h1></div>}<EditorContent editor={editor}/>
+    <div ref={scrollRef} className="editor-scroll" onMouseOver={e=>showPreview(e.target)} onFocusCapture={e=>{if((e.target as HTMLElement).closest?.('[data-note-id]'))showPreview(e.target);}} onClickCapture={e=>{if((e.target as HTMLElement).closest?.('[data-note-id]'))showPreview(e.target);}} onKeyDownCapture={e=>{if((e.key==='Enter'||e.key===' ')&&(e.target as HTMLElement).closest?.('[data-note-id]')){e.preventDefault();showPreview(e.target);}}} onMouseOut={e=>{if((e.target as HTMLElement).closest?.('[data-wiki-id],[data-note-id]'))hidePreview();}}>{heading||<div className="document-heading"><span>{doc.kind==='scene'?doc.chapter:doc.category||'메모'}</span><h1>{doc.title}</h1></div>}<EditorContent editor={editor}/>
       {preview&&previewDoc&&<div className="wiki-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><WikiIcon category={previewDoc.category} size={13}/>{previewDoc.category||'설정'}</span><strong>{previewDoc.title}</strong>{previewText&&<span>{previewText.length>110?`${previewText.slice(0,110)}…`:previewText}</span>}<footer><button type="button" onClick={()=>{onWikiClick(previewDoc.id);setPreview(null);}}><Columns2 size={13}/>{linkCopy.open}</button>{appearances&&<span>등장 {appearances[previewDoc.id]||0}곳</span>}</footer></div>}
-      {preview&&previewNote&&<div className="wiki-preview note-preview" role="tooltip" style={{top:preview.top,left:preview.left}} onMouseEnter={()=>window.clearTimeout(hideTimer.current)} onMouseLeave={hidePreview}><span><MessageSquareText size={13}/>각주 {previewNote.index}</span><p>{previewNote.text||'내용 없는 각주'}</p></div>}
+      {preview?.kind==='note'&&editor&&<EditorFootnotePopover key={`${doc.id}-${preview.id}`} editor={editor} id={preview.id} readonly={readonly} onClose={closePreview} onStay={()=>window.clearTimeout(hideTimer.current)} onLeave={hidePreview} onEditing={value=>{previewLocked.current=value;window.clearTimeout(hideTimer.current);}}/>}
     </div>
     {aiTools&&editor&&!readonly&&<EditorCommands editor={editor} scope={aiTools.scope} onLink={()=>openDialog('wiki',editor.view.dom)} onFootnote={()=>openDialog('note',editor.view.dom)} onImage={noteTools?()=>{const input=imageInput.current;if(input?.showPicker)input.showPicker();else input?.click();}:undefined} onContinue={aiTools.onContinue}/>}
     <Popover open={dialog==='note'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={320} title="각주 추가" description="공개할 원고에 포함되는 설명입니다." onReturnFocus={()=>editor?.commands.focus()}><textarea autoFocus value={note} onChange={e=>setNote(e.target.value)} placeholder="각주 내용을 입력하세요" rows={5}/><div className="popover-actions"><button className="primary" disabled={!note.trim()} onClick={()=>{editor?.chain().focus().setTextSelection(selection.to).insertContent({type:'footnote',attrs:{noteId:uid(),text:note.trim()}}).run();setDialog(null);setNote('');}}>각주 삽입</button></div></Popover>
