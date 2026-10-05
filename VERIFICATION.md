@@ -6,7 +6,8 @@
 - 초기 `pnpm lint --format json`: 141개 파일·19개 규칙, 137개 파일에서 기존 error 3,023건으로 종료 코드 1. 빈 줄 2,826건·SAFETY 설명 90건·unknown 매개변수와 typeof 각 24건·타입 확장 19건·빈 객체 조건 spread 17건·unknown 사전 11건·연속 단언 6건·배열 연속 처리 5건·unknown 반환 1건. `pnpm typecheck` 통과. lint 규칙을 낮추지 않고 CI의 lint 단계만 advisory로 도입한다.
 - 고정 원본 56개 파일의 SHA-256, 설치된 플러그인 자산 38개와 원본의 바이트 일치, 파생 출력 스타일·Claude 진입점 7개·출력 설정을 확인했다. Codex app-server의 `skills/list` 읽기 전용 조회에서 저장소 스킬 7개가 enabled/repo로 발견되었고 오류는 0이었다. 에이전트 실행·LLM 호출 없이 발견 메타데이터만 조회했다.
 - 실제 Oxlint 플러그인 검사: 이름 있는 도메인 타입의 정상 파일은 19개 규칙·진단 0·종료 코드 0. unknown 입력/반환·연속 단언·SAFETY 누락·누적 spread가 있는 합성 파일은 해당 custom/native 진단·종료 코드 1을 반환했다. 모든 플러그인 등록 규칙 18개와 native 1개의 error 설정을 대조했다. 무관한 기본 Oxlint 규칙은 추가하지 않았다. 최종 전체 검사도 같은 3,023건·종료 코드 1을 반환했고 로딩 경고 없는 유효 JSON이었다. CI는 규칙 수·검사 파일·진단 배열을 별도 필수 단계에서 확인한다.
-- 타입·140개 Node 테스트·운영 빌드·문서 검사 통과. Claude CLI는 이 환경에 설치되어 있지 않아 실제 Claude 세션의 스킬 호출·출력 스타일 선택은 미확인이다. 이번 개발 도구 설치에는 UI 변경이 없어 브라우저·여섯 테마 검사를 새로 실행하지 않았다. PR/main CI와 병합 상태는 확인 후 갱신한다.
+- 타입·140개 Node 테스트·운영 빌드·문서 검사 통과. Claude CLI는 이 환경에 설치되어 있지 않아 실제 Claude 세션의 스킬 호출·출력 스타일 선택은 미확인이다. 이번 개발 도구 설치에는 UI 변경이 없어 브라우저·여섯 테마 검사를 새로 실행하지 않았다.
+- [PR #21](https://github.com/inf1si/Kosmos/pull/21)의 `83fe8ff7b886262a7352307ae64fc2d37be79469`를 [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37298543080) 통과 후 main `57b5b1457dda6e6ccc28fb6ffd5f36595c62899f`로 병합했다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37298860025)도 통과했다. CI Node 22.23.3에서도 플러그인 로딩·유효 JSON 검증·진단 결과물 업로드가 통과했고 두 CI 로그에 각각 141개 파일·19개 규칙·3,023건이 기록되었다. CI 성공을 lint 무결함으로 취급하지 않는다.
 
 ## 2026-10-05 — 홈 바닥글 링크 제거·저장소 비공개 검토
 

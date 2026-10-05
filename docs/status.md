@@ -1,6 +1,6 @@
 # 구현 상태와 확인 범위
 
-2026-10-05 에이전트 도구 설치: Attention Span·Karpathy·완료 검증을 Codex/Claude 저장소 진입점에 연결하고 dmmulroy/anti-slop의 공식 Oxlint 플러그인을 설치했다. Oxlint/SDK 1.86.0·19개 error 규칙·`pnpm lint`와 CI 진단 결과물 보관을 추가한다. 초기 전체 검사는 141개 파일 중 137개에서 기존 위반 3,023건을 보고했고 lint 단계만 advisory다. 앱 소스 정리는 포함하지 않는다. 런타임 발견·타입/테스트/빌드·CI 확인은 [검증 기록](../VERIFICATION.md), 사용법·출처는 [에이전트 도구](agent-tools.md)를 따른다.
+2026-10-05 에이전트 도구 설치: Attention Span·Karpathy·완료 검증을 Codex/Claude 저장소 진입점에 연결하고 dmmulroy/anti-slop의 공식 Oxlint 플러그인을 설치했다. Oxlint/SDK 1.86.0·19개 error 규칙·`pnpm lint`와 CI 진단 결과물 보관을 추가했다. 실제 Codex 스킬 7개 발견·타입·140개 테스트·빌드·문서 검사가 통과했다. PR #21을 main `57b5b14`로 병합하고 PR/main CI에서 플러그인 로딩·결과 보관과 동일한 3,023건을 확인했다. 141개 파일 중 137개에서 기존 위반을 보고하며 lint 단계만 advisory다. 앱 소스 정리는 포함하지 않는다. Claude 런타임 호출은 미확인이다. [검증 기록](../VERIFICATION.md)·[사용법·출처](agent-tools.md).
 
 2026-10-05 홈 바닥글 정리: 홈 화면 우측 하단의 GitHub·데이터 이용 안내 링크를 제거했다. 타입·운영 빌드·문서 검사와 로컬/운영 Chromium의 여섯 테마 × 1280/360px, 서재/집필실 이동·`/privacy` 직접 접근이 통과했다. PR #20을 main `3e51ffe`로 병합하고 PR/main CI·운영 READY·해당 SHA·별칭을 확인했다. 개인 계정 저장소의 비공개 배포 지원과 Actions 실행 한도를 공식 안내로 확인했으며 저장소 공개 여부는 변경하지 않았다. [사용 안내](user-guide.md)·[배포 안내](setup-deployment.md#6-소스-보관과-vercel)·[검증 기록](../VERIFICATION.md).
 

@@ -43,6 +43,6 @@ pnpm lint
 
 ## 업데이트
 
-[공식 업데이트 절차](../.agents/skills/install-anti-slop/references/update.md)를 따른다. 스킬 원본과 설치된 플러그인을 대조하고 변경을 보존한다. `--force`로 덮어쓰지 않는다. 정확한 원본 커밋·해시·라이선스·[플러그인 출처](../tools/oxlint/anti-slop/UPSTREAM.md)를 함께 갱신하고 Oxlint와 SDK를 같은 버전으로 올린다. Claude 진입점의 원본 경로와 출력 스타일도 확인한다.
+[공식 업데이트 절차](../.agents/skills/install-anti-slop/references/update.md)를 따른다. 스킬 원본과 설치된 플러그인을 대조하고 변경을 보존한다. `--force`로 덮어쓰지 않는다. 정확한 원본 커밋·해시·라이선스·[플러그인 출처](../tools/oxlint/anti-slop/UPSTREAM.md)를 함께 갱신하고 Oxlint와 SDK를 같은 버전으로 올린다. 규칙 수가 바뀌면 CI의 필수 로딩 검사 기준도 함께 갱신한다. Claude 진입점의 원본 경로와 출력 스타일도 확인한다.
 
 업데이트 후 `pnpm lint`, `pnpm typecheck`, 변경에 맞는 테스트·빌드·`pnpm docs:check`를 실행하고 실제 실패와 확인 범위를 기록한다.
