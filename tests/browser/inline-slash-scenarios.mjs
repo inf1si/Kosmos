@@ -26,5 +26,9 @@ export async function inlineSlashScenarios({page,body,undo,redo,menuLabel,synced
   await caret(synthetic(),4);await run('AI');await page.getByRole('textbox',{name:'커서 AI에게 질문'}).waitFor();assert((await page.locator('.note-ai-target').textContent()).includes(source));await page.keyboard.press('Escape');await page.getByRole('listbox',{name:menuLabel}).waitFor({state:'hidden'});assert.equal(await synthetic().innerText(),source);
   await caret(synthetic(),4);await page.keyboard.insertText('/');await page.getByRole('listbox',{name:menuLabel}).waitFor();await page.keyboard.press('Escape');await page.getByRole('listbox',{name:menuLabel}).waitFor({state:'hidden'});assert.equal(await synthetic().innerText(),'앞글🙂/뒤글.');await page.keyboard.press('Backspace');await page.getByRole('listbox',{name:menuLabel}).waitFor({state:'hidden'});
   await synthetic().click();await page.keyboard.press('End');await page.keyboard.insertText(' https://example.invalid/a/b');assert.equal(await page.getByRole('listbox',{name:menuLabel}).count(),0);
+  // Regression: a prose slash with no matching command must not trap arrows.
+  const position=()=>body().evaluate(el=>el.editor.state.selection.from);
+  await page.keyboard.insertText(' 그/그녀');await page.waitForTimeout(80);assert.equal(await page.getByRole('listbox',{name:menuLabel}).count(),0);
+  const end=await position();await page.keyboard.press('ArrowUp');assert.notEqual(await position(),end);await synthetic().click();await page.keyboard.press('End');for(let i=0;i<5;i++)await page.keyboard.press('Backspace');
   await synced();await page.reload();await body().waitFor();assert.equal(await synthetic().innerText(),source+' https://example.invalid/a/b');
 }
