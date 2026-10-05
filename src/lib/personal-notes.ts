@@ -185,7 +185,7 @@ const inlineText=(node:RichNode)=>(node.content||[]).map(c=>c.type==='text'?c.te
  * Imported HTML/ENEX keeps checkboxes as ☐/☑ text and images as [첨부: name]. In notes they become a checklist and
  * in-body images again; block and footnote ids are renewed so repeated imports never collide.
  */
-export function noteImportContent(content:RichNode,images:Map<string,string>):RichNode {
+export function noteImportContent(content:RichNode,images:Map<string,string>,links=new Map<string,string>()):RichNode {
   const blocks=(nodes:RichNode[]):RichNode[]=>{
     const out:RichNode[]=[];
     for(const raw of nodes){
@@ -206,7 +206,8 @@ export function noteImportContent(content:RichNode,images:Map<string,string>):Ri
     const next:RichNode={...node};
     if(next.attrs?.blockId)next.attrs={...next.attrs,blockId:uid()};
     if(next.type==='footnote'&&next.attrs)next.attrs={...next.attrs,noteId:uid()};
-    if(next.marks)next.marks=next.marks.filter(mark=>mark.type!=='wikiLink');
+    // Links between imported files carry the source path; they become note links when that file was imported too.
+    if(next.marks)next.marks=next.marks.flatMap(mark=>{if(mark.type!=='wikiLink')return [mark];const id=links.get(String(mark.attrs?.sourceKey||''));return id?[{type:'wikiLink',attrs:{targetId:id}}]:[];});
     if(next.content&&(next.type==='paragraph'||next.type==='heading'))next.content=next.content.map(renew);
     return next;
   };
@@ -214,21 +215,45 @@ export function noteImportContent(content:RichNode,images:Map<string,string>):Ri
   const result=blocks(content.content||[]);if(result.at(-1)?.type!=='paragraph')result.push({type:'paragraph',attrs:{blockId:uid()}});
   return {...content,content:result};
 }
-/** Imported pages become inbox notes in one new top-level folder; Evernote tags and dates are kept. */
+const pageFile=/\.(md|markdown|txt|html?|csv|docx|rtf|hwpx?)$/i;
+const folderName=(segment:string)=>segment.replace(/\.(enex|epub|scriv)$/i,'').replace(/\s+[a-f0-9]{32}$/i,'').trim().slice(0,300)||'폴더';
+/**
+ * The source folders below the bundle's shared root become note folders (one per ENEX file when several are chosen).
+ * A folder named like a page next to it holds that page's sub-pages (Notion, Loop exports), so it nests under the note.
+ */
+export function noteImportTree(pages:{key:string;place?:string}[],ids:Map<string,string>,rootId:string) {
+  const places=pages.map(p=>p.place??p.key),dirs=places.map(p=>p.split('/').slice(0,-1));let shared=dirs[0]?.length||0;
+  for(const dir of dirs){let i=0;while(i<shared&&i<dir.length&&dir[i]===dirs[0][i])i++;shared=i;}
+  const byPath=new Map(pages.map((p,i)=>[places[i].replace(pageFile,''),p.key])),nodes:({id:string;type:'folder';title:string;parentId:string}|{id:string;type:'note';parentId:string})[]=[],folderIds=new Map<string,string>();
+  for(const [index,page]of pages.entries()){
+    let parent=rootId;const dir=dirs[index];
+    // Navigation depth is limited to 24; anything deeper stays in the 20th folder.
+    for(let depth=shared;depth<Math.min(dir.length,shared+20);depth++){
+      const at=dir.slice(0,depth+1).join('/'),owner=byPath.get(at);
+      if(owner&&owner!==page.key){parent=ids.get(owner)!;continue;}
+      let id=folderIds.get(at);if(!id){id=uid();folderIds.set(at,id);nodes.push({id,type:'folder',title:folderName(dir[depth]),parentId:parent});}parent=id;
+    }
+    nodes.push({id:ids.get(page.key)!,type:'note',parentId:parent});
+  }
+  // Folders appear where their first file was, so the source order of files and folders is kept.
+  return nodes;
+}
+/** Imported pages become inbox notes in one new top-level folder that keeps the source folders; tags, dates and links between imported files are kept. */
 export function prepareNoteImport(state:Workspace,bundle:ImportBundle,folderTitle:string) {
   const title=folderTitle.trim().slice(0,300)||'가져온 노트';
   if((state.notes?.length||0)+bundle.pages.length>5000)throw new Error('노트는 최대 5,000개까지 보관할 수 있습니다.');
   const folderId=uid(),assetIds=new Map<string,string>(),assets:AssetMeta[]=[],blobs:{id:string;blob:Blob}[]=[],now=new Date().toISOString();
+  const noteIds=new Map(bundle.pages.map(page=>[page.key,uid()]));
   const notes:PersonalNote[]=bundle.pages.map(page=>{
-    const id=uid(),tags=[...new Set((page.tags||[]).map(t=>t.trim().replace(/^#+/,'').slice(0,40)).filter(Boolean))].slice(0,20);
+    const id=noteIds.get(page.key)!,tags=[...new Set((page.tags||[]).map(t=>t.trim().replace(/^#+/,'').slice(0,40)).filter(Boolean))].slice(0,20);
     const ownAssets:string[]=[],images=new Map<string,string>();
     for(const key of new Set(page.assetKeys)){const asset=bundle.assets.find(a=>a.key===key);if(!asset)continue;let assetId=assetIds.get(key);if(!assetId){assetId=uid();assetIds.set(key,assetId);assets.push({id:assetId,noteId:id,name:asset.name,type:asset.blob.type as AssetMeta['type'],size:asset.blob.size});blobs.push({id:assetId,blob:asset.blob});}ownAssets.push(assetId);if(!images.has(asset.name))images.set(asset.name,assetId);}
-    const content=noteImportContent(page.content,images);
+    const content=noteImportContent(page.content,images,noteIds);
     return noteSchema.parse({id,title:page.title.slice(0,300),content,tags,box:'inbox',linkedWorkIds:[],assetIds:ownAssets,createdAt:enexDate(page.created)||now,updatedAt:enexDate(page.updated)||enexDate(page.created)||now});
   });
   if(assets.length+state.assets.length>2000)throw new Error('작업 공간 첨부는 최대 2,000개입니다. 이미지가 적은 파일로 나누어 가져오세요.');
   const base=materializeNoteNavigation(state),nav=structuredClone(base.noteNavigation!);
-  nav.nodes.unshift({id:folderId,type:'folder',title,parentId:null},...notes.map(n=>({id:n.id,type:'note' as const,parentId:folderId})));
+  nav.nodes.unshift({id:folderId,type:'folder',title,parentId:null},...noteImportTree(bundle.pages,noteIds,folderId));
   const next=applyNoteNavigation({...base,notes:[...notes,...(base.notes||[])],assets:[...base.assets,...assets],updatedAt:now},nav);
   workspaceSchema.parse(next);
   if(new TextEncoder().encode(JSON.stringify(next)).length>19000000)throw new Error('작업 공간 저장 용량(20MB)을 넘습니다. 더 적은 노트를 가져오세요.');

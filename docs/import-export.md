@@ -4,7 +4,7 @@
 
 개인 노트의 폴더·부모·형제 순서·AI 기록은 전체 ZIP에 보존한다. 노트 AI 대화를 하위 노트로 보관해도 작품 MD/HTML/ENEX 교환 대상으로 자동 추가하지 않는다.
 
-독립 개인 노트의 완전한 이동은 전체 ZIP 백업으로 지원한다. 아래 집필실 MD/HTML/ENEX 교환 UI는 작품 문서 대상이다. 개인 노트로 가져오려면 노트 사이드바의 **노트 가져오기**를 쓴다. 같은 파서로 ENEX·Markdown·HTML·TXT·ZIP을 읽어 새 폴더의 수집함 노트로 넣고 Evernote 태그·작성/수정 시각·체크 상태·혼자 한 줄인 이미지를 노트 본문에 유지한다. 노트 내보내기는 없다. [개인 노트](personal-notes.md), [전체 백업](backup-restore.md).
+독립 개인 노트의 완전한 이동은 전체 ZIP 백업으로 지원한다. 아래 집필실 MD/HTML/ENEX 교환 UI는 작품 문서 대상이다. 개인 노트로 가져오려면 노트 사이드바의 **노트 가져오기**를 쓴다. 같은 파서로 아래 형식과 폴더를 읽어 새 폴더의 수집함 노트로 넣고 원본 폴더 구조·노트 간 링크·Evernote 태그·작성/수정 시각·체크 상태·혼자 한 줄인 이미지를 노트에 유지한다. [노트 가져오기 범위](personal-notes.md#노트-가져오기). 노트 내보내기는 없다. [개인 노트](personal-notes.md), [전체 백업](backup-restore.md).
 
 기준: 2026-10-04. Notion·Evernote·Obsidian 등과 **파일로 교환**한다. 외부 계정 연결·실시간 양방향 동기화는 제공하지 않는다. 원본 파일은 따로 보관한다.
 
@@ -16,12 +16,17 @@
 |---|---|
 | Notion | 페이지 메뉴의 Export에서 Markdown & CSV 또는 HTML, 하위 페이지 포함 옵션으로 ZIP 생성. 제목·하위 경로·기본 서식·묶음 내부 링크·지원 이미지 읽기 |
 | Evernote | 데스크톱 앱에서 노트 또는 노트북을 ENEX로 내보내기. 본문·제목·태그 텍스트·체크박스·PNG/JPEG/WebP 자원 읽기 |
-| Obsidian·기타 | Markdown 파일과 연결된 이미지·문서를 함께 ZIP으로 묶기 |
-| 일반 파일 | UTF-8 TXT, MD/Markdown, HTML/HTM, CSV. 여러 파일 동시 선택 가능 |
+| Notion 큰 내보내기 | `Part-n.zip` 여러 개가 든 ZIP을 그대로 선택. 안쪽 ZIP을 한 번 더 연다 |
+| Obsidian·기타 | Markdown 파일과 연결된 이미지·문서를 함께 ZIP으로 묶기. `[[문서]]`·`[[문서\|별칭]]` 링크와 `![[그림]]`을 읽는다 |
+| Word | docx. 제목·기본 서식·목록·정렬·표 병합·각주·외부 링크·그림 |
+| 한글 | hwpx(문단·표·그림), hwp 5.0(문단 글만, 표는 문단으로). 글자 모양 제외. 암호·배포용 문서 거절 |
+| RTF·스크리브너 | RTF의 문단·기본 서식·각주(EUC-KR·유니코드). 스크리브너 2·3 프로젝트는 바인더 순서·하위 문서·시놉시스, 휴지통 제외 |
+| EPUB | DRM 없는 EPUB 2·3의 장마다 문서, 목차 이름·장 사이 링크·그림 |
+| 일반 파일 | TXT, MD/Markdown, HTML/HTM, CSV(UTF-8, 아니면 EUC-KR로 읽고 경고). 여러 파일 동시 선택 가능 |
 
 설정 문서로 지정한 대상에 대한 묶음 내부 상대 링크를 Kosmos 설정 링크로 바꾼다. 선택하지 않은 문서나 원고·메모를 가리키는 내부 링크는 일반 글자로 가져온다. Markdown 각주는 Kosmos 각주로 변환한다. 이미지는 문서의 **별도 참고 첨부**로 저장하고 본문에는 위치 표시를 남긴다. 다른 작품에 있는 문서와 자동으로 연결하지 않는다.
 
-HTML의 실행 코드·스타일시트·삽입 객체는 제거한다. 원격 이미지 주소에 접속하지 않는다. 표의 행·셀·제목 셀·병합, 위/아래첨자·강조와 허용 범위의 문단 정렬·들여쓰기·간격을 보존한다. 임의 CSS는 가져오지 않는다. CSV는 항목별 제목·값으로 변환한다. Notion의 관계·수식·필터·뷰·댓글·버전 이력은 복원하지 않는다. Evernote 암호화 영역은 원본 앱에서 먼저 복호화해야 한다. PDF·오디오·SVG 등 지원하지 않는 첨부는 제외되며 미리보기 경고에 표시한다. 그 첨부는 원본 파일로 별도 보관한다.
+Word·한글·EPUB·스크리브너 묶음 안의 XML도 같은 방식으로 외부 엔티티를 거절하고 압축 해제 크기를 먼저 확인한다. 작품 문서로 가져올 때는 폴더 구조 대신 경로를 부·장 칸에 남긴다. HTML의 실행 코드·스타일시트·삽입 객체는 제거한다. 원격 이미지 주소에 접속하지 않는다. 표의 행·셀·제목 셀·병합, 위/아래첨자·강조와 허용 범위의 문단 정렬·들여쓰기·간격을 보존한다. 임의 CSS는 가져오지 않는다. CSV는 항목별 제목·값으로 변환한다. Notion의 관계·수식·필터·뷰·댓글·버전 이력은 복원하지 않는다. Evernote 암호화 영역은 원본 앱에서 먼저 복호화해야 한다. PDF·오디오·SVG 등 지원하지 않는 첨부는 제외되며 미리보기 경고에 표시한다. 그 첨부는 원본 파일로 별도 보관한다.
 
 한 번에 입력 및 압축 해제 합계 100MiB, ZIP 파일 항목 3,000개, 문서 500개, 텍스트 파일 5MiB, ENEX 100MiB(각 노트 본문 5MiB), 이미지 하나 10MiB까지다. ZIP 경로 이탈·중복 경로·손상 XML·외부 엔티티·잘못된 UTF-8을 거절한다. 앱의 전체 작업 공간 용량 제한도 적용한다. 큰 노트북은 나누어 내보낸다.
 
@@ -47,4 +52,4 @@ MD/HTML ZIP의 `kosmos-transfer.json`은 Orbis Tertius로 다시 가져올 때 �
 
 외부 앱으로 실제 업로드해 전체 호환성을 검증한 상태는 아니다. 합성 Notion/ENEX 자료, MD/HTML 왕복, 첨부 바이트·각주·설정 관계는 자동 테스트로 확인했다. 실제 앱이 지원하는 기능·가져오기 용량은 해당 앱의 정책을 따른다. 공식 안내: [Notion 내보내기](https://www.notion.com/help/export-your-content), [Notion 가져오기](https://www.notion.com/help/import-data-into-notion), [Evernote ENML](https://dev.evernote.com/legacy/doc/articles/enml).
 
-구현: [변환기](../src/lib/interchange.ts), [대화상자](../src/components/interchange-dialog.tsx), [검증](../tests/interchange.test.ts).
+구현: [변환기](../src/lib/interchange.ts)와 형식별 변환기([Word](../src/lib/docx-import.ts)·[RTF](../src/lib/rtf-import.ts)·[한글](../src/lib/hwp-import.ts)·[EPUB](../src/lib/epub-import.ts)·[스크리브너](../src/lib/scrivener-import.ts)), [대화상자](../src/components/interchange-dialog.tsx), [검증](../tests/interchange.test.ts)·[형식별 검증](../tests/note-import-formats.test.ts).

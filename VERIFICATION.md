@@ -8,6 +8,14 @@
 - 기존 브라우저 검사 재실행 통과: [내 스킬](tests/browser/ai-skills.mjs)(AI 설정 창 분리 후), [노트 아이디어](tests/browser/note-ideation.mjs)(노트 홈 보기), [빠른 메모](tests/browser/note-quick-capture.mjs)(원고 들여쓰기 18px 유지), [집필실 입력 명령](tests/browser/studio-inline-commands.mjs), [원고 글꼴](tests/browser/manuscript-fonts.mjs), [글자 수·각주](tests/browser/count-and-footnote.mjs), [휴지통 배치](tests/browser/trash-dialog-layout.mjs).
 - 자동 복구 지점의 실제 5분 간격 생성은 시간을 기다려 확인하지 않았다(설정값 저장과 타이머 재시작 코드만 확인). `pnpm lint`(advisory)는 3,166건에서 3,275건으로 늘었고 새 파일의 빈 줄 규칙(`require-readable-spacing`)이 대부분이다. 운영 빌드(로컬은 Google Fonts 차단)·CI·배포·실제 계정은 미확인이다.
 
+## 2026-10-05 — 노트 가져오기 형식·폴더 확장
+
+- 기준 main `39b9591`. 로컬 개발 서버와 합성 Supabase 응답만 사용했다. 실제 계정·원고·AI 호출은 없다.
+- 타입·151개 Node 테스트 통과. 새 [형식별 테스트](tests/note-import-formats.test.ts) 11개: python-docx docx(제목·서식·스타일 목록·정렬·표·그림), 합성 docx(각주·외부 링크·삭제 글 제외·세로 병합·☒ 체크), RTF(EUC-KR `\'hh`·`\u`·정렬·각주·그림 경고), SheetJS cfb로 만든 hwp(압축 본문, 4KB 넘는 일반 FAT 구역, 암호·이전 형식 거절), 합성 hwpx(줄바꿈·표 병합·그림), EbookLib EPUB(목차 이름·장 링크·그림), 합성 스크리브너(바인더 계층·시놉시스·그림·휴지통 제외), Notion ZIP 속 ZIP(하위 페이지·링크), Obsidian(`[[링크]]`·별칭·없는 링크 경고·`![[그림]]`·코드 괄호 보존), ENEX 여러 개의 폴더 분리, EUC-KR TXT.
+- 개발 서버 Chromium [폴더 가져오기 검사](tests/browser/note-import-formats.mjs) 통과: `.obsidian` 숨김 폴더가 있는 폴더(Markdown 2·PNG·docx·hwp)를 폴더 선택으로 골라 노트 4개·첨부 2개, 기본 폴더 이름, 여섯 테마 × 1280/360px 12개 화면의 파일·폴더 선택 배치(1280 가로, 360 세로)·가로 넘침 없음, 가져온 폴더 구조·노트 링크 2개·본문 이미지·Word 목록, 저장 1회·페이지 오류 0. 기존 [노트 홈·ENEX 검사](tests/browser/note-ideation.mjs)도 다시 통과했다.
+- Playwright의 폴더 업로드는 이름이 한글인 파일·폴더를 읽지 못해(NotReadableError) 브라우저 검사의 이름은 영문이다. 한글 파일·폴더 이름은 Node 테스트의 ZIP 경로로만 확인했다.
+- 미확인: 운영 빌드(로컬 Google Fonts 차단), CI·배포, 실제 한글 프로그램·Microsoft Word·스크리브너·Notion·Loop 변환 확장이 저장한 파일, 맥 Safari·Firefox의 폴더 선택, 큰 파일의 처리 시간.
+
 ## 2026-10-05 — 원고 글꼴 추가
 
 - 기준 main `3d73141`. 원고 표시 글꼴에 마루부리·나눔바른고딕·프리텐다드·원티드 산스를 추가했다. 저장 형식·서버는 바꾸지 않았고 글꼴 선택은 기존 기기 보기 설정을 그대로 쓴다.

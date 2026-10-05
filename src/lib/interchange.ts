@@ -8,6 +8,11 @@ import { z } from 'zod';
 import { newDocument, uid, fromText, workspaceSchema, documentSchema, type RichNode, type NovelDocument, type Workspace, type Work, type AssetMeta } from './model';
 import { applyNavigation, defaultSections, resolveNavigation, subsetNavigation, type DocumentNavigation } from './document-navigation';
 import { navigationSchema, navigationIssues } from './document-navigation-schema';
+import { docxToHtml } from './docx-import';
+import { rtfToHtml } from './rtf-import';
+import { hwpToHtml, hwpxToHtml } from './hwp-import';
+import { readEpub } from './epub-import';
+import { readScrivener } from './scrivener-import';
 import { paragraphCss,htmlParagraphAttrs,cellSpan,tableColumns,inlineFontSize,listStyleType,validListStyle } from './manuscript-format';
 
 const MAX_BYTES=100*1024*1024, MAX_TEXT=5*1024*1024, MAX_PAGES=500;
@@ -18,7 +23,7 @@ markdown.use(markdownFootnote as unknown as (md:typeof markdown)=>void);
 type HtmlNode=ReturnType<typeof parseDocument>['children'][number];
 type HtmlElement=HtmlNode & {name:string;attribs:Record<string,string>;children:HtmlNode[]};
 export type ImportedAsset={key:string;name:string;blob:Blob};
-export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string;tags?:string[];created?:string;updated?:string};
+export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string;tags?:string[];created?:string;updated?:string;place?:string};
 export type ImportBundle={source:string;pages:ImportedPage[];assets:ImportedAsset[];warnings:string[];navigation?:DocumentNavigation;sourceIds?:Record<string,string>};
 export type ImportChoice={key:string;title:string;kind:NovelDocument['kind']};
 export type ExportFormat='markdown'|'html'|'enex';
@@ -37,7 +42,7 @@ function path(value:string):string {
 }
 function resolve(base:string,href:string):string|null {try{const clean=decodeURIComponent(href.split('#')[0].split('?')[0]);if(!clean||clean.startsWith('//')||/^[a-z]+:/i.test(clean))return null;return path(`${base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):''}${clean}`);}catch{return null;}}
 function safeLink(href:string){return /^(https?:|mailto:)/i.test(href)&&!/[\u0000-\u0020]/.test(href)?href:undefined;}
-function baseTitle(name:string){return name.split('/').pop()!.replace(/\.(md|markdown|txt|html?|csv|enex)$/i,'').replace(/\s+[a-f0-9]{32}$/i,'').trim().slice(0,300)||'제목 없는 문서';}
+function baseTitle(name:string){return name.split('/').pop()!.replace(/\.(md|markdown|txt|html?|csv|enex|docx|rtf|hwpx?|epub)$/i,'').replace(/\s+[a-f0-9]{32}$/i,'').trim().slice(0,300)||'제목 없는 문서';}
 function imageMime(bytes:Uint8Array):AssetMeta['type']|null {
   if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b))return'image/png';
   if(bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return'image/jpeg';
@@ -48,6 +53,32 @@ function base64(bytes:Uint8Array){let s='';for(let i=0;i<bytes.length;i+=16384)s
 function unbase64(value:string){const compact=value.replace(/\s/g,'');if(compact.length>14*1024*1024||!/^[a-zA-Z0-9+/]*={0,2}$/.test(compact))throw new Error('첨부의 Base64 형식 또는 크기를 확인하세요.');const s=atob(compact);return Uint8Array.from(s,c=>c.charCodeAt(0));}
 function paragraph(content:RichNode[]):RichNode{return{type:'paragraph',attrs:{blockId:uid()},content};}
 function appendInline(out:RichNode[],n:RichNode){const last=out.at(-1);if(n.type==='text'&&!n.text)return;if(last?.type==='text'&&n.type==='text'&&JSON.stringify(last.marks)===JSON.stringify(n.marks))last.text=(last.text||'')+n.text;else out.push(n);}
+
+const pageExt=/\.(md|markdown|txt|html?|csv|docx|rtf|hwpx?)$/i;
+const loose=(v:string)=>v.normalize('NFC').toLowerCase();
+/** Obsidian-style `[[이름]]`, `[[폴더/이름#제목|별칭]]` to a page in the same bundle: exact path first, then file name, then title. */
+function linkedPage(bundle:ImportBundle,from:string,raw:string):string|undefined{
+  const name=loose(raw.split('#')[0].trim());if(!name)return;
+  const keys=bundle.pages.map(p=>({key:p.key,bare:loose(p.key.replace(pageExt,'')),title:loose(p.title)}));const dir=loose(from.includes('/')?from.slice(0,from.lastIndexOf('/')+1):'');
+  return (keys.find(k=>k.bare===dir+name)||keys.find(k=>k.bare===name)||keys.find(k=>k.bare.endsWith(`/${name}`))||keys.find(k=>baseTitle(k.bare)===name)||keys.find(k=>k.title===name))?.key;
+}
+/** Obsidian `![[그림.png]]` names a file anywhere in the vault. */
+function embeddedAsset(bundle:ImportBundle,from:string,raw:string):string|null{
+  const name=loose(raw.split('|')[0].trim()),relative=resolve(from,raw.split('|')[0].trim());
+  if(relative&&bundle.assets.some(a=>a.key===relative))return relative;
+  return bundle.assets.find(a=>loose(a.key)===name||loose(a.key).endsWith(`/${name}`))?.key||null;
+}
+/** Wiki links and embeds become inline HTML before Markdown rendering; code spans and fenced code keep the brackets. */
+function obsidianMarkdown(source:string):string{
+  let fenced=false;
+  return source.split('\n').map(line=>{
+    if(/^\s*(```|~~~)/.test(line)){fenced=!fenced;return line;}if(fenced)return line;
+    return line.split(/(`+[^`]*`+)/).map((part,i)=>i%2?part:part.replace(/(!?)\[\[([^\[\]\n|]+)(?:\|([^\[\]\n]+))?\]\]/g,(_,bang:string,target:string,alias?:string)=>{
+      const label=alias?.trim()||target.split('#')[0].split('/').pop()!.trim()||target;
+      return bang?`<img data-kosmos-embed="${esc(target.trim())}" alt="${esc(label)}">`:`<a data-kosmos-page="${esc(target.trim())}">${esc(label)}</a>`;
+    })).join('');
+  }).join('\n');
+}
 
 /** Parse into our explicit node whitelist. HTML is never mounted or executed, and resources are never fetched. */
 function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode {
@@ -62,7 +93,7 @@ function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode
       if(['script','style','iframe','object','embed','head','svg','form','noscript','template'].includes(tag)){warning(bundle,`${page.title}: 실행 코드·외부 삽입·스타일은 가져오지 않습니다.`);continue;}
       if(tag==='en-crypt'){warning(bundle,`${page.title}: 암호화된 내용은 원본 앱에서 복호화 후 다시 내보내세요.`);appendInline(out,{type:'text',text:'[암호화된 내용 — 원본 확인 필요]'});continue;}
       if(tag==='img'||tag==='en-media'){
-        const raw=tag==='en-media'?`enex:${page.key}:${attrs.hash?.toLowerCase()}`:resolve(page.key,attrs.src||'');
+        const raw=tag==='en-media'?`enex:${page.key}:${attrs.hash?.toLowerCase()}`:attrs['data-kosmos-asset']??(attrs['data-kosmos-embed']!==undefined?embeddedAsset(bundle,page.key,attrs['data-kosmos-embed']):resolve(page.key,attrs.src||''));
         const asset=bundle.assets.find(a=>a.key===raw);
         if(asset){if(!page.assetKeys.includes(asset.key))page.assetKeys.push(asset.key);appendInline(out,{type:'text',text:`[첨부: ${asset.name}]`});}
         else {warning(bundle,`${page.title}: 이미지·첨부를 찾지 못했거나 지원하지 않습니다 (${attrs.alt||attrs.src||attrs.type||'이름 없음'}).`);appendInline(out,{type:'text',text:`[첨부 확인 필요: ${attrs.alt||attrs.type||'이미지'}]`});}if(tag==='en-media')inline(n.children,marks,depth+1).forEach(v=>appendInline(out,v));continue;
@@ -81,6 +112,7 @@ function htmlContent(html:string,page:ImportedPage,bundle:ImportBundle):RichNode
       if(/background-color\s*:\s*(?:yellow|#ffff00)\s*(?:;|$)/i.test(style))additions.push({type:'highlight'});
       if(/text-decoration[^:]*\s*:[^;]*underline/i.test(style))additions.push({type:'underline'});
       if(/text-decoration[^:]*\s*:[^;]*line-through/i.test(style))additions.push({type:'strike'});
+      if(tag==='a'&&attrs['data-kosmos-page']!==undefined){const target=linkedPage(bundle,page.key,attrs['data-kosmos-page']);if(target)additions.push({type:'wikiLink',attrs:{sourceKey:target}});else warning(bundle,`${page.title}: 묶음에 없는 노트 링크 [[${attrs['data-kosmos-page']}]]를 일반 텍스트로 가져왔습니다.`);}
       if(tag==='a'&&attrs.href){const href=safeLink(attrs.href);if(href)additions.push({type:'link',attrs:{href,target:'_blank',rel:'noopener noreferrer'}});else{const target=resolve(page.key,attrs.href);if(target&&bundle.pages.some(p=>p.key===target))additions.push({type:'wikiLink',attrs:{sourceKey:target}});else if(!attrs.href.startsWith('#'))warning(bundle,`${page.title}: 이동할 수 없는 링크를 일반 텍스트로 가져왔습니다.`);}}
       const size=inlineFontSize(Number(attrs['data-font-size']));if(size)additions.push({type:'fontSize',attrs:{size}});
       if(attrs['data-kosmos-wiki'])additions.push({type:'wikiLink',attrs:{sourceKey:resolve(page.key,attrs['data-kosmos-wiki'])}});
@@ -139,29 +171,72 @@ export async function readInterchange(files:readonly File[]):Promise<ImportBundl
   const bundle:ImportBundle={source:files.map(f=>f.name).join(', '),pages:[],assets:[],warnings:[]};
   const entries=new Map<string,Uint8Array>();let total=0;
   function add(name:string,bytes:Uint8Array){const key=path(name);if(entries.has(key))throw new Error(`중복된 파일 경로입니다: ${key}`);total+=bytes.length;if(total>MAX_BYTES||entries.size>=3000)throw new Error('압축 해제한 파일은 100MB·3,000개 이하로 나누어 가져오세요.');entries.set(key,bytes);}
-  for(const file of files){if(/\.zip$/i.test(file.name)){
-      const zip=await JSZip.loadAsync(await file.arrayBuffer());if(zip.file('manifest.json'))throw new Error('전체 백업 ZIP은 「백업과 복구」에서 복원하세요.');
-      const all=Object.values(zip.files).filter(f=>!f.dir);if(all.length>3000)throw new Error('ZIP의 파일이 너무 많습니다.');
-      let declared=total;
-      for(const entry of all){const original=(entry as unknown as {unsafeOriginalName?:string}).unsafeOriginalName||entry.name;if(path(original)!==original)throw new Error('ZIP에 안전하지 않은 경로가 있습니다.');const size=(entry as unknown as {_data?:{uncompressedSize?:number}})._data?.uncompressedSize;if(!Number.isSafeInteger(size)||size!<0)throw new Error('ZIP 크기를 확인하지 못했습니다.');declared+=size!;if(declared>MAX_BYTES)throw new Error('압축 해제 크기가 100MB를 넘습니다.');}
-      for(const entry of all)add(entry.name,await entry.async('uint8array'));
-    }else add(file.webkitRelativePath||file.name,new Uint8Array(await file.arrayBuffer()));}
+  const hidden=(name:string)=>name.split('/').some(part=>part.startsWith('.')||part==='__MACOSX');
+  // Notion splits large exports into Part-n.zip files inside one ZIP; those are opened once more in place.
+  async function addZip(data:Uint8Array|ArrayBuffer,prefix:string,depth:number){
+    const zip=await JSZip.loadAsync(data);if(depth===0&&zip.file('manifest.json'))throw new Error('전체 백업 ZIP은 「백업과 복구」에서 복원하세요.');
+    const all=Object.values(zip.files).filter(f=>!f.dir);if(all.length>3000)throw new Error('ZIP의 파일이 너무 많습니다.');
+    let declared=total;
+    for(const entry of all){const original=(entry as unknown as {unsafeOriginalName?:string}).unsafeOriginalName||entry.name;if(path(original)!==original)throw new Error('ZIP에 안전하지 않은 경로가 있습니다.');const size=(entry as unknown as {_data?:{uncompressedSize?:number}})._data?.uncompressedSize;if(!Number.isSafeInteger(size)||size!<0)throw new Error('ZIP 크기를 확인하지 못했습니다.');declared+=size!;if(declared>MAX_BYTES)throw new Error('압축 해제 크기가 100MB를 넘습니다.');}
+    for(const entry of all){const name=prefix+entry.name;if(depth<1&&/\.zip$/i.test(entry.name)&&!hidden(entry.name)){await addZip(await entry.async('uint8array'),name.slice(0,name.lastIndexOf('/')+1),depth+1);continue;}add(name,await entry.async('uint8array'));}
+  }
+  for(const file of files){if(/\.zip$/i.test(file.name))await addZip(await file.arrayBuffer(),file.webkitRelativePath?file.webkitRelativePath.slice(0,file.webkitRelativePath.lastIndexOf('/')+1):'',0);
+    else add(file.webkitRelativePath||file.name,new Uint8Array(await file.arrayBuffer()));}
   const decoder=new TextDecoder('utf-8',{fatal:true});
-  const decode=(key:string,bytes:Uint8Array,limit=MAX_TEXT)=>{if(bytes.length>limit)throw new Error(`${key}: 파일을 더 작게 나누어 주세요 (문서 5MB / ENEX 100MB).`);try{return decoder.decode(bytes).replace(/^\uFEFF/,'');}catch{throw new Error(`${key}: UTF-8로 저장한 파일을 선택하세요.`);}};
+  // Korean Windows tools (메모장 이전 버전, 한글 TXT 저장) still write EUC-KR/CP949; plain documents fall back to it.
+  const legacy=(()=>{try{return new TextDecoder('euc-kr',{fatal:true});}catch{return null;}})();
+  const decode=(key:string,bytes:Uint8Array,limit=MAX_TEXT,fallback=false)=>{if(bytes.length>limit)throw new Error(`${key}: 파일을 더 작게 나누어 주세요 (문서 5MB / ENEX 100MB).`);try{return decoder.decode(bytes).replace(/^\uFEFF/,'');}catch{if(fallback&&legacy)try{const value=legacy.decode(bytes);warning(bundle,`${key}: UTF-8이 아니어서 한국어 윈도우 인코딩(EUC-KR)으로 읽었습니다. 글자가 깨졌는지 확인하세요.`);return value;}catch{/* neither encoding */}throw new Error(`${key}: UTF-8 또는 EUC-KR로 저장한 파일을 선택하세요.`);}};
   let metadata=new Map<string,Partial<ImportedPage>>();const metaBytes=entries.get('kosmos-transfer.json');
   if(metaBytes){const parsed=z.object({format:z.literal('kosmos-transfer'),version:z.literal(1),navigation:navigationSchema.optional(),documents:z.array(z.object({id:z.uuid().optional(),path:z.string().min(1).max(1000),title:z.string().min(1).max(300).optional(),kind:z.enum(['scene','wiki','memo']).optional(),chapter:z.string().max(300).optional(),category:z.string().max(200).optional(),summary:z.string().max(20000).optional()})).max(MAX_PAGES)}).safeParse(JSON.parse(decode('kosmos-transfer.json',metaBytes)));if(!parsed.success)throw new Error('문서 묶음의 정보를 확인하세요.');metadata=new Map(parsed.data.documents.map(d=>[path(d.path),d]));if(metadata.size!==parsed.data.documents.length)throw new Error('문서 묶음에 중복된 경로가 있습니다.');
     if(parsed.data.navigation){const sourceIds=parsed.data.documents.flatMap(d=>d.id?[d.id]:[]),issue=navigationIssues(parsed.data.navigation,sourceIds)[0];if(issue||new Set(sourceIds).size!==sourceIds.length)throw new Error(issue||'문서 묶음의 ID가 중복됩니다.');bundle.navigation=parsed.data.navigation;bundle.sourceIds=Object.fromEntries(parsed.data.documents.flatMap(d=>d.id?[[path(d.path),d.id]]:[]));}
   }
   const sources=new Map<string,string>();
-  for(const [key,bytes]of entries){if(key.split('/').some(s=>s.startsWith('.')||s==='__MACOSX')||key==='kosmos-transfer.json'||key==='README-ORBIS-TERTIUS.txt')continue;
+  const pushImage=(key:string,name:string,bytes:Uint8Array,label:string)=>{const type=imageMime(bytes);if(!type||bytes.length>10*1024*1024){warning(bundle,`${label}: ${name} 이미지는 PNG/JPEG/WebP 10MB 이하만 가져옵니다.`);return false;}if(!bundle.assets.some(a=>a.key===key))bundle.assets.push({key,name:name.slice(0,300),blob:new Blob([Uint8Array.from(bytes).buffer],{type})});return true;};
+  const dirOf=(key:string)=>key.split('/').slice(0,-1).join('/').slice(0,300);
+  // A Scrivener project is read through its binder; the files inside it are not imported one by one.
+  const scrivRoots:string[]=[];
+  for(const [key,bytes]of entries){if(hidden(key)||!/\.scrivx$/i.test(key))continue;
+    const root=key.includes('/')?key.slice(0,key.lastIndexOf('/')+1):'';scrivRoots.push(root);
+    const project=readScrivener(key,decode(key,bytes,20*1024*1024),entries);project.warnings.forEach(w=>warning(bundle,w));
+    for(const item of project.items){
+      let html=item.synopsis?`<blockquote><p>${esc(item.synopsis).replace(/\n/g,'<br>')}</p></blockquote>`:'';
+      if(item.content){const rtf=rtfToHtml(entries.get(item.content)!,item.title);rtf.warnings.forEach(w=>warning(bundle,w));html+=rtf.html;}
+      if(item.image&&pushImage(item.image,item.image.split('/').pop()!,entries.get(item.image)!,item.title))html+=`<p><img data-kosmos-asset="${esc(item.image)}"></p>`;
+      const pageKey=item.content||`${root}binder/${item.id}`;
+      bundle.pages.push({key:pageKey,title:item.title,kind:'memo',content:fromText(''),assetKeys:[],chapter:baseTitle(root.replace(/\/$/,'')||key),category:'',summary:'',place:item.place});sources.set(pageKey,html);
+      if(bundle.pages.length>MAX_PAGES)throw new Error('한 번에 500개 문서까지 가져올 수 있습니다.');
+    }
+  }
+  for(const [key,bytes]of entries){if(hidden(key)||key==='kosmos-transfer.json'||key==='README-ORBIS-TERTIUS.txt'||scrivRoots.some(root=>key.startsWith(root)))continue;
     const ext=key.split('.').pop()?.toLowerCase()||'';
     if(imageTypes[ext]){const type=imageMime(bytes);if(type!==imageTypes[ext]||bytes.length>10*1024*1024){warning(bundle,`${key}: 이미지 형식이 올바르지 않거나 10MB를 넘어서 제외했습니다.`);continue;}bundle.assets.push({key,name:key.split('/').pop()!.slice(0,300),blob:new Blob([Uint8Array.from(bytes).buffer],{type})});}
+    else if(['rtf','hwp','hwpx'].includes(ext)){
+      if(bytes.length>MAX_BYTES)throw new Error(`${key}: 파일을 더 작게 나누어 주세요.`);
+      const result=ext==='rtf'?{...rtfToHtml(bytes,key),images:[]}:ext==='hwp'?await hwpToHtml(bytes,key):await hwpxToHtml(bytes,key);result.warnings.forEach(w=>warning(bundle,w));
+      for(const image of result.images)pushImage(image.key,image.name,image.bytes,key);
+      bundle.pages.push({key,title:baseTitle(key),kind:'memo',content:fromText(''),assetKeys:[],chapter:dirOf(key),category:'',summary:''});sources.set(key,result.html);
+    }
+    else if(ext==='epub'){
+      const files=new Map<string,Uint8Array>();let book:JSZip;try{book=await JSZip.loadAsync(bytes);}catch{throw new Error(`${key}: EPUB 파일을 열지 못했습니다.`);}
+      const all=Object.values(book.files).filter(f=>!f.dir);if(all.length>3000)throw new Error(`${key}: EPUB 안의 파일이 너무 많습니다.`);
+      let declared=0;for(const entry of all){const size=(entry as unknown as {_data?:{uncompressedSize?:number}})._data?.uncompressedSize;if(!Number.isSafeInteger(size)||size!<0)throw new Error('EPUB 크기를 확인하지 못했습니다.');declared+=size!;}if(declared>MAX_BYTES)throw new Error(`${key}: 압축 해제 크기가 100MB를 넘습니다.`);
+      for(const entry of all){if(path(entry.name)!==entry.name)throw new Error(`${key}: EPUB에 안전하지 않은 경로가 있습니다.`);files.set(entry.name,await entry.async('uint8array'));}
+      const epub=readEpub(files,key);epub.warnings.forEach(w=>warning(bundle,w));
+      // Only images a chapter actually shows are kept; covers and decorations are dropped quietly.
+      const shown=new Set<string>();for(const chapter of epub.chapters)for(const m of chapter.html.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)){const target=resolve(chapter.path,m[1]);if(target)shown.add(target);}
+      for(const [name,data]of files)if(shown.has(name)&&imageTypes[name.split('.').pop()?.toLowerCase()||''])pushImage(`${key}/${name}`,name.split('/').pop()!,data,key);
+      epub.chapters.forEach((chapter,i)=>{const pageKey=`${key}/${chapter.path}`;bundle.pages.push({key:pageKey,title:chapter.title,kind:'memo',content:fromText(''),assetKeys:[],chapter:epub.title||baseTitle(key),category:'',summary:'',place:`${key}/${String(i+1).padStart(4,'0')}`});sources.set(pageKey,chapter.html);});
+    }
     else if(['md','markdown','txt','html','htm','csv'].includes(ext)){
-      const source=decode(key,bytes),meta=metadata.get(key);const page:ImportedPage={key,title:baseTitle(key),kind:meta?.kind&&['scene','wiki','memo'].includes(meta.kind)?meta.kind:'memo',content:fromText(''),assetKeys:[],chapter:meta?.chapter||key.split('/').slice(0,-1).join('/').slice(0,300),category:meta?.category||'',summary:meta?.summary||''};
+      const source=decode(key,bytes,MAX_TEXT,true),meta=metadata.get(key);const page:ImportedPage={key,title:baseTitle(key),kind:meta?.kind&&['scene','wiki','memo'].includes(meta.kind)?meta.kind:'memo',content:fromText(''),assetKeys:[],chapter:meta?.chapter||key.split('/').slice(0,-1).join('/').slice(0,300),category:meta?.category||'',summary:meta?.summary||''};
       if(meta?.title)page.title=meta.title.slice(0,300);
       else if(['html','htm'].includes(ext)){const tree=parseDocument(source);page.title=(elements(tree,'h1').find(n=>n.attribs.class?.includes('page-title'))||elements(tree,'title')[0])?text(elements(tree,'h1').find(n=>n.attribs.class?.includes('page-title'))||elements(tree,'title')[0]).trim().slice(0,300)||page.title:page.title;}
       else if(['md','markdown'].includes(ext)&&/^#\s+[^\n]+/.test(source))page.title=source.match(/^#\s+([^\n]+)/)![1].trim().slice(0,300);
       bundle.pages.push(page);sources.set(key,source);
+    }else if(ext==='docx'){
+      if(bytes.length>MAX_BYTES)throw new Error(`${key}: 파일을 더 작게 나누어 주세요.`);const docx=await docxToHtml(bytes,key),meta=metadata.get(key);docx.warnings.forEach(w=>warning(bundle,w));
+      for(const image of docx.images)pushImage(image.key,image.name,image.bytes,key);
+      bundle.pages.push({key,title:(meta?.title||docx.title||baseTitle(key)).slice(0,300),kind:meta?.kind||'memo',content:fromText(''),assetKeys:[],chapter:meta?.chapter||key.split('/').slice(0,-1).join('/').slice(0,300),category:meta?.category||'',summary:meta?.summary||''});sources.set(key,docx.html);
     }else if(ext==='enex'){const xml=decode(key,bytes,MAX_BYTES);if(/<!ENTITY/i.test(xml)||/<!DOCTYPE[^>]*\[/i.test(xml))throw new Error('XML 내부 엔티티 선언은 지원하지 않습니다.');if(XMLValidator.validate(xml)!==true)throw new Error(`${key}: 올바른 ENEX XML 파일이 아닙니다.`);
       const tree=parseDocument(xml,{xmlMode:true});const root=elements(tree,'en-export')[0];if(!root)throw new Error(`${key}: Evernote ENEX 형식이 아닙니다.`);
       for(const [i,note]of elements(root,'note').entries()){
@@ -180,8 +255,8 @@ export async function readInterchange(files:readonly File[]):Promise<ImportBundl
     }else warning(bundle,`${key}: 지원하지 않는 파일이므로 가져오지 않습니다.`);
     if(bundle.pages.length>MAX_PAGES)throw new Error('한 번에 500개 문서까지 가져올 수 있습니다.');
   }
-  if(!bundle.pages.length)throw new Error('가져올 문서가 없습니다. ENEX, Markdown, HTML, TXT, CSV 또는 해당 파일을 담은 ZIP을 선택하세요.');
-  for(const page of bundle.pages){const source=sources.get(page.key)!;if(/\.txt$/i.test(page.key))page.content=fromText(source);else if(/\.csv$/i.test(page.key))page.content=csvContent(source,bundle,page);else page.content=htmlContent(/\.(md|markdown)$/i.test(page.key)?markdown.render(source):source,page,bundle);documentSchema.parse({...newDocument(page.kind,page.title),content:page.content,summary:page.summary,chapter:page.chapter,category:page.category});}
+  if(!bundle.pages.length)throw new Error('가져올 문서가 없습니다. ENEX, Markdown, HTML, TXT, CSV, Word(docx), RTF, 한글(hwp·hwpx), EPUB, 스크리브너 프로젝트 또는 이들을 담은 ZIP·폴더를 선택하세요.');
+  for(const page of bundle.pages){const source=sources.get(page.key)!;if(/\.txt$/i.test(page.key))page.content=fromText(source);else if(/\.csv$/i.test(page.key))page.content=csvContent(source,bundle,page);else page.content=htmlContent(/\.(md|markdown)$/i.test(page.key)?markdown.render(obsidianMarkdown(source)):source,page,bundle);documentSchema.parse({...newDocument(page.kind,page.title),content:page.content,summary:page.summary,chapter:page.chapter,category:page.category});}
   const used=new Set(bundle.pages.flatMap(p=>p.assetKeys));for(const a of bundle.assets)if(!used.has(a.key))warning(bundle,`${a.name}: 문서에서 참조하지 않는 이미지이므로 가져오지 않습니다.`);
   bundle.assets=bundle.assets.filter(a=>used.has(a.key));return bundle;
 }
