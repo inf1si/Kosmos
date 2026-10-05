@@ -1,0 +1,322 @@
+{
+  "schemaVersion": 1,
+  "installedAt": "2026-10-05",
+  "components": [
+    {
+      "id": "attention-span",
+      "repository": "alexgreensh/attention-span",
+      "commit": "2714c965e6be1fa2597510e66651e63bc67cb448",
+      "files": [
+        {
+          "source": "LICENSE",
+          "path": ".agents/third-party/attention-span/LICENSE",
+          "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+        },
+        {
+          "source": "VERSION",
+          "path": ".agents/third-party/attention-span/VERSION",
+          "sha256": "1e9d7c27c8bbc8ddf0055c93e064a62fa995d177fee28cc8fa949bc8a4db06f4"
+        },
+        {
+          "source": "output-styles/attention-kind.md",
+          "path": ".claude/output-styles/attention-kind.md",
+          "sha256": "a9da2666c64da03b28a7c1b3de8d991dda7c4b1d9e38da99dff46c009e81d8b1"
+        },
+        {
+          "source": "output-styles/rundown.md",
+          "path": ".claude/output-styles/rundown.md",
+          "sha256": "a39a800e9362ff6182c837c935b5fa2277cf4206d95701ddb109090000d59fb2"
+        },
+        {
+          "source": "output-styles/spartan.md",
+          "path": ".claude/output-styles/spartan.md",
+          "sha256": "5a8a77bb9cfbdcb4fc4c8802e6c4e525879d0125c91a59d48f2da85e55c296da"
+        },
+        {
+          "source": "skills/attention-kind/SKILL.md",
+          "path": ".agents/skills/attention-kind/SKILL.md",
+          "sha256": "9072839457ec1186ad4f7b09a7979791432f772aef516b9682be55e6b4abb868"
+        },
+        {
+          "source": "skills/rundown/SKILL.md",
+          "path": ".agents/skills/rundown/SKILL.md",
+          "sha256": "1b9868923995b2c2469c8184e17eddd85f9232546f17db86c169f5db5231efad"
+        },
+        {
+          "source": "skills/spartan/SKILL.md",
+          "path": ".agents/skills/spartan/SKILL.md",
+          "sha256": "a8fe912415ddff7c0e851fb4994e0d4bc068e829c6a0a16d8c89e0b2ae4f123f"
+        },
+        {
+          "source": "skills/tldr/SKILL.md",
+          "path": ".agents/skills/tldr/SKILL.md",
+          "sha256": "1b2513bd32a6914e6129e1ebbf5ae5e0eb2e304108b3cac24fb6555bb8159ea2"
+        }
+      ]
+    },
+    {
+      "id": "karpathy-skills",
+      "repository": "multica-ai/andrej-karpathy-skills",
+      "commit": "2c606141936f1eeef17fa3043a72095b4765b9c2",
+      "files": [
+        {
+          "source": "README.md",
+          "path": ".agents/third-party/karpathy-skills/README.md",
+          "sha256": "daf314efb31894b86d68b67786c820bd8470bb2126e578ba9cd0e3e2667883f8"
+        },
+        {
+          "source": "skills/karpathy-guidelines/SKILL.md",
+          "path": ".agents/skills/karpathy-guidelines/SKILL.md",
+          "sha256": "6e22cc54cb02a5e98ae42d06d9d7292db0c1b43894831b32879beb0166b2aea7"
+        }
+      ]
+    },
+    {
+      "id": "verification-before-completion",
+      "repository": "obra/superpowers",
+      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d",
+      "files": [
+        {
+          "source": "LICENSE",
+          "path": ".agents/third-party/verification-before-completion/LICENSE",
+          "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        {
+          "source": "skills/verification-before-completion/SKILL.md",
+          "path": ".agents/skills/verification-before-completion/SKILL.md",
+          "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+        }
+      ]
+    },
+    {
+      "id": "anti-slop",
+      "repository": "dmmulroy/anti-slop",
+      "commit": "c44ef22ca116d0ba62a3ff663a0bd13a3f3fa40b",
+      "files": [
+        {
+          "source": "LICENSE",
+          "path": ".agents/third-party/anti-slop/LICENSE",
+          "sha256": "10ed33bf340d6d63dc0633dfc917a346b369b6aa41fe20734aefc6a3fb75ba17"
+        },
+        {
+          "source": "README.md",
+          "path": ".agents/third-party/anti-slop/README.md",
+          "sha256": "5ef1df60a7fe292cc512f64ed2c861fd61720f48570a58bce3aa185d9f24eadf"
+        },
+        {
+          "source": "skills/install-anti-slop/SKILL.md",
+          "path": ".agents/skills/install-anti-slop/SKILL.md",
+          "sha256": "2cb88a6ec0c50d9456c695d3980a29e8b554bfab2a28cc8719ca7fa7a9e05ac5"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/effect/index.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/effect/index.ts",
+          "sha256": "da7851d2c89a66b31ece6a36e88a78065d12dff6f92676d119981574bcd3669f"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/effect/rules/no-manual-effect-error-tag.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/effect/rules/no-manual-effect-error-tag.ts",
+          "sha256": "41434abb14bdb73760a2dfa4121b9e037f3ca741b0530c4f04d36f3a9e1041fd"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/effect/rules/no-manual-tag-comparison.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/effect/rules/no-manual-tag-comparison.ts",
+          "sha256": "f1e7c36b878f872b3cd4482e751bede505aafc21dabf93353a16e1c305bdb0bb"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/effect/rules/no-manual-tagged-construction.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/effect/rules/no-manual-tagged-construction.ts",
+          "sha256": "fc264fcbd8b2809f458ac11fd33f242ccc9cfbc4b605cee85ce490c9dd1d8f44"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/effect/rules/no-service-constructor-imports.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/effect/rules/no-service-constructor-imports.ts",
+          "sha256": "c397d1132329fbe82213dda80059c86acb99f0fe243e59615f615a86069c6fb1"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/effect/rules/prefer-effect-match.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/effect/rules/prefer-effect-match.ts",
+          "sha256": "94309ecd136d12b6b5424fccb6fde222adb1c2c278fb8f198c4c115febbfa69c"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/effect/shared/tagged-values.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/effect/shared/tagged-values.ts",
+          "sha256": "91e65bc7ebba81eda53c049fb3a07e03982a20476546cb9b4f3cbe2e66297d1c"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/index.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/index.ts",
+          "sha256": "9deed4cb455b9a6251001dc3a525d5b5e2c6ef989dd1c01e804c2edf0a697415"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-array-filter-map.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-array-filter-map.ts",
+          "sha256": "528bba857b84712c038e35e59079cc1e6c78a0421c65bb3c6117c9d412a2f28a"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-chained-type-assertions.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-chained-type-assertions.ts",
+          "sha256": "72f8e981520f94adac0ffbdab8f8e84e5f2a4595f14e4a6471be917a85a20a15"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-conditional-empty-object-spread.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-conditional-empty-object-spread.ts",
+          "sha256": "33f044030d208fcc10be73bb19c8172c275c5229df4b0ca8ec10f069bbe60062"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-known-value-widening.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-known-value-widening.ts",
+          "sha256": "321944d20912acc93f65f4b84075916202adfda6b8eaa839d96f0d8b8ec1463b"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-module-mocking.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-module-mocking.ts",
+          "sha256": "e29ba7d9ba4a5aed971002840bf434beef93393f60a589e55b72c203dde4c8db"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-object-parameters.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-object-parameters.ts",
+          "sha256": "2056e99dcb228604d9b2534952045e8ebf9f90af54add67d07a1211657d32941"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-reduce-accumulator-copy.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-reduce-accumulator-copy.ts",
+          "sha256": "dce4b08ee7ac4bbedfe743f6fa4a3d423cde50b37691130b899cc4573c05d2ae"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-reflect-apply.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-reflect-apply.ts",
+          "sha256": "f7920a332106252d6a24cdc917a2c1a433eb438792996ccceb5a25cd6e591dbb"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-reflect-get.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-reflect-get.ts",
+          "sha256": "95c5aa0f8e23b10d9345b1776082e08704ec6590298176a8ede8dfdb6e7cb56f"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-runtime-typeof.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-runtime-typeof.ts",
+          "sha256": "c3ff29662f9f5a0cbad527b200aadd486cbe63ee0d9bbf10c409ce9c39ec678c"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-shape-in-symbol-names.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-shape-in-symbol-names.ts",
+          "sha256": "4e5edcb5ed083de77970a2e4f64e4b2090ba6c4588e9fc6bcb1f01900ae905b7"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-unknown-parameters.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-unknown-parameters.ts",
+          "sha256": "81df45f83b1bca1bbf0bbc36e9211e10cad1aa2bb0ab604840ed9f1b94eaa2e5"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-unknown-returns.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-unknown-returns.ts",
+          "sha256": "67f3ac72d9f98ce29426e70be1e0c359599d94b5799f1130b7ec4cc34129f26b"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-unknown-type-aliases.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-unknown-type-aliases.ts",
+          "sha256": "e34000ccdd5c496fadb1418e29b44a1df970ebc9075e89ef2412f7029ec4c15b"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-unsafe-dictionary-type.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-unsafe-dictionary-type.ts",
+          "sha256": "6ff0b3aafe00bc42300080c514ddbee54a45508d5781cab2fb78156a19756a71"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/no-widen-then-assert.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/no-widen-then-assert.ts",
+          "sha256": "63f2c07cc42b8ad60a7e868efbd7b29e462b9ba960fbd07bbc8f590ef9e3f879"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/require-readable-spacing.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/require-readable-spacing.ts",
+          "sha256": "e63084ad77e215ad25e963c452d8ee819fb1cac3aefe3401e169985a145ac4bc"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/rules/require-safety-comment-for-type-assertion.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/rules/require-safety-comment-for-type-assertion.ts",
+          "sha256": "c8ed9f50f1c6e3592b77165dd8847d187ee9b0ef955d50f8099498d3139aa27c"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/shared/array-method.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/shared/array-method.ts",
+          "sha256": "e360557253c56ab7c256623f3338415743e5027e9d999f801fb79d98240d217b"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/shared/dictionary-types.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/shared/dictionary-types.ts",
+          "sha256": "0f319a2d2cb34c7b3902fb78301c91e1a750bd663c754e73d669f31dc5026525"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/shared/function-parameters.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/shared/function-parameters.ts",
+          "sha256": "ad80a650ea14847736ab9ee4c872dc89cc7d527bf60e7de20112bcb8f679545c"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/shared/lexical-type-parameters.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/shared/lexical-type-parameters.ts",
+          "sha256": "1ae0aa3ec245f1dc43c4bbbd8be1e2e4230e5dc389d1ca4e8de8f51b62ceff29"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/shared/reflect-method.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/shared/reflect-method.ts",
+          "sha256": "d1b7bd13ca714bf20bec15e835ed0526316b7274e06bd9a582cf623c09ac1d40"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/shared/scope.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/shared/scope.ts",
+          "sha256": "e38d41eeada854dbd02285e84e065d10e69460695e06e53fbe8662c963ae7eb4"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/shared/type-alias-resolution.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/shared/type-alias-resolution.ts",
+          "sha256": "5520e97b177f0093af2943808ac63cef0f6c03fedd197a36137c66209d78a8e0"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/LICENSE",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/LICENSE",
+          "sha256": "a429d52d537b871facb01c086191ec8a56a22bf1a10f4e641daff114bccc4a74"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/UPSTREAM.md",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/UPSTREAM.md",
+          "sha256": "7080b0f37202f02f44630e7e13182643561a998b328e8044efe89d3f7d6fca74"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/padding-line-ast.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/padding-line-ast.ts",
+          "sha256": "ae3624502620452022691c89a30ed95d669dc961a5802dbe27c44e45a647c3d0"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/padding-line-between-statements.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/padding-line-between-statements.ts",
+          "sha256": "6974d23a3d2769bfcd5211f1c1fb29c966be122dd37e764c2cf84c5f639a380d"
+        },
+        {
+          "source": "skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/padding-line-options.d.ts",
+          "path": ".agents/skills/install-anti-slop/assets/anti-slop/vendor/eslint-stylistic/padding-line-options.d.ts",
+          "sha256": "ff3d52f2b1c103bc429e030976641715caec676af4b8a0be802c0009874a0d58"
+        },
+        {
+          "source": "skills/install-anti-slop/references/update.md",
+          "path": ".agents/skills/install-anti-slop/references/update.md",
+          "sha256": "37add1b2560670baf2b4bbbba4d95ed3741ef451511c5190d1ebbb3280cae273"
+        },
+        {
+          "source": "skills/install-anti-slop/scripts/install.mjs",
+          "path": ".agents/skills/install-anti-slop/scripts/install.mjs",
+          "sha256": "649456714a15d937748114901c94ccdfbc93d8b2ff69497dbd5848e9431891aa"
+        }
+      ]
+    }
+  ],
+  "derivedFiles": [
+    {
+      "path": ".agents/styles/attention-kind.md",
+      "from": ".claude/output-styles/attention-kind.md",
+      "transform": "body after <!-- body-start -->, leading whitespace removed",
+      "sha256": "973bd7c81c9d5c570ac9839f3e974c8f31deb4984b5438cd06ba4bfb9d64981e"
+    }
+  ]
+}

@@ -51,7 +51,10 @@ pnpm dev
 
 ## 검사
 
+개발 에이전트의 Attention Span·Karpathy·완료 검증 스킬과 Anti Slop linter가 저장소에 설치되어 있습니다. [사용법·출처·기존 lint 진단과 CI 범위](docs/agent-tools.md)를 확인합니다.
+
 ```powershell
+pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build

@@ -41,3 +41,26 @@ jobs:
           age -r "$(cat "$check_dir/public")" -o "$check_dir/archive.age" "$check_dir/original"
           age -d -i "$check_dir/test-identity" -o "$check_dir/restored" "$check_dir/archive.age"
           cmp "$check_dir/original" "$check_dir/restored"
+      - name: Anti Slop lint (advisory during adoption)
+        continue-on-error: true
+        run: pnpm --silent exec oxlint . --format json > anti-slop-lint.json
+      - name: Verify Anti Slop loaded and reported diagnostics
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync } from 'node:fs';
+
+          const report = JSON.parse(readFileSync('anti-slop-lint.json', 'utf8'));
+
+          if (report.number_of_rules !== 19 || report.number_of_files < 1 || !Array.isArray(report.diagnostics)) {
+            throw new Error('Anti Slop did not produce a complete lint report.');
+          }
+
+          console.log(`Anti Slop: ${report.number_of_files} files, ${report.number_of_rules} rules, ${report.diagnostics.length} findings.`);
+          JS
+      - name: Upload Anti Slop diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anti-slop-lint
+          path: anti-slop-lint.json
+          if-no-files-found: ignore

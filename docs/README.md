@@ -11,6 +11,7 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 | 목적 | 문서 |
 |---|---|
 | 현재 무엇이 되는지 확인 | [구현 상태](status.md) |
+| 개발 에이전트 스킬과 코드 검사 | [Attention Span·Karpathy·완료 검증·Anti Slop](agent-tools.md) |
 | 직접 원고를 쓰고 게시·복원하기 | [사용 안내](user-guide.md) |
 | 작품 밖의 아이디어·자료·아이스박스 | [개인 노트](personal-notes.md) |
 | 문서·폴더·사용자 대분류 정리 | [문서 트리](document-navigation.md) |
