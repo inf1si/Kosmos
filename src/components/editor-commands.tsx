@@ -73,9 +73,10 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
       if(event.isComposing||editor.view.composing||!editor.isEditable)return false;
       if(event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.key==='Enter'){openAI('ask');return true;}
       if(event.key==='Escape'&&panel){close();return true;}
-      if(!slash)return false;
+      // Prose such as `그/그녀` or `1/2` keeps ordinary arrows/Escape once nothing matches.
+      if(!slash||!filtered.length)return false;
       if(event.key==='ArrowDown'||event.key==='ArrowUp'){setIndex(v=>(v+(event.key==='ArrowDown'?1:-1)+Math.max(filtered.length,1))%Math.max(filtered.length,1));return true;}
-      if(event.key==='Enter'){if(filtered[chosen]){command(filtered[chosen].id);return true;}close(false);return false;}
+      if(event.key==='Enter'){command(filtered[chosen].id);return true;}
       if(event.key==='Escape'){close();return true;}
       if(event.key==='Tab')close(false);
       return false;
@@ -111,7 +112,7 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
   useEffect(()=>{popup.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({block:'nearest'});},[chosen]);
   useEffect(()=>{
     const dom=editor.view.dom;
-    if(slash){dom.setAttribute('aria-controls',listId);dom.setAttribute('aria-activedescendant',`${listId}-${filtered[chosen]?.id||'empty'}`);}
+    if(slash&&filtered.length){dom.setAttribute('aria-controls',listId);dom.setAttribute('aria-activedescendant',`${listId}-${filtered[chosen].id}`);}
     else{dom.removeAttribute('aria-controls');dom.removeAttribute('aria-activedescendant');}
     return()=>{dom.removeAttribute('aria-controls');dom.removeAttribute('aria-activedescendant');};
   },[editor,slash,filtered,chosen,listId]);
@@ -128,7 +129,9 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
       if(mode==='paste'){
         const text=await navigator.clipboard.readText();if(editor.isDestroyed||!editor.isEditable)return;
         if(!targetIsCurrent(editor,target))throw new Error('글이 바뀌었습니다. 다시 선택하세요.');
-        editor.chain().focus().setTextSelection({from:target.from,to:target.to}).insertContent(text.split('\n').map(line=>({type:'paragraph',content:line?[{type:'text',text:line}]:[]}))).run();
+        // One line stays inside the current paragraph; JSON nodes never parse clipboard text as HTML.
+        const lines=text.replace(/\r\n?/g,'\n').split('\n');
+        if(text)editor.chain().focus().insertContentAt({from:target.from,to:target.to},lines.length===1?{type:'text',text}:lines.map(line=>({type:'paragraph',...(line?{content:[{type:'text',text:line}]}:{})}))).run();
       }else{
         const container=document.createElement('div');container.append(DOMSerializer.fromSchema(editor.schema).serializeFragment(editor.state.doc.slice(target.from,target.to).content));
         await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([target.text],{type:'text/plain'}),'text/html':new Blob([container.innerHTML],{type:'text/html'})})]);
@@ -139,9 +142,9 @@ export function EditorCommands({editor,scope,onLink,onFootnote,onImage,onContinu
   }
   return <>
     {notice&&<p className="note-command-notice" role="status">{notice}</p>}
-    <Popup.Root open={!!slash||!!panel} onOpenChange={open=>{if(!open)close(false);}}>
-      <Popup.Anchor virtualRef={anchor}/><Popup.Portal><Popup.Content ref={popup} className={panel?.kind==='ai'?'popover note-ai-popover':'menu note-command-menu'} side="bottom" align="start" sideOffset={6} collisionPadding={12} aria-label={panel?.kind==='ai'?'커서 AI':panel?.kind==='context'?'선택한 글 메뉴':menuLabel} onKeyDown={event=>{const dialog=(event.target as HTMLElement).closest('[role=dialog]');if(event.key==='Escape'&&(!dialog||dialog===popup.current)){event.preventDefault();event.stopPropagation();close();}}} onOpenAutoFocus={event=>{if(slash)event.preventDefault();}} onFocusOutside={event=>{if((slash||panel?.kind==='ai')&&editor.view.dom.contains(event.target as globalThis.Node))event.preventDefault();}} onCloseAutoFocus={event=>{event.preventDefault();if(!editor.isDestroyed&&document.activeElement===document.body)editor.view.focus();}} onInteractOutside={event=>{if(panel?.kind==='ai'&&(editor.view.dom.contains(event.target as globalThis.Node)||(event.target as HTMLElement)?.closest('[role=dialog]')))event.preventDefault();}} onEscapeKeyDown={()=>{if(slash)dismissed.current=slash.from;}}>
-        {slash&&<><div className="note-command-caption">입력 명령 <kbd>↑↓ 선택 · Enter 실행</kbd></div><div role="listbox" id={listId} aria-label={menuLabel}>{filtered.map((item,i)=><button type="button" role="option" tabIndex={-1} aria-selected={chosen===i} id={`${listId}-${item.id}`} className="menu-item" data-highlighted={chosen===i?'':undefined} key={item.id} onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} onClick={()=>command(item.id)}><item.icon size={15}/>{item.label}{item.id==='ai'&&<kbd>Alt+Enter</kbd>}</button>)}{!filtered.length&&<p>일치하는 명령이 없습니다.</p>}</div></>}
+    <Popup.Root open={(!!slash&&filtered.length>0)||!!panel} onOpenChange={open=>{if(!open)close(false);}}>
+      <Popup.Anchor virtualRef={anchor}/><Popup.Portal><Popup.Content ref={popup} className={panel?.kind==='ai'?'popover note-ai-popover':'menu note-command-menu'} side="bottom" align="start" sideOffset={6} collisionPadding={12} aria-label={panel?.kind==='ai'?'AI 질문':panel?.kind==='context'?'선택한 글 메뉴':menuLabel} onKeyDown={event=>{const dialog=(event.target as HTMLElement).closest('[role=dialog]');if(event.key==='Escape'&&(!dialog||dialog===popup.current)){event.preventDefault();event.stopPropagation();close();}}} onOpenAutoFocus={event=>{if(slash)event.preventDefault();}} onFocusOutside={event=>{if((slash||panel?.kind==='ai')&&editor.view.dom.contains(event.target as globalThis.Node))event.preventDefault();}} onCloseAutoFocus={event=>{event.preventDefault();if(!editor.isDestroyed&&document.activeElement===document.body)editor.view.focus();}} onInteractOutside={event=>{if(panel?.kind==='ai'&&(editor.view.dom.contains(event.target as globalThis.Node)||(event.target as HTMLElement)?.closest('[role=dialog]')))event.preventDefault();}} onEscapeKeyDown={()=>{if(slash)dismissed.current=slash.from;}}>
+        {slash&&filtered.length>0&&<><div className="note-command-caption">입력 명령 <kbd>↑↓ 선택 · Enter 실행</kbd></div><div role="listbox" id={listId} aria-label={menuLabel}>{filtered.map((item,i)=><button type="button" role="option" tabIndex={-1} aria-selected={chosen===i} id={`${listId}-${item.id}`} className="menu-item" data-highlighted={chosen===i?'':undefined} key={item.id} onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} onClick={()=>command(item.id)}><item.icon size={15}/>{item.label}{item.id==='ai'&&<kbd>Alt+Enter</kbd>}</button>)}</div></>}
         {panel?.kind==='context'&&<div role="menu" aria-label="선택한 글 메뉴" onKeyDown={e=>{const buttons=Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button'));if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const i=buttons.indexOf(document.activeElement as HTMLButtonElement);buttons[(i+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}}}>{editorAIActions.map(action=><button className="menu-item" role="menuitem" key={action.id} onClick={()=>openAI(action.id,panel.target)}><Sparkles size={15}/>{action.label}</button>)}<div className="menu-separator"/>{([{id:'copy',label:'복사',icon:Copy},{id:'cut',label:'잘라내기',icon:Scissors},{id:'paste',label:'붙여넣기',icon:Clipboard}] as const).map(item=><button className="menu-item" role="menuitem" key={item.id} onClick={()=>void clipboard(item.id)}><item.icon size={15}/>{item.label}</button>)}</div>}
         {panel?.kind==='ai'&&<EditorInlineAI key={`${scope.docId}-${panel.action}-${panel.target.from}-${panel.target.to}`} editor={editor} scope={scope} target={panel.target} action={panel.action} onClose={()=>close()} onContinue={()=>{close(false);onContinue();}}/>}
       </Popup.Content></Popup.Portal>
