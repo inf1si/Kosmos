@@ -1,5 +1,12 @@
 # 구현 검증
 
+## 2026-10-05 — 집필실 커서 기능 main·운영 확인
+
+- [PR #15](https://github.com/inf1si/Kosmos/pull/15)의 `79df51024938285625942c2377046f2020427358`을 [PR CI 통과](https://github.com/inf1si/Kosmos/actions/runs/37263945187) 후 main `854a2a26d674b9858fbfe243df1cf583daa8085b`로 병합했다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37264153221)도 성공했다.
+- Vercel `dpl_AcFfzELKd5zyQCJrvfz5xAGEUKyS`의 READY·정확한 main SHA·`kosmos-ashy.vercel.app` 별칭을 확인했다. [배포](https://kosmos-gs0quer24-kosmos42.vercel.app)·[운영 집필실](https://kosmos-ashy.vercel.app/studio).
+- 실제 허용 작가 로그인 Chromium에서 1280px 주 편집기·분할 설정 창과 360px 주 편집기의 Alt+Enter 선택/현재 문단·우클릭 질문하기·질문 초점·Esc 후 해당 편집기 복귀·화면 경계/가로 넘침을 읽기 전용으로 확인했다. 사이트 HTTP 200·제공자 상태 GET 200 세 번·페이지 오류 0·작업 공간 변경 시도 0·AI 호출 0.
+- 운영 `/`의 본문 변경·답변 적용·저장/되돌리기는 실제 원고를 변경하지 않기 위해 아래 합성 운영 빌드로 검증했다. 제공자 응답을 기다리지 않고 창을 닫던 첫 점검에서는 상태 GET이 취소돼 제공자 확인 단언이 실패했다. 상태 응답 200을 기다린 최종 점검에서 위 조작이 모두 통과했다. 실제 제공자 품질/비용·맥/터치는 미검증이다.
+
 ## 2026-10-05 — 집필실 `/` 명령·커서 AI·선택 글 메뉴
 
 - 기준 main `d10ff79`를 fetch했고 중간 변경은 없었다. 노트 개선·기존 원고 서식/설정 링크/각주·분할 창과 AI 저장/제공자/프리셋 구조를 보존했다. 편집 도구·AI·디자인·조작 검증 안내와 현재 Next.js 가이드를 읽었다.
