@@ -38,3 +38,7 @@
 .transfer-row.notes-import-row{grid-template-columns:18px 1fr}
 .notes-import-row>svg{color:var(--muted)}
 .notes-import-help{margin:12px 0 0}
+.notes-import-pick{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.notes-import-pick .backup-upload{display:flex;flex-direction:column;gap:6px;min-width:0}
+.notes-import-pick input{max-width:100%}
+@media(max-width:600px){.notes-import-pick{grid-template-columns:1fr;gap:12px}}
