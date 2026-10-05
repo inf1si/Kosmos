@@ -1,5 +1,12 @@
 # 구현 검증
 
+## 2026-10-05 — 저장 복구·문장 중간 명령 main·운영 확인
+
+- [PR #16](https://github.com/inf1si/Kosmos/pull/16)의 `1fb3b24ef6ece6fb62b14dbc534b86adbc4af12d`를 [PR CI 통과](https://github.com/inf1si/Kosmos/actions/runs/37268623623) 후 main `9c344dee173a7303a86c651e525766c519727ea9`로 병합했다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37268739049)도 성공했다.
+- Vercel `dpl_4SrtZtJ2owRi8siPUAM1Vc8kxVDo`의 READY·정확한 main 소스·`kosmos-ashy.vercel.app` 별칭을 확인했다. [배포](https://kosmos-rhyrul54x-kosmos42.vercel.app)·[운영 집필실](https://kosmos-ashy.vercel.app/studio).
+- 실제 운영 URL에서 격리된 합성 로그인·Supabase/AI 응답을 사용해 저장 복구 회귀 검사 6개와 집필실/분할/노트 공유 조작 검사를 모두 통과했다(합성 AI 7회·저장 10회·여섯 테마 × 1280/360px 12조합·페이지 오류 0). 오래된 대기 요청/전송 중 새 입력/응답 유실·같은 ID 재전송/서버 휴지통·서버 버전·다른 창 변경을 각각 확인했다. 문장 중간·제목·목록 전환·표 셀·구분선·AI 대상·실행 취소/다시 실행·저장/새로고침도 배포된 클라이언트로 검증했다. 합성 요청은 브라우저 경로에서 가로채므로 실제 계정 저장·AI 제공자 호출은 하지 않았다.
+- 별도로 실제 허용 작가 로그인 Chromium에서 HTTP 200, 1280px 원고/분할 창·360px 원고의 선택/현재 문단 AI·우클릭·질문 초점·Esc 복귀·화면 경계를 읽기 전용으로 확인했다. 제공자 GET 200 세 번·원고 변경 시도 0·AI 호출 0·페이지 오류 0. 사용자 브라우저의 기존 기기 대기열은 직접 조회하지 않았으며, 같은 조건을 위 합성 운영 검사로 재현했다. 기존 열린 탭은 새 클라이언트를 받도록 한 번 새로고침해야 한다.
+
 ## 2026-10-05 — 휴지통 저장 재시도·문장 중간 슬래시
 
 - 기준 main `14d5b3289ccc98683c8f11d45a65958a4edf1319`를 fetch했고 중간 변경은 없었다. 사용자가 반복 휴지통 보호 오류와 빈 문단에만 뜨는 입력 메뉴를 보고했다. 최신 편집은 휴지통 배열을 명시하지만 IndexedDB의 기존 pendingRequest는 오래된 payload를 그대로 재전송하는 것을 확인했다. 운영 DB는 읽기 전용으로 휴지통 배열 존재·빈 목록만 확인했고 원고 내용은 조회/기록하지 않았다.
