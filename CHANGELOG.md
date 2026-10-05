@@ -1,5 +1,11 @@
 # 변경 기록
 
+## 2026-10-05 — 노트 가져오기 형식·폴더 확장
+
+- **노트 가져오기**에 **폴더 선택**을 추가하고 Word(docx), 한글(hwp·hwpx), RTF, EPUB, 스크리브너 2·3 프로젝트, Notion의 ZIP 속 ZIP을 읽는다. 작품 문서 가져오기도 같은 형식을 받는다.
+- 폴더·ZIP의 하위 폴더를 노트 폴더로, Notion·Loop식 하위 페이지를 하위 노트로, ENEX·EPUB 여러 개를 파일별 폴더로 옮긴다. 가져오는 파일 사이의 상대 링크와 Obsidian `[[링크]]`는 노트 링크가 되고 `![[그림]]`은 본문 이미지가 된다.
+- UTF-8이 아닌 TXT·Markdown·HTML·CSV는 EUC-KR로 읽고 경고한다. hwp는 글만, 한글 두 형식은 글자 모양 없이 가져온다. [노트 가져오기](docs/personal-notes.md#노트-가져오기)·[교환 형식](docs/import-export.md).
+
 ## 2026-10-05 — 에이전트 스킬·Anti Slop linter 설치
 
 - Attention Span·Karpathy Guidelines·Verification Before Completion을 저장소의 Codex·Claude 진입점에 연결했다. 기본 출력은 Attention-kind이며 한국어와 상위 지침을 따른다.

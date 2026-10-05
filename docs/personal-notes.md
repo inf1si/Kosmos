@@ -81,13 +81,29 @@
 
 `…` → **작품으로 가져오기**에서 대상 작품과 원고·설정집·메모 종류를 고르면 새 비공개 문서가 열린다. 본문과 첨부를 복사하고 원본 노트는 남긴다. 첨부·문단·각주의 새 ID를 생성하며 사본 수정은 원본을 바꾸지 않는다. 대상 작품을 노트의 연결 목록에도 추가한다. 실제 공개는 집필실에서 판본을 만들 때 선택한 원고·공개 설명만 포함한다.
 
-## 노트 가져오기 (Evernote)
+## 노트 가져오기
 
-사이드바 **노트 가져오기**에서 ENEX, Markdown·HTML·TXT 또는 이를 묶은 ZIP을 고른다. 노트 수·첨부 수·제목과 태그 목록, 변환 경고를 확인하고 새 폴더 이름(기본값은 파일 이름)을 정한 뒤 **노트 n개 가져오기**를 누른다. 모든 노트는 새 최상위 폴더 아래 수집함에 들어가며 기존 노트는 그대로다. 같은 파일을 다시 가져오면 사본이 생긴다.
+사이드바 **노트 가져오기**에서 **파일 선택**(여러 개 가능) 또는 **폴더 선택**을 누른다. 노트 수·첨부 수·제목과 원본 경로 목록, 변환 경고를 확인하고 새 폴더 이름(기본값은 파일·폴더 이름)을 정한 뒤 **노트 n개 가져오기**를 누른다. 모든 노트는 새 최상위 폴더 아래 수집함에 들어가며 기존 노트는 그대로다. 같은 파일을 다시 가져오면 사본이 생긴다.
 
-- Evernote 태그는 노트 태그(앞의 `#` 제거, 40자·20개)로, `created`/`updated`는 작성·수정 시각으로 옮긴다. 체크박스(`en-todo`)는 체크 상태를 가진 체크리스트, 혼자 한 줄인 이미지(`en-media`)는 본문 이미지와 노트 첨부가 된다. 다른 위치의 이미지는 `[첨부: 이름]` 텍스트와 첨부로 남는다. 노트 간 링크·암호화 내용·PDF 같은 첨부는 옮기지 않고 경고로 알린다.
-- 가져오기 전에 복구 지점을 남긴다. 계정 노트 5,000개, 첨부 2,000개, 저장 후 작업 공간 JSON 약 19MB를 넘으면 아무것도 바꾸지 않고 오류를 보인다. 이미지는 JSON 밖 첨부 저장소에 들어가지만 본문 텍스트는 JSON 한도를 쓴다. 큰 노트북은 나눠서 가져온다.
-- 파일 해석은 작품용 [문서 가져오기](import-export.md)와 같은 파서를 쓴다.
+| 원본 | 준비 | 노트로 옮기는 범위 |
+|---|---|---|
+| Evernote | 노트북 내보내기 → ENEX. 여러 노트북은 ENEX 여러 개를 함께 선택 | 태그·작성/수정 시각·체크 상태·이미지. ENEX가 여럿이면 파일마다 하위 폴더 |
+| Notion | 내보내기(Markdown & CSV 또는 HTML, 하위 페이지 포함)로 받은 ZIP을 그대로 선택. 큰 내보내기의 `Part-n.zip`이 든 ZIP도 가능 | 하위 페이지는 상위 페이지 노트의 하위 노트, 페이지 사이 링크는 노트 링크. 이름 끝의 32자리 ID는 지운다 |
+| Microsoft Loop | Loop 자체 내보내기는 PDF뿐이다. 페이지를 Word에 붙여 docx로 저장하거나 Markdown 변환 확장으로 받은 폴더를 선택 | docx 또는 Markdown 범위 |
+| Obsidian | 보관함 폴더를 선택하거나 ZIP으로 선택. `.obsidian` 같은 숨김 폴더는 건너뛴다 | 폴더 구조, `[[노트]]`·`[[폴더/노트#제목\|별칭]]` 링크, `![[그림.png]]`. 코드 안의 괄호는 글자 그대로 |
+| 스크리브너 2·3 | 윈도우는 `.scriv` 폴더를 선택. 맥은 프로젝트를 Finder에서 압축한 ZIP을 선택 | 바인더 순서·하위 문서, 각 문서의 RTF 본문, 시놉시스(본문 앞 인용), 그림 항목. 휴지통은 제외 |
+| Word | docx (이전 doc은 Word에서 docx로 저장) | 제목 1~6, 굵게·기울임·밑줄·취소선·위/아래첨자·강조, 글머리·번호 목록, 정렬, 표(가로·세로 병합), 각주, 외부 링크, 그림. 변경 추적의 삭제된 글은 제외 |
+| 한글 | hwpx 또는 hwp(5.0) | hwpx: 문단·줄바꿈·표 병합·그림. hwp: 문단과 줄바꿈 글만 읽고 표는 칸 내용을 문단으로 푼다. 두 형식 모두 글자 모양은 옮기지 않는다. 암호·배포용·한글 97 이전 문서는 거절한다 |
+| RTF | TextEdit·워드패드·Word의 rtf | 문단·정렬·굵게·기울임·밑줄·취소선·위/아래첨자·줄바꿈·각주. EUC-KR(코드 페이지 949)과 유니코드. 그림은 제외 |
+| EPUB | DRM이 없는 EPUB 2·3 | 읽기 순서의 장마다 노트(목차 이름), 장 사이 링크, 장에 보이는 그림. 책 여러 권이면 책마다 하위 폴더 |
+| 그 밖 | Markdown·HTML·TXT·CSV, 이들을 묶은 ZIP | TXT·Markdown·HTML·CSV는 UTF-8이 아니면 EUC-KR로 읽고 경고한다 |
+
+- 폴더·ZIP 안의 하위 폴더는 새 폴더 아래 같은 이름의 노트 폴더가 된다. 모든 파일이 같은 최상위 폴더 안에 있으면 그 폴더는 한 번만 만든다. 폴더 이름이 옆의 페이지 파일 이름과 같으면(Notion·Loop 변환 결과) 그 페이지 노트의 하위 노트가 된다. 24단계 제한 때문에 20단계보다 깊은 폴더는 20단계 폴더에 모은다.
+- Markdown·HTML 상대 링크와 `[[링크]]`가 함께 가져오는 파일을 가리키면 노트 링크(백링크 포함)로 바꾼다. 묶음 밖을 가리키면 글자로 남기고 경고한다. 웹 주소 링크는 그대로 둔다.
+- 체크박스(`en-todo`, Word의 ☐/☒)는 체크 상태를 가진 체크리스트, 혼자 한 줄인 이미지는 본문 이미지와 노트 첨부가 된다. 다른 위치의 이미지는 `[첨부: 이름]` 텍스트와 첨부로 남는다. 이미지는 PNG/JPEG/WebP 10MB 이하만 보관하고 나머지 첨부·수식·개체·암호화 내용은 경고로 알린다.
+- 한 번에 입력과 압축 해제 합계 100MB, ZIP 항목 3,000개, 문서 500개까지다. 가져오기 전에 복구 지점을 남긴다. 계정 노트 5,000개, 첨부 2,000개, 저장 후 작업 공간 JSON 약 19MB를 넘으면 아무것도 바꾸지 않고 오류를 보인다. 이미지는 JSON 밖 첨부 저장소에 들어가지만 본문 텍스트는 JSON 한도를 쓴다. 큰 노트북은 나눠서 가져온다.
+- 파일 해석은 작품용 [문서 가져오기](import-export.md)와 같은 파서를 쓴다. 형식별 변환기: [Word](../src/lib/docx-import.ts), [RTF](../src/lib/rtf-import.ts), [한글](../src/lib/hwp-import.ts), [EPUB](../src/lib/epub-import.ts), [스크리브너](../src/lib/scrivener-import.ts).
+- 실제 앱이 만든 파일 중 python-docx(docx)·EbookLib(EPUB)로 만든 파일만 자동 테스트에 쓴다. 한글 프로그램·Microsoft Word·스크리브너·Notion이 실제로 저장한 파일은 이 저장소에서 확인하지 않았다. [시험 파일](../tests/fixtures/note-import/README.md).
 
 ## 저장과 보존
 
@@ -101,7 +117,7 @@
 
 ## 검증
 
-검증 환경과 실제 조작 결과는 [검증 기록](../VERIFICATION.md)과 [상태](status.md)를 따른다. 단위 테스트는 [personal-notes.test.ts](../tests/personal-notes.test.ts), [계층·AI 테스트](../tests/note-hierarchy-ai.test.ts), [보드·링크·가져오기·폴더→작품 테스트](../tests/note-ideation.test.ts), UI는 [personal-notes.tsx](../src/components/personal-notes.tsx), 모델·복사·검색은 [personal-notes.ts](../src/lib/personal-notes.ts)에 있다.
+검증 환경과 실제 조작 결과는 [검증 기록](../VERIFICATION.md)과 [상태](status.md)를 따른다. 단위 테스트는 [personal-notes.test.ts](../tests/personal-notes.test.ts), [계층·AI 테스트](../tests/note-hierarchy-ai.test.ts), [보드·링크·가져오기·폴더→작품 테스트](../tests/note-ideation.test.ts), [형식별 노트 가져오기 테스트](../tests/note-import-formats.test.ts), UI는 [personal-notes.tsx](../src/components/personal-notes.tsx), 모델·복사·검색은 [personal-notes.ts](../src/lib/personal-notes.ts)에 있다.
 
 [메타 항목 강조 회귀 검사](../tests/browser/note-metadata-focus.mjs)는 실행 중인 로컬 앱과 별도로 설치된 `playwright-core`/Chromium이 필요하다. 아래 명령은 Playwright 모듈 경로·브라우저 실행 파일을 해당 환경에 맞게 지정해 실행한다. 기본 앱 주소는 `http://127.0.0.1:3210`이며 `KOSMOS_TEST_BASE_URL`로 바꿀 수 있다. 테스트 앱의 공개 Supabase 설정에 맞는 로그인 캐시 키는 `KOSMOS_TEST_AUTH_STORAGE_KEY`로 지정한다. 실제 계정 대신 격리된 합성 로그인·Supabase 응답을 사용하고 화면과 측정은 무시되는 `test-results/note-metadata-focus`에 저장한다. CI의 Node 테스트에 자동 포함되지는 않는다.
 
@@ -114,5 +130,7 @@ pnpm exec tsx tests/browser/note-metadata-focus.mjs
 [빠른 메모·노트 정리 회귀 검사](../tests/browser/note-quick-capture.mjs)는 같은 설정으로 실행한다. 집필실 Alt+N 빠른 메모의 초점·Ctrl/Cmd+Enter 저장·화면 유지·Esc 원고 복귀, **노트에서 열기**, 노트 공간 Alt+N, 원고와 노트 본문의 계산된 첫 줄 들여쓰기, 필터 팝오버·보기 버튼, `…` 메뉴의 아이스박스 이동과 1280/360px 가로 넘침을 확인한다. 화면은 `test-results/note-quick-capture`에 저장한다.
 
 [노트 홈·보드·본문 도구·링크·가져오기 회귀 검사](../tests/browser/note-ideation.mjs)도 같은 설정으로 실행한다. 노트 홈 보드의 열 구성과 카드 끌어 옮기기, 체크리스트 체크와 본문 이미지 넣기·새로고침 후 이미지 표시, 노트 링크와 대상 노트의 백링크, 합성 ENEX 가져오기(태그·날짜·체크 상태·이미지, 열어도 수정 시각 유지), 폴더 메뉴의 **새 작품으로 만들기**(메모 문서 4개, 노트 전용 블록 변환, 원본 연결)와 1280/360px 가로 넘침을 확인한다. 화면은 `test-results/note-ideation`에 저장한다.
+
+[폴더째 노트 가져오기 회귀 검사](../tests/browser/note-import-formats.mjs)도 같은 설정으로 실행한다. 숨김 폴더가 있는 Obsidian식 폴더(Markdown·PNG·Word·한글 hwp)를 **폴더 선택**으로 고른 뒤 미리보기 수·기본 폴더 이름, 여섯 테마 × 1280/360px의 파일·폴더 선택 배치와 가로 넘침, 가져온 폴더 구조·`[[링크]]` 2개·본문 이미지·Word 목록을 확인한다. Playwright가 한글 이름의 폴더 업로드 파일을 읽지 못해 이 검사의 파일·폴더 이름은 영문이다. 화면은 `test-results/note-import-formats`에 저장한다.
 
 커서 명령 회귀 검사는 [note-inline-commands.mjs](../tests/browser/note-inline-commands.mjs)를 같은 브라우저 환경 변수로 실행한다. 합성 로그인·저장·AI 응답만 사용하며 원문 범위 검증은 [note-inline-ai.test.ts](../tests/note-inline-ai.test.ts)에 있다.

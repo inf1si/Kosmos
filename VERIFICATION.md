@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-10-05 — 노트 가져오기 형식·폴더 확장
+
+- 기준 main `39b9591`. 로컬 개발 서버와 합성 Supabase 응답만 사용했다. 실제 계정·원고·AI 호출은 없다.
+- 타입·151개 Node 테스트 통과. 새 [형식별 테스트](tests/note-import-formats.test.ts) 11개: python-docx docx(제목·서식·스타일 목록·정렬·표·그림), 합성 docx(각주·외부 링크·삭제 글 제외·세로 병합·☒ 체크), RTF(EUC-KR `\'hh`·`\u`·정렬·각주·그림 경고), SheetJS cfb로 만든 hwp(압축 본문, 4KB 넘는 일반 FAT 구역, 암호·이전 형식 거절), 합성 hwpx(줄바꿈·표 병합·그림), EbookLib EPUB(목차 이름·장 링크·그림), 합성 스크리브너(바인더 계층·시놉시스·그림·휴지통 제외), Notion ZIP 속 ZIP(하위 페이지·링크), Obsidian(`[[링크]]`·별칭·없는 링크 경고·`![[그림]]`·코드 괄호 보존), ENEX 여러 개의 폴더 분리, EUC-KR TXT.
+- 개발 서버 Chromium [폴더 가져오기 검사](tests/browser/note-import-formats.mjs) 통과: `.obsidian` 숨김 폴더가 있는 폴더(Markdown 2·PNG·docx·hwp)를 폴더 선택으로 골라 노트 4개·첨부 2개, 기본 폴더 이름, 여섯 테마 × 1280/360px 12개 화면의 파일·폴더 선택 배치(1280 가로, 360 세로)·가로 넘침 없음, 가져온 폴더 구조·노트 링크 2개·본문 이미지·Word 목록, 저장 1회·페이지 오류 0. 기존 [노트 홈·ENEX 검사](tests/browser/note-ideation.mjs)도 다시 통과했다.
+- Playwright의 폴더 업로드는 이름이 한글인 파일·폴더를 읽지 못해(NotReadableError) 브라우저 검사의 이름은 영문이다. 한글 파일·폴더 이름은 Node 테스트의 ZIP 경로로만 확인했다.
+- 미확인: 운영 빌드(로컬 Google Fonts 차단), CI·배포, 실제 한글 프로그램·Microsoft Word·스크리브너·Notion·Loop 변환 확장이 저장한 파일, 맥 Safari·Firefox의 폴더 선택, 큰 파일의 처리 시간.
+
 ## 2026-10-05 — 저장소 에이전트 도구와 Anti Slop
 
 - 기준 main `4f71cdbbf4d1ac95856d78d3c71780abebf000e4`. Attention Span·Karpathy Guidelines·Verification Before Completion과 사용자 지정 dmmulroy/anti-slop을 원본 커밋으로 고정했다. 스킬·라이선스·파일 해시·Codex/Claude 진입점과 Oxlint 설정을 추가한다. 앱 소스·로그인·개인 설정은 변경하지 않는다.
