@@ -15,6 +15,8 @@ const output = resolve(process.env.KOSMOS_BROWSER_OUTPUT || 'test-results/sync-r
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.KOSMOS_CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+// Older checks start in the editor; the studio home has its own check (studio-home.mjs).
+await context.addInitScript(() => { try { const key = 'kosmos-app-preferences', value = JSON.parse(localStorage.getItem(key) || '{}'); if (!('studioStart' in value)) localStorage.setItem(key, JSON.stringify({ ...value, studioStart: 'last' })); } catch { /* Storage blocked: the test sees the home and fails loudly. */ } });
 const note=newNote();
 const data=addNote(seedWorkspace(),note);data.works[0].documents[0].content=fromText('\n\n기기 원문.');
 const profile = { id: '11111111-1111-4111-8111-111111111111', aud: 'authenticated', role: 'authenticated', email: 'synthetic@example.invalid', created_at: '2026-10-04T00:00:00.000Z', app_metadata: { provider: 'email', providers: ['email'] }, user_metadata: {}, identities: [] };

@@ -62,7 +62,8 @@ function ManuscriptSection(){
 
 function ToolsSection(){
   const [editor,setEditor]=useEditorPreferences();const [app,update,reset]=useAppPreferences();
-  return <><Head storage="이 기기에만 저장합니다. 플롯보드와 문서 그래프는 다음에 열 때 적용합니다." onReset={()=>{setEditor({countMetric:defaultEditorPreferences.countMetric});reset(['plotBoardMode','graphScope','graphDepth','graphIncludePov']);}}/>
+  return <><Head storage="이 기기에만 저장합니다. 집필실 첫 화면, 플롯보드, 문서 그래프는 다음에 열 때 적용합니다." onReset={()=>{setEditor({countMetric:defaultEditorPreferences.countMetric});reset(['studioStart','plotBoardMode','graphScope','graphDepth','graphIncludePov']);}}/>
+    <Row label="집필실 첫 화면" hint="기본 집필실 홈"><Choice label="집필실 첫 화면" value={app.studioStart} options={[['home','집필실 홈'],['last','마지막 문서']]} onChange={studioStart=>update({studioStart})}/></Row>
     <Row label="글자 수 기준" hint="기본 공백 포함"><select aria-label="글자 수 기준" value={editor.countMetric} onChange={e=>{const metric=countMetrics.find(m=>m.id===e.target.value);if(metric)setEditor({countMetric:metric.id});}}>{countMetrics.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></Row>
     <h3>플롯보드</h3>
     <Row label="첫 보기" hint="기본 부와 장"><Choice label="플롯보드 첫 보기" value={app.plotBoardMode} options={[['part','부와 장'],['status','진행 상태'],['time','작중 시간']]} onChange={plotBoardMode=>update({plotBoardMode})}/></Row>

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, HardDrive, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
+import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, HardDrive, House, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
@@ -12,9 +12,10 @@ import { QuickNote } from './quick-note';
 import { NoteCard, NotesReference } from './notes-reference';
 import { addNote, filterNotes, newNote, noteFromTemplate } from '@/lib/personal-notes';
 import { PlotBoard } from './plot-board';
+import { StudioHome } from './studio-home';
 import { DocumentGraph } from './document-graph';
 import { DocumentTree } from './document-tree';
-import { WikiIcon } from './studio-icons';
+import { DocIcon, WikiIcon } from './studio-icons';
 import { ThemeControls } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
 import { Login,GoogleAccountControl } from './studio-auth';
@@ -26,7 +27,10 @@ import { countChars } from '@/lib/outline';
 import { childrenOf, insertDocument, moveNavigation, resolveNavigation, siblingDestination } from '@/lib/document-navigation';
 import { cloudConfigured, cloud } from '@/lib/cloud';
 import { db } from '@/lib/database';
+import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences';
+import { openingDocument, readStudioPosition, rememberStudioPosition } from '@/lib/studio-position';
 
+const HOME='home';
 const BOARD='board';
 const GRAPH='graph';
 type Reference='links'|'files'|'notes'|'ai';
@@ -34,6 +38,12 @@ const kinds={scene:'원고',wiki:'설정집',memo:'메모 · 리서치'} as cons
 // Below this width the sidebar floats over the editor and closes after a document opens.
 const narrow=()=>window.matchMedia('(max-width: 900px)').matches;
 const modal=(detail:string)=>window.dispatchEvent(new CustomEvent('studio-modal',{detail}));
+/** Read once on the client's first render, before the workspace loads, so the first painted view is already the right one. */
+function studioEntry(){
+  const position=readStudioPosition();let home=true;
+  try{home=parseAppPreferences(localStorage.getItem(APP_PREFERENCES_KEY)).studioStart==='home';}catch{/* Server render or blocked storage: start on the home. */}
+  return {workId:position.workId,docId:position.docs[position.workId]||'',home};
+}
 
 /** Closes a popover on a click outside it or Escape, returning focus to its toggle. */
 function useDismiss(open:boolean,setOpen:(open:boolean)=>void){
@@ -49,7 +59,8 @@ export function Studio(){
   useEffect(()=>{const read=()=>{const hash=window.location.hash;if(hash==='#notes'||hash.startsWith('#notes/')){setSelectedNote(hash.slice(7));setNotesOpen(true);}else setNotesOpen(false);};read();window.addEventListener('hashchange',read);return()=>window.removeEventListener('hashchange',read);},[]);
   // Browsers reserve Ctrl/Cmd+Shift+N for private windows, so Alt+N (Option+N) is the note key.
   useEffect(()=>{const key=(event:KeyboardEvent)=>{if(event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.code==='KeyN'){event.preventDefault();if(notesOpen)createNote();else if(s.canUse&&!s.conflict)setQuickNote(true);}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[createNote,notesOpen,s.canUse,s.conflict]);
-  const [workId,setWorkId]=useState('');const [current,setCurrent]=useState('');const [lastDoc,setLastDoc]=useState('');const [tabs,setTabs]=useState<string[]>([]);
+  const [entry]=useState(studioEntry);
+  const [workId,setWorkId]=useState(entry.workId);const [current,setCurrent]=useState(entry.home?HOME:entry.docId);const [lastDoc,setLastDoc]=useState(entry.docId);const [tabs,setTabs]=useState<string[]>(entry.home?[HOME]:[]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
   const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
@@ -63,16 +74,18 @@ export function Studio(){
   useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);if(media.matches)setSidebar(false);const resize=()=>{setCompact(media.matches);if(media.matches)setSidebar(false);};media.addEventListener('change',resize);return()=>media.removeEventListener('change',resize);},[]);
   useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(document.querySelector('.notes-workspace'))return;if((e.ctrlKey||e.metaKey)&&(e.code==='KeyK'||e.key.toLowerCase()==='k')){e.preventDefault();openSearch();}};window.addEventListener('keydown',onKey,true);return()=>window.removeEventListener('keydown',onKey,true);},[]);
   useEffect(()=>{const list=document.querySelector('.tab-list');if(!list)return;const reveal=()=>list.querySelector('.doc-tab.active')?.scrollIntoView({block:'nearest',inline:'nearest'});const observer=new ResizeObserver(reveal);observer.observe(list);reveal();return()=>observer.disconnect();},[current,compact,s.loading]);
+  // Remember the open work and document on this device for the home's "이어 쓰기" and the "마지막 문서" start.
+  useEffect(()=>{const works=s.state?.works;if(!works)return;const w=works.find(item=>item.id===workId)||works[0];rememberStudioPosition(w.id,openingDocument(w.documents,current,lastDoc).id);},[s.state?.works,workId,current,lastDoc]);
   if(s.loading)return <div className="loading-screen"><NotebookPen size={28}/><p>집필실을 여는 중입니다.</p></div>;
   if(!s.canUse)return <Login/>;
   if(!s.state)return <div className="loading-screen">원고를 불러오지 못했습니다. {s.error}</div>;
   const work=s.state.works.find(w=>w.id===workId)||s.state.works[0];const docs=work.documents;
   function returnToWork(id?:string,docId?:string){setNotesOpen(false);window.history.replaceState(null,'',`${window.location.pathname}${window.location.search}`);if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(docId?[docId]:[]);setBack([]);setForward([]);setSplitId(null);setReference(null);}}
   if(notesOpen)return <TooltipProvider><PersonalNotes activeId={selectedNote} captureId={captureId} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs workId={work.id}/></TooltipProvider>;
-  const onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onBoard||onGraph;
-  const active=docs.find(d=>d.id===(onOverview?lastDoc:current))||docs.find(d=>d.id===lastDoc)||docs.find(d=>d.kind==='scene')||docs[0];
-  const view=onGraph?GRAPH:onBoard?BOARD:active.id;
-  const openTabs=[...new Set([...(tabs.length?tabs:[view]),view])].filter(id=>id===BOARD||id===GRAPH||docs.some(d=>d.id===id));
+  const onHome=current===HOME,onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onHome||onBoard||onGraph;
+  const active=openingDocument(docs,onOverview?lastDoc:current,lastDoc);
+  const view=onHome?HOME:onGraph?GRAPH:onBoard?BOARD:active.id;
+  const openTabs=[...new Set([...(tabs.length?tabs:[view]),view])].filter(id=>id===HOME||id===BOARD||id===GRAPH||docs.some(d=>d.id===id));
   const split=onOverview?undefined:docs.find(d=>d.id===splitId&&d.id!==active.id);
   const scenes=docs.filter(d=>d.kind==='scene');const wiki=docs.filter(d=>d.kind==='wiki');
   const references=new Map(docs.map(d=>[d.id,wikiReferences(d.content)]));const appearances:Record<string,number>={};for(const ids of references.values())for(const id of ids)appearances[id]=(appearances[id]||0)+1;
@@ -80,13 +93,14 @@ export function Studio(){
   const navigation=resolveNavigation(work),placement=navigation.nodes.find(n=>n.id===active.id);
   const siblings=placement?childrenOf(navigation,placement.parentId,placement.sectionId).map(n=>n.id):[];const position=siblings.indexOf(active.id);
   const showSidebar=sidebar&&!focus;const readonly=!!s.conflict;const total=scenes.reduce((n,d)=>n+countChars(d),0);
-  function show(id:string){setCurrent(id);if(id!==BOARD&&id!==GRAPH)setLastDoc(id);else setReference(null);setTabs(t=>[...new Set([...(t.length?t:[view]),id])]);setProperties(false);if(narrow())setSidebar(false);}
+  function show(id:string){setCurrent(id);if(id!==HOME&&id!==BOARD&&id!==GRAPH)setLastDoc(id);else setReference(null);setTabs(t=>[...new Set([...(t.length?t:[view]),id])]);setProperties(false);if(narrow())setSidebar(false);}
   function go(id:string){if(id===view)return;setBack(b=>[...b,view].slice(-50));setForward([]);show(id);}
   function goBack(){const previous=back.at(-1);if(!previous)return;setBack(b=>b.slice(0,-1));setForward(f=>[view,...f]);show(previous);}
   function goForward(){const next=forward[0];if(!next)return;setForward(f=>f.slice(1));setBack(b=>[...b,view]);show(next);}
   function closeTab(id:string){const remaining=openTabs.filter(v=>v!==id);setTabs(remaining);if(id===view){const next=remaining.at(-1)!;show(next);setTabs(remaining);}}
   function openDoc(id:string,beside=false){if(beside&&!onOverview){setSplitId(id===active.id?null:id);return;}if(id===splitId)setSplitId(active.id);go(id);}
-  function switchWork(id:string){setWorkId(id);setCurrent('');setLastDoc('');setTabs([]);setBack([]);setForward([]);setSplitId(null);setProperties(false);setWorkMenu(false);}
+  // A work reopens on the document last open in it on this device. The home tab spans works, so it stays open.
+  function switchWork(id:string,docId?:string){const doc=docId??readStudioPosition().docs[id]??'';setWorkId(id);setCurrent(doc);setLastDoc(doc);setTabs(t=>t.includes(HOME)?[HOME]:[]);setBack(view===HOME?[HOME]:[]);setForward([]);setSplitId(null);setReference(null);setProperties(false);setWorkMenu(false);if(narrow())setSidebar(false);}
   function patchDoc(id:string,patch:Partial<NovelDocument>){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,documents:w.documents.map(d=>d.id===id?{...d,...patch,updatedAt:new Date().toISOString()}:d)}:w)}));}
   function patchWork(patch:{title?:string;subtitle?:string;description?:string}){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,...patch}:w)}));}
   function organizeWork(fn:(latest:Work)=>Work){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?fn(w):w)}));}
@@ -116,6 +130,7 @@ export function Studio(){
         {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
       </div>
       <nav className="studio-tools" aria-label="작업 도구">
+        <button type="button" className="nav-item" aria-pressed={onHome} onClick={()=>go(HOME)}><House size={16}/><span>집필실 홈</span></button>
         {searching||query?<div className="sidebar-search"><Search size={15}/><input id="workspace-search" aria-label="작품과 노트 검색" placeholder="제목 · 본문 · 노트 검색" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setQuery('');setSearching(false);}}}/><IconButton label="검색 닫기" onClick={()=>{setQuery('');setSearching(false);}}><X size={14}/></IconButton></div>
           :<button type="button" className="nav-item" onClick={openSearch}><Search size={16}/><span>검색</span><kbd>Ctrl K</kbd></button>}
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
@@ -136,7 +151,7 @@ export function Studio(){
         <IconButton id="sidebar-toggle" label={showSidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={showSidebar} onClick={()=>{if(compact)setReference(null);if(focus){setFocus(false);setSidebar(true);}else setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton>
         <IconButton label="뒤로" className="icon-button history-button" disabled={!back.length} onClick={goBack}><ChevronLeft size={16}/></IconButton>
         <IconButton label="앞으로" className="icon-button history-button" disabled={!forward.length} onClick={goForward}><ChevronRight size={16}/></IconButton>
-        <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||(id===GRAPH?'문서 그래프':'플롯보드');return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
+        <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?.title||(id===HOME?'집필실 홈':id===GRAPH?'문서 그래프':'플롯보드');return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:id===HOME?<House size={14}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
         <span className="tab-spacer"/>
         <QuickNote open={quickNote} onOpenChange={setQuickNote} disabled={readonly} onOpenNote={id=>{setCaptureId(id);openNotes(id);}}/>
         <GoogleAccountControl/>
@@ -156,7 +171,8 @@ export function Studio(){
         <button type="button" className="primary publish-button" onClick={()=>modal('publish')}><Send size={14}/>게시 준비</button>
       </div>
       {s.error&&<button type="button" className="studio-error" title="닫기" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {onGraph?<DocumentGraph key={work.id} documents={docs} initialDocumentId={active.id} onOpen={id=>openDoc(id)}/>
+      {onHome?<StudioHome state={s.state} resume={{work,doc:active}} currentWorkId={work.id} readonly={readonly} onOpen={(workId,docId)=>workId===work.id?openDoc(docId):switchWork(workId,docId)} onOpenWork={id=>id===work.id?go(active.id):switchWork(id)} onNewWork={()=>modal('new-work')}/>
+      :onGraph?<DocumentGraph key={work.id} documents={docs} initialDocumentId={active.id} onOpen={id=>openDoc(id)}/>
       :onBoard?<PlotBoard documents={docs} onOpen={id=>openDoc(id)} onCreate={chapter=>createDoc('scene',chapter,false)}/>
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={{'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
         <RichEditor key={`${active.id}-${s.epoch}`} doc={active} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:active.id},onContinue:()=>{setFocus(false);setReference('ai');}}} appearances={appearances}
@@ -175,8 +191,6 @@ export function Studio(){
     <StudioDialogs workId={work.id}/><Modal open={workSettings} onClose={()=>setWorkSettings(false)} title="작품 정보"><div className="form-grid"><label>작품명<input value={work.title} onChange={e=>{if(e.target.value)patchWork({title:e.target.value});}}/></label><label>부제<input value={work.subtitle} onChange={e=>patchWork({subtitle:e.target.value})}/></label><label>작품 소개<textarea rows={4} value={work.description} onChange={e=>patchWork({description:e.target.value})}/></label></div></Modal>
   </div></TooltipProvider>;
 }
-
-function DocIcon({doc}:{doc:NovelDocument}){return doc.kind==='wiki'?<WikiIcon category={doc.category} size={14}/>:doc.kind==='memo'?<StickyNote size={14}/>:<FileText size={14}/>;}
 
 /** The title is committed while typing but never left empty; Enter moves into the manuscript. */
 function TitleInput({value,disabled,onCommit}:{value:string;disabled:boolean;onCommit:(title:string)=>void}){

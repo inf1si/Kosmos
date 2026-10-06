@@ -15,8 +15,9 @@ export const manuscriptWidths=[560,680,800,960] as const;
 export const checkpointIntervals=[5,10,20,30] as const;
 export type PlotBoardMode='part'|'status'|'time';
 export type GraphScope='all'|'local';
+export type StudioStart='home'|'last';
 
-export const defaultAppPreferences={lineHeight:2,paragraphIndent:1,paragraphGap:1.2,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10} as const;
+export const defaultAppPreferences={lineHeight:2,paragraphIndent:1,paragraphGap:1.2,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home'} as const;
 const d=defaultAppPreferences;
 // Each field falls back on its own, so one unknown or damaged value never resets the rest.
 const appPreferencesSchema=z.object({
@@ -32,6 +33,8 @@ const appPreferencesSchema=z.object({
   aiIncludeManuscript:z.boolean().catch(d.aiIncludeManuscript),
   aiAttachLinked:z.boolean().catch(d.aiAttachLinked),
   checkpointMinutes:z.literal(checkpointIntervals).catch(d.checkpointMinutes),
+  /** What /studio opens on: the studio home, or straight into the last document on this device. */
+  studioStart:z.enum(['home','last']).catch(d.studioStart),
 }).catch({...defaultAppPreferences});
 export type AppPreferences=z.infer<typeof appPreferencesSchema>;
 

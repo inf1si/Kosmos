@@ -13,6 +13,8 @@ const output = resolve(process.env.KOSMOS_BROWSER_OUTPUT || 'test-results/note-q
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.KOSMOS_CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+// Older checks start in the editor; the studio home has its own check (studio-home.mjs).
+await context.addInitScript(() => { try { const key = 'kosmos-app-preferences', value = JSON.parse(localStorage.getItem(key) || '{}'); if (!('studioStart' in value)) localStorage.setItem(key, JSON.stringify({ ...value, studioStart: 'last' })); } catch { /* Storage blocked: the test sees the home and fails loudly. */ } });
 const note = { ...newNote(), title: '합성 노트', content: fromText('첫 문단.\n\n둘째 문단은 들여쓰지 않는다.'), tags: ['생각'] };
 const other = { ...newNote(), title: '보관 노트', content: fromText('다른 태그'), tags: ['자료'] };
 let data = addNote(addNote(seedWorkspace(), other), note), version = 1, saves = 0;
