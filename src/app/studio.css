@@ -67,3 +67,4 @@ html:has(.studio){background:var(--ground)}
 .login-google{width:min(360px,calc(100vw - 48px));justify-content:center}.login-help{max-width:360px;font-size:13px;line-height:1.7;text-align:center;overflow-wrap:anywhere}.account-login{display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
 .wiki-preview.note-preview-popover{position:relative;width:min(300px,calc(100vw - 24px));max-height:var(--radix-popover-content-available-height);overflow:auto}
 .note-preview-popover textarea{width:100%;resize:vertical}
+.studio-home .reference-card[aria-current]{background:var(--sel)}.studio-home .reference-card[aria-current] strong{color:var(--sel-ink)}
