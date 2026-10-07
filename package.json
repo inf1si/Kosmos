@@ -54,8 +54,6 @@
     "@electric-sql/pglite": "latest",
     "@oxlint/plugins": "1.86.0",
     "@tailwindcss/postcss": "^4.0.0",
-    "@types/markdown-it": "^14.2.0",
-    "@types/markdown-it-footnote": "^3.0.4",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

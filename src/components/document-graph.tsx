@@ -10,12 +10,19 @@ import styles from './document-graph.module.css';
 import { useAppPreferences } from './use-app-preferences';
 
 const kindNames = { scene: '원고', wiki: '설정집', memo: '메모' } as const;
+
 const clampZoom = (z: number) => Math.max(0.05, Math.min(4, z));
+
 function DocIcon({doc, size = 14}: {doc: NovelDocument; size?: number}) { return doc.kind === 'wiki' ? <WikiIcon category={doc.category} size={size}/> : doc.kind === 'memo' ? <StickyNote size={size}/> : <FileText size={size}/>; }
+
 /** 같은 두 문서 사이의 본문 링크와 시점 관계는 선 하나로 그린다. 본문 링크가 있으면 실선이다. */
 function mergeEdges(edges: GraphEdge[]) {
   const pairs = new Map<string, GraphEdge>();
-  for (const e of edges) { const key = [e.source, e.target].sort().join('|'), previous = pairs.get(key); if (!previous || previous.kind === 'pov' && e.kind === 'link') pairs.set(key, e); }
+
+  for (const e of edges) { const key = [e.source, e.target].sort().join('|'), previous = pairs.get(key);
+
+ if (!previous || previous.kind === 'pov' && e.kind === 'link') pairs.set(key, e); }
+
   return [...pairs.values()];
 }
 
@@ -42,70 +49,114 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
   const categories = [...new Set(documents.filter(d => d.kind === 'wiki').map(d => d.category.trim()).filter(Boolean))].sort();
   const doc = visible.documents.find(d => d.id === selected);
   const neighbors = doc ? graph.edges.filter(e => (includePov || e.kind === 'link') && (e.source === doc.id || e.target === doc.id)) : [];
-  const related = [...new Set(neighbors.map(e => e.source === doc?.id ? e.target : e.source))].map(id => documents.find(d => d.id === id)).filter((d): d is NovelDocument => !!d);
+
+  const related = [...new Set(neighbors.map(e => e.source === doc?.id ? e.target : e.source))].flatMap(id => { const document=documents.find(d => d.id === id);
+
+    return document?[document]:[];
+  });
+
   const point = (id: string) => offsets[id] || points.get(id)!;
   const screen = (p: GraphPoint) => ({x: camera.x + p.x * camera.zoom, y: camera.y + p.y * camera.zoom});
   const filtered = query.trim() || category || kinds.length < 3 || !includePov || hideIsolated;
 
   useEffect(() => {
-    const observer = new ResizeObserver(entries => { const {width, height} = entries[0].contentRect; if (width && height) setSize({width, height}); });
-    observer.observe(canvas.current!); return () => observer.disconnect();
+    const observer = new ResizeObserver(entries => { const {width, height} = entries[0].contentRect;
+
+ if (width && height) setSize({width, height}); });
+
+    observer.observe(canvas.current!);
+
+ return () => observer.disconnect();
   }, []);
   useEffect(() => {
     const element = canvas.current!;
+
     const wheel = (e: WheelEvent) => {
       e.preventDefault(); const r = element.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-      setCamera(c => {const zoom = clampZoom(c.zoom * Math.exp(-e.deltaY * 0.0015)), ratio = zoom / c.zoom; return {zoom, x: x - (x - c.x) * ratio, y: y - (y - c.y) * ratio};});
+      setCamera(c => {const zoom = clampZoom(c.zoom * Math.exp(-e.deltaY * 0.0015)), ratio = zoom / c.zoom;
+
+ return {zoom, x: x - (x - c.x) * ratio, y: y - (y - c.y) * ratio};});
     };
+
     element.addEventListener('wheel', wheel, {passive: false});
+
     return () => element.removeEventListener('wheel', wheel);
   }, []);
+
   function fit() {
     const positions = [...points.values()];
-    if (!positions.length) { setCamera({x: size.width / 2, y: size.height / 2, zoom: 1}); return; }
+
+    if (!positions.length) { setCamera({x: size.width / 2, y: size.height / 2, zoom: 1});
+
+ return; }
+
     const xs = positions.map(p => p.x), ys = positions.map(p => p.y);
     const left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys), bottom = Math.max(...ys);
     // 칩은 확대율과 관계없이 같은 크기라 화면 여백(칩 폭·높이)을 빼고 맞춘다.
     const zoom = Math.min(1.6, clampZoom(Math.min((size.width - 240) / Math.max(1, right - left), (size.height - 90) / Math.max(1, bottom - top))));
     setCamera({x: size.width / 2 - (left + right) / 2 * zoom, y: size.height / 2 - (top + bottom) / 2 * zoom, zoom});
   }
+
   useEffect(() => { setOffsets({}); fit(); /* Fit when the visible graph or canvas changes. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points, size.width, size.height]);
+
   function zoomBy(factor: number, x = size.width / 2, y = size.height / 2) {
-    setCamera(c => { const zoom = clampZoom(c.zoom * factor), ratio = zoom / c.zoom; return {zoom, x: x - (x - c.x) * ratio, y: y - (y - c.y) * ratio}; });
+    setCamera(c => { const zoom = clampZoom(c.zoom * factor), ratio = zoom / c.zoom;
+
+ return {zoom, x: x - (x - c.x) * ratio, y: y - (y - c.y) * ratio}; });
   }
+
   function startDrag(e: PointerEvent<HTMLElement>, id?: string) {
     if (e.button !== 0) return;
-    if (!id && (e.target as HTMLElement).closest('button,select,input,a')) return;
+
+    if (!id && (e.target instanceof Element?e.target:null)?.closest('button,select,input,a')) return;
+
     if (id) e.stopPropagation(); else e.preventDefault();
     suppressClick.current = false;
     drag.current = {id, pointer: e.pointerId, x: e.clientX, y: e.clientY, moved: false, origin: id ? point(id) : {x: camera.x, y: camera.y}};
     canvas.current?.setPointerCapture(e.pointerId);
   }
+
   function moveDrag(e: PointerEvent<HTMLDivElement>) {
-    const d = drag.current; if (!d || d.pointer !== e.pointerId) return;
+    const d = drag.current;
+
+ if (!d || d.pointer !== e.pointerId) return;
     const x = e.clientX - d.x, y = e.clientY - d.y;
+
     if (Math.hypot(x, y) > 4) d.moved = true;
+
     if (d.id) setOffsets(o => ({...o, [d.id!]: {x: d.origin.x + x / camera.zoom, y: d.origin.y + y / camera.zoom}}));
     else setCamera(c => ({...c, x: d.origin.x + x, y: d.origin.y + y}));
   }
+
   function endDrag(e: PointerEvent<HTMLDivElement>) {
-    const d = drag.current; if (!d || d.pointer !== e.pointerId) return;
+    const d = drag.current;
+
+ if (!d || d.pointer !== e.pointerId) return;
     suppressClick.current = d.moved;
+
     if (d.id && !d.moved && e.type !== 'pointercancel') {
       setSelected(d.id);
       const now = performance.now(), previous = lastClick.current;
+
       if (previous?.id === d.id && now - previous.time < 400) {lastClick.current = null; onOpen(d.id);}
       else lastClick.current = {id: d.id, time: now};
     } else lastClick.current = null;
     drag.current = null;
+
     if (canvas.current?.hasPointerCapture(e.pointerId)) canvas.current.releasePointerCapture(e.pointerId);
   }
+
   function resetFilters() { setQuery(''); setCategory(''); setKinds(['scene', 'wiki', 'memo']); setHideIsolated(false); setIncludePov(defaults.graphIncludePov); }
-  function selectNeighbor(id: string) { setSelected(id); resetFilters(); if (mode === 'local' || !visible.documents.some(d => d.id === id)) {setCenter(id); setMode('local');} }
+
+  function selectNeighbor(id: string) { setSelected(id); resetFilters();
+
+ if (mode === 'local' || !visible.documents.some(d => d.id === id)) {setCenter(id); setMode('local');} }
+
   // 큰 지도와 좁은 화면은 축소 상태에서 선택한 문서만 제목을 보여 칩이 겹치지 않게 한다.
   const compact = (visible.documents.length > GRAPH_FULL_LABELS || size.width < 520) && camera.zoom < 1;
+
   return <section className={styles.graph} aria-label="문서 그래프">
     <header className={`board-bar ${styles.bar}`}>
       <div className="segmented" aria-label="그래프 범위">
@@ -139,10 +190,14 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
             else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) setCamera(c => ({...c, x: c.x + (e.key === 'ArrowLeft' ? 40 : e.key === 'ArrowRight' ? -40 : 0), y: c.y + (e.key === 'ArrowUp' ? 40 : e.key === 'ArrowDown' ? -40 : 0)}));
             else return; e.preventDefault();
           }}>
-          {lines.map(e => {const a = screen(point(e.source)), b = screen(point(e.target)), highlight = e.source === doc?.id || e.target === doc?.id; return <line key={`${e.source}-${e.target}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`${styles.edge} ${highlight ? styles.highlightEdge : ''}`} strokeDasharray={e.kind === 'pov' ? '4 4' : undefined}/>;})}
+          {lines.map(e => {const a = screen(point(e.source)), b = screen(point(e.target)), highlight = e.source === doc?.id || e.target === doc?.id;
+
+ return <line key={`${e.source}-${e.target}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={`${styles.edge} ${highlight ? styles.highlightEdge : ''}`} strokeDasharray={e.kind === 'pov' ? '4 4' : undefined}/>;})}
         </svg>
         <div className={styles.nodes}>
-          {visible.documents.map(d => {const p = screen(point(d.id)), chosen = d.id === doc?.id, small = compact && !chosen; return <button type="button" key={d.id} className={`${styles.node} ${small ? styles.compact : ''}`} style={{transform: `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`}} aria-pressed={chosen} aria-label={`문서 선택: ${d.title}`} title={`${d.title} · ${kindNames[d.kind]}${d.category ? ` · ${d.category}` : ''}`}
+          {visible.documents.map(d => {const p = screen(point(d.id)), chosen = d.id === doc?.id, small = compact && !chosen;
+
+ return <button type="button" key={d.id} className={`${styles.node} ${small ? styles.compact : ''}`} style={{transform: `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`}} aria-pressed={chosen} aria-label={`문서 선택: ${d.title}`} title={`${d.title} · ${kindNames[d.kind]}${d.category ? ` · ${d.category}` : ''}`}
             onPointerDown={e => startDrag(e, d.id)} onClick={() => {if (!suppressClick.current) setSelected(d.id);}}
             onKeyDown={e => {if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {e.preventDefault(); onOpen(d.id);}}}>
             <DocIcon doc={d} size={13}/>{!small && <span>{d.title}</span>}{!small && d.kind === 'scene' && <i className={`status-dot ${d.status}`} role="img" aria-label={statuses[d.status]}/>}
@@ -158,7 +213,9 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
           {doc.summary && <p className={styles.summary}>{doc.summary}</p>}
           <div className={styles.docActions}><button type="button" className="button" onClick={() => onOpen(doc.id)}><ArrowUpRight size={14}/>문서 열기</button><button type="button" className="button" onClick={() => {setCenter(doc.id); setMode('local');}}><Network size={14}/>주변 연결</button></div>
           <h3>연결된 문서 <span>{related.length}</span></h3>
-          {related.length ? <ul className={styles.relatedList}>{related.map(d => {const edges = neighbors.filter(e => e.source === d.id || e.target === d.id); return <li key={d.id}><button type="button" className={styles.related} onClick={() => selectNeighbor(d.id)}><DocIcon doc={d}/><span><strong>{d.title}</strong><small>{[...new Set(edges.map(e => e.kind === 'pov' ? '시점 인물' : e.source === doc.id ? '이 문서에서 연결' : '이 문서를 참조'))].join(' · ')}</small></span></button></li>;})}</ul> : <p className={styles.hint}>본문의 ‘설정 링크 추가’로 다른 문서를 연결할 수 있습니다.</p>}
+          {related.length ? <ul className={styles.relatedList}>{related.map(d => {const edges = neighbors.filter(e => e.source === d.id || e.target === d.id);
+
+ return <li key={d.id}><button type="button" className={styles.related} onClick={() => selectNeighbor(d.id)}><DocIcon doc={d}/><span><strong>{d.title}</strong><small>{[...new Set(edges.map(e => e.kind === 'pov' ? '시점 인물' : e.source === doc.id ? '이 문서에서 연결' : '이 문서를 참조'))].join(' · ')}</small></span></button></li>;})}</ul> : <p className={styles.hint}>본문의 ‘설정 링크 추가’로 다른 문서를 연결할 수 있습니다.</p>}
         </> : <p className={styles.hint}>문서를 선택하면 연결된 문서를 볼 수 있습니다. 두 번 누르면 문서가 열립니다.</p>}
         <details className={styles.documentList}><summary>표시된 문서 목록 · {visible.documents.length}개</summary>{visible.documents.map(d => <button type="button" key={d.id} aria-pressed={d.id === doc?.id} onClick={() => setSelected(d.id)}><DocIcon doc={d}/><span>{d.title}</span></button>)}</details>
       </aside>

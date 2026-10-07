@@ -4,6 +4,7 @@ import { newDocument, type NovelDocument } from '../src/lib/model';
 import { buildDocumentGraph, filterDocumentGraph, layoutDocumentGraph, graphChipWidth, GRAPH_EDGE_LIMIT, GRAPH_ROW, type GraphOptions } from '../src/lib/document-graph';
 
 const options: GraphOptions = {kinds: ['scene', 'wiki', 'memo'], query: '', category: '', includePov: true, hideIsolated: false, depth: 1};
+
 function link(doc: NovelDocument, ...targets: string[]) {
   doc.content = {type: 'doc', content: [{type: 'paragraph', content: targets.map(targetId => ({type: 'text', text: '연결', marks: [{type: 'wikiLink', attrs: {targetId}}]}))}]};
 }
@@ -59,6 +60,7 @@ test('force layout is stable across document ordering and produces finite separa
   assert.equal(layout.size, 200); assert.equal(layoutDocumentGraph([], []).size, 0);
   assert.ok([...layout.values()].every(p => Number.isFinite(p.x) && Number.isFinite(p.y)));
   const coordinates = [...layout.values()]; let closest = Infinity;
+
   for (let i = 0; i < coordinates.length; i++) for (let j = i + 1; j < coordinates.length; j++) closest = Math.min(closest, Math.hypot(coordinates[i].x - coordinates[j].x, coordinates[i].y - coordinates[j].y));
   assert.ok(closest > 15, `closest nodes were ${closest} units apart`);
 });
@@ -69,6 +71,7 @@ test('small graphs separate Korean title chips around a connected character', ()
   docs.slice(1).forEach(d => link(d, person.id));
   const points = layoutDocumentGraph(docs, buildDocumentGraph(docs).edges);
   const halfWidth = (d: NovelDocument) => Math.min(220, graphChipWidth(d.title)) / 2;
+
   for (let i = 0; i < docs.length; i++) for (let j = i + 1; j < docs.length; j++) {
     const a = points.get(docs[i].id)!, b = points.get(docs[j].id)!;
     assert.ok(Math.abs(a.x - b.x) >= halfWidth(docs[i]) + halfWidth(docs[j]) - 1 || Math.abs(a.y - b.y) >= GRAPH_ROW - 1, `title chips overlap: ${i}, ${j}`);

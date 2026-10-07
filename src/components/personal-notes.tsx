@@ -1,4 +1,6 @@
 'use client';
+
+import { documentSchema } from '@/lib/model';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -26,8 +28,11 @@ import { cloud, cloudConfigured } from '@/lib/cloud';
 import { db } from '@/lib/database';
 
 const EMPTY_NOTES:PersonalNote[]=[];
+
 const NOTE_EXTENSIONS=[...noteExtensions,NoteImageView];
+
 const NOTE_LINK_COPY={tool:'노트 링크 추가',title:'노트 연결',description:'선택한 단어를 다른 노트에 연결합니다. Ctrl+클릭으로 엽니다.',select:'연결할 노트',open:'열기'};
+
 type Props={activeId:string;captureId:string;onSelect:(id:string)=>void;onReturn:()=>void;onNew:(to?:NoteDestination,template?:string)=>void;onOpenWork:(workId:string,docId?:string)=>void};
 
 export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpenWork}:Props){
@@ -44,23 +49,49 @@ export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpen
   const tree=useMemo(()=>s.state?noteTreeWork(s.state):null,[s.state]);
   // No note in the address opens the notes home instead of an arbitrary first note.
   const active=activeId?notes.find(n=>n.id===activeId):undefined,readonly=!!s.conflict;
-  useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);setSidebar(!media.matches);const change=()=>{setCompact(media.matches);setSidebar(!media.matches);};media.addEventListener('change',change);return()=>media.removeEventListener('change',change);},[]);
-  useEffect(()=>{const key=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.code==='KeyK'){event.preventDefault();setSide(null);setSidebar(true);setTimeout(()=>document.getElementById('notes-search')?.focus(),30);}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[]);
+  useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);setSidebar(!media.matches);const change=()=>{setCompact(media.matches);setSidebar(!media.matches);};
+
+media.addEventListener('change',change);
+
+return()=>media.removeEventListener('change',change);},[]);
+  useEffect(()=>{const key=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.code==='KeyK'){event.preventDefault();setSide(null);setSidebar(true);setTimeout(()=>document.getElementById('notes-search')?.focus(),30);}};
+
+window.addEventListener('keydown',key);
+
+return()=>window.removeEventListener('keydown',key);},[]);
   const linkTargets=useMemo(()=>notes.filter(n=>n.id!==activeId).map(n=>({...noteDocument(n),category:'노트'})),[notes,activeId]);
-  const noteLinkCount=useMemo(()=>{const a=notes.find(n=>n.id===activeId);if(!a)return 0;const ids=new Set(notes.map(n=>n.id));return wikiReferences(a.content).filter(id=>ids.has(id)&&id!==a.id).length+noteBacklinks(notes,a.id).length;},[notes,activeId]);
+
+  const noteLinkCount=useMemo(()=>{const a=notes.find(n=>n.id===activeId);
+
+if(!a)return 0;const ids=new Set(notes.map(n=>n.id));
+
+return wikiReferences(a.content).filter(id=>ids.has(id)&&id!==a.id).length+noteBacklinks(notes,a.id).length;},[notes,activeId]);
+
   const activeNoteId=active?.id,addNoteAsset=s.addNoteAsset;
   const noteTools=useMemo<NoteTools|undefined>(()=>activeNoteId?{extensions:NOTE_EXTENSIONS,onImage:file=>addNoteAsset(activeNoteId,file)}:undefined,[activeNoteId,addNoteAsset]);
+
   if(!s.state)return null;
   const works=s.state.works,allTags=[...new Set(notes.flatMap(n=>n.tags))].sort((a,b)=>a.localeCompare(b));
   const inbox=notes.filter(n=>n.box==='inbox').length,icebox=notes.length-inbox,filters=(tag?1:0)+(workId?1:0);
-  function create(to?:NoteDestination,template?:string){setQuery('');setBox('all');setTag('');setWorkId('');onNew(to,template);if(compact)setSidebar(false);}
+
+  function create(to?:NoteDestination,template?:string){setQuery('');setBox('all');setTag('');setWorkId('');onNew(to,template);
+
+if(compact)setSidebar(false);}
+
   function move(id:string,to:NoteDestination){try{s.update(state=>moveNote(state,id,to));}catch(e){alert(e instanceof Error?e.message:'노트를 옮기지 못했습니다.');}}
-  function select(id:string){onSelect(id);if(compact)setSidebar(false);}
+
+  function select(id:string){onSelect(id);
+
+if(compact)setSidebar(false);}
+
   function patch(id:string,change:Parameters<typeof patchNote>[2]){s.update(state=>patchNote(state,id,change));}
+
   async function trashNote(id:string){
     await s.trashNote(id);
+
     if(active?.id===id){onSelect(visible.find(n=>n.id!==id)?.id||notes.find(n=>n.id!==id)?.id||'');setSide(null);}
   }
+
   return <TooltipProvider><div className="studio notes-workspace">
     {sidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={closeSidebar}/>}
     {sidebar&&<aside className="studio-sidebar" ref={sidebarRef} aria-label="노트 탐색" role={compact?'dialog':undefined} aria-modal={compact||undefined}>
@@ -88,13 +119,25 @@ export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpen
     <main className="studio-panel">
       <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {active?<RichEditor key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');if(compact)setSidebar(false);}}} onChange={content=>patch(active.id,{content})}
-        heading={<NoteHead key={active.id} note={active} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork}/>}
-        toolbarEnd={<><span className="char-count" aria-label="글자 수 · 공백 포함">{textStatistics(active.content).charactersWithSpaces.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={side==='ai'} onClick={()=>{setSide(v=>v==='ai'?null:'ai');if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
+      {active?<RichEditor key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');
+
+if(compact)setSidebar(false);}}} onChange={content=>patch(active.id,{content})}
+        heading={<NoteHead key={active.id} note={active} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');
+
+if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork}/>}
+        toolbarEnd={<><span className="char-count" aria-label="글자 수 · 공백 포함">{textStatistics(active.content).charactersWithSpaces.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={side==='ai'} onClick={()=>{setSide(v=>v==='ai'?null:'ai');
+
+if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
         :<NotesHome state={s.state} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
     </main>
     {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<NoteLinks note={active} notes={notes} onOpen={select}/>
-      :<AIChat key={`${s.namespace}-${active.id}-${s.epoch}`} noteId={active.id} doc={noteDocument(active)} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);return;}const work=works.find(w=>w.documents.some(d=>d.id===id));if(work)onOpenWork(work.id,id);}}/>}</div></aside></>}
+      :<AIChat key={`${s.namespace}-${active.id}-${s.epoch}`} noteId={active.id} doc={noteDocument(active)} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);
+
+return;}
+
+const work=works.find(w=>w.documents.some(d=>d.id===id));
+
+if(work)onOpenWork(work.id,id);}}/>}</div></aside></>}
     <NotesImportDialog open={importOpen} onClose={()=>setImportOpen(false)} onImported={()=>{setQuery('');setBox('all');setTag('');setWorkId('');chooseList('tree');}}/>
     {folderWork&&<FolderWorkPopover key={folderWork.id} folderId={folderWork.id} anchor={folderWork.anchor} onClose={()=>setFolderWork(null)} onCreated={id=>{setFolderWork(null);onOpenWork(id);}}/>}
   </div></TooltipProvider>;
@@ -107,11 +150,34 @@ function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork}:{no
   const effectiveReadonly=readonly||busy;
   const chipsRef=useRef<HTMLDivElement>(null),keepMenuFocus=useRef(false);
   const returnToBody=()=>document.querySelector<HTMLElement>('[aria-label="노트 본문"]')?.focus();
+
   // Menu items open a panel under the chip row; the closing menu must not pull focus back to its trigger.
   function openPanel(next:'files'|'copy'){keepMenuFocus.current=true;setError('');window.setTimeout(()=>setPanel(next),0);}
-  function addTag(){const value=draftTag.trim().replace(/^#+/,'');if(!value)return;if(value.length>40||note.tags.length>=20){setError('태그는 40자 이하, 최대 20개까지 추가할 수 있습니다.');return;}onPatch({tags:[...new Set([...note.tags,value])]});setDraftTag('');setError('');}
-  async function download(id:string){try{const meta=s.state!.assets.find(a=>a.id===id);if(!meta)throw new Error('첨부를 찾지 못했습니다.');let blob=(await db.assets.get([s.namespace,id]))?.blob;if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${s.user}/${id}`);if(result.error)throw result.error;blob=result.data||undefined;}if(!blob)throw new Error('첨부를 찾지 못했습니다.');const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=meta.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setError(e instanceof Error?e.message:'첨부를 내려받지 못했습니다.');}}
-  async function copy(){setBusy(true);setError('');try{const id=await s.copyNote(note.id,targetId,kind);onOpenWork(targetId,id);}catch(e){setError(e instanceof Error?e.message:'노트를 가져오지 못했습니다.');}finally{setBusy(false);}}
+
+  function addTag(){const value=draftTag.trim().replace(/^#+/,'');
+
+if(!value)return;
+
+if(value.length>40||note.tags.length>=20){setError('태그는 40자 이하, 최대 20개까지 추가할 수 있습니다.');
+
+return;}
+
+onPatch({tags:[...new Set([...note.tags,value])]});setDraftTag('');setError('');}
+
+  async function download(id:string){try{const meta=s.state!.assets.find(a=>a.id===id);
+
+if(!meta)throw new Error('첨부를 찾지 못했습니다.');let blob=(await db.assets.get([s.namespace,id]))?.blob;
+
+if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${s.user}/${id}`);
+
+if(result.error)throw result.error;blob=result.data||undefined;}
+
+if(!blob)throw new Error('첨부를 찾지 못했습니다.');const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=meta.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){setError(e instanceof Error?e.message:'첨부를 내려받지 못했습니다.');}}
+
+  async function copy(){setBusy(true);setError('');
+
+try{const id=await s.copyNote(note.id,targetId,kind);onOpenWork(targetId,id);}catch(e){setError(e instanceof Error?e.message:'노트를 가져오지 못했습니다.');}finally{setBusy(false);}}
+
   return <div className="doc-head">
     <span className="doc-kicker">개인 노트 · {note.box==='icebox'?'아이스박스':'수집함'}</span>
     <input className="doc-title" aria-label="노트 제목" placeholder="제목 (선택)" maxLength={300} value={note.title} disabled={effectiveReadonly} onChange={e=>onPatch({title:e.target.value})} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.closest('.editor-scroll')?.querySelector<HTMLElement>('.manuscript')?.focus();}}}/>
@@ -120,7 +186,9 @@ function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork}:{no
       <Popover open={panel==='works'} onOpenChange={open=>{setPanel(current=>open?'works':current==='works'?null:current);setError('');}} title="작품에 연결" description="같은 노트를 여러 작품에서 참고할 수 있습니다." width={320} onReturnFocus={returnToBody} trigger={<button type="button" className="chip"><Link2 size={13}/>작품 {note.linkedWorkIds.length||'연결'}</button>}><div className="notes-popover">{available.map(work=><label className="check-label" key={work.id}><input type="checkbox" aria-label={`${work.title}에 노트 연결`} disabled={effectiveReadonly} checked={note.linkedWorkIds.includes(work.id)} onChange={e=>onPatch({linkedWorkIds:e.target.checked?[...note.linkedWorkIds,work.id]:note.linkedWorkIds.filter(id=>id!==work.id)})}/>{work.title}</label>)}</div></Popover>
       {links>0&&<button type="button" id="note-links-toggle" className="chip" aria-pressed={linksOpen} onClick={onLinks}><Waypoints size={13}/>노트 링크 {links}</button>}
       {note.assetIds.length>0&&<button type="button" className="chip" onClick={()=>setPanel('files')}><Paperclip size={13}/>첨부 {note.assetIds.length}</button>}
-      {note.linkedWorkIds.map(id=>{const work=available.find(w=>w.id===id);return work?<button type="button" className="chip soft" key={id} onClick={()=>onOpenWork(id)}><Link2 size={13}/>{work.title}</button>:null;})}
+      {note.linkedWorkIds.map(id=>{const work=available.find(w=>w.id===id);
+
+return work?<button type="button" className="chip soft" key={id} onClick={()=>onOpenWork(id)}><Link2 size={13}/>{work.title}</button>:null;})}
       <DropdownMenu.Root modal={false}>
         <DropdownMenu.Trigger asChild><button type="button" className="icon-button notes-head-more" aria-label="노트 더 보기" title="노트 더 보기"><MoreHorizontal size={15}/></button></DropdownMenu.Trigger>
         <DropdownMenu.Portal><DropdownMenu.Content className="menu" align="start" sideOffset={4} collisionPadding={12} onCloseAutoFocus={e=>{if(keepMenuFocus.current){e.preventDefault();keepMenuFocus.current=false;}}}>
@@ -131,8 +199,10 @@ function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork}:{no
           <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>openPanel('copy')}><NotebookPen size={15}/>작품으로 가져오기</DropdownMenu.Item>
         </DropdownMenu.Content></DropdownMenu.Portal>
       </DropdownMenu.Root>
-      <Popover open={panel==='copy'} onOpenChange={open=>{setPanel(current=>open?'copy':current==='copy'?null:current);setError('');}} anchor={chipsRef} title="작품 문서로 가져오기" description="본문과 첨부를 새 비공개 문서로 복사합니다. 원본 노트는 남습니다." width={320} onReturnFocus={returnToBody}><div className="form-grid"><label>대상 작품<select aria-label="노트를 가져올 작품" value={targetId} disabled={effectiveReadonly} onChange={e=>setTarget(e.target.value)}>{available.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</select></label><label>문서 종류<select aria-label="노트를 가져올 문서 종류" value={kind} disabled={effectiveReadonly} onChange={e=>setKind(e.target.value as NovelDocument['kind'])}><option value="memo">메모 · 리서치</option><option value="scene">원고</option><option value="wiki">설정집</option></select></label><button type="button" className="button" disabled={effectiveReadonly} onClick={()=>void copy()}>{busy?'가져오는 중':'가져오기'}</button>{error&&<p className="danger" role="alert">{error}</p>}</div></Popover>
-      <Popover open={panel==='files'} onOpenChange={open=>{setPanel(current=>open?'files':current==='files'?null:current);setError('');}} anchor={chipsRef} title="노트 첨부" width={320} onReturnFocus={returnToBody}><div className="notes-popover">{note.assetIds.map(id=><button type="button" className="reference-card" key={id} onClick={()=>void download(id)}><Paperclip size={14}/><span>{s.state!.assets.find(a=>a.id===id)?.name}</span></button>)}<label className="asset-upload">이미지 첨부<input aria-label="노트 이미지 첨부" type="file" disabled={effectiveReadonly} accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;setBusy(true);setError('');void s.addNoteAsset(note.id,file).catch(e=>setError(e instanceof Error?e.message:'이미지를 첨부하지 못했습니다.')).finally(()=>setBusy(false));}}/></label>{busy&&<p className="muted" role="status">첨부를 저장하는 중입니다.</p>}{error&&<p className="danger" role="alert">{error}</p>}</div></Popover>
+      <Popover open={panel==='copy'} onOpenChange={open=>{setPanel(current=>open?'copy':current==='copy'?null:current);setError('');}} anchor={chipsRef} title="작품 문서로 가져오기" description="본문과 첨부를 새 비공개 문서로 복사합니다. 원본 노트는 남습니다." width={320} onReturnFocus={returnToBody}><div className="form-grid"><label>대상 작품<select aria-label="노트를 가져올 작품" value={targetId} disabled={effectiveReadonly} onChange={e=>setTarget(e.target.value)}>{available.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</select></label><label>문서 종류<select aria-label="노트를 가져올 문서 종류" value={kind} disabled={effectiveReadonly} onChange={e=>setKind(documentSchema.shape.kind.parse(e.target.value))}><option value="memo">메모 · 리서치</option><option value="scene">원고</option><option value="wiki">설정집</option></select></label><button type="button" className="button" disabled={effectiveReadonly} onClick={()=>void copy()}>{busy?'가져오는 중':'가져오기'}</button>{error&&<p className="danger" role="alert">{error}</p>}</div></Popover>
+      <Popover open={panel==='files'} onOpenChange={open=>{setPanel(current=>open?'files':current==='files'?null:current);setError('');}} anchor={chipsRef} title="노트 첨부" width={320} onReturnFocus={returnToBody}><div className="notes-popover">{note.assetIds.map(id=><button type="button" className="reference-card" key={id} onClick={()=>void download(id)}><Paperclip size={14}/><span>{s.state!.assets.find(a=>a.id===id)?.name}</span></button>)}<label className="asset-upload">이미지 첨부<input aria-label="노트 이미지 첨부" type="file" disabled={effectiveReadonly} accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];e.target.value='';
+
+if(!file)return;setBusy(true);setError('');void s.addNoteAsset(note.id,file).catch(e=>setError(e instanceof Error?e.message:'이미지를 첨부하지 못했습니다.')).finally(()=>setBusy(false));}}/></label>{busy&&<p className="muted" role="status">첨부를 저장하는 중입니다.</p>}{error&&<p className="danger" role="alert">{error}</p>}</div></Popover>
     </div>
     <div className="doc-divider"/>
   </div>;
@@ -141,6 +211,7 @@ function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork}:{no
 /** 이 노트가 가리키는 노트와 이 노트를 가리키는 노트. 노트 본문의 링크(Ctrl+클릭)와 같은 대상을 연다. */
 function NoteLinks({note,notes,onOpen}:{note:PersonalNote;notes:PersonalNote[];onOpen:(id:string)=>void}){
   const byId=new Map(notes.map(n=>[n.id,n])),outgoing=wikiReferences(note.content).map(id=>byId.get(id)).filter((n):n is PersonalNote=>!!n&&n.id!==note.id),incoming=noteBacklinks(notes,note.id);
+
   return <>
     <h3>이 노트가 가리키는 노트 {outgoing.length}</h3>{outgoing.length?outgoing.map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>):<p className="muted">본문에서 단어를 고르고 노트 링크 추가로 연결하세요.</p>}
     <h3>이 노트를 가리키는 노트 {incoming.length}</h3>{incoming.length?incoming.map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>):<p className="muted">아직 이 노트를 연결한 노트가 없습니다.</p>}

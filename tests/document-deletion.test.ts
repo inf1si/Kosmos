@@ -14,6 +14,7 @@ function noteFixture(){
   const parent={...newNote(),title:'상위 생각',content:fromText('보관할 내용')},child={...newNote(),title:'하위 자료'},neighbor={...newNote(),title:'다음 생각'};
   let state=addNote(addNote(addNote(seedWorkspace(),neighbor),parent,{parentId:null,beforeId:neighbor.id}),child,{parentId:parent.id});
   state=editNoteTree(state,w=>insertFolder(w,'하위 폴더',{sectionId:'notes',parentId:parent.id}));
+
   return {state,parent,child,neighbor,folder:state.noteNavigation!.nodes.find(n=>n.type==='folder')!};
 }
 
@@ -60,8 +61,11 @@ test('없는 대상과 작품의 마지막 문서 삭제를 거절한다',()=>{
 });
 
 test('운영과 같은 보호 SQL에서 노트·문서 삭제와 삭제 전 상태 복원을 허용한다',async()=>{
-  const pg=new PGlite();try{
+  const pg=new PGlite();
+
+try{
     await pg.exec('create role anon; create role authenticated; create table public.workspaces (id integer primary key,payload jsonb not null);');
+
     for(const file of ['002_document_navigation_guard.sql','003_ai_preferences_guard.sql','20261004063340_independent_notes_guard.sql','20261004074609_note_hierarchy_ai_guard.sql'])await pg.exec(readFileSync(new URL('../supabase/migrations/'+file,import.meta.url),'utf8'));
     const {state,parent}=noteFixture();state.works=state.works.map(w=>applyNavigation(w,resolveNavigation(w)));
     const before=workspaceSchema.parse(state);await pg.query('insert into workspaces values (1,$1)',[JSON.stringify(before)]);

@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 import { StickyNote } from 'lucide-react';
 import { IconButton, Popover } from './primitives';
@@ -8,13 +9,27 @@ import { addNote, newNote, noteFromText } from '@/lib/personal-notes';
 /** 한 줄이 한 문단인 새 노트를 수집함 맨 앞에 넣는다. 팝오버와 참고 패널 노트 탭이 함께 쓴다. */
 export function QuickNoteForm({disabled,onOpenNote,rows=4,autoFocus=false}:{disabled:boolean;onOpenNote:(id:string)=>void;rows?:number;autoFocus?:boolean}){
   const s=useStudio(),[text,setText]=useState(''),[saved,setSaved]=useState(0),[error,setError]=useState('');
+
   function save(){
     const note=text.trim()?noteFromText(text):newNote();
-    try{s.update(state=>addNote(state,note));}catch(e){setError(e instanceof Error?e.message:'노트를 만들지 못했습니다.');return null;}
-    setText('');setError('');return note.id;
+
+    try{s.update(state=>addNote(state,note));}catch(e){setError(e instanceof Error?e.message:'노트를 만들지 못했습니다.');
+
+return null;}
+
+    setText('');setError('');
+
+return note.id;
   }
-  function capture(){if(!text.trim()||disabled)return;if(save())setSaved(n=>n+1);}
-  function openNote(){if(disabled)return;const id=save();if(id)onOpenNote(id);}
+
+  function capture(){if(!text.trim()||disabled)return;
+
+if(save())setSaved(n=>n+1);}
+
+  function openNote(){if(disabled)return;const id=save();
+
+if(id)onOpenNote(id);}
+
   return <>
     <textarea className="quick-note-input" aria-label="빠른 메모 내용" rows={rows} maxLength={10000} placeholder="떠오른 생각을 적으세요" value={text} disabled={disabled} autoFocus={autoFocus}
       onChange={e=>{setText(e.target.value);setSaved(0);}} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();capture();}}}/>

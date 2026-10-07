@@ -1,4 +1,6 @@
 'use client';
+
+import { workSchema } from '@/lib/model';
 import { useMemo, useRef, useState } from 'react';
 import { Check, FileText } from 'lucide-react';
 import { Modal, Popover } from './primitives';
@@ -8,17 +10,29 @@ import { resolveNoteNavigation } from '@/lib/note-navigation';
 import type { Work } from '@/lib/model';
 
 const noteFileTypes='.enex,.zip,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.hwp,.hwpx,.epub,.png,.jpg,.jpeg,.webp';
+
 // Browsers expose folder picking only through this non-standard attribute.
-const folderPicker={webkitdirectory:'',directory:''} as Record<string,string>;
+const folderPicker={webkitdirectory:'',directory:''};
 
 /** 여러 앱의 내보내기 파일·폴더를 새 최상위 폴더의 수집함 노트로 가져온다. 원본 폴더 구조·태그·날짜·노트 간 링크를 유지한다. */
 export function NotesImportDialog({open,onClose,onImported}:{open:boolean;onClose:()=>void;onImported:(folderId:string)=>void}){
   const s=useStudio(),[bundle,setBundle]=useState<ImportBundle|null>(null),[folder,setFolder]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const operation=useRef(0);
+
   function close(){if(busy)return;operation.current++;setBundle(null);setError('');setMessage('');onClose();}
-  async function run(fn:()=>Promise<void>){setBusy(true);setError('');setMessage('');try{await fn();}catch(e){setError(e instanceof Error?e.message:'노트를 가져오지 못했습니다.');}finally{setBusy(false);}}
-  function pick(list:FileList|null,input:HTMLInputElement){const files=Array.from(list||[]);input.value='';if(!files.length)return;const op=++operation.current;setBundle(null);void run(async()=>{const parsed=await readInterchange(files);if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRelativePath.split('/')[0]||files[0].name).replace(/\.(scriv|zip|enex|epub|docx|hwpx?|rtf|md|markdown|html?|txt|csv)$/i,'').slice(0,300));});}
+
+  async function run(fn:()=>Promise<void>){setBusy(true);setError('');setMessage('');
+
+try{await fn();}catch(e){setError(e instanceof Error?e.message:'노트를 가져오지 못했습니다.');}finally{setBusy(false);}}
+
+  function pick(list:FileList|null,input:HTMLInputElement){const files=Array.from(list||[]);input.value='';
+
+if(!files.length)return;const op=++operation.current;setBundle(null);void run(async()=>{const parsed=await readInterchange(files);
+
+if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRelativePath.split('/')[0]||files[0].name).replace(/\.(scriv|zip|enex|epub|docx|hwpx?|rtf|md|markdown|html?|txt|csv)$/i,'').slice(0,300));});}
+
   const attached=bundle?bundle.assets.filter(a=>bundle.pages.some(p=>p.assetKeys.includes(a.key))).length:0;
+
   return <Modal open={open} onClose={close} title="노트 가져오기" description="가져온 노트는 새 폴더의 수집함에 들어갑니다. 기존 노트는 유지됩니다." wide>
     <div className="transfer-guide">
       <p><strong>Evernote</strong> · 노트북 내보내기 → ENEX</p>
@@ -49,10 +63,14 @@ export function FolderWorkPopover({folderId,anchor,onClose,onCreated}:{folderId:
   const folder=useMemo(()=>s.state?resolveNoteNavigation(s.state).nodes.find(n=>n.id===folderId):undefined,[s.state,folderId]);
   const [title,setTitle]=useState(folder?.type==='folder'?folder.title:''),[form,setForm]=useState<Work['form']>('장편'),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const anchorRef=useRef({getBoundingClientRect:()=>anchor?.getBoundingClientRect()||new DOMRect()});
-  async function create(){setBusy(true);setError('');try{const id=await s.createWorkFromFolder(folderId,{title,form});onCreated(id);}catch(e){setError(e instanceof Error?e.message:'작품을 만들지 못했습니다.');}finally{setBusy(false);}}
+
+  async function create(){setBusy(true);setError('');
+
+try{const id=await s.createWorkFromFolder(folderId,{title,form});onCreated(id);}catch(e){setError(e instanceof Error?e.message:'작품을 만들지 못했습니다.');}finally{setBusy(false);}}
+
   return <Popover open onOpenChange={open=>{if(!open&&!busy)onClose();}} anchor={anchorRef} side={typeof window!=='undefined'&&window.innerWidth<700?'bottom':'right'} width={300} title="새 작품으로 만들기" description="폴더의 노트를 메모 · 리서치 문서로 복사합니다. 원본 노트는 그대로 두고 새 작품에 연결합니다." onReturnFocus={()=>{if(anchor?.isConnected)(anchor.matches('button')?anchor:anchor.querySelector<HTMLElement>('[data-row-menu],button'))?.focus();}}>
     <label>작품 제목<input aria-label="새 작품 제목" value={title} maxLength={300} disabled={busy} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&title.trim())void create();}}/></label>
-    <label>형식<select aria-label="새 작품 형식" value={form} disabled={busy} onChange={e=>setForm(e.target.value as Work['form'])}>{(['단편','중편','장편'] as const).map(v=><option key={v}>{v}</option>)}</select></label>
+    <label>형식<select aria-label="새 작품 형식" value={form} disabled={busy} onChange={e=>setForm(workSchema.shape.form.parse(e.target.value))}>{(['단편','중편','장편'] as const).map(v=><option key={v}>{v}</option>)}</select></label>
     {error&&<p className="danger" role="alert">{error}</p>}
     <div className="popover-actions"><button type="button" className="button" disabled={busy} onClick={onClose}>취소</button><button type="button" className="button primary" disabled={busy||!title.trim()} onClick={()=>void create()}>{busy?'만드는 중…':'작품 만들기'}</button></div>
   </Popover>;

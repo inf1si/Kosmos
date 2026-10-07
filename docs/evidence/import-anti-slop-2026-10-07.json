@@ -1,0 +1,158 @@
+{
+  "date": "2026-10-07",
+  "baseMain": "87fca9e64975c4ef55418ee6c1fdc95d26373c50",
+  "scope": "local production build, synthetic author/workspaces and intercepted Supabase/AI responses",
+  "browser": "Chromium 151 via /usr/bin/chromium and Playwright",
+  "checks": {
+    "unit": {
+      "command": "pnpm test",
+      "passed": 162,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "typecheck": {
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    "build": {
+      "command": "NODE_USE_ENV_PROXY=1 pnpm build",
+      "exitCode": 0
+    },
+    "lint": {
+      "command": "pnpm --silent exec oxlint . --format json",
+      "files": 165,
+      "rules": 19,
+      "diagnostics": 0,
+      "exitCode": 0
+    },
+    "documentation": {
+      "command": "pnpm docs:check",
+      "files": 40,
+      "links": 609,
+      "exitCode": 0
+    }
+  },
+  "importRegressionRed": {
+    "tests": 3,
+    "failedBeforeFix": 3
+  },
+  "browserSuites": [
+    {
+      "suite": "tests/browser/note-import-formats.mjs",
+      "exitCode": 0,
+      "screenshots": 13,
+      "errors": [],
+      "saves": 4,
+      "notes": 9,
+      "regressions": [
+        "single subfolder retained",
+        "merged table three rows and one column after reload",
+        "Scrivener ZIP and separate Markdown both saved"
+      ]
+    },
+    {
+      "suite": "tests/browser/studio-inline-commands.mjs",
+      "exitCode": 0,
+      "screenshots": 36,
+      "errors": [],
+      "requests": 7,
+      "saves": 9,
+      "layouts": 12
+    },
+    {
+      "suite": "tests/browser/note-inline-commands.mjs",
+      "exitCode": 0,
+      "screenshots": 36,
+      "errors": [],
+      "requests": 4,
+      "saves": 7,
+      "layouts": 12
+    },
+    {
+      "suite": "tests/browser/app-settings.mjs",
+      "exitCode": 0,
+      "screenshots": 84,
+      "errors": [],
+      "saves": 0,
+      "layouts": 84
+    },
+    {
+      "suite": "tests/browser/studio-home.mjs",
+      "exitCode": 0,
+      "screenshots": 12,
+      "errors": [],
+      "saves": 0,
+      "layouts": 12
+    },
+    {
+      "suite": "tests/browser/count-and-footnote.mjs",
+      "exitCode": 0,
+      "screenshots": 12,
+      "errors": [],
+      "saves": 3,
+      "layouts": 12
+    },
+    {
+      "suite": "tests/browser/ai-skills.mjs",
+      "exitCode": 0,
+      "screenshots": 49,
+      "errors": [],
+      "requests": 3,
+      "saves": 10,
+      "layouts": 12
+    },
+    {
+      "suite": "tests/browser/interchange-dialog.mjs",
+      "exitCode": 0,
+      "screenshots": 24,
+      "errors": [],
+      "combinations": 12
+    },
+    {
+      "suite": "tests/browser/sync-recovery.mjs",
+      "exitCode": 0,
+      "screenshots": 0,
+      "errors": [],
+      "scenarios": [
+        {
+          "scenario": "refresh",
+          "attempts": 2,
+          "passed": true
+        },
+        {
+          "scenario": "typing",
+          "attempts": 2,
+          "passed": true
+        },
+        {
+          "scenario": "ack",
+          "attempts": 2,
+          "passed": true
+        },
+        {
+          "scenario": "nonempty",
+          "attempts": 1,
+          "passed": true
+        },
+        {
+          "scenario": "version",
+          "attempts": 1,
+          "passed": true
+        },
+        {
+          "scenario": "tab",
+          "attempts": 1,
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "notVerified": [
+    "production deployment",
+    "real Google OAuth",
+    "real cloud save and external backup",
+    "paid AI providers",
+    "full external-app document compatibility"
+  ]
+}

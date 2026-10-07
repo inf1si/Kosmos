@@ -1,4 +1,5 @@
 import { Workspace, RichNode, makePublication } from './model';
+
 const ids = {
   workspace:'10000000-0000-4000-8000-000000000001',work:'20000000-0000-4000-8000-000000000001',
   second:'20000000-0000-4000-8000-000000000002',scene1:'30000000-0000-4000-8000-000000000001',
@@ -6,9 +7,13 @@ const ids = {
   person:'40000000-0000-4000-8000-000000000001',tech:'40000000-0000-4000-8000-000000000002',
   place:'40000000-0000-4000-8000-000000000003',memo:'50000000-0000-4000-8000-000000000001',
 };
+
 const p=(text:string,index:number):RichNode=>({type:'paragraph',attrs:{blockId:`60000000-0000-4000-8000-${String(index).padStart(12,'0')}`},content:[{type:'text',text}]});
+
 const doc=(...paras:RichNode[]):RichNode=>({type:'doc',content:paras});
+
 const at='2026-10-01T03:00:00.000Z';
+
 export function seedWorkspace():Workspace {
   const first=doc(
     p('항구에 도착했을 때, 지구의 시계는 이미 열일곱 해를 앞서 있었다.',1),
@@ -23,7 +28,9 @@ export function seedWorkspace():Workspace {
     p('귀하의 지정 수신인은 연락 가능 상태가 아닙니다.',10),
     p('항구의 푸른 불빛이 다시 유리창을 지나갔다. 서윤은 그 빛이 익숙하다는 사실이, 지금 가장 낯설었다.',11),
   );
+
   const base={summary:'',status:'draft' as const,category:'',pov:'',storyTime:'',isPublic:false,publicSummary:'',updatedAt:at,assetIds:[]};
+
   const state:Workspace={formatVersion:1,id:ids.workspace,updatedAt:at,assets:[],works:[{
     id:ids.work,title:'먼 별의 항구',subtitle:'돌아온 사람과 남겨진 시간',form:'장편',
     description:'지구의 열일곱 해를 건너 귀환한 항해사. 익숙한 항구에서 그녀를 기다리는 것은, 자신이 살지 않은 시간의 흔적이다.',
@@ -40,8 +47,10 @@ export function seedWorkspace():Workspace {
     id:ids.second,title:'마지막 관측자',subtitle:'관측이 끝난 뒤에도 별은 남는다',form:'단편',description:'한 관측소에 남은 마지막 사람이 보내는 짧은 기록.',activePublicationId:null,publications:[],
     documents:[{...base,id:'30000000-0000-4000-8000-000000000004',kind:'scene',title:'관측 일지',chapter:'',content:doc(p('모든 안테나가 멈춘 날, 별들은 처음으로 조용해졌다.',21)),summary:'관측소의 마지막 밤.',status:'idea'}],
   }]};
+
   for(const w of state.works)for(const d of w.documents)d.assetIds=[...d.assetIds];
   const initial=makePublication(state.works[0],[ids.scene1]);
   state.works[0].publications=[initial];state.works[0].activePublicationId=initial.id;
+
   return state;
 }

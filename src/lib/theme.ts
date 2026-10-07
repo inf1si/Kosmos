@@ -1,12 +1,17 @@
 export type SiteTheme='light'|'dark';
+
 export type SitePalette='violet'|'cassette'|'cyber';
+
 /** Every colour family, the default first. */
 export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber'];
+
 export const THEME_KEY='orbis-theme';
+
 export const PALETTE_KEY='orbis-palette';
 
 /** The reader's saved choice, else the device setting. */
 export function preferredTheme(stored:string|null,systemDark:boolean):SiteTheme{return stored==='light'||stored==='dark'?stored:systemDark?'dark':'light';}
+
 /** The reader's saved colour family, else violet. */
 export function preferredPalette(stored:string|null):SitePalette{return PALETTES.find(p=>p===stored)??'violet';}
 

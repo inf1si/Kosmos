@@ -1,5 +1,18 @@
 # 구현 검증
 
+## 2026-10-07 — 가져오기 회귀와 Anti Slop 정리
+
+- 기준 main `87fca9e64975c4ef55418ee6c1fdc95d26373c50`. 작업 전과 공개 준비 중 origin/main을 fetch해 같은 SHA임을 확인했다. Karpathy Guidelines·Verification Before Completion·Supabase·React 검토·전체 흐름 검증 지침을 적용했다. SQL·운영 계정·실제 원고·제공자 키는 변경하지 않았다.
+- 새 [가져오기 회귀 검사](tests/import-regressions.test.ts) 세 개는 수정 전 모두 실패했다. 수정 후 기존 형식 검사와 함께 14개가 통과했다. DOCX 세로 병합으로 덮인 행을 유지하고 실제 Tiptap TableMap의 3행·1열·문제 없음과 마지막 셀 위치를 확인한다. 저장 모델은 병합으로 덮이지 않은 빈 행을 거절한다. 유일한 `Characters` 하위 폴더 유지, ZIP 루트 스크리브너와 별도 Markdown을 함께 가져오기·내부 메타 파일과 휴지통 제외도 확인한다.
+- Anti Slop 기준 3,820건(간격 3,596건·나머지 224건)을 정리했다. 전체 165개 파일·19개 규칙·진단 0, 종료 코드 0이다. 기존 파일 중 92개는 AST 비교로 간격만 바뀌었고, 65개는 타입·입력 경계·DOM 확인 등 코드가 바뀌었다. 플러그인·Oxlint/SDK 1.86.0·규칙·제외 범위는 그대로다. CI의 advisory를 제거했으며 JSON 결과물과 실제 규칙 로딩 확인은 유지한다.
+- JSON 응답은 유효한 JSON 값으로, ZIP 내부 메타데이터·백업 manifest·Supabase 저장 응답·Google 인증 복귀는 해당 스키마로 확인한다. `1e400` 같은 비유한 JSON 숫자도 SyntaxError로 거절하는 검사를 추가했다. Markdown-it 15 자체 타입과 로컬 각주 플러그인 선언을 사용하며 런타임 패키지는 바꾸지 않았다.
+- 로컬 타입 검사·162개 Node 테스트·프로덕션 빌드가 통과했다. Google Fonts는 환경의 공식 프록시를 사용해 실제로 받았다. 로컬 브라우저는 이 프로덕션 빌드를 대상으로 시스템 Chromium 151과 Playwright를 사용했다. 최초 실행은 Playwright 기본 브라우저 경로가 없어 시작 전에 실패했고, 설치된 `/usr/bin/chromium`을 지정해 실행했다.
+- [노트 가져오기](tests/browser/note-import-formats.mjs): 실제 폴더·파일 선택, 합성 Obsidian 폴더의 경로·링크·이미지, 세 가지 회귀의 저장·새로고침과 병합 표의 실제 셀 좌표·너비가 통과했다. 노트 9개·저장 4회·페이지 오류 0이다. [설정](tests/browser/app-settings.mjs) 84개 화면, [집필실 홈](tests/browser/studio-home.mjs) 12개 화면, [글자 수·각주](tests/browser/count-and-footnote.mjs) 12개 화면, [문서 교환 창](tests/browser/interchange-dialog.mjs) 12개 조합, [저장 복구](tests/browser/sync-recovery.mjs) 여섯 시나리오도 통과했다. 합성 Supabase 응답과 합성 AI 응답만 사용했다.
+- AI 스킬 검사는 타입 단언을 없애던 변경에서 기본 기능 → 사용자 스킬로 되돌릴 때 요청문이 비워지는 회귀를 발견했다. 사용자 스킬 목록도 확인하도록 고쳤다. 재빌드 후 [집필실 입력 명령](tests/browser/studio-inline-commands.mjs)(합성 AI 7회·저장 9회), [노트 입력 명령](tests/browser/note-inline-commands.mjs)(합성 AI 4회·저장 7회), [내 스킬](tests/browser/ai-skills.mjs)(합성 AI 3회·저장 10회)가 모두 통과했다. 양쪽 편집기의 대상 범위·답변 적용·실행 취소·초점·연속 기능·새로고침을 확인하며, 각각 12개 테마/폭 조합과 스킬 메뉴·우클릭·질문·관리 화면을 검사했다. 수정 후 162개 Node 테스트도 다시 통과했다.
+- 여섯 팔레트/밝기 × 1280/360px에서 화면 경계·가로 넘침을 검사하고 가져오기·설정·홈의 모바일 화면을 직접 확인했다. [검증 요약](docs/evidence/import-anti-slop-2026-10-07.json)에 명령과 합성 브라우저 결과를 보관한다. 화면·실행 로그는 `test-results/import-anti-slop/`에 저장하며 Git에는 넣지 않는다.
+- 이 기록은 로컬 결과다. 새 브랜치 CI·main 병합·운영 배포·실제 Google OAuth·실제 클라우드 저장/외부 백업·유료 AI·외부 앱이 저장한 전체 문서 호환성은 이 로컬 검사로 확인하지 않는다. 기존 [형식 시험 파일](tests/fixtures/note-import/README.md)의 제한도 유지한다.
+
+
 ## 2026-10-06 — 집필실 홈
 
 - 기준 main `40e424e`. 집필실 첫 화면(집필실 홈), 작품별 마지막 문서 기억(`kosmos-studio-position`), 설정 **집필실 첫 화면**을 추가했다. 서버 API·SQL·작업 공간 스키마는 바꾸지 않았다.

@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import { FileText, Search, StickyNote, Trash2 } from 'lucide-react';
 import { type TrashItem } from '@/lib/model';
@@ -15,19 +16,25 @@ export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:(
   const scope=(item:TrashItem)=>item.type==='note'?`노트 · ${item.note.box==='icebox'?'아이스박스':'수집함'}`:`문서 · ${item.workTitle}`;
   const visible=items.filter(item=>`${trashTitle(item)} ${scope(item)}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const readonly=busy||!!s.conflict;
+
   function requestPurge(ids:string[],at:HTMLElement,title?:string){confirmFocus.current=at;setError('');setConfirm({ids,title:title&&title.length>40?`${title.slice(0,40)}…`:title});}
+
   async function restore(item:TrashItem){
     setBusy(true);setError('');setMessage('');
+
     try{await s.restoreTrash(item.id);setMessage('복원했습니다.');search.current?.focus();}
     catch(error){setError(error instanceof Error?error.message:'복원하지 못했습니다.');}
     finally{setBusy(false);}
   }
+
   async function purge(){
     if(!confirm||readonly)return;setBusy(true);setError('');setMessage('');
+
     try{await s.purgeTrash(confirm.ids);setConfirm(null);setMessage('삭제했습니다.');}
     catch(error){setError(error instanceof Error?error.message:'삭제하지 못했습니다.');}
     finally{setBusy(false);}
   }
+
   return <>
     <Modal open={open} onClose={()=>{if(!busy&&!confirm)onClose();}} title="휴지통" description="자동으로 비우지 않습니다. 필요할 때 복원하세요." wide onReturnFocus={onReturnFocus}>
       <div className="trash-tools"><div className="sidebar-search"><Search size={15}/><input ref={search} autoFocus aria-label="휴지통 검색" placeholder="제목 · 작품 검색" value={query} onChange={e=>setQuery(e.target.value)}/></div><span className="field-help">{items.length}개</span><button type="button" className="button" disabled={readonly||!items.length} onClick={e=>requestPurge(items.map(item=>item.id),e.currentTarget)}>비우기</button></div>

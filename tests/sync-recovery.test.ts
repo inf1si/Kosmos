@@ -15,6 +15,7 @@ test('휴지통 호환 복구는 확정된 누락 거절만 처리하고 응답 
   assert(!isRejectedLegacyTrashSave(new CloudSaveError('다른 보호 오류','P0001'),legacy));
   assert(!isRejectedLegacyTrashSave(new CloudSaveError(TRASH_SAVE_REJECTED,'P0001'),{...legacy,trash:[]}));
 });
+
 test('빈 서버 휴지통은 최신 기기 편집과 기기의 삭제 의도를 보존해 복구한다',()=>{
   const remote:Workspace={...seedWorkspace(),trash:[]};const local=structuredClone(remote);delete local.trash;
   local.works[0].documents[0].title='전송 대기 중 새 제목';
@@ -24,6 +25,7 @@ test('빈 서버 휴지통은 최신 기기 편집과 기기의 삭제 의도를
   assert.deepEqual(recoverLegacyTrash(deleted,remote),deleted);
   assert.equal(local.trash,undefined);
 });
+
 test('비어 있지 않은 서버 휴지통과 다른 기기 자료는 충돌로 남겨 삭제·부활을 막는다',()=>{
   const note=newNote(),local=addNote(seedWorkspace(),note),remote=trashNote(local,note.id);
   assert.equal(recoverLegacyTrash(local,remote),null);

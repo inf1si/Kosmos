@@ -13,16 +13,20 @@ test('기존 부·장 폴더를 안정적으로 이어받고 비연속 부·장�
   assert.equal(nav.nodes.filter(n=>n.type==='folder').length,scenes.length);assert.deepEqual(navigationOrder(nav).filter(id=>scenes.some(d=>d.id===id)),scenes.map(d=>d.id));
   assert.deepEqual(applyNavigation(work,nav).documents.filter(d=>d.kind==='scene').map(d=>d.id),scenes.map(d=>d.id));
 });
+
 test('문서 하위에 문서·폴더를 넣고 하위 트리 전체를 다른 대분류로 옮겨도 링크·종류·부·장은 유지한다',()=>{
   let work=seedWorkspace().works[0];const scenes=work.documents.filter(d=>d.kind==='scene'),wiki=work.documents.find(d=>d.kind==='wiki')!;
   const original=structuredClone(work.documents),refs=wikiReferences(scenes[0].content);
   work=moveNavigation(work,scenes[1].id,{sectionId:'scene',parentId:scenes[0].id});
   work=insertFolder(work,'부속 자료',{sectionId:'scene',parentId:scenes[1].id});const folder=work.navigation!.nodes.find(n=>n.type==='folder'&&n.title==='부속 자료')!;
   work=moveNavigation(work,wiki.id,{sectionId:'scene',parentId:folder.id});work=moveNavigation(work,scenes[0].id,{sectionId:'memo',parentId:null});
+
   for(const id of [scenes[0].id,scenes[1].id,folder.id,wiki.id])assert.equal(work.navigation!.nodes.find(n=>n.id===id)!.sectionId,'memo');
   assert.deepEqual(wikiReferences(work.documents.find(d=>d.id===scenes[0].id)!.content),refs);
+
   for(const d of work.documents)assert.deepEqual(d,original.find(old=>old.id===d.id));
 });
+
 test('형제 순서 변경은 하위 트리를 함께 옮기며 발행 원고 순서도 트리 순서를 따른다',()=>{
   let work=seedWorkspace().works[0];const scenes=work.documents.filter(d=>d.kind==='scene'),folder=resolveNavigation(work).nodes.find(n=>n.type==='folder')!;
   work=moveNavigation(work,scenes[1].id,{sectionId:'scene',parentId:scenes[0].id});
@@ -32,15 +36,21 @@ test('형제 순서 변경은 하위 트리를 함께 옮기며 발행 원고 �
   const to=siblingDestination(work,scenes[2].id,1)!;work=moveNavigation(work,scenes[2].id,to);assert.deepEqual(makePublication(work,scenes.map(d=>d.id)).scenes.map(d=>d.id),[scenes[0].id,scenes[1].id,scenes[2].id]);
   assert(!JSON.stringify(pub).includes('navigation'));assert(!JSON.stringify(pub).includes(folder.id));
 });
+
 test('자기 자신·자손·없는 부모·다른 대분류의 부모·없는 형제·과도한 깊이로의 이동은 거절한다',()=>{
   let work=seedWorkspace().works[0];const [a,b]=work.documents.filter(d=>d.kind==='scene');work=moveNavigation(work,b.id,{sectionId:'scene',parentId:a.id});
+
   for(const parentId of [a.id,b.id])assert.throws(()=>moveNavigation(work,a.id,{sectionId:'scene',parentId}),/자신/);
   assert.throws(()=>moveNavigation(work,a.id,{sectionId:'scene',parentId:uid()}),/위치/);
   assert.throws(()=>moveNavigation(work,a.id,{sectionId:'memo',parentId:b.id}),/위치/);
   assert.throws(()=>moveNavigation(work,a.id,{sectionId:'scene',parentId:null,beforeId:uid()}),/순서/);
-  let parentId:string|null=null;for(let i=0;i<MAX_DOCUMENT_DEPTH;i++){work=insertFolder(work,`깊이 ${i}`,{sectionId:'memo',parentId});parentId=work.navigation!.nodes.find(n=>n.type==='folder'&&n.title===`깊이 ${i}`)!.id;}
+  let parentId:string|null=null;
+
+for(let i=0;i<MAX_DOCUMENT_DEPTH;i++){work=insertFolder(work,`깊이 ${i}`,{sectionId:'memo',parentId});parentId=work.navigation!.nodes.find(n=>n.type==='folder'&&n.title===`깊이 ${i}`)!.id;}
+
   assert.throws(()=>moveNavigation(work,a.id,{sectionId:'memo',parentId}),/24단계/);
 });
+
 test('클라우드·복구 입력에서 중복·유실·순환 위치를 거절하고 누락된 새 문서 위치는 복구한다',()=>{
   const state=seedWorkspace(),work=state.works[0];work.navigation=resolveNavigation(work);const original=structuredClone(state);
   work.navigation.nodes.push({...work.navigation.nodes[0]});assert.throws(()=>workspaceSchema.parse(state),/중복/);
@@ -48,20 +58,24 @@ test('클라우드·복구 입력에서 중복·유실·순환 위치를 거절�
   node.parentId=uid();assert.throws(()=>workspaceSchema.parse(invalid),/상위/);node.parentId=null;node.id=uid();assert.throws(()=>workspaceSchema.parse(invalid),/찾지/);
   const memo=newDocument('memo','새 메모');original.works[0].documents.push(memo);const parsed=workspaceSchema.parse(original);const repaired=applyNavigation(parsed.works[0],resolveNavigation(parsed.works[0]));assert(repaired.navigation!.nodes.some(n=>n.id===memo.id));assert(repaired.documents.some(d=>d.id===memo.id));
 });
+
 test('정리 되돌리기는 이후의 본문 편집·새 문서를 보존한다',()=>{
   let work=seedWorkspace().works[0];const before=navigationSnapshot(work),[a,b]=work.documents.filter(d=>d.kind==='scene');
   work=moveNavigation(work,b.id,{sectionId:'scene',parentId:a.id});work.documents.find(d=>d.id===a.id)!.content=fromText('이동 뒤에 쓴 문장');const memo=newDocument('memo','추가한 메모');work=insertDocument(work,memo);
   work=restoreNavigation(work,before);assert.deepEqual(work.navigation!.nodes.find(n=>n.id===b.id),before.navigation.nodes.find(n=>n.id===b.id));assert.equal(work.documents.find(d=>d.id===a.id)!.content.content![0].content![0].text,'이동 뒤에 쓴 문장');assert(work.documents.some(d=>d.id===memo.id));assert(work.navigation!.nodes.some(n=>n.id===memo.id));
 });
+
 test('전체 백업·복구 이력은 대분류와 폴더·하위 문서를 그대로 복원한다',async()=>{
   const state=seedWorkspace(),work=state.works[0],[a,b]=work.documents.filter(d=>d.kind==='scene');state.works[0]=moveNavigation(work,b.id,{sectionId:'scene',parentId:a.id});
   state.works[0].navigation!.sections.push({id:uid(),title:'연대표',defaultKind:'memo'});const blob=await createBackup(state,[{id:uid(),namespace:'test',createdAt:state.updatedAt,label:'정리',data:structuredClone(state)}],[]),loaded=await readBackup(blob);
   assert.deepEqual(loaded.data,state);assert.deepEqual(loaded.revisions[0].data.works[0].navigation,state.works[0].navigation);
 });
+
 test('기존 문서 묶음을 계층이 있는 작품에 추가해도 모든 문서가 탐색창에 나타난다',async()=>{
   const state=seedWorkspace();state.works[0]=applyNavigation(state.works[0],resolveNavigation(state.works[0]));const bundle=await readInterchange([new File(['추가 본문'],'리서치.txt')]);const out=prepareImport(state,bundle,bundle.pages.map(p=>({key:p.key,title:p.title,kind:'memo'})),{workId:state.works[0].id});
   const work=out.state.works[0],nav=resolveNavigation(work);assert(nav.nodes.some(n=>n.type==='document'&&work.documents.find(d=>d.id===n.id)?.title==='리서치'));assert.equal(childrenOf(nav,null,'memo').length,2);
 });
+
 for(const format of ['markdown','html'] as const)test(`${format} 교환 파일은 사용자 대분류·폴더·하위 문서를 새 ID로 복원한다`,async()=>{
   const state=seedWorkspace();let work=state.works[0];const [a,b]=work.documents.filter(d=>d.kind==='scene');work=moveNavigation(work,b.id,{sectionId:'scene',parentId:a.id});work=insertFolder(work,'조사 폴더',{sectionId:'scene',parentId:b.id});
   const sectionId=uid();work.navigation!.sections.push({id:sectionId,title:'연대표',defaultKind:'memo'});const memo=newDocument('memo','조사 결과'),folder=work.navigation!.nodes.find(n=>n.type==='folder'&&n.title==='조사 폴더')!;work=insertDocument(work,memo,{sectionId:'scene',parentId:folder.id});

@@ -8,7 +8,9 @@ import { seedWorkspace } from '../src/lib/seed';
 import { uid, plainText, footnotes, wikiReferences, type RichNode } from '../src/lib/model';
 
 const png=new Uint8Array([137,80,78,71,13,10,26,10,1,2,3]);
+
 const asFile=(bytes:Blob|Uint8Array|string,name:string)=>new File([bytes instanceof Uint8Array?Uint8Array.from(bytes).buffer:bytes],name);
+
 function allNodes(n:RichNode):RichNode[]{return[n,...(n.content||[]).flatMap(allNodes)];}
 
 test('Notion 하위 페이지 ZIP의 서식·상대 링크·이미지와 CSV 행을 가져온다',async()=>{
@@ -44,7 +46,11 @@ test('XML 엔티티·손상 XML·ZIP 경로 이탈·과도한 압축 해제·누
   await assert.rejects(()=>readInterchange([asFile('<!DOCTYPE en-export [<!ENTITY attack SYSTEM "file:///secret">]><en-export/>','bad.enex')]),/엔티티/);
   await assert.rejects(()=>readInterchange([asFile('<en-export><note></en-export>','bad.enex')]),/XML/);
   const traversal=new JSZip();traversal.file('../escape.md','escape');await assert.rejects(()=>traversal.generateAsync({type:'blob'}).then(b=>readInterchange([asFile(b,'escape.zip')])),/경로/);
-  const zip=new JSZip();zip.file('note.md','ok');const bomb=await zip.generateAsync({type:'uint8array',compression:'DEFLATE'});for(let i=0;i<bomb.length-28;i++)if(bomb[i]===80&&bomb[i+1]===75&&bomb[i+2]===1&&bomb[i+3]===2){new DataView(bomb.buffer).setUint32(i+24,101*1024*1024,true);break;}await assert.rejects(()=>readInterchange([asFile(bomb,'bomb.zip')]),/100MB/);
+  const zip=new JSZip();zip.file('note.md','ok');const bomb=await zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
+
+for(let i=0;i<bomb.length-28;i++)if(bomb[i]===80&&bomb[i+1]===75&&bomb[i+2]===1&&bomb[i+3]===2){new DataView(bomb.buffer).setUint32(i+24,101*1024*1024,true);break;}
+
+await assert.rejects(()=>readInterchange([asFile(bomb,'bomb.zip')]),/100MB/);
   await assert.rejects(()=>readInterchange([asFile(new Uint8Array([255,254,0]),'wrong.txt')]),/UTF-8/);
   const state=seedWorkspace();state.works[0].documents[0].assetIds.push(uid());await assert.rejects(()=>exportInterchange(state.works[0],[state.works[0].documents[0].id],[],[],'markdown'),/첨부/);
 });

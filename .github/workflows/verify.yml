@@ -41,8 +41,7 @@ jobs:
           age -r "$(cat "$check_dir/public")" -o "$check_dir/archive.age" "$check_dir/original"
           age -d -i "$check_dir/test-identity" -o "$check_dir/restored" "$check_dir/archive.age"
           cmp "$check_dir/original" "$check_dir/restored"
-      - name: Anti Slop lint (advisory during adoption)
-        continue-on-error: true
+      - name: Anti Slop lint
         run: pnpm --silent exec oxlint . --format json > anti-slop-lint.json
       - name: Verify Anti Slop loaded and reported diagnostics
         run: |
