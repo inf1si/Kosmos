@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-10-07 — 작품 게시 철회·휴지통 이동·작품 카드 우클릭 메뉴
+
+- 기준 main `215f4d2`(작업 시작 때 fetch). 작품 휴지통 항목(`trash[].type='work'`), `withdrawPublication`, `unpublish_work` RPC 호출, 작품 카드 우클릭 메뉴·작품 정보 창·확인창을 추가했다. 새 [마이그레이션](supabase/migrations/20261007081500_work_trash_unpublish.sql)은 PR에만 넣었고 **운영 DB에는 적용하지 않았다**. 운영 계정·실제 원고는 건드리지 않았다.
+- 타입·`pnpm lint`(오류 0)·168개 Node 테스트 통과. 새 [단위 검사](tests/work-actions.test.ts) 6개: 작품 이동이 원본을 바꾸지 않고 노트 연결을 떼었다가 복원 시 같은 자리·연결로 되돌림, 휴지통 사본의 게시 연결 null·판본 기록 유지, 마지막 작품·없는 작품 거절, 휴지통 작품의 문서는 작품 복원 후에만 복원, 영구 삭제의 작품 소속 첨부 정리, 이전 백업에서 휴지통 작품·첨부 보존, ZIP 왕복과 문서별 읽기 사본. PGlite에서 기존 보호 SQL은 작품 항목을 거절하고 새 마이그레이션 후 저장·복원·영구 삭제가 통과하며 첨부 누락·ID 불일치·빈 문서·노트 ID 손상·활성 작품과 중복을 거절함을 확인했다. `unpublish_work`는 작가가 아니면 거절하고 본인 판본만 1개 비활성화한 뒤 두 번째는 0을 반환하며 다른 작가 판본은 그대로였다.
+- 로컬 개발 서버의 [합성 Chromium 검사](tests/browser/work-actions.mjs) 통과(seed 작품 2개, 첫 작품 게시 중): 게시 중 카드 표시, 우클릭 메뉴 항목(게시 중일 때만 게시 철회), Esc 닫기, 키보드 Shift+F10 → Home → Enter로 열기. 다른 작품의 작품 정보 편집(형식·부제 저장, 열린 작품은 그대로). 게시 철회 취소는 요청 0, 실행은 `unpublish_work` 1회·`activePublicationId` null·판본 기록 유지·작품 정보 안 결과 문구. 서버에 함수가 없으면(PGRST202) 확인창에 데이터베이스 업데이트 안내, 저장 0·작품 수 그대로. 열린 작품을 홈에서 휴지통으로 옮기면 철회 호출 후 카드 1개·남은 작품 선택, 마지막 작품 메뉴 비활성·이유 표시, 새로고침 후 유지, 휴지통 행 **작품 · 문서 7개** → 복원 시 원래 순서·게시 안 됨. 편집 화면에서 사이드바 작품 정보 → 휴지통으로 이동 시 남은 작품 편집 화면 유지 → 복원. 저장 6회·철회 호출 3회·페이지 오류 0.
+- 여섯 팔레트/밝기 × 1280/360px에서 메뉴·작품 정보·겹친 확인창이 화면 안에 있고 가로 넘침이 없음을 검사하고 스크린샷을 직접 봤다. 처음 실행에서 360px 가운데를 우클릭한 메뉴가 오른쪽으로 12px 넘쳐(Radix 우클릭 메뉴는 좌우로만 뒤집힘, 최소 폭 190px) 700px 이하 내용 폭으로 고쳤다. 다른 대화상자 위의 확인창이 아래 대화상자를 흐리게 덮지 않던 기존 겹침(휴지통 비우기 확인 포함)을 공용 CSS로 고쳤고 [휴지통 창 검사](tests/browser/trash-dialog-layout.mjs) 24개 화면에서 확인했다.
+- 기존 브라우저 검사 재실행 통과: 휴지통 창, [집필실 홈](tests/browser/studio-home.mjs), [저장 복구](tests/browser/sync-recovery.mjs) 6개 시나리오, [내 스킬](tests/browser/ai-skills.mjs), [가져오기·내보내기 창](tests/browser/interchange-dialog.mjs), [설정](tests/browser/app-settings.mjs) 84개 화면(설정 검사는 첫 실행이 출력 없이 실패한 뒤 두 번 연속 통과). 휴지통 창 검사는 개발 표시 아이콘이 클릭을 가로채 `devIndicators:false`를 임시로 넣고 실행했다(커밋 안 함).
+- 미확인: 운영 빌드(로컬은 Google Fonts 403), CI, 배포, 운영 DB 마이그레이션 적용, 실제 Supabase의 `unpublish_work` 호출과 공개 서재 반영, 실제 터치 길게 누르기. 이 마이그레이션 전 앱이 열린 탭은 작품 항목이 있는 작업 공간을 읽지 못하므로 새로고침한다.
+
 ## 2026-10-07 — 가져오기 회귀와 Anti Slop 정리
 
 - 기준 main `87fca9e64975c4ef55418ee6c1fdc95d26373c50`. 작업 전과 공개 준비 중 origin/main을 fetch해 같은 SHA임을 확인했다. Karpathy Guidelines·Verification Before Completion·Supabase·React 검토·전체 흐름 검증 지침을 적용했다. SQL·운영 계정·실제 원고·제공자 키는 변경하지 않았다.

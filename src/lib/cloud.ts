@@ -51,6 +51,15 @@ export async function publishCloud(id:string,workId:string,sceneIds:string[]):Pr
 return publicationSchema.parse(data);
 }
 
+/** Turns off the work's active public edition. A server without the 2026-10-07 migration has no such function. */
+export async function unpublishCloud(workId:string):Promise<void>{
+  const {error}=await cloud().rpc('unpublish_work',{p_work_id:workId});
+
+  if(error?.code==='PGRST202')throw new Error('서버에 게시 철회 기능이 아직 설치되지 않았습니다. 데이터베이스 업데이트 후 다시 시도하세요.');
+
+  if(error)throw error;
+}
+
 export async function publicPublications():Promise<Publication[]>{
   const {data,error}=await cloud().from('publications').select('payload').eq('active',true).order('published_at',{ascending:false});
 

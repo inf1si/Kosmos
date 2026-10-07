@@ -4,7 +4,16 @@ import { applyNoteNavigation, resolveNoteNavigation } from './note-navigation';
 import { removeDocument } from './document-deletion';
 import { applyNavigation, resolveNavigation } from './document-navigation';
 
-export function trashTitle(item:TrashItem){return item.type==='note'?noteTitle(item.note):item.document.title;}
+export function trashTitle(item:TrashItem){return item.type==='note'?noteTitle(item.note):item.type==='work'?item.work.title:item.document.title;}
+
+/** Every attachment a trash item still holds. A work also owns attachments no document references any more. */
+function heldAssets(item:TrashItem,state:Workspace){
+  if(item.type==='note')return item.note.assetIds;
+
+  if(item.type==='document')return item.document.assetIds;
+
+  return [...item.work.documents.flatMap(d=>d.assetIds),...state.assets.filter(a=>a.workId===item.id).map(a=>a.id)];
+}
 
 export function materializeTrash(state:Workspace):Workspace{return {...state,trash:state.trash||[]};}
 
@@ -48,11 +57,35 @@ if(!work||!document)throw new Error('휴지통으로 옮길 문서를 찾지 못
   return append({...removeDocument(state,workId,id),assets:state.assets},item);
 }
 
+/** Move a whole work to the trash. The caller withdraws its public edition first; the last work stays. */
+export function trashWork(state:Workspace,id:string):Workspace{
+  const index=state.works.findIndex(w=>w.id===id);
+
+  if(index<0)throw new Error('휴지통으로 옮길 작품을 찾지 못했습니다.');
+
+  if(state.works.length<=1)throw new Error('마지막 작품은 휴지통으로 옮길 수 없습니다.');
+  const linked=(state.notes||[]).filter(n=>n.linkedWorkIds.includes(id));
+  const item:TrashItem={id,type:'work',deletedAt:new Date().toISOString(),work:{...structuredClone(state.works[index]),activePublicationId:null},index,noteIds:linked.map(n=>n.id)};
+  const next={...state,works:state.works.filter(w=>w.id!==id)};
+
+  if(state.notes)next.notes=state.notes.map(n=>n.linkedWorkIds.includes(id)?{...n,linkedWorkIds:n.linkedWorkIds.filter(w=>w!==id)}:n);
+
+  return append(next,item);
+}
+
 export function restoreTrash(state:Workspace,id:string):Workspace{
   const item=state.trash?.find(t=>t.id===id);
 
 if(!item)throw new Error('복원할 항목을 찾지 못했습니다.');
   const base={...state,trash:state.trash!.filter(t=>t.id!==id)},workIds=new Set(state.works.map(w=>w.id));
+
+  if(item.type==='work'){
+    if(state.works.length>=100)throw new Error('작품은 최대 100개입니다. 다른 작품을 정리한 뒤 복원하세요.');
+    const works=[...base.works];works.splice(Math.min(item.index,works.length),0,structuredClone(item.work));
+    const relink=new Set(item.noteIds),notes=base.notes?.map(n=>relink.has(n.id)&&!n.linkedWorkIds.includes(id)&&n.linkedWorkIds.length<100?{...n,linkedWorkIds:[...n.linkedWorkIds,id]}:n);
+
+    return checked({...base,works,...notes&&{notes}});
+  }
 
   if(item.type==='note'){
     if((state.notes?.length||0)>=5000)throw new Error('노트 보관 한도를 초과해 복원할 수 없습니다.');
@@ -92,7 +125,7 @@ try{restored=applyNavigation(next,nav);}catch(error){if(!(error instanceof Error
 
 export function purgeTrash(state:Workspace,ids:string[]):Workspace{
   const selected=new Set(ids),removed=(state.trash||[]).filter(t=>selected.has(t.id)),trash=(state.trash||[]).filter(t=>!selected.has(t.id));
-  const assetIds=(item:TrashItem)=>item.type==='note'?item.note.assetIds:item.document.assetIds;
+  const assetIds=(item:TrashItem)=>heldAssets(item,state);
   const used=new Set([...state.works.flatMap(w=>w.documents.flatMap(d=>d.assetIds)),...(state.notes||[]).flatMap(n=>n.assetIds),...trash.flatMap(assetIds)]),discarded=new Set(removed.flatMap(assetIds).filter(id=>!used.has(id)));
 
   return checked({...state,trash,assets:state.assets.filter(a=>!discarded.has(a.id))});
@@ -101,8 +134,8 @@ export function purgeTrash(state:Workspace,ids:string[]):Workspace{
 /** Old backups omit trash. Keep its records and assets unless the same ID is restored live. */
 export function preserveTrash(candidate:Workspace,previous:Workspace):Workspace{
   if(candidate.trash!==undefined||previous.trash===undefined)return candidate;
-  const active=new Set([...candidate.works.flatMap(w=>w.documents.map(d=>d.id)),...(candidate.notes||[]).map(n=>n.id)]),trash=previous.trash.filter(t=>!active.has(t.id));
-  const assetIds=new Set(trash.flatMap(t=>t.type==='note'?t.note.assetIds:t.document.assetIds)),present=new Set(candidate.assets.map(a=>a.id));
+  const active=new Set([...candidate.works.map(w=>w.id),...candidate.works.flatMap(w=>w.documents.map(d=>d.id)),...(candidate.notes||[]).map(n=>n.id)]),trash=previous.trash.filter(t=>!active.has(t.id));
+  const assetIds=new Set(trash.flatMap(t=>heldAssets(t,previous))),present=new Set(candidate.assets.map(a=>a.id));
 
   return {...candidate,trash:structuredClone(trash),assets:[...candidate.assets,...previous.assets.filter(a=>assetIds.has(a.id)&&!present.has(a.id))]};
 }
