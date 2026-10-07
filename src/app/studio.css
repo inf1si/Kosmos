@@ -68,3 +68,6 @@ html:has(.studio){background:var(--ground)}
 .wiki-preview.note-preview-popover{position:relative;width:min(300px,calc(100vw - 24px));max-height:var(--radix-popover-content-available-height);overflow:auto}
 .note-preview-popover textarea{width:100%;resize:vertical}
 .studio-home .reference-card[aria-current]{background:var(--sel)}.studio-home .reference-card[aria-current] strong{color:var(--sel-ink)}
+.work-settings-actions{flex-wrap:wrap;align-items:center}.work-public-state{flex-basis:100%;font-size:12px;line-height:1.6;color:var(--muted)}.work-settings-done{margin:12px 0 0}
+/* A context menu opens at the pointer and can only flip sideways, so on a phone it keeps its natural width to fit on one side of a centred tap. */
+@media(max-width:700px){.work-context-menu{min-width:0}}

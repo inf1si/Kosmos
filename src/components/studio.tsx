@@ -15,6 +15,7 @@ import { NoteCard, NotesReference } from './notes-reference';
 import { addNote, filterNotes, newNote, noteFromTemplate } from '@/lib/personal-notes';
 import { PlotBoard } from './plot-board';
 import { StudioHome } from './studio-home';
+import { WorkDialogs, type WorkConfirm } from './work-actions';
 import { DocumentGraph } from './document-graph';
 import { DocumentTree } from './document-tree';
 import { DocIcon, WikiIcon } from './studio-icons';
@@ -98,7 +99,7 @@ return()=>window.removeEventListener('keydown',key);},[createNote,notesOpen,s.ca
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
   const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
-  const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [workSettings,setWorkSettings]=useState(false);
+  const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const referenceRef=useRef<HTMLElement>(null);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
   useDrawerFocus(!notesOpen&&compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
@@ -194,9 +195,15 @@ if(narrow())setSidebar(false);}
 
   function patchDoc(id:string,patch:Partial<NovelDocument>){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,documents:w.documents.map(d=>d.id===id?{...d,...patch,updatedAt:new Date().toISOString()}:d)}:w)}));}
 
-  function patchWork(patch:{title?:string;subtitle?:string;description?:string}){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?{...w,...patch}:w)}));}
-
   function organizeWork(fn:(latest:Work)=>Work){s.update(state=>({...state,works:state.works.map(w=>w.id===work.id?fn(w):w)}));}
+
+  // The trashed work's tabs belong to it alone; the home tab spans works and stays where it is.
+  function leaveWork(id:string){
+    if(id!==work.id)return;const next=s.state!.works.find(w=>w.id!==id)!;
+
+    if(onHome){setWorkId(next.id);setLastDoc(readStudioPosition().docs[next.id]??'');setTabs([HOME]);setBack([]);setForward([]);setSplitId(null);}
+    else switchWork(next.id);
+  }
 
   async function trashDocument(id:string){
     await s.trashDocument(work.id,id);
@@ -241,7 +248,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={true}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={false} onClick={()=>openNotes(selectedNote)}><StickyNote size={14}/>노트</button></div>
       <div className="work-switcher" ref={workMenuRef}>
         <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span><span className="work-tag" aria-hidden="true">ORB-{String(s.state.works.indexOf(work)+1).padStart(2,'0')}</span></button>
-        {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
+        {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(work.id);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
       </div>
       <nav className="studio-tools" aria-label="작업 도구">
         <button type="button" className="nav-item" aria-pressed={onHome} onClick={()=>go(HOME)}><House size={16}/><span>집필실 홈</span></button>
@@ -258,7 +265,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
         <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument}/>
         {query.trim()&&<WorkspaceNoteResults query={query} onOpen={id=>openNotes(id)}/>}
       </div>
-      <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(true)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
+      <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(work.id)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
     </aside>}
     <main className="studio-panel">
       <div className="panel-tabs">
@@ -282,14 +289,14 @@ return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon 
             <button type="button" disabled={readonly||onOverview||position>=siblings.length-1} onClick={()=>moveDoc(1)}><ArrowDown size={15}/>문서 아래로 옮기기</button>
             <button type="button" onClick={()=>{setMoreMenu(false);void s.snapshot(`${active.title} · 수동 저장`).catch(e=>alert(e.message));}}><Save size={15}/>복구 지점 만들기</button>
             <span className="menu-divider"/>
-            <button type="button" onClick={()=>{setMoreMenu(false);setWorkSettings(true);}}><Settings2 size={15}/>작품 정보 편집</button>
+            <button type="button" onClick={()=>{setMoreMenu(false);setWorkSettings(work.id);}}><Settings2 size={15}/>작품 정보 편집</button>
             <button type="button" onClick={()=>{setMoreMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button>
           </div>}
         </div>
         <button type="button" className="primary publish-button" onClick={()=>modal('publish')}><Send size={14}/>게시 준비</button>
       </div>
       {s.error&&<button type="button" className="studio-error" title="닫기" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {onHome?<StudioHome state={s.state} resume={{work,doc:active}} currentWorkId={work.id} readonly={readonly} onOpen={(workId,docId)=>workId===work.id?openDoc(docId):switchWork(workId,docId)} onOpenWork={id=>id===work.id?go(active.id):switchWork(id)} onNewWork={()=>modal('new-work')}/>
+      {onHome?<StudioHome state={s.state} resume={{work,doc:active}} currentWorkId={work.id} readonly={readonly} onOpen={(workId,docId)=>workId===work.id?openDoc(docId):switchWork(workId,docId)} onOpenWork={id=>id===work.id?go(active.id):switchWork(id)} onNewWork={()=>modal('new-work')} onEditWork={setWorkSettings} onConfirmWork={setWorkConfirm}/>
       :onGraph?<DocumentGraph key={work.id} documents={docs} initialDocumentId={active.id} onOpen={id=>openDoc(id)}/>
       :onBoard?<PlotBoard documents={docs} onOpen={id=>openDoc(id)} onCreate={chapter=>createDoc('scene',chapter,false)}/>
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
@@ -310,7 +317,7 @@ if(file)void s.addAsset(work.id,active.id,file).catch(error=>alert(error.message
       </div></aside></>}
       </div>}
     </main>
-    <StudioDialogs workId={work.id}/><Modal open={workSettings} onClose={()=>setWorkSettings(false)} title="작품 정보"><div className="form-grid"><label>작품명<input value={work.title} onChange={e=>{if(e.target.value)patchWork({title:e.target.value});}}/></label><label>부제<input value={work.subtitle} onChange={e=>patchWork({subtitle:e.target.value})}/></label><label>작품 소개<textarea rows={4} value={work.description} onChange={e=>patchWork({description:e.target.value})}/></label></div></Modal>
+    <StudioDialogs workId={work.id}/><WorkDialogs state={s.state} settingsId={workSettings} confirm={workConfirm} readonly={readonly} onSettings={setWorkSettings} onConfirm={setWorkConfirm} onTrashed={leaveWork}/>
   </div></TooltipProvider>;
 }
 

@@ -171,9 +171,16 @@ const trashPlacementSchema=z.object({parentId:z.uuid().nullable(),beforeId:z.uui
 
 export const trashItemSchema=z.discriminatedUnion('type',[
   z.object({id:z.uuid(),type:z.literal('note'),deletedAt:z.iso.datetime(),note:noteSchema,placement:trashPlacementSchema}),
+  // A whole work: its list position and the notes that linked to it come back on restore.
+  z.object({id:z.uuid(),type:z.literal('work'),deletedAt:z.iso.datetime(),work:workSchema,index:z.number().int().min(0).max(100),noteIds:z.array(z.uuid()).max(5000)}),
   z.object({id:z.uuid(),type:z.literal('document'),deletedAt:z.iso.datetime(),workId:z.uuid(),workTitle:z.string().min(1).max(300),document:documentSchema,aiMessages:chatMessagesSchema.optional(),placement:trashPlacementSchema.extend({section:z.object({id:z.string().min(1).max(100),title:z.string().min(1).max(200),defaultKind:z.enum(['scene','wiki','memo'])})})}),
 ]).superRefine((item,ctx)=>{
-  if(item.id!==(item.type==='note'?item.note.id:item.document.id))ctx.addIssue({code:'custom',message:'휴지통 항목 ID를 확인하세요.'});
+  if(item.id!==(item.type==='note'?item.note.id:item.type==='work'?item.work.id:item.document.id))ctx.addIssue({code:'custom',message:'휴지통 항목 ID를 확인하세요.'});
+
+  if(item.type==='work'){if(new Set(item.noteIds).size!==item.noteIds.length)ctx.addIssue({code:'custom',message:'휴지통 작품의 노트 연결을 확인하세요.'});
+
+return;}
+
   const p=item.placement;
 
 if(p.parentId===item.id||p.beforeId===item.id||p.childIds.includes(item.id)||new Set(p.childIds).size!==p.childIds.length)ctx.addIssue({code:'custom',message:'휴지통 하위 항목을 확인하세요.'});
@@ -199,6 +206,12 @@ export const workspaceSchema = z.object({
   const workIds=new Set(data.works.map(w=>w.id));
 
   for(const item of data.trash||[]){
+    if(item.type==='work'){
+      if(item.work.documents.some(d=>d.assetIds.some(id=>assets.get(id)?.workId!==item.id)))ctx.addIssue({code:'custom',message:'휴지통 첨부 연결을 확인하세요.',path:['trash']});
+
+      continue;
+    }
+
     const content=item.type==='note'?item.note:item.document;
 
     if(content.assetIds.some(id=>item.type==='note'?assets.get(id)?.noteId!==item.id:assets.get(id)?.workId!==item.workId))ctx.addIssue({code:'custom',message:'휴지통 첨부 연결을 확인하세요.',path:['trash']});
@@ -257,6 +270,11 @@ export function makePublication(work:Work,sceneIds:string[]):Publication {
     scenes:scenes.map(d=>({id:d.id,title:d.title,chapter:d.chapter,content:structuredClone(d.content)})),
     wiki:work.documents.filter(d=>d.kind==='wiki'&&d.isPublic&&d.publicSummary.trim()).map(d=>({id:d.id,title:d.title,category:d.category,summary:d.publicSummary})),
   });
+}
+
+/** Take a work off the public library. Earlier editions stay in the work's history; publishing again makes a new one. */
+export function withdrawPublication(state:Workspace,workId:string):Workspace{
+  return {...state,works:state.works.map(w=>w.id===workId?{...w,activePublicationId:null}:w)};
 }
 
 export function wikiReferences(content:RichNode):string[] {

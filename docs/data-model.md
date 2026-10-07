@@ -10,7 +10,7 @@ Workspace
 ├─ aiPreferences?: version: 1, activePresetId, presets[], skills?[], updatedAt
 ├─ notes[]?: 개인 노트 · 태그 · 수집함/아이스박스 · pinned? · 작품 연결 · aiMessages?
 ├─ noteNavigation?: version: 1, 노트/폴더 ID·부모·형제 순서
-├─ trash?: 노트/문서 사본·시각·원래 위치·AI 기록 (최대 5,000개)
+├─ trash?: 노트/문서/작품 사본·시각·원래 위치·AI 기록 (최대 5,000개)
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
 │  ├─ documents[]: scene | wiki | memo
@@ -44,6 +44,8 @@ AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대
 선택적 `Workspace.trash`는 note/document 구분, 원본과 같은 UUID, deletedAt(ISO), 전체 note/document 사본, 원래 parentId·다음 형제 beforeId·직접 childIds를 저장한다. 문서는 workId·workTitle·대분류 사본·별도 aiMessages도 보관한다. [모델](../src/lib/model.ts)과 [변환](../src/lib/workspace-trash.ts)은 활성 자료와 휴지통 ID 중복, 손상 첨부 연결, 하위 자기 참조를 거절한다. 총 5,000개·기존 20MB 서버 JSON 한도를 공유하며 형식 버전은 1이다.
 
 이동은 활성 notes/documents·탐색 노드·해당 작품 AI 대화를 제거하고 직접 하위 항목을 기존 부모로 올린다. 첨부 메타데이터는 휴지통 복원을 위해 유지한다. notes: []는 허용하고 작품 documents는 최소 1개다. 복원은 저장한 부모/형제·대분류를 사용하고 유효한 후속 변경을 보존한다. 영구 삭제는 선택 사본과 현재/남은 휴지통에서 쓰지 않는 첨부 목록만 제거한다. 공개 판본·사본·복구 이력·Blob/Storage 바이트는 유지한다. [사용·호환성](workspace-trash.md).
+
+작품 항목(`type: 'work'`)은 작품 전체 사본(`activePublicationId`는 null), 작품 목록 순서 `index`(0~100), 연결되어 있던 노트 `noteIds`를 저장한다. 이동은 노트의 해당 작품 연결을 떼고 첨부 메타데이터는 유지하며, 모델은 작품 문서의 첨부가 그 작품 소속인지 확인한다. 마지막 작품은 옮기지 않는다(작품 최소 1개). 복원은 순서 자리와 남은 노트 연결을 되살린다.
 
 ## 계정의 독립 노트
 
@@ -107,6 +109,7 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 | `initialize_workspace` | `p_payload` | 허용 작가의 행을 처음 생성하거나 기존 행 반환: `id/version/payload` |
 | `save_workspace` | `p_id`, `p_base_version`, `p_payload`, `p_request_id` | `saved`와 새 버전, 또는 `conflict`와 현재 버전·payload |
 | `publish_work` | `p_id`, `p_work_id`, `p_scene_ids` | 서버 작업본에서 공개 판본 생성·활성 전환, 판본 JSON 반환 |
+| `unpublish_work` | `p_work_id` | 그 작가의 해당 작품 활성 판본을 비활성화하고 바꾼 행 수 반환(이미 없으면 0). 판본 행은 지우지 않는다. 2026-10-07 [마이그레이션](../supabase/migrations/20261007081500_work_trash_unpublish.sql) |
 | `reserve_ai_call` | 없음 | 해당 작가의 DB 날짜별 호출 수 증가. 최대 10회 |
 
 함수는 `SECURITY DEFINER`와 고정 `search_path`를 사용하고 `auth.uid()`를 확인한다. 기본 테이블의 쓰기 권한은 클라이언트에 주지 않는다. 권한 취소와 재부여는 Supabase의 기본 권한에 의존하지 않도록 SQL에 명시한다.

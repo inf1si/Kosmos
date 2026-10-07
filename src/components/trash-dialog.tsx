@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { FileText, Search, StickyNote, Trash2 } from 'lucide-react';
+import { Book, FileText, Search, StickyNote, Trash2 } from 'lucide-react';
 import { type TrashItem } from '@/lib/model';
 import { trashTitle } from '@/lib/workspace-trash';
 import { useStudio } from './studio-provider';
@@ -13,7 +13,7 @@ export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:(
   const [confirm,setConfirm]=useState<{ids:string[];title?:string}|null>(null);
   useEffect(()=>{if(open){setQuery('');setError('');setMessage('');setConfirm(null);}},[open]);
   const items=[...(s.state?.trash||[])].sort((a,b)=>b.deletedAt.localeCompare(a.deletedAt));
-  const scope=(item:TrashItem)=>item.type==='note'?`노트 · ${item.note.box==='icebox'?'아이스박스':'수집함'}`:`문서 · ${item.workTitle}`;
+  const scope=(item:TrashItem)=>item.type==='note'?`노트 · ${item.note.box==='icebox'?'아이스박스':'수집함'}`:item.type==='work'?`작품 · 문서 ${item.work.documents.length}개`:`문서 · ${item.workTitle}`;
   const visible=items.filter(item=>`${trashTitle(item)} ${scope(item)}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const readonly=busy||!!s.conflict;
 
@@ -40,7 +40,7 @@ export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:(
       <div className="trash-tools"><div className="sidebar-search"><Search size={15}/><input ref={search} autoFocus aria-label="휴지통 검색" placeholder="제목 · 작품 검색" value={query} onChange={e=>setQuery(e.target.value)}/></div><span className="field-help">{items.length}개</span><button type="button" className="button" disabled={readonly||!items.length} onClick={e=>requestPurge(items.map(item=>item.id),e.currentTarget)}>비우기</button></div>
       <div className="trash-list" aria-label="휴지통 목록">
         {visible.map(item=><div className="reference-card trash-row" key={item.id} data-trash-id={item.id}>
-          {item.type==='note'?<StickyNote size={16}/>:<FileText size={16}/>}
+          {item.type==='note'?<StickyNote size={16}/>:item.type==='work'?<Book size={16}/>:<FileText size={16}/>}
           <span className="trash-title"><strong title={trashTitle(item)}>{trashTitle(item)}</strong><small>{scope(item)}</small><small>{new Date(item.deletedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></span>
           <button type="button" className="button" disabled={readonly} onClick={()=>void restore(item)}>복원</button><IconButton label={`${trashTitle(item)} 영구 삭제`} disabled={readonly} onClick={e=>requestPurge([item.id],e.currentTarget,trashTitle(item))}><Trash2 size={16}/></IconButton>
         </div>)}

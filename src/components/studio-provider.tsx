@@ -2,10 +2,10 @@
 
 import { assetSchema } from '@/lib/model';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Workspace, LocalRecord, uid, Revision, Publication, makePublication, AssetMeta } from '@/lib/model';
+import { Workspace, LocalRecord, uid, Revision, Publication, makePublication, withdrawPublication, AssetMeta } from '@/lib/model';
 import { seedWorkspace } from '@/lib/seed';
 import { db, writeLocal, checkpoint, LocalConflict, listRevisions } from '@/lib/database';
-import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud } from '@/lib/cloud';
+import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud, unpublishCloud } from '@/lib/cloud';
 import { createBackup, readBackup } from '@/lib/backup';
 import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
 import type { Work } from '@/lib/model';
@@ -13,7 +13,7 @@ import { applyNavigation, resolveNavigation } from '@/lib/document-navigation';
 import { preserveAIPreferences } from '@/lib/ai-prompt-presets';
 import { preserveNotes, preserveNoteDetails, prepareFolderWork, prepareNoteCopy, prepareNoteImport } from '@/lib/personal-notes';
 import { materializeNoteNavigation } from '@/lib/note-navigation';
-import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
+import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, trashWork as moveWorkToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
 import type { NovelDocument } from '@/lib/model';
 import { isRejectedLegacyTrashSave,recoverLegacyTrash } from '@/lib/sync-recovery';
 import { useAppPreferences } from './use-app-preferences';
@@ -28,11 +28,11 @@ type StudioContextValue={
   exportBackup:()=>Promise<TransferDownload>;importBackup:(file:File)=>Promise<void>;
   importDocuments:(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']})=>Promise<string>;
   exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
-  publish:(workId:string,sceneIds:string[])=>Promise<Publication>;
+  publish:(workId:string,sceneIds:string[])=>Promise<Publication>;unpublish:(workId:string)=>Promise<void>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
   addNoteAsset:(noteId:string,file:File)=>Promise<string>;importNotes:(bundle:ImportBundle,folderTitle:string)=>Promise<{folderId:string;count:number}>;createWorkFromFolder:(folderId:string,target:{title:string;form:Work['form']})=>Promise<string>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
   trashNote:(noteId:string)=>Promise<void>;
-  trashDocument:(workId:string,docId:string)=>Promise<void>;
+  trashDocument:(workId:string,docId:string)=>Promise<void>;trashWork:(workId:string)=>Promise<void>;
   restoreTrash:(id:string)=>Promise<void>;purgeTrash:(ids:string[])=>Promise<void>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
   flush:()=>Promise<void>;syncNow:()=>Promise<void>;clearError:()=>void;
@@ -393,6 +393,15 @@ if(row?.dirty||conflictRef.current)throw new Error('클라우드 저장을 확�
 return pub;
   }
 
+  async function unpublish(workId:string){
+    await flush();
+
+    if(conflictRef.current)throw new Error('충돌 원고를 확인한 뒤 게시를 철회할 수 있습니다.');
+
+    if(cloudConfigured)await unpublishCloud(workId);
+    update(state=>withdrawPublication(state,workId));await flush();
+  }
+
   async function addAsset(workId:string,docId:string,file:File){
     if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>10*1024*1024)throw new Error('PNG, JPEG, WebP 이미지 10MB 이하만 첨부할 수 있습니다.');
     const id=uid();await db.assets.put({id,namespace,blob:file});
@@ -514,6 +523,19 @@ if(!row)throw new Error('기기 원고가 없습니다.');
     await flush();update(state=>moveDocumentToTrash(state,workId,docId));await flush();
   }
 
+  // A work in the trash must not stay in the public library, so its edition is withdrawn first. On a server without
+  // that function this stops before the workspace changes, which also keeps the save from tripping the older trash guard.
+  async function trashWork(workId:string){
+    await flush();
+
+    if(conflictRef.current)throw new Error('충돌 원고를 확인한 뒤 작품을 옮길 수 있습니다.');
+    // Dry run: refuse the last or a missing work before the server withdraws anything.
+    moveWorkToTrash(dataRef.current!,workId);
+
+    if(cloudConfigured)await unpublishCloud(workId);
+    update(state=>moveWorkToTrash(state,workId));await flush();
+  }
+
   async function restoreTrash(id:string){
     await flush();update(state=>restoreTrashItem(state,id));await flush();
   }
@@ -528,7 +550,7 @@ if(!row)throw new Error('기기 원고가 없습니다.');
   }
 
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,restoreTrash,purgeTrash,resolve,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashWork,restoreTrash,purgeTrash,resolve,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});
 
 if(error)throw error;},

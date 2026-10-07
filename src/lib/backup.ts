@@ -39,7 +39,7 @@ if(!blob||blob.size!==meta.size)throw new Error(`첨부가 누락되었거나 �
 
   for(const note of data.notes||[])await add(`text/notes/${note.id}.md`,encode(`# ${noteTitle(note)}\n\n${plainText(note.content)}\n`));
 
-  for(const item of data.trash||[])await add(`text/trash/${item.id}.md`,encode(`# ${trashTitle(item)}\n\n${plainText(item.type==='note'?item.note.content:item.document.content)}\n`));
+  for(const item of data.trash||[])await add(`text/trash/${item.id}.md`,encode(`# ${trashTitle(item)}\n\n${item.type==='work'?item.work.documents.map(d=>`## ${d.title}\n\n${plainText(d.content)}\n`).join('\n'):`${plainText(item.type==='note'?item.note.content:item.document.content)}\n`}`));
   await add('README.txt',encode('workspace.json이 원고·설정·독립 노트·휴지통·각주·관계·공개 판본의 복원 원본입니다. assets/에는 실제 첨부, revisions.json에는 복구 이력이 있습니다. text/는 읽기 쉬운 별도 사본입니다. 이 파일에는 비공개 원고와 노트가 포함됩니다.\n'));
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
 

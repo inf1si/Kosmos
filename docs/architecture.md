@@ -108,6 +108,7 @@ flowchart LR
 | [ai-conversation.ts](../src/lib/ai-conversation.ts) | 질문·답변 저장 계약과 최근 대화 길이 제한 |
 | [manuscript-fonts.ts](../src/components/manuscript-fonts.ts) | Next.js가 빌드 시 내려받아 자체 제공하는 한글 원고 글꼴 |
 | [001_studio.sql](../supabase/migrations/001_studio.sql) | 테이블·권한·RPC·첨부 정책·Realtime |
+| [work-actions.tsx](../src/components/work-actions.tsx) · [20261007081500_work_trash_unpublish.sql](../supabase/migrations/20261007081500_work_trash_unpublish.sql) | 작품 카드 우클릭 메뉴·작품 정보·게시 철회/휴지통 확인, 작품 휴지통 항목 보호와 `unpublish_work` |
 
 ## 변경할 때 유지할 규칙
 

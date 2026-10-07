@@ -46,3 +46,5 @@ html:has(.public-site) .popover{background:var(--pub-popover);color:var(--pub-te
 .note-inline-ai small{font-size:11px;color:var(--muted);line-height:1.6}
 .note-inline-ai .popover-actions{flex-wrap:wrap;position:sticky;bottom:-14px;z-index:1;margin-bottom:-12px;padding:8px 0 14px;background:var(--pop)}
 .note-command-notice{margin:0;padding:8px 16px;font-size:12px;color:var(--muted)}
+/* A confirmation opened from another dialog dims that dialog too; Radix appends each overlay and dialog to body in opening order. */
+.modal~.modal-overlay{z-index:92}.modal~.modal-overlay~.modal{z-index:93}
