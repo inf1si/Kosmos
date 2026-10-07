@@ -7,6 +7,8 @@
 - 수정 후 로컬 프로덕션 빌드의 Chromium 151에서 실제 헤더의 테마/밝기 버튼을 눌러 여섯 조합 × 1280/360px 화면을 확인했다. 문단 안 줄바꿈 뒤 내용까지 741자를 유지하며 첫 문단 뒤 문단은 포함하지 않았다. 화면은 데스크톱 120px·모바일 108px로 모두 정확히 3줄이고 말줄임표를 직접 봤다. 가로 넘침·페이지 오류 0. 빈 문단 뒤 짧은 문단은 36px·1줄, 공백 없는 1080자는 108px·3줄·가로 넘침 없음, **작품 읽기** 링크로 본문이 열렸다. 원문 데이터는 잘라 저장하지 않는다. 화면과 측정은 Git 제외 `test-results/library-preview/`에 보관한다.
 - 타입·프로덕션 빌드·문서 검사 통과. Anti Slop 169개 파일·19개 규칙·진단 0. 로컬 단위 테스트를 추가하거나 실행하지 않았다. CI·main·운영 배포는 이 로컬 결과와 구분한다. 다른 브라우저·실제 터치 기기는 확인하지 않았다.
 
+- 후속 운영 확인: [PR #31](https://github.com/inf1si/Kosmos/pull/31)을 main `2f62d044fce07879802e917dfd64ba33d9507129`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37610510621)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37610736295) 성공. Vercel `dpl_5rbYyyz2TCBfnvLFmsm4Xze6iWJ1`의 production READY·정확한 SHA·`kosmos-ashy.vercel.app` 별칭을 확인했다. 운영 서재의 공개 작품 2개에서 실제 헤더를 조작해 여섯 테마 × 1280/360px를 확인했다: 모두 **본문 미리보기**, 계산된 clamp 3·높이 최대 3줄, 가로 넘침·페이지 오류 0, **작품 읽기**로 본문 열림. 별도 익명 브라우저의 표시 설정만 바꾸고 로그인·원고 수정·게시·유료 AI는 실행하지 않았다. 측정에는 실제 본문을 기록하지 않는다.
+
 ## 2026-10-07 — 서재 읽기 글꼴·크기 확장
 
 - 처음 기준 main `215f4d2`. 공개 준비 중 다시 fetch해 새 main `4413f6c`의 작품 게시 철회·휴지통·홈 메뉴 변경을 합쳤고, CHANGELOG의 두 변경 기록을 모두 유지했다. 읽기 화면은 집필실의 `manuscriptFonts`·`fontSizes`·크기 검증을 공유하며, 웹폰트 CSS/Next Font는 독서 경로에서 불러온다. 저장 모델·API·운영 원고는 변경하지 않았다.
@@ -14,6 +16,8 @@
 - 기존 공개 헤더의 Google Fonts CSS와 앱 폰트가 같은 family로 등록돼 `document.fonts.check()`가 실제 표시와 다른 결과를 냈다. 본문의 평문 한·영·숫자 표본을 대상으로 Chromium `CSS.getPlatformFontsForNode`를 사용해 실제 표시한 글꼴을 검사한다. 기기 글꼴 4종은 CSS family를 검사하며 설치 여부는 기기에 따라 다르다.
 - 최신 main 통합 후 타입·168개 Node 테스트·프로덕션 빌드·문서 검사 통과. Anti Slop 169개 파일·19개 규칙·진단 0. 합성 독서 검사에서 글꼴 20개·크기 목록 16개, 실제 웹폰트 family 16개·앱 폰트 응답 772회·폰트 실패 0, 기존 sans/serif·23/17px 복원, 22.5px 적용·잘못된 입력 복구·Esc 취소/초점 복귀·목차 연속 전환·새로고침 유지·집필실 설정 독립을 확인했다. 여섯 팔레트/밝기 × 1280/360px 12개 조합에서 본문 72px·설정 창 경계·입력칸 폭·가로 넘침을 검사하고 데스크톱·모바일 화면을 직접 봤다. 페이지 오류 0. [검증 요약](docs/evidence/reader-preferences-2026-10-07.json)에 보관한다.
 - 아래 결과는 합성 IndexedDB와 클라우드 설정을 비운 로컬 프로덕션 빌드에 대한 검사다. 실제 계정·원고 수정, 게시, 유료 AI는 실행하지 않았다. 브랜치 CI·main 병합·운영 배포는 로컬 결과와 별도로 확인한다.
+
+- 후속 운영 확인: [PR #30](https://github.com/inf1si/Kosmos/pull/30)을 main `5a3f860ebf760b1ad05a8b617c86b26ed9b640a3`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37603021136)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37603205608) 성공. Vercel `dpl_HB5PAe1ySQV4pB92uUp3tgZtzQpE`의 production READY·정확한 SHA·운영 별칭을 확인했다. 운영 공개 독서 화면에서 글꼴 20종·프리텐다드 선택, 22.5px 입력·새로고침 유지, 360px에서 72px 적용·설정 창 경계·가로 넘침 없음·페이지 오류 0을 확인했다. 별도 브라우저의 독자 설정만 바꿨으며 실제 계정·원고·게시·유료 AI는 실행하지 않았다.
 
 ## 2026-10-07 — 작품 게시 철회·휴지통 이동·작품 카드 우클릭 메뉴
 
