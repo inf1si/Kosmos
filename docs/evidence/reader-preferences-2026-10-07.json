@@ -1,0 +1,200 @@
+{
+  "date": "2026-10-07",
+  "baseMain": "4413f6c82cc9d7bab17cda24c17c29c9ca47aa5c",
+  "scope": "synthetic IndexedDB, local production preview, Chromium 151",
+  "nodeTests": {
+    "passed": 168,
+    "failed": 0
+  },
+  "lint": {
+    "files": 169,
+    "rules": 19,
+    "diagnostics": 0
+  },
+  "typecheck": true,
+  "build": true,
+  "browser": {
+    "passed": true,
+    "fonts": 20,
+    "presets": 16,
+    "layouts": [
+      {
+        "width": 1280,
+        "palette": "violet",
+        "theme": "light"
+      },
+      {
+        "width": 1280,
+        "palette": "violet",
+        "theme": "dark"
+      },
+      {
+        "width": 1280,
+        "palette": "cassette",
+        "theme": "light"
+      },
+      {
+        "width": 1280,
+        "palette": "cassette",
+        "theme": "dark"
+      },
+      {
+        "width": 1280,
+        "palette": "cyber",
+        "theme": "light"
+      },
+      {
+        "width": 1280,
+        "palette": "cyber",
+        "theme": "dark"
+      },
+      {
+        "width": 360,
+        "palette": "violet",
+        "theme": "light"
+      },
+      {
+        "width": 360,
+        "palette": "violet",
+        "theme": "dark"
+      },
+      {
+        "width": 360,
+        "palette": "cassette",
+        "theme": "light"
+      },
+      {
+        "width": 360,
+        "palette": "cassette",
+        "theme": "dark"
+      },
+      {
+        "width": 360,
+        "palette": "cyber",
+        "theme": "light"
+      },
+      {
+        "width": 360,
+        "palette": "cyber",
+        "theme": "dark"
+      }
+    ],
+    "fontResponses": 772,
+    "renderedFonts": [
+      {
+        "id": "gowun",
+        "label": "고운바탕",
+        "families": [
+          "Gowun Batang"
+        ]
+      },
+      {
+        "id": "noto-serif",
+        "label": "본명조",
+        "families": [
+          "Noto Serif KR ExtraLight"
+        ]
+      },
+      {
+        "id": "nanum-myeongjo",
+        "label": "나눔명조",
+        "families": [
+          "NanumMyeongjo"
+        ]
+      },
+      {
+        "id": "maruburi",
+        "label": "마루부리",
+        "families": [
+          "MaruBuri"
+        ]
+      },
+      {
+        "id": "ibm-plex",
+        "label": "IBM Plex 고딕",
+        "families": [
+          "IBM Plex Sans KR"
+        ]
+      },
+      {
+        "id": "noto-sans",
+        "label": "본고딕",
+        "families": [
+          "Noto Sans KR Thin"
+        ]
+      },
+      {
+        "id": "nanum-gothic",
+        "label": "나눔고딕",
+        "families": [
+          "NanumGothic"
+        ]
+      },
+      {
+        "id": "nanum-barun-gothic",
+        "label": "나눔바른고딕",
+        "families": [
+          "NanumBarunGothic"
+        ]
+      },
+      {
+        "id": "pretendard",
+        "label": "프리텐다드",
+        "families": [
+          "Pretendard Variable"
+        ]
+      },
+      {
+        "id": "wanted-sans",
+        "label": "원티드 산스",
+        "families": [
+          "Wanted Sans Variable"
+        ]
+      },
+      {
+        "id": "hahmlet",
+        "label": "함렛",
+        "families": [
+          "Hahmlet"
+        ]
+      },
+      {
+        "id": "gowun-dodum",
+        "label": "고운돋움",
+        "families": [
+          "Gowun Dodum"
+        ]
+      },
+      {
+        "id": "gothic-a1",
+        "label": "고딕 A1",
+        "families": [
+          "Gothic A1"
+        ]
+      },
+      {
+        "id": "nanum-coding",
+        "label": "나눔고딕코딩",
+        "families": [
+          "NanumGothicCoding"
+        ]
+      },
+      {
+        "id": "nanum-pen",
+        "label": "나눔손글씨 펜",
+        "families": [
+          "Nanum Pen"
+        ]
+      },
+      {
+        "id": "nanum-brush",
+        "label": "나눔손글씨 붓",
+        "families": [
+          "Nanum Brush Script"
+        ]
+      }
+    ],
+    "errors": [],
+    "failedFonts": []
+  }
+}

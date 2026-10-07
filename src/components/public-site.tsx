@@ -11,6 +11,7 @@ import { paragraphStyle,cellSpan,tableColumns,inlineFontSize,listStyleType } fro
 import { THEME_KEY, preferredPalette } from '@/lib/theme';
 import { Popover, type PopoverAnchor } from './primitives';
 import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './theme-toggle';
+import { manuscriptFonts, fontSizes, validFontSize } from '@/lib/editor-preferences';
 
 function usePublicData(initial:Publication[],localPreview:boolean){
   const [data,setData]=useState(initial);const [loading,setLoading]=useState(localPreview);
@@ -106,22 +107,36 @@ return <div className="reader-table" key={key}><table aria-label="본문 표" st
   return <>{content.content?.map((n,i)=>node(n,String(i)))}</>;
 }
 
-export function Reader({workId,initial,localPreview}:{workId:string;initial:Publication[];localPreview:boolean}){
+export function Reader({workId,initial,localPreview,fontClassName=''}:{workId:string;initial:Publication[];localPreview:boolean;fontClassName?:string}){
   const {data,loading}=usePublicData(initial,localPreview);const pub=data.find(p=>p.workId===workId);
   const [settings,setSettings]=useState(false);const [toc,setToc]=useState(false);const [wikiId,setWikiId]=useState<string|null>(null);const wikiAnchor:PopoverAnchor=useRef(null);
-  const [font,setFont]=useState('serif');const [size,setSize]=useState(19);const [width,setWidth]=useState(680);const [theme,setTheme]=useSiteTheme();const [palette,setPalette]=useSitePalette();const [progress,setProgress]=useState(0);
+  const [font,setFont]=useState('gowun');const [size,setSize]=useState(19);const [sizeDraft,setSizeDraft]=useState('19');const [width,setWidth]=useState(680);const [theme,setTheme]=useSiteTheme();const [palette,setPalette]=useSitePalette();const [progress,setProgress]=useState(0);
   const restored=useRef(false);
+  const [preferencesLoaded,setPreferencesLoaded]=useState(false);
   // The reader's old 밝게/어둡게 preference carries over once, until the site-wide toggle saves its own choice.
   useEffect(()=>{try{const prefs=JSON.parse(localStorage.getItem('orbit-reader-prefs')||'null');
 
-if(prefs){if(['serif','sans'].includes(prefs.font))setFont(prefs.font);
+if(prefs){const storedFont=manuscriptFonts.find(item=>item.id===prefs.font);
 
-if([17,19,21,23].includes(prefs.size))setSize(prefs.size);
+if(storedFont)setFont(storedFont.id);else if(prefs.font==='sans')setFont('ibm-plex');
+
+if(validFontSize(prefs.size))setSize(prefs.size);
 
 if([580,680,780].includes(prefs.width))setWidth(prefs.width);
 
-if(prefs.theme==='night'&&!localStorage.getItem(THEME_KEY))setTheme('dark');}}catch{}},[]);
-  useEffect(()=>{try{localStorage.setItem('orbit-reader-prefs',JSON.stringify({font,size,width}));}catch{}},[font,size,width]);
+if(prefs.theme==='night'&&!localStorage.getItem(THEME_KEY))setTheme('dark');}}catch{}
+
+setPreferencesLoaded(true);},[]);
+  useEffect(()=>{if(!preferencesLoaded)return;
+
+try{localStorage.setItem('orbit-reader-prefs',JSON.stringify({font,size,width}));}catch{}},[font,size,width,preferencesLoaded]);
+  useEffect(()=>setSizeDraft(String(size)),[size]);
+
+  function commitSize(){const value=Number(sizeDraft);
+
+    if(sizeDraft.trim()&&validFontSize(value))setSize(value);else setSizeDraft(String(size));
+  }
+
   useEffect(()=>{
     if(!pub)return;
     const key=`orbit-reading:${workId}`;let timer:ReturnType<typeof setTimeout>|undefined;
@@ -150,13 +165,17 @@ if(timer)clearTimeout(timer);};
   if(loading)return <div className="public-site"><PublicHeader/><p className="public-loading">작품을 여는 중입니다.</p></div>;
 
   if(!pub)return <div className="public-site"><PublicHeader/><div className="public-loading"><h1>아직 공개되지 않은 작품입니다.</h1><Link href="/library">서재로 돌아가기</Link></div></div>;
+  const selectedFont=manuscriptFonts.find(item=>item.id===font)||manuscriptFonts[0];
+  const sizes=fontSizes.includes(size)?fontSizes:[...fontSizes,size].sort((a,b)=>a-b);
   const wiki=pub.wiki.find(w=>w.id===wikiId);const notes=pub.scenes.flatMap(scene=>footnotes(scene.content)).filter((n,i,a)=>a.findIndex(x=>x.id===n.id)===i);
 
-  return <div className="public-site reader" style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--reading-size':`${size}px`,'--reading-width':`${width}px`} as React.CSSProperties}><PublicHeader><Link href={`/wiki/${workId}`}>설정집</Link></PublicHeader>
-    <div className="reading-controls"><button onClick={()=>setToc(v=>!v)}><List size={17}/>목차</button><span>{pub.title}</span><Popover open={settings} onOpenChange={setSettings} align="end" width={340} title="읽기 설정" trigger={<button><Settings2 size={17}/>읽기 설정</button>}><div className="reading-preferences"><label>글꼴<select value={font} onChange={e=>setFont(e.target.value)}><option value="serif">명조</option><option value="sans">고딕</option></select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{[17,19,21,23].map(v=><option key={v}>{v}</option>)}</select></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(preferredPalette(e.target.value))}>{paletteOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div></Popover></div>
+  return <div className={`public-site reader ${fontClassName}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--reading-size':`${size}px`,'--reading-width':`${width}px`,'--reading-font':selectedFont.family} as React.CSSProperties}><PublicHeader><Link href={`/wiki/${workId}`}>설정집</Link></PublicHeader>
+    <div className="reading-controls"><button onClick={()=>setToc(v=>!v)}><List size={17}/>목차</button><span>{pub.title}</span><Popover open={settings} onOpenChange={next=>{setSettings(next);
+
+if(!next)setSizeDraft(String(size));}} align="end" width={340} title="읽기 설정" trigger={<button><Settings2 size={17}/>읽기 설정</button>}><div className="reading-preferences"><label className="reading-font">글꼴<select value={font} onChange={e=>setFont(e.target.value)}>{manuscriptFonts.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{sizes.map(value=><option key={value} value={value}>{value}px</option>)}</select></label><label>크기 직접 입력 (px)<input type="number" inputMode="decimal" min={10} max={72} step={0.5} value={sizeDraft} title="10–72px · 0.5px 단위" onChange={e=>setSizeDraft(e.target.value)} onBlur={commitSize} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commitSize();e.currentTarget.blur();}}}/></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(preferredPalette(e.target.value))}>{paletteOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div></Popover></div>
     <div className="reading-progress" style={{width:`${progress}%`}}/>
     {toc&&<aside className="reading-toc"><div><h2>목차</h2><button aria-label="목차 닫기" onClick={()=>setToc(false)}><X size={18}/></button></div>{pub.scenes.map(scene=><a key={scene.id} href={`#scene-${scene.id}`} onClick={()=>setToc(false)}>{scene.title}</a>)}</aside>}
-    <main className={`reading-page reading-${font}`}><header className="reading-title"><span>소설</span><h1>{pub.title}</h1><p>{pub.subtitle}</p></header>{pub.scenes.map(scene=><section key={scene.id} className="reading-scene" id={`scene-${scene.id}`}><div className="reading-scene-title"><span>{scene.chapter}</span><h2>{scene.title}</h2></div><div className="reading-body"><RichReader content={scene.content} publication={pub} onWiki={(id,link)=>{wikiAnchor.current=link;setWikiId(id);}}/></div></section>)}
+    <main className="reading-page"><header className="reading-title"><span>소설</span><h1>{pub.title}</h1><p>{pub.subtitle}</p></header>{pub.scenes.map(scene=><section key={scene.id} className="reading-scene" id={`scene-${scene.id}`}><div className="reading-scene-title"><span>{scene.chapter}</span><h2>{scene.title}</h2></div><div className="reading-body"><RichReader content={scene.content} publication={pub} onWiki={(id,link)=>{wikiAnchor.current=link;setWikiId(id);}}/></div></section>)}
       {notes.length>0&&<section className="reading-notes"><h2>주석</h2><ol>{notes.map((note,i)=><li id={`note-${note.id}`} key={note.id}><a href={`#ref-${note.id}`} aria-label={`각주 ${i+1} 본문으로 돌아가기`}>{i+1}</a><p>{note.text}</p></li>)}</ol></section>}
       <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><Link href="/library">작품 목록</Link><Link href={`/wiki/${workId}`}>설정집 읽기</Link></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small></footer>
     </main>
