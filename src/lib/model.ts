@@ -136,6 +136,7 @@ const publicWikiSchema = z.object({id:z.uuid(),title:z.string(),category:z.strin
 export const publicationSchema = z.object({
   id:z.uuid(),workId:z.uuid(),title:z.string(),subtitle:z.string(),description:z.string(),
   publishedAt:z.string(),scenes:z.array(publicSceneSchema),wiki:z.array(publicWikiSchema),
+  libraryPosition:z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
 });
 
 export type Publication = z.infer<typeof publicationSchema>;

@@ -14,10 +14,11 @@ import { THEME_KEY, preferredPalette } from '@/lib/theme';
 import { Popover, type PopoverAnchor } from './primitives';
 import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './theme-toggle';
 import { manuscriptFonts, fontSizes, validFontSize } from '@/lib/editor-preferences';
+import { LIBRARY_SORT_KEY, librarySort, librarySorts, previewPublications, sortPublications, type LibrarySort } from '@/lib/library-order';
 
 function usePublicData(initial:Publication[],localPreview:boolean){
   const [data,setData]=useState(initial);const [loading,setLoading]=useState(localPreview);
-  useEffect(()=>{if(!localPreview)return;void db.workspaces.get('preview').then(row=>{const state=row?.data||seedWorkspace();setData(state.works.flatMap(w=>w.publications.filter(p=>p.id===w.activePublicationId)));}).finally(()=>setLoading(false));},[localPreview]);
+  useEffect(()=>{if(!localPreview)return;void db.workspaces.get('preview').then(row=>{const state=row?.data||seedWorkspace();setData(previewPublications(state));}).finally(()=>setLoading(false));},[localPreview]);
 
 return{data,loading};
 }
@@ -29,10 +30,16 @@ function BookCover({pub}:{pub:Publication}){return <Link className="book-cover" 
 
 export function Library({initial,localPreview,error}:{initial:Publication[];localPreview:boolean;error?:string}){
   const {data,loading}=usePublicData(initial,localPreview);
+  const [sort,setSort]=useState<LibrarySort>('author');
+  useEffect(()=>{try{setSort(librarySort(localStorage.getItem(LIBRARY_SORT_KEY)));}catch{}},[]);
+  const ordered=sortPublications(data,sort);
   const latest=data.length?new Date(Math.max(...data.map(p=>new Date(p.publishedAt).getTime()))).toLocaleDateString('ko-KR'):'';
 
   return <div className="public-site"><PublicHeader/><main className="library"><div className="library-heading"><h1>수록 작품</h1>{!loading&&<span>{data.length}편</span>}{latest&&<small>마지막 공개 {latest}</small>}</div>{localPreview&&<div className="preview-label">기기 내 미리보기 · 예시 작품을 포함합니다</div>}{error&&<p role="alert">{error}</p>}
-    {loading?<p className="muted">서재를 여는 중입니다.</p>:data.length?<div className="book-list">{data.map((p,i)=><article className="book-entry" key={p.id}><BookCover pub={p}/><div className="book-info"><span className="book-category">{String(i+1).padStart(2,'0')} · 소설 · {p.scenes.length}개 장면</span><Link href={`/read/${p.workId}`}><h2>{p.title}</h2></Link><p className="book-subtitle">{p.subtitle}</p><p className="book-description">{p.description}</p><div className="book-actions"><Link className="book-read" href={`/read/${p.workId}`}>작품 읽기<span aria-hidden="true">→</span></Link><Link className="book-wiki" href={`/wiki/${p.workId}`}>설정집</Link><span>{new Date(p.publishedAt).toLocaleDateString('ko-KR')}</span></div></div><div className="book-excerpt"><span>본문 미리보기</span><p>{plainText(p.scenes[0].content).split('\n\n').find(text=>text.trim())?.replace(/\s+/g,' ').trim()}</p></div></article>)}</div>:<div className="empty-library"><h2>아직 공개한 작품이 없습니다.</h2><p>첫 작품이 준비되면 이곳에서 읽을 수 있습니다.</p></div>}
+    <div className="library-sort"><label>정렬<select aria-label="서재 정렬" value={sort} onChange={e=>{const next=librarySort(e.target.value);setSort(next);
+
+try{localStorage.setItem(LIBRARY_SORT_KEY,next);}catch{}}}>{Object.entries(librarySorts).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div>
+    {loading?<p className="muted">서재를 여는 중입니다.</p>:data.length?<div className="book-list">{ordered.map((p,i)=><article className="book-entry" key={p.id}><BookCover pub={p}/><div className="book-info"><span className="book-category">{String(i+1).padStart(2,'0')} · 소설 · {p.scenes.length}개 장면</span><Link href={`/read/${p.workId}`}><h2>{p.title}</h2></Link><p className="book-subtitle">{p.subtitle}</p><p className="book-description">{p.description}</p><div className="book-actions"><Link className="book-read" href={`/read/${p.workId}`}>작품 읽기<span aria-hidden="true">→</span></Link><Link className="book-wiki" href={`/wiki/${p.workId}`}>설정집</Link><span>{new Date(p.publishedAt).toLocaleDateString('ko-KR')}</span></div></div><div className="book-excerpt"><span>본문 미리보기</span><p>{plainText(p.scenes[0].content).split('\n\n').find(text=>text.trim())?.replace(/\s+/g,' ').trim()}</p></div></article>)}</div>:<div className="empty-library"><h2>아직 공개한 작품이 없습니다.</h2><p>첫 작품이 준비되면 이곳에서 읽을 수 있습니다.</p></div>}
     <footer className="public-footer">Orbis Tertius</footer></main></div>;
 }
 

@@ -91,6 +91,8 @@ flowchart LR
 | [cloud.ts](../src/lib/cloud.ts) | Supabase 클라이언트·RPC |
 | [backup.ts](../src/lib/backup.ts) | ZIP 생성·검사·파싱 |
 | [public-data.ts](../src/lib/public-data.ts) | 서버에서 활성 공개 데이터만 조회 |
+| [library-order.ts](../src/lib/library-order.ts) | 작가/독자 정렬 기준·미리보기 순위·현재 목록 검증 |
+| [library-order.tsx](../src/components/library-order.tsx) | 집필실 홈의 공개 작품 순서 편집·자동 정렬·수동 이동 |
 | [ai.ts](../src/lib/ai.ts) | 응답 검증, 수정 제안 적용 |
 | [studio-provider.tsx](../src/components/studio-provider.tsx) | 상태·기기 저장 큐·동기화·충돌·게시·첨부·복원 |
 | [studio.tsx](../src/components/studio.tsx) | 집필실 탐색·탭·분할·속성·보드 |
@@ -139,3 +141,5 @@ Google OAuth 앱·웹 클라이언트는 사용자가 생성했다. 새 비밀�
 ## 원고 편집 확장 (2026-10-04)
 
 [editor-extensions.ts](../src/lib/editor-extensions.ts)는 표·첨자·강조·각주/설정 링크·안정된 문단 ID·문단 속성을 공유한다. [editor-search.ts](../src/lib/editor-search.ts)는 ProseMirror 텍스트 위치와 Decoration을 사용하고 검색 강조는 원고에 저장하지 않는다. [manuscript-format.ts](../src/lib/manuscript-format.ts)는 편집기·독서·교환 파일의 안전한 서식 변환을 공유한다. [편집 안내](editor-tools.md). 본문 노드 추가 외에 DB·서버 저장 방식·게시 권한·AI 프롬프트는 바꾸지 않았다.
+
+서재의 작가 순서는 공개 테이블 메타데이터 RPC로 조회·저장하며 원고 workspace 저장과 별개다. 첫 게시/재게시 트리거가 작품 자리를 유지하고 공개 SSR 조회가 순위를 함께 전달한다. 독자의 정렬 선택은 브라우저 설정이다. [계약과 범위](library-order.md).
