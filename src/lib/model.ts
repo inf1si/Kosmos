@@ -193,11 +193,15 @@ export type AssetMeta = z.infer<typeof assetSchema>;
 
 const trashPlacementSchema=z.object({parentId:z.uuid().nullable(),beforeId:z.uuid().optional(),childIds:z.array(z.uuid()).max(7500)});
 
+// Folder-wide deletion keeps one document/note item per entry, all sharing the folder ID. The first also keeps the deleted tree
+// in sibling order (a title marks a folder), so one restore rebuilds it. Older servers and tabs accept or drop the extra field.
+const trashFolderSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),nodes:z.array(z.object({id:z.uuid(),parentId:z.uuid().nullable(),title:z.string().trim().min(1).max(300).optional()})).max(7500).optional()});
+
 export const trashItemSchema=z.discriminatedUnion('type',[
-  z.object({id:z.uuid(),type:z.literal('note'),deletedAt:z.iso.datetime(),note:noteSchema,placement:trashPlacementSchema}),
+  z.object({id:z.uuid(),type:z.literal('note'),deletedAt:z.iso.datetime(),note:noteSchema,placement:trashPlacementSchema,folder:trashFolderSchema.optional()}),
   // A whole work: its list position and the notes that linked to it come back on restore.
   z.object({id:z.uuid(),type:z.literal('work'),deletedAt:z.iso.datetime(),work:workSchema,index:z.number().int().min(0).max(100),noteIds:z.array(z.uuid()).max(5000)}),
-  z.object({id:z.uuid(),type:z.literal('document'),deletedAt:z.iso.datetime(),workId:z.uuid(),workTitle:z.string().min(1).max(300),document:documentSchema,aiMessages:chatMessagesSchema.optional(),placement:trashPlacementSchema.extend({section:z.object({id:z.string().min(1).max(100),title:z.string().min(1).max(200),defaultKind:z.enum(['scene','wiki','memo'])})})}),
+  z.object({id:z.uuid(),type:z.literal('document'),deletedAt:z.iso.datetime(),workId:z.uuid(),workTitle:z.string().min(1).max(300),document:documentSchema,aiMessages:chatMessagesSchema.optional(),folder:trashFolderSchema.optional(),placement:trashPlacementSchema.extend({section:z.object({id:z.string().min(1).max(100),title:z.string().min(1).max(200),defaultKind:z.enum(['scene','wiki','memo'])})})}),
 ]).superRefine((item,ctx)=>{
   if(item.id!==(item.type==='note'?item.note.id:item.type==='work'?item.work.id:item.document.id))ctx.addIssue({code:'custom',message:'휴지통 항목 ID를 확인하세요.'});
 

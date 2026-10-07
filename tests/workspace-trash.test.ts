@@ -8,7 +8,7 @@ import { fromText, makePublication, uid, workspaceSchema, type Workspace } from 
 import { addNote, newNote } from '../src/lib/personal-notes';
 import { editNoteTree, moveNote } from '../src/lib/note-navigation';
 import { applyNavigation, insertFolder, moveNavigation, resolveNavigation } from '../src/lib/document-navigation';
-import { materializeTrash, preserveTrash, purgeTrash, restoreTrash, trashDocument, trashNote } from '../src/lib/workspace-trash';
+import { materializeTrash, preserveTrash, purgeTrash, restoreTrash, trashDocument, trashDocumentFolder, trashNote, trashNoteFolder } from '../src/lib/workspace-trash';
 import { createBackup, readBackup } from '../src/lib/backup';
 
 function treeOrder(nav:{nodes:{id:string;parentId:string|null;sectionId?:string}[]}){
@@ -36,6 +36,49 @@ function documents(){
 
 return {state:materializeTrash(state),work:tree,parent:tree.documents[0],child,exclusive,shared};
 }
+
+function folderTree(){
+ const state=seedWorkspace();let work=state.works[0];const [a,b,c]=work.documents,first=resolveNavigation(work).nodes.find(n=>n.parentId===null&&n.sectionId==='scene')!;
+ const folderNamed=(title:string)=>resolveNavigation(work).nodes.find(n=>n.type==='folder'&&n.title===title)!.id;
+ work=insertFolder(work,'1부',{sectionId:'scene',parentId:null});const folder=folderNamed('1부');work=moveNavigation(work,folder,{sectionId:'scene',parentId:null,beforeId:first.id});
+ work=insertFolder(work,'1장',{sectionId:'scene',parentId:folder});const chapter=folderNamed('1장');work=insertFolder(work,'빈 폴더',{sectionId:'scene',parentId:folder});
+ work=moveNavigation(work,a.id,{sectionId:'scene',parentId:folder,beforeId:chapter});work=moveNavigation(work,b.id,{sectionId:'scene',parentId:chapter});work=moveNavigation(work,c.id,{sectionId:'scene',parentId:b.id});
+ work.aiConversations=[{docId:b.id,messages:[]}];state.works[0]=work;
+ const [x,y,z]=[a,b,c].map(d=>work.documents.find(w=>w.id===d.id)!);
+
+ return {state:materializeTrash(state),work,folder,chapter,a:x,b:y,c:z};
+}
+
+test('폴더 전체 삭제는 폴더째 복원해 하위 폴더·빈 폴더·문서 순서·AI 대화를 돌려놓는다',()=>{
+ const {state,work,folder,a,b,c}=folderTree(),next=trashDocumentFolder(state,work.id,folder);
+ assert.equal(next.trash!.length,3);assert(next.trash!.every(t=>t.type==='document'&&t.folder?.id===folder&&t.folder.title==='1부'));assert.equal(next.trash!.filter(t=>t.type==='document'&&t.folder?.nodes).length,1);
+ assert.deepEqual(workspaceSchema.parse(next).trash,next.trash);assert(!next.works[0].navigation!.nodes.some(n=>n.id===folder));
+ const restored=restoreTrash(next,folder),nav=restored.works[0].navigation!,folders=(n:{nodes:{type:string;id:string}[]})=>n.nodes.filter(x=>x.type==='folder').sort((p,q)=>p.id.localeCompare(q.id));
+ assert.deepEqual(restored.trash,[]);assert.deepEqual(treeOrder(nav),treeOrder(work.navigation!));assert.deepEqual(folders(nav),folders(work.navigation!));
+
+ for(const d of [a,b,c])assert.deepEqual(restored.works[0].documents.find(x=>x.id===d.id),d);
+ assert(restored.works[0].aiConversations!.some(x=>x.docId===b.id));
+ // A single item still restores alone, next to where the folder was.
+ assert.equal(restoreTrash(next,c.id).works[0].navigation!.nodes.find(n=>n.id===c.id)!.parentId,null);
+});
+
+test('폴더 복원은 영구 삭제한 문서의 하위를 위로 올리고, 폴더 구조가 빠진 항목은 폴더 하나에 모은다',()=>{
+ const {state,work,folder,chapter,a,b,c}=folderTree(),next=trashDocumentFolder(state,work.id,folder);
+ assert.equal(next.trash!.find(t=>t.type==='document'&&t.folder?.nodes)!.id,a.id);
+ const purged=restoreTrash(purgeTrash(next,[b.id]),folder).works[0].navigation!.nodes;assert.equal(purged.find(n=>n.id===c.id)!.parentId,chapter);
+ const flat=restoreTrash({...next,trash:next.trash!.map(t=>t.type==='document'&&t.folder?{...t,folder:{id:t.folder.id,title:t.folder.title}}:t)},folder).works[0].navigation!.nodes;
+
+ for(const d of [a,b,c])assert.equal(flat.find(n=>n.id===d.id)!.parentId,folder);
+ assert.equal(flat.find(n=>n.id===folder)!.type,'folder');
+});
+
+test('노트 폴더 전체 삭제도 폴더째 복원한다',()=>{
+ const {state,parent,child}=notes();let tree=editNoteTree(state,w=>insertFolder(w,'묶음',{sectionId:'notes',parentId:null}));
+ const top=tree.noteNavigation!.nodes.find(n=>n.type==='folder'&&n.title==='묶음')!.id;tree=moveNote(tree,parent.id,{parentId:top});
+ const next=trashNoteFolder(tree,top);assert.deepEqual(next.trash!.map(t=>t.id).sort(),[parent.id,child.id].sort());
+ const restored=restoreTrash(next,top);assert.deepEqual(restored.trash,[]);assert.deepEqual(treeOrder(restored.noteNavigation!),treeOrder(tree.noteNavigation!));
+ assert.deepEqual(restored.notes!.find(n=>n.id===parent.id),parent);
+});
 
 test('노트 휴지통 이동·복원은 단일 항목과 AI·첨부·원래 하위 관계를 보존한다',()=>{
  const {state,parent,child,folder}=notes(),before=structuredClone(state),next=trashNote(state,parent.id);
@@ -119,5 +162,11 @@ try{
   const work=state.works[0],doc=trashDocument(state,work.id,work.documents[0].id);await pg.query('update workspaces set payload=$1 where id=1',[JSON.stringify(doc)]);
   const purged=purgeTrash(doc,doc.trash!.map(t=>t.id));await pg.query('update workspaces set payload=$1 where id=1',[JSON.stringify(purged)]);
   assert.deepEqual((await pg.query<{payload:typeof state}>('select payload from workspaces where id=1')).rows[0].payload,purged);
+  // The deployed guard accepts the folder field on document and note items, so folder restore needs no migration.
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261007081500_work_trash_unpublish.sql',import.meta.url),'utf8').match(/create or replace function public.guard_workspace_trash[\s\S]*?end \$\$;/)![0]);
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261007124540_workspace_templates_guard.sql',import.meta.url),'utf8'));
+  const tree=folderTree();tree.state.works=tree.state.works.map(w=>applyNavigation(w,resolveNavigation(w)));await pg.query('insert into workspaces values (2,$1)',[JSON.stringify(tree.state)]);
+  const folders=trashDocumentFolder(tree.state,tree.work.id,tree.folder);await pg.query('update workspaces set payload=$1 where id=2',[JSON.stringify(folders)]);
+  await pg.query('update workspaces set payload=$1 where id=2',[JSON.stringify(restoreTrash(folders,tree.folder))]);
  }finally{await pg.close();}
 });

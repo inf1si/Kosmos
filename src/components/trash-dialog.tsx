@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Book, FileText, Search, StickyNote, Trash2 } from 'lucide-react';
+import { Book, FileText, Folder, Search, StickyNote, Trash2 } from 'lucide-react';
 import { type TrashItem } from '@/lib/model';
 import { trashTitle } from '@/lib/workspace-trash';
 import { useStudio } from './studio-provider';
 import { IconButton, Modal } from './primitives';
+
+type Row={id:string;ids:string[];title:string;first:TrashItem;deletedAt:string};
 
 export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:()=>void;onReturnFocus:()=>void}){
   const s=useStudio(),search=useRef<HTMLInputElement>(null),confirmFocus=useRef<HTMLElement|null>(null);
@@ -14,15 +16,31 @@ export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:(
   useEffect(()=>{if(open){setQuery('');setError('');setMessage('');setConfirm(null);}},[open]);
   const items=[...(s.state?.trash||[])].sort((a,b)=>b.deletedAt.localeCompare(a.deletedAt));
   const scope=(item:TrashItem)=>item.type==='note'?`노트 · ${item.note.box==='icebox'?'아이스박스':'수집함'}`:item.type==='work'?`작품 · 문서 ${item.work.documents.length}개`:`문서 · ${item.workTitle}`;
-  const visible=items.filter(item=>`${trashTitle(item)} ${scope(item)}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  // Items from one folder-wide deletion share the folder ID and restore or purge together as one row.
+  const rows:Row[]=[],folders=new Map<string,Row>();
+
+  for(const item of items){
+    const folder=item.type==='work'?undefined:item.folder,row=folder&&folders.get(folder.id);
+
+    if(row){row.ids.push(item.id);continue;}
+
+    const next={id:folder?.id||item.id,ids:[item.id],title:folder?.title||trashTitle(item),first:item,deletedAt:item.deletedAt};
+
+    if(folder)folders.set(folder.id,next);
+
+    rows.push(next);
+  }
+
+  const rowScope=(row:Row)=>row.id===row.first.id?scope(row.first):row.first.type==='document'?`폴더 · ${row.first.workTitle} · 문서 ${row.ids.length}개`:`노트 폴더 · 노트 ${row.ids.length}개`;
+  const visible=rows.filter(row=>`${row.title} ${rowScope(row)}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const readonly=busy||!!s.conflict;
 
   function requestPurge(ids:string[],at:HTMLElement,title?:string){confirmFocus.current=at;setError('');setConfirm({ids,title:title&&title.length>40?`${title.slice(0,40)}…`:title});}
 
-  async function restore(item:TrashItem){
+  async function restore(row:Row){
     setBusy(true);setError('');setMessage('');
 
-    try{await s.restoreTrash(item.id);setMessage('복원했습니다.');search.current?.focus();}
+    try{await s.restoreTrash(row.id);setMessage('복원했습니다.');search.current?.focus();}
     catch(error){setError(error instanceof Error?error.message:'복원하지 못했습니다.');}
     finally{setBusy(false);}
   }
@@ -37,14 +55,14 @@ export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:(
 
   return <>
     <Modal open={open} onClose={()=>{if(!busy&&!confirm)onClose();}} title="휴지통" description="자동으로 비우지 않습니다. 필요할 때 복원하세요." wide onReturnFocus={onReturnFocus}>
-      <div className="trash-tools"><div className="sidebar-search"><Search size={15}/><input ref={search} autoFocus aria-label="휴지통 검색" placeholder="제목 · 작품 검색" value={query} onChange={e=>setQuery(e.target.value)}/></div><span className="field-help">{items.length}개</span><button type="button" className="button" disabled={readonly||!items.length} onClick={e=>requestPurge(items.map(item=>item.id),e.currentTarget)}>비우기</button></div>
+      <div className="trash-tools"><div className="sidebar-search"><Search size={15}/><input ref={search} autoFocus aria-label="휴지통 검색" placeholder="제목 · 작품 검색" value={query} onChange={e=>setQuery(e.target.value)}/></div><span className="field-help">{rows.length}개</span><button type="button" className="button" disabled={readonly||!items.length} onClick={e=>requestPurge(items.map(item=>item.id),e.currentTarget)}>비우기</button></div>
       <div className="trash-list" aria-label="휴지통 목록">
-        {visible.map(item=><div className="reference-card trash-row" key={item.id} data-trash-id={item.id}>
-          {item.type==='note'?<StickyNote size={16}/>:item.type==='work'?<Book size={16}/>:<FileText size={16}/>}
-          <span className="trash-title"><strong title={trashTitle(item)}>{trashTitle(item)}</strong><small>{scope(item)}</small><small>{new Date(item.deletedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></span>
-          <button type="button" className="button" disabled={readonly} onClick={()=>void restore(item)}>복원</button><IconButton label={`${trashTitle(item)} 영구 삭제`} disabled={readonly} onClick={e=>requestPurge([item.id],e.currentTarget,trashTitle(item))}><Trash2 size={16}/></IconButton>
+        {visible.map(row=><div className="reference-card trash-row" key={row.id} data-trash-id={row.id}>
+          {row.id!==row.first.id?<Folder size={16}/>:row.first.type==='note'?<StickyNote size={16}/>:row.first.type==='work'?<Book size={16}/>:<FileText size={16}/>}
+          <span className="trash-title"><strong title={row.title}>{row.title}</strong><small>{rowScope(row)}</small><small>{new Date(row.deletedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></span>
+          <button type="button" className="button" disabled={readonly} onClick={()=>void restore(row)}>복원</button><IconButton label={`${row.title} 영구 삭제`} disabled={readonly} onClick={e=>requestPurge(row.ids,e.currentTarget,row.title)}><Trash2 size={16}/></IconButton>
         </div>)}
-        {!visible.length&&<p className="empty-text">{items.length?'검색 결과가 없습니다.':'휴지통이 비어 있습니다.'}</p>}
+        {!visible.length&&<p className="empty-text">{rows.length?'검색 결과가 없습니다.':'휴지통이 비어 있습니다.'}</p>}
       </div>
       {message&&<p className="field-help" role="status">{message}</p>}{error&&!confirm&&<p className="error-message" role="alert">{error}</p>}
     </Modal>
