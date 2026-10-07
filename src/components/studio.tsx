@@ -206,8 +206,7 @@ if(narrow())setSidebar(false);}
   }
 
   async function trashDocument(id:string){
-    await s.trashDocument(work.id,id);
-    const remaining=docs.filter(d=>d.id!==id),next=remaining[Math.min(docs.findIndex(d=>d.id===id),remaining.length-1)].id;
+    const next=await s.trashDocument(work.id,id);
     setTabs(t=>t.filter(tab=>tab!==id));setBack(t=>t.filter(item=>item!==id));setForward(t=>t.filter(item=>item!==id));
 
     if(view===id){setCurrent(next);setLastDoc(next);setProperties(false);setReference(null);}

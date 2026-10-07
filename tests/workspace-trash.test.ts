@@ -92,11 +92,13 @@ test('이전 백업의 필드 누락은 현재 휴지통과 첨부를 유지하�
  const original=structuredClone(state);delete original.trash;assert.deepEqual(preserveTrash(original,moved).trash,[]);
 });
 
-test('마지막 노트는 휴지통으로 이동 가능하고 마지막 작품 문서·중복 ID·손상 첨부는 거절한다',()=>{
+test('마지막 노트·문서는 휴지통으로 옮기고 중복 ID·손상 첨부는 거절한다',()=>{
  const {state,parent}=notes();let next=trashNote(state,parent.id);
 
 for(const note of next.notes!)next=trashNote(next,note.id);assert.deepEqual(next.notes,[]);
- const last=state.works[1];assert.throws(()=>trashDocument(state,last.id,last.documents[0].id),/최소 1개/);
+ const last=state.works[1],document=last.documents[0],moved=trashDocument(state,last.id,document.id),replacement=moved.works[1].documents[0];
+ assert.equal(moved.works[1].documents.length,1);assert.notEqual(replacement.id,document.id);assert.equal(replacement.chapter,'');assert.deepEqual(moved.trash?.find(item=>item.id===document.id)?.type,'document');
+ const restored=restoreTrash(moved,document.id);assert.deepEqual(restored.works[1].documents.find(d=>d.id===document.id),document);assert(restored.works[1].documents.some(d=>d.id===replacement.id));assert(workspaceSchema.safeParse(restored).success);
  const duplicate={...trashNote(state,parent.id),notes:state.notes};assert(!workspaceSchema.safeParse(duplicate).success);
  const damaged=trashNote(state,parent.id);damaged.assets=[];assert(!workspaceSchema.safeParse(damaged).success);
 });
