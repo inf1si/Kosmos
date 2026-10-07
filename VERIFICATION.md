@@ -9,6 +9,8 @@
 - 운영 Supabase에 보호 SQL을 먼저 적용했다. 사용자 원고 행을 읽거나 바꾸지 않고 임시 테이블의 실제 트리거로 templates 누락·같은 ID의 속성 누락 거절/명시적 빈 배열 허용을 확인한 뒤 롤백했다. SECURITY INVOKER·빈 search_path·anon/authenticated 실행 권한 없음·트리거 설치를 확인했다. 적용 전/후 보안 진단 수는 같았다(기존 RLS 정책 없는 테이블 정보 2개·기존 인증 RPC 경고 5개·유출 비밀번호 보호 경고 1개). 스키마 데이터·RLS·Auth·Storage 정책 변경은 없다.
 - 실제 작가 로그인 저장·다중 기기/다른 브라우저·실제 터치는 미확인이다. 실제 원고 변경·유료 AI 호출은 0이다. PR/main CI·운영 배포 확인은 아래 후속 기록으로 구분한다. [사용법](docs/workspace-templates.md)·[저장](docs/synchronization.md#사용자-속성템플릿-동기화)·[백업](docs/backup-restore.md#사용자-속성템플릿-백업).
 
+- 후속 운영 확인: [PR #34](https://github.com/inf1si/Kosmos/pull/34)을 main `f1bda47dd1b8f0c9038228a45f8bd978ad4a6a15`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37626826234)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37627075091)가 타입·173개 검사·빌드·문서·실제 age 왕복·Anti Slop 0건을 통과했다. 기능 커밋 뒤 로컬 문서 검사도 41개·690개 내부 링크와 변경 경로 갱신 규칙을 통과했다. Vercel 미리보기 READY(`dpl_8Zcvmnm8Y6Thh9521wnFkiJ8Buoq`)·운영 READY(`dpl_ciVpA38NjwFPv5EA7my1t8PQXmq3`), 정확한 main SHA·`kosmos-ashy.vercel.app` 별칭을 확인했다. 운영 URL 익명 Chromium의 1280/360px 로그인 화면은 HTTP 200·비밀번호/Google 로그인 진입점 표시·가로 넘침/페이지 오류 0이다. 실제 계정의 새 기능 저장은 로컬 합성 검증과 구분해 미확인으로 둔다. 배포 전에 열린 집필실 탭은 새로고침한다.
+
 ## 2026-10-07 — 마지막 문서 개별 휴지통 이동
 
 - 기준 main `27e45975577c86b7f11ff2242d33a0c22e22fb2a`. fetch 후 새 브랜치를 만들었다. 폴더 전체 삭제와 달리 개별 문서 이동은 UI와 삭제 함수가 작품의 마지막 문서를 막고 있었다. 로컬 프로덕션·합성 IndexedDB에서 작품/폴더에 원고 1개인 메뉴의 `aria-disabled=true`·**마지막 문서는 유지해야 합니다**를 확인했다.
