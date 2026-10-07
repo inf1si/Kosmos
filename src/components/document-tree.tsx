@@ -358,7 +358,7 @@ if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButt
       else root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="섹션 추가"]')?.focus();
     }}>
       <p style={{overflowWrap:'anywhere'}}>‘{folderDelete?.title}’ 폴더를 전체 삭제할까요?</p>
-      <p className="field-help">{folderDelete?.documents?`하위 ${noun} ${folderDelete.documents}개는 휴지통에 보관합니다.${folderDelete.replace?' 빈 원고 하나를 남깁니다.':''}`:`하위 폴더 ${folderDelete?.folders||0}개도 삭제합니다.`}</p>
+      <p className="field-help">{folderDelete?.documents?`하위 ${noun} ${folderDelete.documents}개는 휴지통에 보관하고 폴더는 복원되지 않습니다.${folderDelete.replace?' 빈 원고 하나를 남깁니다.':''}`:`하위 폴더 ${folderDelete?.folders||0}개도 삭제합니다.`}</p>
       {folderDelete&&error&&<p className="error-message" role="alert">{error}</p>}
       <div className="modal-actions"><button type="button" className="button" disabled={movingToTrash} onClick={()=>{setFolderDelete(null);setError('');}}>취소</button><button type="button" className="button danger" disabled={readonly} onClick={()=>void deleteFolder()}>{movingToTrash?'삭제 중':'삭제'}</button></div>
     </Modal>
