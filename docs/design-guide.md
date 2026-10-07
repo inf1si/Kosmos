@@ -124,14 +124,14 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 | 변수 | 글꼴 순서 | 쓰는 곳 |
 |---|---|---|
-| `--pub-serif` | Gowun Batang → Batang → Noto Serif KR → serif | 사이트 이름, 페이지·작품·장면 제목, 첫 문장 발췌, 독서 본문(명조 선택 시) |
+| `--pub-serif` | Gowun Batang → Batang → Noto Serif KR → serif | 사이트 이름, 페이지·작품·장면 제목, 첫 문장 발췌, 독서 본문의 기본 폴백 |
 | `--pub-sans` | IBM Plex Sans KR → Apple SD Gothic Neo → Malgun Gothic → sans-serif | 메뉴·버튼·설명·날짜·각주·설정집 설명, 카세트의 제목 |
 | `--pub-mono` | IBM Plex Mono → IBM Plex Sans KR → ui-monospace | 카세트의 날짜·개수·각주 번호·분류 글자. 한글은 IBM Plex Sans KR로 넘어간다 |
 | `--pub-tech` | Michroma → IBM Plex Sans KR (사이버에서는 Chakra Petch) | 카세트·사이버의 사이트 이름, 홈 제목, 표지의 ORBIS TERTIUS. 사이버는 숫자·분류 글자에도 쓴다 |
 
 사이트 웹폰트는 `src/app/layout.tsx`에서 Google Fonts 한 줄로 불러온다(Gowun Batang, Chakra Petch, IBM Plex Mono, IBM Plex Sans KR, Michroma). 제목은 `--pub-serif`를 직접 쓰지 않고 `--pub-title`을 쓴다(3절 모양 토큰).
 
-작가가 선택하는 원고 글꼴은 별도다. 명조·고딕·코딩·손글씨·기기 글꼴 등 20가지를 제공한다([목록과 크기 범위](editor-tools.md#글꼴크기)). 크기는 10~72px에서 0.5px 단위로 직접 입력한다. `manuscript-fonts.ts`가 웹폰트를 사이트에서 직접 제공하며 preload하지 않는다. Google Fonts 글꼴은 Next Font로, Google Fonts에 없는 마루부리·나눔바른고딕·프리텐다드·원티드 산스는 npm 글꼴 패키지의 CSS를 불러온다. 원고 글꼴을 더할 때는 상업적 이용이 가능한 무료 라이선스(OFL 등)만 쓰고, 외부 CDN 대신 이 두 방식 중 하나로 사이트에서 제공한다. 선택한 글꼴만 내려받으며 글자 범위로 나뉜 글꼴은 필요한 범위만 로드한다. `--manuscript-font`는 원고 본문에만 적용한다. 글꼴·크기는 현재 브라우저에 저장하고 문서·분할 창이 바뀌어도 유지한다. 공개 페이지·문서의 서식 데이터·내보내기에는 영향을 주지 않는다.
+작가가 선택하는 원고 글꼴은 별도다. 명조·고딕·코딩·손글씨·기기 글꼴 등 20가지를 제공한다([목록과 크기 범위](editor-tools.md#글꼴크기)). 크기는 10~72px에서 0.5px 단위로 직접 입력한다. `manuscript-fonts.ts`가 웹폰트를 사이트에서 직접 제공하며 preload하지 않는다. Google Fonts 글꼴은 Next Font로, Google Fonts에 없는 마루부리·나눔바른고딕·프리텐다드·원티드 산스는 npm 글꼴 패키지의 CSS를 불러온다. 원고 글꼴을 더할 때는 상업적 이용이 가능한 무료 라이선스(OFL 등)만 쓰고, 외부 CDN 대신 이 두 방식 중 하나로 사이트에서 제공한다. 선택한 글꼴만 내려받으며 글자 범위로 나뉜 글꼴은 필요한 범위만 로드한다. `--manuscript-font`는 원고 본문에만 적용한다. 글꼴·크기는 현재 브라우저에 저장하고 문서·분할 창이 바뀌어도 유지한다. 이 작가 보기 설정은 공개 페이지·문서의 서식 데이터·내보내기에 영향을 주지 않는다. 독서 화면은 같은 글꼴 목록과 웹폰트를 사용하되 `--reading-font`에 독자가 고른 family를 넣어 본문에만 적용한다. 읽기 설정은 독자의 브라우저에 별도로 저장한다.
 
 | 요소 | 크기·행간 | 비고 |
 |---|---|---|
@@ -141,7 +141,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 | 설정집 제목·설정 문서 제목 | 32px | 명조 400 |
 | 장면 제목 | 24px (모바일 22px) | 명조 400 |
 | 첫 문장 발췌 | 20px / 2 | 명조 |
-| 독서 본문 | 독자 선택 17·19·21·23px / 2.05, 기본 19px | `--reading-size`. 모바일 최대 21px / 2 |
+| 독서 본문 | 집필실과 같은 10~72px 목록·0.5px 직접 입력 / 2.05, 기본 19px | `--reading-size`·`--reading-font`. 모바일도 선택 크기 / 2 |
 | 소개·설명 | 16px / 1.9 | |
 | 메뉴·버튼 | 14px | 버튼 500 |
 | 보조 정보 | 12–13px | 날짜, 개수, 분류 |
@@ -149,7 +149,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 - 위 크기는 세 색 계열에 같다. 카세트와 사이버는 제목 글꼴만 고딕 600으로 바뀐다.
 - 명조 제목은 굵게 쓰지 않는다(400). 위계는 크기와 여백으로 만든다.
-- 독서 본문 글꼴은 색 계열과 관계없이 독자가 고른 명조/고딕(기본 명조)을 따른다. 첫 문장 발췌도 명조로 둔다.
+- 독서 본문 글꼴은 색 계열과 관계없이 독자가 고른 집필실 공통 20종(기본 고운바탕)을 따른다. 읽기 설정의 글꼴 행은 전체 폭, 크기 목록과 직접 입력은 두 칸이며 긴 선택 값은 창 안에 머문다. 첫 문장 발췌도 명조로 둔다.
 - 한국어 본문은 `word-break: keep-all`로 어절 단위 줄바꿈을 하고, 첫 문단 다음부터 1em 들여쓴다.
 - 영문은 이름에만 쓴다(Orbis Tertius, 표지의 ORBIS TERTIUS).
 
@@ -352,7 +352,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 | `hud` | 남보라 | 시안 | 독서 제목과 원고 머리의 모서리 괄호 |
 | `display` · `display-ink` | 라임 알약 · 짙은 글자 | 검정 액정 · 노랑(빛번짐) | 집필실 글자 수(다섯 자리) |
 
-- 글꼴: 사이트 이름·숫자·분류 글자는 Chakra Petch(`--pub-tech`가 사이버에서 Chakra Petch로 바뀐다), 한글 UI와 제목은 IBM Plex Sans KR 600. 원고는 작가의 20종 선택, 독서 본문은 독자의 명조/고딕 선택을 따른다.
+- 글꼴: 사이트 이름·숫자·분류 글자는 Chakra Petch(`--pub-tech`가 사이버에서 Chakra Petch로 바뀐다), 한글 UI와 제목은 IBM Plex Sans KR 600. 원고는 작가의 20종 선택, 독서 본문은 독자의 공통 20종 글꼴 선택을 따른다.
 - 작품 카드는 신호색 번호표 ORB-01·02…(카세트의 SIDE A 자리)와 아래 남보라·마젠타 줄. 상태 점은 라이트 둥근 점, 다크 사각 LED(퇴고 중·완성은 빛남).
 - 영문 표시는 사이트 이름과 작품 번호표(ORB-01)만 쓴다. 시안에 있던 SCN 01, REF 02, NOTE 01, SYNC OK는 7절(영문 장식 제목 금지)에 따라 넣지 않았다.
 - 규칙은 `globals.css`의 사이버 줄(공개), `public-info.module.css` 끝(홈·안내), `studio.css` 끝(집필실)에 있다.

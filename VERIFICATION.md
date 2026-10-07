@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-10-07 — 서재 읽기 글꼴·크기 확장
+
+- 처음 기준 main `215f4d2`. 공개 준비 중 다시 fetch해 새 main `4413f6c`의 작품 게시 철회·휴지통·홈 메뉴 변경을 합쳤고, CHANGELOG의 두 변경 기록을 모두 유지했다. 읽기 화면은 집필실의 `manuscriptFonts`·`fontSizes`·크기 검증을 공유하며, 웹폰트 CSS/Next Font는 독서 경로에서 불러온다. 저장 모델·API·운영 원고는 변경하지 않았다.
+- 새 [합성 독서 검사](tests/browser/reader-preferences.mjs)는 수정 전 글꼴 개수 2 ≠ 20으로 실패했다. 구현 중 개발 StrictMode의 설정 복원 전에 기본값을 저장하던 문제와 Esc 취소 후 미적용 입력이 다시 보이던 문제를 발견해, 복원 완료 뒤 저장하고 설정 창을 닫을 때 입력을 마지막 적용값으로 돌리도록 고쳤다.
+- 기존 공개 헤더의 Google Fonts CSS와 앱 폰트가 같은 family로 등록돼 `document.fonts.check()`가 실제 표시와 다른 결과를 냈다. 본문의 평문 한·영·숫자 표본을 대상으로 Chromium `CSS.getPlatformFontsForNode`를 사용해 실제 표시한 글꼴을 검사한다. 기기 글꼴 4종은 CSS family를 검사하며 설치 여부는 기기에 따라 다르다.
+- 최신 main 통합 후 타입·168개 Node 테스트·프로덕션 빌드·문서 검사 통과. Anti Slop 169개 파일·19개 규칙·진단 0. 합성 독서 검사에서 글꼴 20개·크기 목록 16개, 실제 웹폰트 family 16개·앱 폰트 응답 772회·폰트 실패 0, 기존 sans/serif·23/17px 복원, 22.5px 적용·잘못된 입력 복구·Esc 취소/초점 복귀·목차 연속 전환·새로고침 유지·집필실 설정 독립을 확인했다. 여섯 팔레트/밝기 × 1280/360px 12개 조합에서 본문 72px·설정 창 경계·입력칸 폭·가로 넘침을 검사하고 데스크톱·모바일 화면을 직접 봤다. 페이지 오류 0. [검증 요약](docs/evidence/reader-preferences-2026-10-07.json)에 보관한다.
+- 아래 결과는 합성 IndexedDB와 클라우드 설정을 비운 로컬 프로덕션 빌드에 대한 검사다. 실제 계정·원고 수정, 게시, 유료 AI는 실행하지 않았다. 브랜치 CI·main 병합·운영 배포는 로컬 결과와 별도로 확인한다.
+
 ## 2026-10-07 — 작품 게시 철회·휴지통 이동·작품 카드 우클릭 메뉴
 
 - 기준 main `215f4d2`(작업 시작 때 fetch). 작품 휴지통 항목(`trash[].type='work'`), `withdrawPublication`, `unpublish_work` RPC 호출, 작품 카드 우클릭 메뉴·작품 정보 창·확인창을 추가했다. 새 [마이그레이션](supabase/migrations/20261007081500_work_trash_unpublish.sql)은 PR에만 넣었고 **운영 DB에는 적용하지 않았다**. 운영 계정·실제 원고는 건드리지 않았다.
@@ -20,7 +28,7 @@
 - [노트 가져오기](tests/browser/note-import-formats.mjs): 실제 폴더·파일 선택, 합성 Obsidian 폴더의 경로·링크·이미지, 세 가지 회귀의 저장·새로고침과 병합 표의 실제 셀 좌표·너비가 통과했다. 노트 9개·저장 4회·페이지 오류 0이다. [설정](tests/browser/app-settings.mjs) 84개 화면, [집필실 홈](tests/browser/studio-home.mjs) 12개 화면, [글자 수·각주](tests/browser/count-and-footnote.mjs) 12개 화면, [문서 교환 창](tests/browser/interchange-dialog.mjs) 12개 조합, [저장 복구](tests/browser/sync-recovery.mjs) 여섯 시나리오도 통과했다. 합성 Supabase 응답과 합성 AI 응답만 사용했다.
 - AI 스킬 검사는 타입 단언을 없애던 변경에서 기본 기능 → 사용자 스킬로 되돌릴 때 요청문이 비워지는 회귀를 발견했다. 사용자 스킬 목록도 확인하도록 고쳤다. 재빌드 후 [집필실 입력 명령](tests/browser/studio-inline-commands.mjs)(합성 AI 7회·저장 9회), [노트 입력 명령](tests/browser/note-inline-commands.mjs)(합성 AI 4회·저장 7회), [내 스킬](tests/browser/ai-skills.mjs)(합성 AI 3회·저장 10회)가 모두 통과했다. 양쪽 편집기의 대상 범위·답변 적용·실행 취소·초점·연속 기능·새로고침을 확인하며, 각각 12개 테마/폭 조합과 스킬 메뉴·우클릭·질문·관리 화면을 검사했다. 수정 후 162개 Node 테스트도 다시 통과했다.
 - 여섯 팔레트/밝기 × 1280/360px에서 화면 경계·가로 넘침을 검사하고 가져오기·설정·홈의 모바일 화면을 직접 확인했다. [검증 요약](docs/evidence/import-anti-slop-2026-10-07.json)에 명령과 합성 브라우저 결과를 보관한다. 화면·실행 로그는 `test-results/import-anti-slop/`에 저장하며 Git에는 넣지 않는다.
-- 이 기록은 로컬 결과다. 새 브랜치 CI·main 병합·운영 배포·실제 Google OAuth·실제 클라우드 저장/외부 백업·유료 AI·외부 앱이 저장한 전체 문서 호환성은 이 로컬 검사로 확인하지 않는다. 기존 [형식 시험 파일](tests/fixtures/note-import/README.md)의 제한도 유지한다.
+- 후속 운영 확인: PR #28을 main `215f4d2705a656f5bb899c2a8f17fc8602e8eec8`로 병합했다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37587439700) 성공, Vercel `dpl_8itR3VGqAFipSKUGWuPhJjiHr11p`의 READY·production·정확한 SHA·`kosmos-ashy.vercel.app` 별칭을 확인했다. 실제 Google OAuth·실제 클라우드 저장/외부 백업·유료 AI·외부 앱이 저장한 전체 문서 호환성은 이 검사에 포함하지 않는다. 기존 [형식 시험 파일](tests/fixtures/note-import/README.md)의 제한도 유지한다.
 
 
 ## 2026-10-06 — 집필실 홈
