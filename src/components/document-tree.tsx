@@ -245,9 +245,9 @@ return applyNavigation(latest,next);});}});}
     if(node?.type==='document'&&onTrash)entries.push({key:'trash-document',label:'휴지통으로 이동',title:!noteView&&work.documents.length<=1?'마지막 문서는 유지해야 합니다':undefined,icon:<Trash2 size={15}/>,disabled:readonly||!noteView&&work.documents.length<=1,divider:true,run:()=>afterMenu(()=>void moveToTrash(node))});
 
     if(node?.type==='folder'&&onTrashFolder&&childNodes(node.id,node.sectionId).length)entries.push({key:'trash-folder',label:'폴더 전체 삭제',icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>afterMenu(()=>{
-      const subtree=descendantsOf(nav,node.id),count=work.documents.filter(d=>subtree.has(d.id)).length;
+      const subtree=descendantsOf(nav,node.id),count=work.documents.filter(d=>subtree.has(d.id)).length,folderTitle=title(node);
       setError('');returnFocus.current=menuButtonOf(t);
-      setFolderDelete({id:node.id,title:title(node),documents:count,folders:nav.nodes.filter(n=>n.type==='folder'&&n.id!==node.id&&subtree.has(n.id)).length,replace:!noteView&&count===work.documents.length});
+      setFolderDelete({id:node.id,title:folderTitle.length>40?`${folderTitle.slice(0,40)}…`:folderTitle,documents:count,folders:nav.nodes.filter(n=>n.type==='folder'&&n.id!==node.id&&subtree.has(n.id)).length,replace:!noteView&&count===work.documents.length});
     })});
 
     if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'대분류':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);
@@ -350,7 +350,7 @@ if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButt
       if(returnFocus.current?.isConnected)returnFocus.current.focus();
       else root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="대분류 추가"]')?.focus();
     }}>
-      <p>‘{folderDelete?.title}’ 폴더를 전체 삭제할까요?</p>
+      <p style={{overflowWrap:'anywhere'}}>‘{folderDelete?.title}’ 폴더를 전체 삭제할까요?</p>
       <p className="field-help">{folderDelete?.documents?`하위 ${noun} ${folderDelete.documents}개는 휴지통에 보관합니다.${folderDelete.replace?' 빈 원고 하나를 남깁니다.':''}`:`하위 폴더 ${folderDelete?.folders||0}개도 삭제합니다.`}</p>
       {folderDelete&&error&&<p className="error-message" role="alert">{error}</p>}
       <div className="modal-actions"><button type="button" className="button" disabled={movingToTrash} onClick={()=>{setFolderDelete(null);setError('');}}>취소</button><button type="button" className="button danger" disabled={readonly} onClick={()=>void deleteFolder()}>{movingToTrash?'삭제 중':'삭제'}</button></div>
