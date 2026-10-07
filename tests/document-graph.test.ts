@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { newDocument, type NovelDocument } from '../src/lib/model';
+import { newDocument, povSettings, type NovelDocument } from '../src/lib/model';
 import { buildDocumentGraph, filterDocumentGraph, layoutDocumentGraph, graphChipWidth, GRAPH_EDGE_LIMIT, GRAPH_ROW, type GraphOptions } from '../src/lib/document-graph';
 
 const options: GraphOptions = {kinds: ['scene', 'wiki', 'memo'], query: '', category: '', includePov: true, hideIsolated: false, depth: 1};
@@ -27,6 +27,16 @@ test('POV requires an exact unique character title and can be disabled separatel
   const duplicate = {...newDocument('wiki', '해린'), category: '인물'};
   assert.equal(buildDocumentGraph([scene, person, duplicate]).edges.filter(e => e.kind === 'pov').length, 0);
   scene.pov = '항구'; assert.equal(buildDocumentGraph([scene, person, place]).edges.filter(e => e.kind === 'pov').length, 0);
+});
+
+test('an untitled character is never the POV of scenes without one', () => {
+  const scene = newDocument('scene', '장면'), person = {...newDocument('wiki', ''), category: '인물'};
+  assert.equal(buildDocumentGraph([scene, person]).edges.length, 0);
+  assert.deepEqual(povSettings([scene, person], scene.pov), []);
+  scene.pov = ' ';
+  assert.deepEqual(povSettings([scene, person], scene.pov), []);
+  const named = newDocument('wiki', '해린'); scene.pov = '해린';
+  assert.deepEqual(povSettings([scene, person, named], scene.pov).map(d => d.id), [named.id]);
 });
 
 test('neighborhoods traverse incoming and outgoing links through cycles and respect depth and filters', () => {

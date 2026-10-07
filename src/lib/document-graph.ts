@@ -30,7 +30,7 @@ export function buildDocumentGraph(documents: NovelDocument[]): DocumentGraphDat
       if (ids.has(target) && target !== d.id) edges.push({ source: d.id, target, kind: 'link' });
     }
 
-    const person = characters.get(d.pov.trim());
+    const person = d.pov.trim() ? characters.get(d.pov.trim()) : undefined;
 
     if (d.kind === 'scene' && person?.length === 1) edges.push({ source: d.id, target: person[0], kind: 'pov' });
   }

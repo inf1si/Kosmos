@@ -1,5 +1,7 @@
 import { documentTitle } from './model';
 import { newDocument, workspaceSchema, type TrashItem, type Workspace, type Work } from './model';
+import { asDocumentNavigation, asNoteNavigation } from './note-navigation-schema';
+import type { DocumentNavigation } from './document-navigation-schema';
 import { noteTitle, removeNote } from './personal-notes';
 import { applyNoteNavigation, noteTreeWork, resolveNoteNavigation } from './note-navigation';
 import { removeDocument } from './document-deletion';
@@ -58,7 +60,12 @@ if(!work||!document)throw new Error('휴지통으로 옮길 문서를 찾지 못
   return append({...removeDocument(state,workId,id),assets:state.assets},item);
 }
 
-/** Delete a folder tree in one update; its documents remain individually recoverable in the existing trash. */
+type FolderItem=Extract<TrashItem,{type:'document'|'note'}>;
+
+/** The deleted tree in sibling order, root first under its old parent. A title marks a folder. */
+function folderTree(nodes:DocumentNavigation['nodes'],removed:Set<string>){return nodes.filter(n=>removed.has(n.id)).map(n=>({id:n.id,parentId:n.parentId,...n.type==='folder'&&{title:n.title}}));}
+
+/** Delete a folder tree in one update. Each document stays a trash item; together they restore as the folder. */
 export function trashDocumentFolder(state:Workspace,workId:string,folderId:string):Workspace{
   const work=state.works.find(w=>w.id===workId);
 
@@ -71,10 +78,10 @@ export function trashDocumentFolder(state:Workspace,workId:string,folderId:strin
   if((state.trash?.length||0)+documents.length>5000)throw new Error('휴지통이 가득 찼습니다. 일부 항목을 비운 뒤 다시 시도하세요.');
   const siblings=nav.nodes.filter(n=>n.parentId===folder.parentId&&n.sectionId===folder.sectionId),beforeId=siblings[siblings.findIndex(n=>n.id===folderId)+1]?.id;
   const section=nav.sections.find(s=>s.id===folder.sectionId)!,deletedAt=new Date().toISOString();
-  const conversations=new Map((work.aiConversations||[]).map(c=>[c.docId,c.messages]));
+  const conversations=new Map((work.aiConversations||[]).map(c=>[c.docId,c.messages])),title=folder.type==='folder'?folder.title:'',tree=folderTree(nav.nodes,removed);
 
-  const items:TrashItem[]=documents.map(document=>({id:document.id,type:'document',workId,workTitle:work.title,deletedAt,document:structuredClone(document),
-    placement:{parentId:folder.parentId,childIds:[],section:structuredClone(section),...beforeId&&{beforeId}},
+  const items:TrashItem[]=documents.map((document,i)=>({id:document.id,type:'document',workId,workTitle:work.title,deletedAt,document:structuredClone(document),
+    placement:{parentId:folder.parentId,childIds:[],section:structuredClone(section),...beforeId&&{beforeId}},folder:{id:folderId,title,...i===0&&{nodes:tree}},
     ...conversations.has(document.id)&&{aiMessages:structuredClone(conversations.get(document.id)!)}}));
 
   const remaining=work.documents.filter(d=>!removed.has(d.id)),nodes=nav.nodes.filter(n=>!removed.has(n.id));
@@ -95,7 +102,8 @@ export function trashNoteFolder(state:Workspace,folderId:string):Workspace{
 
   if((state.trash?.length||0)+notes.length>5000)throw new Error('휴지통이 가득 찼습니다. 일부 항목을 비운 뒤 다시 시도하세요.');
   const siblings=nav.nodes.filter(n=>n.parentId===folder.parentId),beforeId=siblings[siblings.findIndex(n=>n.id===folderId)+1]?.id,deletedAt=new Date().toISOString();
-  const items:TrashItem[]=notes.map(note=>({id:note.id,type:'note',deletedAt,note:structuredClone(note),placement:{parentId:folder.parentId,childIds:[],...beforeId&&{beforeId}}}));
+  const title=folder.type==='folder'?folder.title:'',tree=folderTree(asDocumentNavigation(nav).nodes,removed);
+  const items:TrashItem[]=notes.map((note,i)=>({id:note.id,type:'note',deletedAt,note:structuredClone(note),placement:{parentId:folder.parentId,childIds:[],...beforeId&&{beforeId}},folder:{id:folderId,title,...i===0&&{nodes:tree}}}));
 
   return checked(applyNoteNavigation({...state,notes:(state.notes||[]).filter(n=>!removed.has(n.id)),trash:[...(state.trash||[]),...items]},{...nav,nodes:nav.nodes.filter(n=>!removed.has(n.id))}));
 }
@@ -116,10 +124,74 @@ export function trashWork(state:Workspace,id:string):Workspace{
   return append(next,item);
 }
 
+/** Retry at the top level when the old place would pass the depth limit. */
+function placeOrTop<T>(place:(parentId:string|null)=>T,parentId:string|null):T{
+  try{return place(parentId);}catch(error){if(parentId===null||!(error instanceof Error)||!error.message.includes('24단계'))throw error;
+
+return place(null);}
+}
+
+/** Put a deleted folder tree back before its old next sibling. Items purged since drop out and their children move up. */
+function insertTree(nav:DocumentNavigation,group:FolderItem[],sectionId:string,parentId:string|null):DocumentNavigation{
+  const folder=group[0].folder!,live=new Set(nav.nodes.map(n=>n.id)),present=new Set(group.map(t=>t.id));
+  const saved=group.find(t=>t.folder?.nodes)?.folder?.nodes||[{id:folder.id,parentId:null,title:folder.title}];
+  const tree:{id:string;parentId:string|null;title?:string}[]=[...saved,...group.flatMap(t=>saved.some(n=>n.id===t.id)?[]:[{id:t.id,parentId:folder.id}])],byId=new Map(tree.map(n=>[n.id,n]));
+  const kept=tree.filter(n=>n.title?!live.has(n.id):present.has(n.id)),keep=new Set(kept.map(n=>n.id));
+
+  const up=(id:string|null)=>{while(id&&byId.has(id)&&!keep.has(id))id=byId.get(id)!.parentId;
+
+return id&&keep.has(id)?id:parentId;};
+
+  const nodes=kept.map(n=>n.title?{id:n.id,type:'folder' as const,title:n.title,sectionId,parentId:up(n.parentId)}:{id:n.id,type:'document' as const,sectionId,parentId:up(n.parentId)});
+  const next=[...nav.nodes],before=next.findIndex(n=>n.id===group[0].placement.beforeId&&n.parentId===parentId&&n.sectionId===sectionId);
+  next.splice(before<0?next.length:before,0,...nodes);
+
+  return {...nav,nodes:next};
+}
+
+/** One restore for a folder-wide deletion: the folder, its subfolders and every document or note still in the trash. */
+function restoreFolder(state:Workspace,group:FolderItem[]):Workspace{
+  const ids=new Set(group.map(t=>t.id)),base={...state,trash:state.trash!.filter(t=>!ids.has(t.id))},workIds=new Set(state.works.map(w=>w.id)),first=group[0];
+
+  if(first.type==='note'){
+    const notes=group.filter(t=>t.type==='note');
+
+    if((state.notes?.length||0)+notes.length>5000)throw new Error('노트 보관 한도를 초과해 복원할 수 없습니다.');
+    const nav=noteTreeWork(state).navigation!,parentId=nav.nodes.some(n=>n.id===first.placement.parentId)?first.placement.parentId:null;
+    const next={...base,notes:[...(state.notes||[]),...notes.map(t=>({...structuredClone(t.note),linkedWorkIds:t.note.linkedWorkIds.filter(id=>workIds.has(id))}))]};
+
+    return checked(placeOrTop(p=>applyNoteNavigation(next,asNoteNavigation(insertTree(nav,notes,'notes',p))),parentId));
+  }
+
+  const docs=group.filter(t=>t.type==='document'),work=state.works.find(w=>w.id===first.workId);
+
+  if(!work)throw new Error('원래 작품이 없습니다. 작품을 복원한 뒤 다시 시도하세요.');
+
+  if(work.documents.length+docs.length>5000)throw new Error('작품의 문서 보관 한도를 초과해 복원할 수 없습니다.');
+  const nav=resolveNavigation(work),placement=docs[0].placement;
+
+  if(!nav.sections.some(s=>s.id===placement.section.id)&&nav.sections.length<40)nav.sections.push(structuredClone(placement.section));
+  const section=nav.sections.find(s=>s.id===placement.section.id)||nav.sections.find(s=>s.defaultKind===docs[0].document.kind)||nav.sections[0];
+  const parentId=nav.nodes.some(n=>n.id===placement.parentId&&n.sectionId===section.id)?placement.parentId:null;
+  const next:Work={...work,documents:[...work.documents,...docs.map(t=>structuredClone(t.document))]},messages=docs.flatMap(t=>t.aiMessages?[{docId:t.id,messages:structuredClone(t.aiMessages)}]:[]);
+
+  if(messages.length)next.aiConversations=[...(work.aiConversations||[]),...messages];
+  const restored=placeOrTop(p=>applyNavigation(next,insertTree(nav,docs,section.id,p)),parentId);
+
+  return checked({...base,works:base.works.map(w=>w.id===work.id?restored:w)});
+}
+
+/** Restores one trash item, or every item of a folder-wide deletion when given that folder's ID. */
 export function restoreTrash(state:Workspace,id:string):Workspace{
   const item=state.trash?.find(t=>t.id===id);
 
-if(!item)throw new Error('복원할 항목을 찾지 못했습니다.');
+  if(!item){const group=(state.trash||[]).filter((t):t is FolderItem=>t.type!=='work'&&t.folder?.id===id);
+
+    if(group.length)return restoreFolder(state,group);
+
+    throw new Error('복원할 항목을 찾지 못했습니다.');
+  }
+
   const base={...state,trash:state.trash!.filter(t=>t.id!==id)},workIds=new Set(state.works.map(w=>w.id));
 
   if(item.type==='work'){
