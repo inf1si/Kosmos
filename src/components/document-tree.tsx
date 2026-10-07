@@ -242,7 +242,7 @@ for(const direction of [-1,1] as const)entries.push({key:`section${direction}`,l
 
 return applyNavigation(latest,next);});}});}
 
-    if(node?.type==='document'&&onTrash)entries.push({key:'trash-document',label:'휴지통으로 이동',title:!noteView&&work.documents.length<=1?'마지막 문서는 유지해야 합니다':undefined,icon:<Trash2 size={15}/>,disabled:readonly||!noteView&&work.documents.length<=1,divider:true,run:()=>afterMenu(()=>void moveToTrash(node))});
+    if(node?.type==='document'&&onTrash)entries.push({key:'trash-document',label:'휴지통으로 이동',title:!noteView&&work.documents.length===1?'빈 원고 하나를 남깁니다':undefined,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>afterMenu(()=>void moveToTrash(node))});
 
     if(node?.type==='folder'&&onTrashFolder&&childNodes(node.id,node.sectionId).length)entries.push({key:'trash-folder',label:'폴더 전체 삭제',icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>afterMenu(()=>{
       const subtree=descendantsOf(nav,node.id),count=work.documents.filter(d=>subtree.has(d.id)).length,folderTitle=title(node);

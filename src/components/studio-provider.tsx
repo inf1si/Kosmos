@@ -32,7 +32,7 @@ type StudioContextValue={
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
   addNoteAsset:(noteId:string,file:File)=>Promise<string>;importNotes:(bundle:ImportBundle,folderTitle:string)=>Promise<{folderId:string;count:number}>;createWorkFromFolder:(folderId:string,target:{title:string;form:Work['form']})=>Promise<string>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
   trashNote:(noteId:string)=>Promise<void>;
-  trashDocument:(workId:string,docId:string)=>Promise<void>;trashWork:(workId:string)=>Promise<void>;
+  trashDocument:(workId:string,docId:string)=>Promise<string>;trashWork:(workId:string)=>Promise<void>;
   trashDocumentFolder:(workId:string,folderId:string)=>Promise<string>;trashNoteFolder:(folderId:string)=>Promise<void>;
   restoreTrash:(id:string)=>Promise<void>;purgeTrash:(ids:string[])=>Promise<void>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
@@ -521,7 +521,11 @@ if(!row)throw new Error('기기 원고가 없습니다.');
   }
 
   async function trashDocument(workId:string,docId:string){
-    await flush();update(state=>moveDocumentToTrash(state,workId,docId));await flush();
+    await flush();const before=dataRef.current!,next=moveDocumentToTrash(before,workId,docId);
+    const index=before.works.find(w=>w.id===workId)!.documents.findIndex(d=>d.id===docId),documents=next.works.find(w=>w.id===workId)!.documents;
+    update(()=>next);await flush();
+
+return documents[Math.min(index,documents.length-1)].id;
   }
 
   async function trashDocumentFolder(workId:string,folderId:string){
