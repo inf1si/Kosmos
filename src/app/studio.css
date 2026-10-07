@@ -71,3 +71,6 @@ html:has(.studio){background:var(--ground)}
 .work-settings-actions{flex-wrap:wrap;align-items:center}.work-public-state{flex-basis:100%;font-size:12px;line-height:1.6;color:var(--muted)}.work-settings-done{margin:12px 0 0}
 /* A context menu opens at the pointer and can only flip sideways, so on a phone it keeps its natural width to fit on one side of a centred tap. */
 @media(max-width:700px){.work-context-menu{min-width:0}}
+
+.custom-properties{display:flex;flex-direction:column;align-items:flex-start;gap:14px;min-width:0}.custom-property-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px 16px;width:100%}.custom-property-field{display:flex;align-items:flex-end;gap:6px;min-width:0}.custom-property-field label{flex:1;min-width:0;overflow-wrap:anywhere}.custom-property-field input{min-width:0;max-width:100%}.custom-property-field .check-label input{flex-shrink:0}.custom-property-field .icon-button{flex-shrink:0;align-self:center}.doc-chips>.chip:has(.notes-tag-summary){max-width:100%;min-width:0}.template-controls{margin-bottom:16px}.template-selection{max-height:260px;overflow-y:auto;margin:16px 0;padding:4px}.template-selection .transfer-export-row svg{flex-shrink:0}.template-selection .transfer-export-row input{flex-shrink:0}
+@media(max-width:700px){.custom-property-fields{grid-template-columns:minmax(0,1fr)}}

@@ -88,7 +88,7 @@ export function addNote(state:Workspace,note=newNote(),to?:NoteDestination):Work
   return moveNote(next,note.id,to||{parentId:null,beforeId:base.noteNavigation?.nodes.find(n=>n.parentId===null)?.id});
 }
 
-export function patchNote(state:Workspace,id:string,patch:Partial<Pick<PersonalNote,'title'|'content'|'tags'|'box'|'linkedWorkIds'|'pinned'>>):Workspace {
+export function patchNote(state:Workspace,id:string,patch:Partial<Pick<PersonalNote,'title'|'content'|'tags'|'box'|'linkedWorkIds'|'pinned'|'customProperties'>>):Workspace {
   if(!state.notes?.some(note=>note.id===id))throw new Error('노트를 찾지 못했습니다.');
 
   if(patch.linkedWorkIds?.some(id=>!state.works.some(work=>work.id===id)))throw new Error('연결할 작품을 찾지 못했습니다.');
@@ -171,7 +171,7 @@ export function prepareNoteCopy(state:Workspace,noteId:string,workId:string,kind
   if(!note||!work)throw new Error('노트와 대상 작품을 확인하세요.');
 
   if(work.documents.length>=5000)throw new Error('작품의 문서는 최대 5,000개까지 추가할 수 있습니다.');
-  const doc=newDocument(kind,noteTitle(note));
+  const doc=newDocument(kind,noteTitle(note));doc.customProperties=structuredClone(note.customProperties);
   doc.content=noteContentForWork(note.content,new Set(work.documents.filter(d=>d.kind==='wiki').map(d=>d.id)),state.assets);
 
   if(kind==='scene')doc.chapter=work.documents.findLast(d=>d.kind==='scene')?.chapter||'제1부';
@@ -263,7 +263,7 @@ if(!title)throw new Error('작품 제목을 입력하세요.');
     if(node.type==='folder')workNav.nodes.push({id,type:'folder',title:node.title,sectionId:'memo',parentId:parent});
     else{const note=byId.get(node.id);
 
-if(!note)continue;const doc=newDocument('memo',noteTitle(note));doc.id=id;doc.content=noteContentForWork(note.content,new Set(),state.assets);
+if(!note)continue;const doc=newDocument('memo',noteTitle(note));doc.customProperties=structuredClone(note.customProperties);doc.id=id;doc.content=noteContentForWork(note.content,new Set(),state.assets);
 
       for(const sourceId of note.assetIds){const meta=state.assets.find(a=>a.id===sourceId);
 
@@ -412,7 +412,7 @@ if(!images.has(asset.name))images.set(asset.name,assetId);}
 
     const content=noteImportContent(page.content,images,noteIds);
 
-    return noteSchema.parse({id,title:page.title.slice(0,300),content,tags,box:'inbox',linkedWorkIds:[],assetIds:ownAssets,createdAt:enexDate(page.created)||now,updatedAt:enexDate(page.updated)||enexDate(page.created)||now});
+    return noteSchema.parse({id,customProperties:page.customProperties?.map(p=>({...p,id:uid()})),title:page.title.slice(0,300),content,tags,box:'inbox',linkedWorkIds:[],assetIds:ownAssets,createdAt:enexDate(page.created)||now,updatedAt:enexDate(page.updated)||enexDate(page.created)||now});
   });
 
   if(assets.length+state.assets.length>2000)throw new Error('작업 공간 첨부는 최대 2,000개입니다. 이미지가 적은 파일로 나누어 가져오세요.');

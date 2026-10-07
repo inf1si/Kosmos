@@ -84,7 +84,7 @@ flowchart LR
 | [model.ts](../src/lib/model.ts) | Zod 모델, 공개 판본 생성, 각주·설정 참조 추출 |
 | [document-navigation-schema.ts](../src/lib/document-navigation-schema.ts) | 트리 스키마·ID·순환·깊이 검증 |
 | [document-navigation.ts](../src/lib/document-navigation.ts) | 이전 자료 변환·이동·배열 정렬·정리 되돌리기·부분 내보내기 |
-| [document-tree.tsx](../src/components/document-tree.tsx) | 중첩 탐색·하위 문서/폴더·사용자 대분류·드래그·이동 폼 |
+| [document-tree.tsx](../src/components/document-tree.tsx) | 중첩 탐색·하위 문서/폴더·사용자 섹션·드래그·이동 폼 |
 | [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql) | 이전 클라이언트가 새 트리 필드를 지우는 저장 거절 |
 | [seed.ts](../src/lib/seed.ts) | 샘플 작품·문서 |
 | [database.ts](../src/lib/database.ts) | IndexedDB, 로컬 기준 버전 검사, 복구 지점 |

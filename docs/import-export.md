@@ -46,7 +46,7 @@ Word·한글·EPUB·스크리브너 묶음 안의 XML도 같은 방식으로 외
 | HTML ZIP | 문서별 HTML, 기본 서식·각주·상대 링크·이미지. Notion 가져오기 등에 사용 |
 | Evernote ENEX | 선택 문서별 노트, 기본 서식·첨부·분류 태그. 각주 번호와 설명은 일반 텍스트이며 설정 링크는 글자로 전달 |
 
-MD/HTML ZIP의 `kosmos-transfer.json`은 Orbis Tertius로 다시 가져올 때 제목·문서 종류·부·장·분류·요약과 사용자 대분류·문서/폴더 계층을 복원한다. 새 문서·폴더·관계 ID가 생성되며 공개 설정은 자동 활성화하지 않는다. 일부 문서만 내보내면 필요한 상위 폴더를 남기고, 빠진 부모 문서 아래의 자료는 가장 가까운 남은 부모로 올린다. 모든 문서를 선택하면 빈 폴더·대분류도 보존한다. 기존 작품에 추가할 때 이름과 기본 종류가 같은 대분류를 재사용한다.
+MD/HTML ZIP의 `kosmos-transfer.json`은 Orbis Tertius로 다시 가져올 때 빈 제목·사용자 정의 속성·문서 종류·부·장·분류·요약과 사용자 섹션·문서/폴더 계층을 복원한다. 새 문서·폴더·관계 ID가 생성되며 공개 설정은 자동 활성화하지 않는다. 일부 문서만 내보내면 필요한 상위 폴더를 남기고, 빠진 부모 문서 아래의 자료는 가장 가까운 남은 부모로 올린다. 모든 문서를 선택하면 빈 폴더·섹션도 보존한다. 기존 작품에 추가할 때 이름과 기본 종류가 같은 섹션을 재사용한다.
 
 이 메타데이터는 앱 간 공통 계층 표준이 아니다. 원본 Notion 페이지 계층·ENEX 노트북의 자동 복원은 아직 없으며 ENEX는 같은 수준의 메타데이터·각주 관계를 복원하는 형식이 아니다. [교환·트리 상세 계약](document-navigation.md).
 
@@ -55,3 +55,5 @@ MD/HTML ZIP의 `kosmos-transfer.json`은 Orbis Tertius로 다시 가져올 때 �
 외부 앱으로 실제 업로드해 전체 호환성을 검증한 상태는 아니다. 합성 Notion/ENEX 자료, MD/HTML 왕복, 첨부 바이트·각주·설정 관계는 자동 테스트로 확인했다. 실제 앱이 지원하는 기능·가져오기 용량은 해당 앱의 정책을 따른다. 공식 안내: [Notion 내보내기](https://www.notion.com/help/export-your-content), [Notion 가져오기](https://www.notion.com/help/import-data-into-notion), [Evernote ENML](https://dev.evernote.com/legacy/doc/articles/enml).
 
 구현: [변환기](../src/lib/interchange.ts)와 형식별 변환기([Word](../src/lib/docx-import.ts)·[RTF](../src/lib/rtf-import.ts)·[한글](../src/lib/hwp-import.ts)·[EPUB](../src/lib/epub-import.ts)·[스크리브너](../src/lib/scrivener-import.ts)), [대화상자](../src/components/interchange-dialog.tsx), [검증](../tests/interchange.test.ts)·[형식별 검증](../tests/note-import-formats.test.ts)·[가져오기 회귀 검사](../tests/import-regressions.test.ts).
+
+MD/HTML ZIP의 사용자 정의 속성은 Kosmos 메타데이터에서 복원하며 다른 앱이나 ENEX는 이를 복원하지 않는다. 제목이 빈 MD/HTML은 제목 줄을 만들지 않는다. 저장한 템플릿 목록과 템플릿 첨부는 교환 ZIP에 포함하지 않으며 전체 백업을 사용한다.

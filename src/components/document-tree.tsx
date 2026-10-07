@@ -4,12 +4,14 @@ import { documentSchema } from '@/lib/model';
 import { Fragment, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ArrowDown, ArrowUp, BookPlus, ChevronDown, ChevronRight, Columns2, FileText, Folder, FolderPlus, GripVertical, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookPlus, ChevronDown, ChevronRight, Columns2, FileText, Files, Folder, FolderPlus, GripVertical, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import { type NovelDocument, type Work, statuses, plainText, uid } from '@/lib/model';
 import { applyNavigation, createNavigationDocument, descendantsOf, insertFolder, moveNavigation, navigationSnapshot, resolveNavigation, restoreNavigation, siblingDestination, type DocumentDestination, type NavigationNode, type NavigationSnapshot } from '@/lib/document-navigation';
 import { IconButton, Modal, Popover } from './primitives';
 import { WikiIcon } from './studio-icons';
 import styles from './document-tree.module.css';
+import type { TemplateDialogRequest } from './workspace-templates';
+import { documentTitle } from '@/lib/model';
 
 type FormState = {type:'move';id:string}|{type:'folder';to:DocumentDestination}|{type:'document';to:DocumentDestination;kind:NovelDocument['kind']}|{type:'section'};
 
@@ -27,7 +29,7 @@ const menuClose=(keep:{current:boolean})=>(e:Event)=>{if(keep.current){e.prevent
 
 type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void;onFolderWork?:(folderId:string,at:HTMLElement|null)=>void};
 
-export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onTrash,onTrashFolder,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onTrash?:(id:string)=>Promise<void>;onTrashFolder?:(id:string)=>Promise<void>;noteView?:NoteView}){
+export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onTrash,onTrashFolder,onTemplate,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onTrash?:(id:string)=>Promise<void>;onTrashFolder?:(id:string)=>Promise<void>;onTemplate?:(request:TemplateDialogRequest)=>void;noteView?:NoteView}){
   const noun=noteView?'노트':'문서',filtered=noteView?noteView.filtered:!!query.trim();
   const nav=useMemo(()=>resolveNavigation(work),[work]);const root=useRef<HTMLDivElement>(null);
   const [closed,setClosed]=useState<Set<string>>(new Set());const [dialog,setDialog]=useState<FormState|null>(null);
@@ -45,7 +47,7 @@ export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onC
 for(const n of nav.nodes){const key=`${n.sectionId}/${n.parentId||''}`;branches.set(key,[...(branches.get(key)||[]),n]);}
 
   const childNodes=(parentId:string|null,sectionId:string)=>branches.get(`${sectionId}/${parentId||''}`)||[];
-  const title=(n:NavigationNode)=>n.type==='folder'?n.title:documents.get(n.id)?.title||'문서';
+  const title=(n:NavigationNode)=>n.type==='folder'?n.title:documents.has(n.id)?documentTitle(documents.get(n.id)!):'문서';
   const targetTitle=(t:Target)=>(t.section?nav.sections.find(s=>s.id===t.id)?.title:nodes.get(t.id)?title(nodes.get(t.id)!):'')||'';
   const eligible=noteView?new Set(noteView.eligibleIds):null;
   const matching=new Set(noteView?noteView.matchingIds:work.documents.filter(d=>!query.trim()||`${d.title} ${plainText(d.content)}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(d=>d.id));
@@ -129,7 +131,7 @@ return next;});}
   async function moveToTrash(node:NavigationNode){
     if(readonly||!onTrash)return;setMovingToTrash(true);setError('');
 
-    try{await onTrash(node.id);setUndo(null);window.setTimeout(()=>root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="대분류 추가"]')?.focus(),0);}
+    try{await onTrash(node.id);setUndo(null);window.setTimeout(()=>root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="섹션 추가"]')?.focus(),0);}
     catch(error){setError(error instanceof Error?error.message:`${noun}를 휴지통으로 옮기지 못했습니다.`);menuButtonOf({id:node.id})?.focus();}
     finally{setMovingToTrash(false);}
   }
@@ -234,11 +236,16 @@ return next?moveNavigation(latest,node.id,next):latest;});}});
 
     if(node?.type==='folder'&&noteView?.onFolderWork){const open=noteView.onFolderWork;entries.push({key:'folder-work',label:'새 작품으로 만들기',icon:<BookPlus size={15}/>,disabled:readonly||!childNodes(node.id,node.sectionId).length,run:()=>afterMenu(()=>open(node.id,rowOf(t)))});}
 
+    if(onTemplate){
+      if(node)entries.push({key:'template-save',label:'템플릿으로 저장',icon:<Files size={15}/>,disabled:readonly,divider:true,run:()=>afterMenu(()=>onTemplate({selected:[node.id]}))});
+      entries.push({key:'template-apply',label:'템플릿으로 만들기',icon:<Files size={15}/>,disabled:readonly,run:()=>afterMenu(()=>onTemplate({destination:to}))});
+    }
+
     if(section||node?.type==='folder')entries.push({key:'rename',label:'이름 변경',icon:<Pencil size={15}/>,disabled:readonly,divider:!!section,run:()=>afterMenu(()=>startRename(t))});
 
     if(section){const index=nav.sections.findIndex(s=>s.id===section.id);
 
-for(const direction of [-1,1] as const)entries.push({key:`section${direction}`,label:direction<0?'대분류 위로':'대분류 아래로',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||index+direction<0||index+direction>=nav.sections.length,run:()=>{mutate(latest=>{const next=resolveNavigation(latest),i=next.sections.findIndex(s=>s.id===section.id);[next.sections[i],next.sections[i+direction]]=[next.sections[i+direction],next.sections[i]];
+for(const direction of [-1,1] as const)entries.push({key:`section${direction}`,label:direction<0?'섹션 위로':'섹션 아래로',icon:direction<0?<ArrowUp size={15}/>:<ArrowDown size={15}/>,disabled:readonly||index+direction<0||index+direction>=nav.sections.length,run:()=>{mutate(latest=>{const next=resolveNavigation(latest),i=next.sections.findIndex(s=>s.id===section.id);[next.sections[i],next.sections[i+direction]]=[next.sections[i+direction],next.sections[i]];
 
 return applyNavigation(latest,next);});}});}
 
@@ -250,7 +257,7 @@ return applyNavigation(latest,next);});}});}
       setFolderDelete({id:node.id,title:folderTitle.length>40?`${folderTitle.slice(0,40)}…`:folderTitle,documents:count,folders:nav.nodes.filter(n=>n.type==='folder'&&n.id!==node.id&&subtree.has(n.id)).length,replace:!noteView&&count===work.documents.length});
     })});
 
-    if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'대분류':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);
+    if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'섹션':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);
 
 if(section)next.sections=next.sections.filter(s=>s.id!==section.id);else next.nodes=next.nodes.filter(n=>n.id!==node!.id);
 
@@ -287,7 +294,7 @@ return applyNavigation(latest,next);});}});
 return;}
 
       success=mutate(latest=>moveNavigation(latest,dialog.id,to));expand(to.parentId);expand(`section:${to.sectionId}`);
-    }else if(!titleValue){setError('이름을 입력하세요.');
+    }else if(dialog.type!=='document'&&!titleValue){setError('이름을 입력하세요.');
 
 return;}
     else if(dialog.type==='folder'){success=mutate(latest=>insertFolder(latest,titleValue,dialog.to));expand(dialog.to.parentId);expand(`section:${dialog.to.sectionId}`);}
@@ -320,16 +327,16 @@ if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openFor
     })}</ul>;
   }
 
-  const formTitle=dialog?.type==='move'?`${moveNode?title(moveNode):noun} 이동`:dialog?.type==='folder'?'폴더 만들기':dialog?.type==='document'?'문서 만들기':'대분류 추가';
+  const formTitle=dialog?.type==='move'?`${moveNode?title(moveNode):noun} 이동`:dialog?.type==='folder'?'폴더 만들기':dialog?.type==='document'?'문서 만들기':'섹션 추가';
 
   return <div ref={root} className={styles.tree}>
-    <div className={styles.toolbar} data-navigation-section={noteView?'notes':undefined} data-drop-edge={noteView&&drag?.active&&drag.drop?.id==='notes'?drag.drop.edge:undefined}><span>{noteView?'노트 정리':'문서'}</span>{undo&&<IconButton label={`${noun} 정리 되돌리기`} disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),false);setUndo(null);}}><Undo2 size={14}/></IconButton>}{noteView?<IconButton label="최상위 폴더 추가" disabled={readonly} onClick={e=>openForm({type:'folder',to:{sectionId:'notes',parentId:null}},e.currentTarget)}><FolderPlus size={15}/></IconButton>:<IconButton label="대분류 추가" disabled={readonly||nav.sections.length>=40} onClick={e=>openForm({type:'section'},e.currentTarget)}><Plus size={15}/></IconButton>}</div>
+    <div className={styles.toolbar} data-navigation-section={noteView?'notes':undefined} data-drop-edge={noteView&&drag?.active&&drag.drop?.id==='notes'?drag.drop.edge:undefined}><span>{noteView?'노트 정리':'문서'}</span>{undo&&<IconButton label={`${noun} 정리 되돌리기`} disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),false);setUndo(null);}}><Undo2 size={14}/></IconButton>}{noteView?<IconButton label="최상위 폴더 추가" disabled={readonly} onClick={e=>openForm({type:'folder',to:{sectionId:'notes',parentId:null}},e.currentTarget)}><FolderPlus size={15}/></IconButton>:<IconButton label="섹션 추가" disabled={readonly||nav.sections.length>=40} onClick={e=>openForm({type:'section'},e.currentTarget)}><Plus size={15}/></IconButton>}</div>
     {noteView?<section className={styles.section} aria-label="노트 트리">{renderNodes('notes',null,0)}</section>:nav.sections.map((section,index)=>{const sectionClosed=!query.trim()&&closed.has(`section:${section.id}`),count=nav.nodes.filter(n=>n.sectionId===section.id&&n.type==='document').length,drop=drag?.active&&drag.drop?.id===section.id?drag.drop:undefined;
       const t={id:section.id,section:true},isRenaming=renaming?.id===section.id&&!!renaming.section;
 
       return <section key={section.id} className={styles.section} aria-label={section.title}>{rowContext(t,<div data-navigation-section={section.id} data-drop-edge={drop?.edge} className={`${styles.heading} ${menuOpen(t)||dialog&&anchor.current?.dataset.navigationSection===section.id?styles.active:''} ${drop?.error?styles.invalid:''}`}>
         {isRenaming?<span className={styles.sectionTitle}><ChevronDown size={13}/><i className="tree-number" aria-hidden="true">{String(index+1).padStart(2,'0')}</i>{renameInput(section.title)}</span>:<button type="button" className={styles.sectionTitle} aria-expanded={!sectionClosed} onClick={()=>toggle(`section:${section.id}`)}>{sectionClosed?<ChevronRight size={13}/>:<ChevronDown size={13}/>}<i className="tree-number" aria-hidden="true">{String(index+1).padStart(2,'0')}</i><span className="tree-label">{section.title}</span><small>{count}</small></button>}
-        <IconButton label={`${section.title} 문서 추가`} disabled={readonly} className={styles.rowMenu} onClick={e=>openForm({type:'document',to:{sectionId:section.id,parentId:null},kind:section.defaultKind},rowOf(t),e.currentTarget)}><Plus size={14}/></IconButton>{rowMenu(t,`${section.title} 대분류 메뉴`)}
+        <IconButton label={`${section.title} 문서 추가`} disabled={readonly} className={styles.rowMenu} onClick={e=>openForm({type:'document',to:{sectionId:section.id,parentId:null},kind:section.defaultKind},rowOf(t),e.currentTarget)}><Plus size={14}/></IconButton>{rowMenu(t,`${section.title} 섹션 메뉴`)}
       </div>)}{!sectionClosed&&renderNodes(section.id,null,0)}{!sectionClosed&&!childNodes(null,section.id).length&&<p className={styles.empty}>문서를 추가하거나 여기로 옮겨주세요.</p>}</section>;
     })}
     {filtered&&!nav.nodes.some(show)&&<p className="empty-text">검색 결과가 없습니다.</p>}
@@ -339,16 +346,16 @@ if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openFor
 
 if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButtonElement>(`[data-navigation-row="${activeId}"] button`)||document.getElementById('sidebar-toggle'))?.focus();}}>
       <form onSubmit={e=>{e.preventDefault();formSubmit();}} className={styles.form}>
-        {dialog?.type==='move'?<><label>옮길 위치<select value={destination} onChange={e=>{setDestination(e.target.value);setPlace('last');}}>{targets.map(t=><option value={t.value} key={t.value}>{t.label}</option>)}</select></label><label>순서<select value={place} onChange={e=>setPlace(e.target.value)}><option value="last">맨 뒤</option><option value="first">맨 앞</option>{moveSiblings.map(n=><option key={n.id} value={`before:${n.id}`}>{title(n)} 앞</option>)}</select></label></>:<label>{dialog?.type==='document'?'문서 제목':'이름'}<input autoFocus value={name} onChange={e=>setName(e.target.value)} maxLength={dialog?.type==='section'?200:300} required/></label>}
+        {dialog?.type==='move'?<><label>옮길 위치<select value={destination} onChange={e=>{setDestination(e.target.value);setPlace('last');}}>{targets.map(t=><option value={t.value} key={t.value}>{t.label}</option>)}</select></label><label>순서<select value={place} onChange={e=>setPlace(e.target.value)}><option value="last">맨 뒤</option><option value="first">맨 앞</option>{moveSiblings.map(n=><option key={n.id} value={`before:${n.id}`}>{title(n)} 앞</option>)}</select></label></>:<label>{dialog?.type==='document'?'문서 제목':'이름'}<input autoFocus value={name} onChange={e=>setName(e.target.value)} maxLength={dialog?.type==='section'?200:300} placeholder={dialog?.type==='document'?'제목 없음':undefined} required={dialog?.type!=='document'}/></label>}
         {(dialog?.type==='section'||dialog?.type==='document')&&<label>{dialog.type==='section'?'기본 문서 종류':'문서 종류'}<select value={kind} onChange={e=>setKind(documentSchema.shape.kind.parse(e.target.value))}>{Object.entries(labels).map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></label>}
-        {dialog?.type==='section'&&<p className="field-help">대분류는 정리용입니다. 이동해도 원고·설정·메모의 종류는 바뀌지 않습니다.</p>}
+        {dialog?.type==='section'&&<p className="field-help">섹션은 정리용입니다. 이동해도 원고·설정·메모의 종류는 바뀌지 않습니다.</p>}
         {dialog?.type==='folder'&&!noteView&&<p className="field-help">폴더 이름은 독서 화면의 부·장과 별도로 관리합니다.</p>}
         {error&&<p role="alert" className={styles.error}>{error}</p>}<div className={styles.formButtons}><button type="button" className="button" onClick={()=>setDialog(null)}>취소</button><button type="submit" className="button primary" disabled={readonly}>{dialog?.type==='move'?'이동':'추가'}</button></div>
       </form>
     </Popover>
     <Modal open={!!folderDelete} onClose={()=>{if(!movingToTrash){setFolderDelete(null);setError('');}}} title="폴더 전체 삭제" onReturnFocus={()=>{
       if(returnFocus.current?.isConnected)returnFocus.current.focus();
-      else root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="대분류 추가"]')?.focus();
+      else root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="섹션 추가"]')?.focus();
     }}>
       <p style={{overflowWrap:'anywhere'}}>‘{folderDelete?.title}’ 폴더를 전체 삭제할까요?</p>
       <p className="field-help">{folderDelete?.documents?`하위 ${noun} ${folderDelete.documents}개는 휴지통에 보관합니다.${folderDelete.replace?' 빈 원고 하나를 남깁니다.':''}`:`하위 폴더 ${folderDelete?.folders||0}개도 삭제합니다.`}</p>

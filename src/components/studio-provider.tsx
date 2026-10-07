@@ -16,6 +16,7 @@ import { materializeNoteNavigation } from '@/lib/note-navigation';
 import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, trashDocumentFolder as moveDocumentFolderToTrash, trashNoteFolder as moveNoteFolderToTrash, trashWork as moveWorkToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
 import type { NovelDocument } from '@/lib/model';
 import { isRejectedLegacyTrashSave,recoverLegacyTrash } from '@/lib/sync-recovery';
+import { prepareTemplate, prepareTemplateApplication, preserveTemplateData, removeTemplate, type TemplateSource, type TemplateTarget } from '@/lib/workspace-templates';
 import { useAppPreferences } from './use-app-preferences';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
@@ -37,6 +38,8 @@ type StudioContextValue={
   restoreTrash:(id:string)=>Promise<void>;purgeTrash:(ids:string[])=>Promise<void>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
   flush:()=>Promise<void>;syncNow:()=>Promise<void>;clearError:()=>void;
+  saveTemplate:(source:TemplateSource,selected:string[],name:string)=>Promise<string>;
+  applyTemplate:(id:string,target:TemplateTarget)=>Promise<string[]>;deleteTemplate:(id:string)=>Promise<void>;
 };
 
 const Context=createContext<StudioContextValue|null>(null);
@@ -156,7 +159,7 @@ return;}
 
     // Materialize legacy folders before editing properties, so the first chapter edit does not rename them.
     const base=materializeTrash(materializeNoteNavigation({...dataRef.current,works:dataRef.current.works.map(w=>w.navigation?w:applyNavigation(w,resolveNavigation(w)))}));
-    const edited=preserveTrash(preserveNoteDetails(preserveNotes(preserveAIPreferences(fn(structuredClone(base)),base),base),base),base);
+    const edited=preserveTemplateData(preserveTrash(preserveNoteDetails(preserveNotes(preserveAIPreferences(fn(structuredClone(base)),base),base),base),base),base);
     const data={...edited,works:edited.works.map(w=>applyNavigation(w,resolveNavigation(w))),updatedAt:new Date().toISOString()};setCurrent(data);setStatus('기기에 저장 중');pending.current++;
     const targetNamespace=namespaceRef.current;
     saveQueue.current=saveQueue.current.then(async()=>{
@@ -504,6 +507,33 @@ if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('가
 return prepared.docId;
   }
 
+  async function saveTemplate(source:TemplateSource,selected:string[],name:string){
+    await flush();const before=structuredClone(dataRef.current!),targetNamespace=namespaceRef.current,prepared=prepareTemplate(before,source,selected,name);
+    await copyAssetBlobs(prepared.copies);await flush();
+
+    if(namespaceRef.current!==targetNamespace||JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('저장하는 동안 작업이 바뀌었습니다. 다시 시도하세요.');
+    update(()=>prepared.state);await flush();
+
+return prepared.templateId;
+  }
+
+  async function applyTemplate(id:string,target:TemplateTarget){
+    await flush();const before=structuredClone(dataRef.current!),targetNamespace=namespaceRef.current,prepared=prepareTemplateApplication(before,id,target);
+    await checkpoint(namespace,before,'템플릿 적용 전');await copyAssetBlobs(prepared.copies);await flush();
+
+    if(namespaceRef.current!==targetNamespace||JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('만드는 동안 작업이 바뀌었습니다. 다시 시도하세요.');
+    update(()=>prepared.state);await flush();
+
+return prepared.documentIds;
+  }
+
+  async function deleteTemplate(id:string){
+    await flush();const before=structuredClone(dataRef.current!);await checkpoint(namespace,before,'템플릿 삭제 전');await flush();
+
+    if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('삭제하는 동안 작업이 바뀌었습니다. 다시 시도하세요.');
+    update(state=>removeTemplate(state,id));await flush();
+  }
+
   async function resolve(choice:'local'|'remote'){
     const c=conflictRef.current;
 
@@ -575,7 +605,7 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
   }
 
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});
 
 if(error)throw error;},

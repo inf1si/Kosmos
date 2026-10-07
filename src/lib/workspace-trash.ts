@@ -1,10 +1,11 @@
+import { documentTitle } from './model';
 import { newDocument, workspaceSchema, type TrashItem, type Workspace, type Work } from './model';
 import { noteTitle, removeNote } from './personal-notes';
 import { applyNoteNavigation, noteTreeWork, resolveNoteNavigation } from './note-navigation';
 import { removeDocument } from './document-deletion';
 import { applyNavigation, descendantsOf, resolveNavigation } from './document-navigation';
 
-export function trashTitle(item:TrashItem){return item.type==='note'?noteTitle(item.note):item.type==='work'?item.work.title:item.document.title;}
+export function trashTitle(item:TrashItem){return item.type==='note'?noteTitle(item.note):item.type==='work'?item.work.title:documentTitle(item.document);}
 
 /** Every attachment a trash item still holds. A work also owns attachments no document references any more. */
 function heldAssets(item:TrashItem,state:Workspace){

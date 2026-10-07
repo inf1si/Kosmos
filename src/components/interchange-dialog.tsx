@@ -1,5 +1,7 @@
 'use client';
 
+import { documentTitle } from '@/lib/model';
+
 import { documentSchema } from '@/lib/model';
 import { useEffect, useRef, useState } from 'react';
 import { Check, Download, Upload, FileText } from 'lucide-react';
@@ -73,7 +75,7 @@ return <div className="transfer-row" key={p.key}><input aria-label={`${p.title} 
       <div className="transfer-guide"><p><strong>{work.title}</strong>의 내보낼 문서를 선택하세요. 비공개 원고·설정·메모도 선택한 범위에 포함됩니다.</p></div>
       <label className="transfer-format">내보내기 형식<select aria-label="외부 문서 내보내기 형식" value={format} disabled={busy} onChange={e=>{setFormat(exportFormats.find(value=>value===e.target.value)||'markdown');setDownload(null);}}><option value="markdown">Markdown ZIP · Notion / Obsidian / 일반 편집기</option><option value="html">HTML ZIP · Notion / 웹 문서</option><option value="enex">Evernote ENEX · Evernote 가져오기</option></select></label>
       <div className="transfer-bulk"><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.map(d=>d.id));setDownload(null);}}>전체 선택</button><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.filter(d=>d.kind==='scene').map(d=>d.id));setDownload(null);}}>원고만</button><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.filter(d=>d.kind==='wiki').map(d=>d.id));setDownload(null);}}>설정집만</button></div>
-      <div className="transfer-list">{work.documents.map(d=><label className="transfer-export-row" key={d.id}><input type="checkbox" checked={ids.includes(d.id)} disabled={busy} onChange={e=>{setIds(v=>e.target.checked?[...v,d.id]:v.filter(id=>id!==d.id));setDownload(null);}}/><span>{d.title}</span><small>{kinds[d.kind]}</small></label>)}</div>
+      <div className="transfer-list">{work.documents.map(d=><label className="transfer-export-row" key={d.id}><input type="checkbox" checked={ids.includes(d.id)} disabled={busy} onChange={e=>{setIds(v=>e.target.checked?[...v,d.id]:v.filter(id=>id!==d.id));setDownload(null);}}/><span>{documentTitle(d)}</span><small>{kinds[d.kind]}</small></label>)}</div>
       <p className="field-help">첨부와 각주 설명을 포함합니다. ENEX에서는 각주가 번호·설명 텍스트로 바뀌며 설정 연결은 일반 텍스트로 옮깁니다. 복구 이력과 공개 판본까지 보관하려면 전체 ZIP 백업을 사용하세요.</p>
       <div className="modal-actions"><button className="primary" disabled={busy||!ids.length} onClick={()=>void run(async()=>{setDownload(null);setDownload(await s.exportDocuments(work.id,ids,format));})}>{busy?'파일 만드는 중…':`${ids.length}개 문서 내보내기`}</button></div><DownloadLink file={download}/>
     </>}

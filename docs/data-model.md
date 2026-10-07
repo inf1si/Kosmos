@@ -13,10 +13,11 @@ Workspace
 ├─ notes[]?: 개인 노트 · 태그 · 수집함/아이스박스 · pinned? · 작품 연결 · aiMessages?
 ├─ noteNavigation?: version: 1, 노트/폴더 ID·부모·형제 순서
 ├─ trash?: 노트/문서/작품 사본·시각·원래 위치·AI 기록 (최대 5,000개)
+├─ templates?: 계정의 work/notes 템플릿 사본·탐색 구조·첨부 소속 (최대 100개)
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
-│  ├─ documents[]: scene | wiki | memo
-│  ├─ navigation?: 대분류·문서/폴더 배치, version: 1
+│  ├─ documents[]: scene | wiki | memo, customProperties? (최대 40개)
+│  ├─ navigation?: 섹션·문서/폴더 배치, version: 1
 │  ├─ publications[]: 공개 판본의 기기 사본
 │  ├─ activePublicationId
 │  └─ aiConversations[]: 선택 필드, 문서별 작가·AI 대화
@@ -35,17 +36,17 @@ Workspace
 
 `chapter`, `pov`, `storyTime`, `category`는 현재 자유 문자열이다. 정규화된 장·인물·시간선 엔티티가 아니다. 메모에는 연구 자료를 기록할 수 있지만 전용 출처 모델은 없다.
 
-문서 상태는 `idea` 구상, `draft` 집필 중, `review` 퇴고 중, `done` 완성이다. `navigation`이 있으면 대분류와 형제 순서를 따르는 전위 순회로 `documents` 배열을 정렬한다(부모 문서가 하위 문서보다 먼저). 이 배열의 장면 순서가 다음 판본의 게시 순서가 된다. 폴더는 원고의 `chapter`와 독립된 정리 객체다. 문서 ID는 이동해도 바뀌지 않는다.
+문서 상태는 `idea` 구상, `draft` 집필 중, `review` 퇴고 중, `done` 완성이다. `navigation`이 있으면 섹션과 형제 순서를 따르는 전위 순회로 `documents` 배열을 정렬한다(부모 문서가 하위 문서보다 먼저). 이 배열의 장면 순서가 다음 판본의 게시 순서가 된다. 폴더는 원고의 `chapter`와 독립된 정리 객체다. 문서 ID는 이동해도 바뀌지 않는다.
 
-[트리 스키마](../src/lib/document-navigation-schema.ts)는 대분류 ID·이름·새 문서의 기본 종류와, 노드의 ID·종류·대분류 ID·부모 ID를 저장한다. 노드 배열에서 같은 부모의 순서를 읽는다. 문서 노드 ID는 문서 UUID와 같고 폴더는 자체 UUID·제목을 갖는다. 중복 ID·없는 문서/부모·다른 대분류의 부모·순환·24단계를 넘는 깊이를 거절한다. `navigation`이 없는 이전 형식 1 자료는 세 기본 대분류와 연속된 부·장별 폴더로 변환한다. [전환·가져오기 계약](document-navigation.md).
+[트리 스키마](../src/lib/document-navigation-schema.ts)는 섹션 ID·이름·새 문서의 기본 종류와, 노드의 ID·종류·섹션 ID·부모 ID를 저장한다. 노드 배열에서 같은 부모의 순서를 읽는다. 문서 노드 ID는 문서 UUID와 같고 폴더는 자체 UUID·제목을 갖는다. 중복 ID·없는 문서/부모·다른 섹션의 부모·순환·24단계를 넘는 깊이를 거절한다. `navigation`이 없는 이전 형식 1 자료는 세 기본 섹션과 연속된 부·장별 폴더로 변환한다. [전환·가져오기 계약](document-navigation.md).
 
 AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대화 ID는 중복할 수 없다. 한 대화의 최대 메시지 수는 40개다. 작가 메시지에는 질문, AI 메시지에는 답변·수정안·제공자·모델·원고 시점·참고 자료 제목과 ID를 보관한다. 대화를 저장해도 원고의 `updatedAt`을 바꾸지 않는다. 전체 백업에는 포함하고 공개 판본에는 포함하지 않는다. 새 필드는 선택적이므로 이전 형식 1 백업도 계속 읽는다. [AI 제한](ai.md).
 
 ## 휴지통 계약
 
-선택적 `Workspace.trash`는 note/document 구분, 원본과 같은 UUID, deletedAt(ISO), 전체 note/document 사본, 원래 parentId·다음 형제 beforeId·직접 childIds를 저장한다. 문서는 workId·workTitle·대분류 사본·별도 aiMessages도 보관한다. [모델](../src/lib/model.ts)과 [변환](../src/lib/workspace-trash.ts)은 활성 자료와 휴지통 ID 중복, 손상 첨부 연결, 하위 자기 참조를 거절한다. 총 5,000개·기존 20MB 서버 JSON 한도를 공유하며 형식 버전은 1이다.
+선택적 `Workspace.trash`는 note/document 구분, 원본과 같은 UUID, deletedAt(ISO), 전체 note/document 사본, 원래 parentId·다음 형제 beforeId·직접 childIds를 저장한다. 문서는 workId·workTitle·섹션 사본·별도 aiMessages도 보관한다. [모델](../src/lib/model.ts)과 [변환](../src/lib/workspace-trash.ts)은 활성 자료와 휴지통 ID 중복, 손상 첨부 연결, 하위 자기 참조를 거절한다. 총 5,000개·기존 20MB 서버 JSON 한도를 공유하며 형식 버전은 1이다.
 
-이동은 활성 notes/documents·탐색 노드·해당 작품 AI 대화를 제거하고 직접 하위 항목을 기존 부모로 올린다. 첨부 메타데이터는 휴지통 복원을 위해 유지한다. notes: []는 허용하고 작품 documents는 최소 1개다. 마지막 문서 이동은 빈 원고 하나를 원고 대분류 최상위에 만들어 같은 최소 개수 계약을 유지한다. 복원은 저장한 부모/형제·대분류를 사용하고 유효한 후속 변경을 보존한다. 영구 삭제는 선택 사본과 현재/남은 휴지통에서 쓰지 않는 첨부 목록만 제거한다. 공개 판본·사본·복구 이력·Blob/Storage 바이트는 유지한다. [사용·호환성](workspace-trash.md).
+이동은 활성 notes/documents·탐색 노드·해당 작품 AI 대화를 제거하고 직접 하위 항목을 기존 부모로 올린다. 첨부 메타데이터는 휴지통 복원을 위해 유지한다. notes: []는 허용하고 작품 documents는 최소 1개다. 마지막 문서 이동은 빈 원고 하나를 원고 섹션 최상위에 만들어 같은 최소 개수 계약을 유지한다. 복원은 저장한 부모/형제·섹션을 사용하고 유효한 후속 변경을 보존한다. 영구 삭제는 선택 사본과 현재/남은 휴지통에서 쓰지 않는 첨부 목록만 제거한다. 공개 판본·사본·복구 이력·Blob/Storage 바이트는 유지한다. [사용·호환성](workspace-trash.md).
 
 작품 항목(`type: 'work'`)은 작품 전체 사본(`activePublicationId`는 null), 작품 목록 순서 `index`(0~100), 연결되어 있던 노트 `noteIds`를 저장한다. 이동은 노트의 해당 작품 연결을 떼고 첨부 메타데이터는 유지하며, 모델은 작품 문서의 첨부가 그 작품 소속인지 확인한다. 마지막 작품은 옮기지 않는다(작품 최소 1개). 복원은 순서 자리와 남은 노트 연결을 되살린다.
 
@@ -132,7 +133,7 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 |---|---:|---|
 | 작품 | 최대 100개 | Zod |
 | 작품별 문서 | 1~5,000개 | Zod |
-| 작품별 대분류 / 문서·폴더 노드 | 40개 / 7,500개 | Zod |
+| 작품별 섹션 / 문서·폴더 노드 | 40개 / 7,500개 | Zod |
 | 문서 트리 깊이 | 24단계 | Zod·이동 검증 |
 | 작품별 기기 판본 | 최대 100개 | Zod·게시 시 정리 |
 | 첨부 메타데이터 | 최대 2,000개 | Zod |
@@ -148,3 +149,11 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql)은 기존 작품의 `navigation`이 다음 저장에서 통째로 사라지면 UPDATE를 거절한다. 오래 열린 이전 버전 집필실의 Zod 파싱이 새 필드를 제거하는 경우를 막는다. 기존 권한·RLS·RPC·행 버전 검사를 유지하며 기존 원고를 수정하지 않는다. 서버는 계층 전체의 의미까지 검증하지 않으므로 현재 세부 검증의 기준은 클라이언트 스키마다.
 
 AI 질문 요청의 작품 `documentRange`·노트 `noteRange`(선택/문단, 편집기 from/to, 원문)는 임시 API 입력이다. 저장되는 답변은 기존 작품 aiConversations/노트 aiMessages 형식이며 범위 검색으로 다른 반복 문장을 적용하지 않도록 suggestions를 비운다. 본문은 기존 리치 노드로 저장하므로 DB 마이그레이션·백업 버전 변경이 없다. AI 제공자 선택은 계정별 브라우저 설정이고 키·모델과 함께 작업 공간에 넣지 않는다.
+
+## 사용자 속성과 템플릿 (2026-10-07)
+
+문서와 개인 노트의 선택 필드 `customProperties[]`는 `{id, name, type, value}`를 저장한다. 이름은 1~80자·중복 금지, 최대 40개다. type은 text(최대 2,000자), number(유한 숫자 또는 null), date(ISO 날짜 또는 빈 문자열), checkbox(boolean)다. 0·false도 보존한다. 문서 title은 0~300자로 빈 값도 허용하며 작품·폴더·섹션 이름은 기존 필수 계약이다. 사용자 속성은 공개 판본에 포함하지 않는다.
+
+`Workspace.templates[]`의 항목은 UUID·name(1~200자)·createdAt·scope(work/notes)·navigation과 문서 또는 노트 사본이다. 최대 100개이고 기존 문서 5,000개/노드 7,500개/깊이 24단계 계약을 적용한다. 선택된 자손은 한 번만 포함하고 포함하지 않은 부모는 루트로 만든다. 저장 및 적용할 때 문서·폴더·각주·블록·속성·첨부 ID를 새로 만든다. 내부 링크를 재연결하고 묶음 밖 문서 링크는 텍스트로 남긴다. 적용한 작품 문서는 비공개·집필 중, 노트는 작품 연결/고정 없음이다.
+
+첨부 메타데이터는 `workId | noteId | templateId` 중 하나만 갖는다. 템플릿 첨부는 저장할 때 별도 바이트로 복제하고 적용할 때 대상 소속으로 또 복제한다. 원본 문서/작품을 영구 삭제해도 템플릿 사본은 유지된다. 템플릿 삭제는 그 사본의 메타데이터만 제거하며 기존 복구 이력·Storage/Blob 바이트는 남는다. 형식 버전·테이블·RLS·Storage 정책은 유지한다. [사용법·이전 자료 보존](workspace-templates.md).
