@@ -1,4 +1,6 @@
 'use client';
+
+import { providerSchema } from '@/lib/ai-provider';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, Check, Copy, FileText, MessageSquarePlus, Search, Sparkles, Settings2 } from 'lucide-react';
 import { applySuggestion,reviewSchema } from '@/lib/ai';
@@ -23,7 +25,9 @@ const starters=[
   {title:'SF 개연성',text:'현재 원고와 자료의 SF 설정에서 검증할 과학적 가정과 독자가 의문을 가질 지점을 정리해 줘. 확인되지 않은 사실은 단정하지 말아줘.'},
   {title:'자료 질문',text:'선택한 자료를 바탕으로 내 질문에 답해 줘: '},
 ];
+
 type ChatScope={workId:string;noteId?:never}|{noteId:string;workId?:never};
+
 export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;onOpen:(id:string)=>void}){
   const s=useStudio(),work=s.state!.works.find(w=>w.id===workId),note=s.state!.notes?.find(n=>n.id===noteId);
   const noun=noteId?'노트':'원고',materials=useMemo(()=>noteId?noteAISources(s.state!,noteId):work!.documents,[s.state,noteId,work]);
@@ -37,35 +41,56 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
   const log=useRef<HTMLDivElement>(null);const textarea=useRef<HTMLTextAreaElement>(null);const disposed=useRef(false);const settingsTrigger=useRef<HTMLElement|null>(null);
   const availableIds=new Set(materials.filter(d=>d.id!==doc.id).map(d=>d.id));const selectedIds=sourceIds.filter(id=>availableIds.has(id));
   const full=messages.length>=40||(!messages.length&&(noteId?(s.state!.notes||[]).filter(n=>n.aiMessages?.length).length:(work!.aiConversations?.length||0))>=200);const configured=cloudConfigured&&currentProvider.configured;const chars=plainText(doc.content).length;
-  useEffect(()=>{disposed.current=false;return()=>{disposed.current=true;};},[]);
+  useEffect(()=>{disposed.current=false;
+
+return()=>{disposed.current=true;};},[]);
   useEffect(()=>{if(messages.length||pending)log.current?.scrollTo({top:log.current.scrollHeight,behavior:'smooth'});},[messages.length,pending]);
+
   async function send(){
-    const question=prompt.trim();if(!question||busy||!configured||full||s.conflict)return;
+    const question=prompt.trim();
+
+if(!question||busy||!configured||full||s.conflict)return;
     setBusy(true);setPending(question);setError('');setNotice('');
+
     try{
-      await s.flush();await s.syncNow();const session=(await cloud().auth.getSession()).data.session;if(!session)throw new Error('작가 로그인이 필요합니다.');
+      await s.flush();await s.syncNow();const session=(await cloud().auth.getSession()).data.session;
+
+if(!session)throw new Error('작가 로그인이 필요합니다.');
       const version=doc.updatedAt;const response=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({...(noteId?{noteId}:{workId}),docId:doc.id,version,provider,message:question,includeManuscript,sourceIds:selectedIds,history:recentChatHistory(messages),systemPrompt,promptPresetId:activePreset.id})});
-      const body=await response.json();if(!response.ok)throw new Error(body.error||'대화를 완료하지 못했습니다.');
+      const body=await response.json();
+
+if(!response.ok)throw new Error(body.error||'대화를 완료하지 못했습니다.');
       const answer=chatMessageSchema.parse({id:uid(),role:'assistant',createdAt:new Date().toISOString(),result:reviewSchema.parse(body.result),provider,model:body.model,version:body.version,sources:body.sources,promptPreset:body.promptPreset});
+
       if(answer.role!=='assistant')throw new Error('답변 형식을 확인하세요.');
       // Capture the originating document so switching tabs cannot attach an answer elsewhere.
       s.update(state=>appendEditorExchange(state,noteId?{noteId,docId:doc.id}:{workId:workId!,docId:doc.id},messages.length,question,answer));
-      await s.flush();if(!disposed.current)setPrompt('');
+      await s.flush();
+
+if(!disposed.current)setPrompt('');
     }catch(e){if(!disposed.current)setError(e instanceof Error?e.message:'AI 대화를 완료하지 못했습니다.');}
     finally{if(!disposed.current){setBusy(false);setPending('');}}
   }
+
   async function apply(message:Extract<ChatMessage,{role:'assistant'}>,index:number){
-    try{await s.snapshot('AI 수정 적용 전');s.update(state=>noteId?applyNoteSuggestion(state,noteId,message,index):({...state,works:state.works.map(w=>w.id===workId?{...w,documents:w.documents.map(d=>{if(d.id!==doc.id)return d;if(d.updatedAt!==message.version)throw new Error('답변 이후 원고가 바뀌었습니다. 새로 질문하거나 직접 비교하세요.');const suggestion=message.result.suggestions[index];return {...d,content:applySuggestion(d.content,suggestion.quote,suggestion.replacement),updatedAt:new Date().toISOString()};})}:w)}));setNotice(`수정안을 적용했습니다. 적용 전 ${noun}는 복구 지점에 있습니다.`);}
+    try{await s.snapshot('AI 수정 적용 전');s.update(state=>noteId?applyNoteSuggestion(state,noteId,message,index):({...state,works:state.works.map(w=>w.id===workId?{...w,documents:w.documents.map(d=>{if(d.id!==doc.id)return d;
+
+if(d.updatedAt!==message.version)throw new Error('답변 이후 원고가 바뀌었습니다. 새로 질문하거나 직접 비교하세요.');const suggestion=message.result.suggestions[index];
+
+return {...d,content:applySuggestion(d.content,suggestion.quote,suggestion.replacement),updatedAt:new Date().toISOString()};})}:w)}));setNotice(`수정안을 적용했습니다. 적용 전 ${noun}는 복구 지점에 있습니다.`);}
     catch(e){setError(e instanceof Error?e.message:'수정안을 적용하지 못했습니다.');}
   }
+
   function saveAsMemo(){
     if(!messages.length)return;const memo=newDocument('memo',`AI 대화 · ${doc.title}`.slice(0,300));memo.content={type:'doc',content:messages.map(m=>({type:'paragraph',attrs:{blockId:uid()},content:[{type:'text',text:m.role==='user'?`작가: ${m.text}`:`${m.provider} (${m.model}): ${m.result.review}${m.result.suggestions.map(p=>`\n수정 제안: ${p.quote}\n→ ${p.replacement}\n${p.reason}`).join('')}` }]}))};
+
     if(noteId){const saved={...newNote(),title:memo.title,content:memo.content};s.update(state=>addNote(state,saved,{parentId:noteId}));setNotice('대화를 하위 노트로 보관했습니다.');onOpen(saved.id);}
     else{s.update(state=>({...state,works:state.works.map(w=>w.id===workId?{...w,documents:[...w.documents,memo]}:w)}));setNotice('대화를 메모로 보관했습니다.');onOpen(memo.id);}
   }
+
   return <div className="ai-chat">
     <div className="chat-heading"><div><strong title={doc.title}>{doc.title}</strong></div><IconButton label="AI 설정" disabled={busy||loadingProviders} onClick={e=>{settingsTrigger.current=e.currentTarget;setSettingsOpen(true);}}><Settings2 size={17}/></IconButton><IconButton label="새 대화" disabled={busy||!messages.length||!!s.conflict} onClick={()=>setResetOpen(true)}><MessageSquarePlus size={17}/></IconButton></div>
-    <div className="chat-provider"><label>제공자<select aria-label="AI 제공자" value={provider} disabled={busy||loadingProviders} onChange={e=>setProvider(e.target.value as AIProvider)}>{providers.map(p=><option key={p.id} value={p.id} disabled={!p.configured}>{p.label}{p.configured?'':' · 연결 필요'}</option>)}</select></label><span title={currentProvider.model||undefined}>{loadingProviders?'연결 확인 중':currentProvider.model||'API 키·모델 미설정'}</span></div>
+    <div className="chat-provider"><label>제공자<select aria-label="AI 제공자" value={provider} disabled={busy||loadingProviders} onChange={e=>setProvider(providerSchema.parse(e.target.value))}>{providers.map(p=><option key={p.id} value={p.id} disabled={!p.configured}>{p.label}{p.configured?'':' · 연결 필요'}</option>)}</select></label><span title={currentProvider.model||undefined}>{loadingProviders?'연결 확인 중':currentProvider.model||'API 키·모델 미설정'}</span></div>
     {!configured&&!loadingProviders&&<div className="chat-connection"><p>{currentProvider.browserInvalid?'보관한 연결이 만료되었거나 읽히지 않습니다. AI 설정에서 다시 입력하거나 해제하세요.':'AI 설정에서 API 키와 모델을 입력하면 대화할 수 있습니다. 아래 추천으로 질문을 미리 작성해 보세요.'}</p><button type="button" onClick={e=>{settingsTrigger.current=e.currentTarget;setSettingsOpen(true);}}>AI 설정 열기</button></div>}
     {configured&&<p className="chat-settings-source">{currentProvider.source==='browser'?'이 브라우저의 키 사용':'서버 키 사용'}</p>}
     <div className="chat-preset"><label>프리셋<select aria-label="AI 프롬프트 프리셋" value={activePreset.id} disabled={busy||!!s.conflict} onChange={e=>{try{const id=e.target.value;s.update(state=>({...state,aiPreferences:activatePromptPreset(state.aiPreferences,id)}));setNotice('프리셋을 적용했습니다. 다음 질문부터 사용합니다.');setError('');}catch(err){setError(err instanceof Error?err.message:'프리셋을 적용하지 못했습니다.');}}}>{promptCatalog(s.state?.aiPreferences).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label></div>

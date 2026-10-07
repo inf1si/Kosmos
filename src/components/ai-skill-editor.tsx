@@ -1,10 +1,12 @@
 'use client';
+
 import { useEffect,useRef,useState } from 'react';
 import { deleteSkill,MAX_SKILLS,saveSkill,type AISkill } from '@/lib/ai-prompt-presets';
 import { uid } from '@/lib/model';
 import { useStudio } from './studio-provider';
 
 const blank:AISkill={id:'new',title:'',description:'',prompt:'',updatedAt:''};
+
 export function AISkillEditor({focus=false}:{focus?:boolean}){
   const studio=useStudio(),skills=studio.state?.aiPreferences?.skills||[];
   const [selectedId,setSelectedId]=useState(skills[0]?.id||'new'),baseline=useRef<AISkill>(skills[0]||blank);
@@ -15,24 +17,40 @@ export function AISkillEditor({focus=false}:{focus?:boolean}){
   const selected=skills.find(p=>p.id===selectedId),readonly=!!studio.conflict||busy;
   const dirty=title!==baseline.current.title||description!==baseline.current.description||prompt!==baseline.current.prompt;
   const remoteChanged=selectedId!=='new'&&selected?.updatedAt!==baseline.current.updatedAt;
+
   function load(id:string){
-    const skill=id==='new'?blank:skills.find(p=>p.id===id);if(!skill){setError('스킬이 바뀌었습니다. 최신 목록에서 선택하세요.');return;}
+    const skill=id==='new'?blank:skills.find(p=>p.id===id);
+
+if(!skill){setError('스킬이 바뀌었습니다. 최신 목록에서 선택하세요.');
+
+return;}
+
     baseline.current=skill;setSelectedId(id);setTitle(skill.title);setDescription(skill.description);setPrompt(skill.prompt);setPending(null);setDeleteOpen(false);setError('');setNotice('');
   }
+
   function save(){
-    if(readonly){setError('원고 충돌을 해결한 뒤 스킬을 저장하세요.');return;}
+    if(readonly){setError('원고 충돌을 해결한 뒤 스킬을 저장하세요.');
+
+return;}
+
     const id=selectedId==='new'?uid():selectedId;
+
     try{
       let saved:AISkill|undefined;
-      studio.update(state=>{const next=saveSkill(state.aiPreferences,{id,title,description,prompt},selectedId==='new'?undefined:baseline.current.updatedAt);saved=next.skills!.find(p=>p.id===id);return {...state,aiPreferences:next};});
+      studio.update(state=>{const next=saveSkill(state.aiPreferences,{id,title,description,prompt},selectedId==='new'?undefined:baseline.current.updatedAt);saved=next.skills!.find(p=>p.id===id);
+
+return {...state,aiPreferences:next};});
       baseline.current=saved!;setSelectedId(id);setTitle(saved!.title);setDescription(saved!.description);setPrompt(saved!.prompt);setPending(null);setError('');setNotice('스킬을 저장했습니다. 본문에서 / 또는 선택한 글 우클릭으로 부를 수 있습니다.');
     }catch(e){setError(e instanceof Error?e.message:'스킬을 저장하지 못했습니다.');}
   }
+
   async function remove(){
     if(readonly||!selected)return;setBusy(true);setError('');
+
     try{await studio.snapshot('AI 스킬 삭제 전');studio.update(state=>({...state,aiPreferences:deleteSkill(state.aiPreferences,selectedId,baseline.current.updatedAt)}));baseline.current=blank;setSelectedId('new');setTitle('');setDescription('');setPrompt('');setDeleteOpen(false);setNotice('스킬을 삭제했습니다. 삭제 전 설정은 복구 이력에 있습니다.');}
     catch(e){setError(e instanceof Error?e.message:'삭제하지 못했습니다.');}finally{setBusy(false);}
   }
+
   return <section ref={section} aria-labelledby="ai-skill-title" className="ai-prompt-editor"><h3 id="ai-skill-title">내 스킬</h3>
     <p className="ai-settings-help">자주 하는 요청을 저장해 두고 노트·집필실 본문의 <strong>/</strong> 메뉴, 선택한 글 우클릭, AI 질문 창에서 부릅니다. 선택한 글(없으면 커서가 있는 문단)과 현재 프리셋이 함께 전송되며, 전송은 직접 합니다.</p>
     <div className="ai-preset-picker"><label>편집할 스킬<select ref={picker} aria-label="편집할 스킬" value={selectedId} disabled={readonly} onChange={e=>{if(dirty){setPending(e.target.value);setDeleteOpen(false);}else load(e.target.value);}}>{skills.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}{selectedId!=='new'&&!selected&&<option value={selectedId}>삭제된 스킬의 편집본</option>}<option value="new">새 스킬 작성</option></select></label></div>

@@ -1,4 +1,5 @@
 'use client';
+
 import { useDeferredValue, useMemo, useState } from 'react';
 import { ArrowLeft, NotebookPen, Pin, Search, StickyNote, X } from 'lucide-react';
 import { IconButton } from './primitives';
@@ -12,6 +13,7 @@ const EMPTY:PersonalNote[]=[];
 /** 노트 목록 한 줄: 제목, 날짜 · 첫 줄. 참고 패널·노트 첫 화면·목록 보기·통합 검색이 같은 카드를 쓴다. */
 export function NoteCard({note,onOpen,current=false}:{note:PersonalNote;onOpen:(id:string)=>void;current?:boolean}){
   const snippet=noteSnippet(note);
+
   return <button type="button" className="reference-card note-card" aria-current={current||undefined} onClick={()=>onOpen(note.id)}>
     {note.pinned?<Pin size={16} aria-label="고정"/>:<StickyNote size={16}/>}
     <span><strong>{noteTitle(note)}</strong><small>{noteDate(note.updatedAt)}{snippet&&` · ${snippet}`}</small></span>
@@ -25,12 +27,14 @@ export function NotesReference({workId,readonly,onOpenNote}:{workId:string;reado
   const linked=useMemo(()=>filterNotes(notes,{workId}),[notes,workId]);
   const found=useMemo(()=>filterNotes(notes,{query:search}).slice(0,30),[notes,search]);
   const preview=notes.find(n=>n.id===previewId);
+
   if(preview)return <div className="notes-reference">
     <div className="notes-reference-bar"><IconButton label="노트 목록으로" onClick={()=>setPreviewId('')}><ArrowLeft size={15}/></IconButton><span>{noteDate(preview.updatedAt)}</span><button type="button" className="button" onClick={()=>onOpenNote(preview.id)}><NotebookPen size={14}/>노트에서 열기</button></div>
     <h3 className="notes-reference-title">{noteTitle(preview)}</h3>
     {preview.tags.length>0&&<div className="doc-chips">{preview.tags.map(tag=><span className="chip soft" key={tag}>#{tag}</span>)}</div>}
     <div className="notes-reference-body">{plainText(preview.content).split('\n').filter(line=>line.trim()).map((line,i)=><p key={i}>{line}</p>)}</div>
   </div>;
+
   return <div className="notes-reference">
     <h3>빠른 메모</h3>
     <QuickNoteForm disabled={readonly} rows={3} onOpenNote={onOpenNote}/>

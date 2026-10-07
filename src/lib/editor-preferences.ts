@@ -1,4 +1,7 @@
 import { countMetrics, type CountMetric } from './text-statistics';
+import { inlineFontSizeSchema } from './manuscript-format';
+import type { JsonValue } from './json-value';
+
 export const manuscriptFonts=[
   {id:'gowun',label:'고운바탕',family:'var(--font-gowun), serif'},
   {id:'noto-serif',label:'본명조',family:'var(--font-noto-serif), serif'},
@@ -21,16 +24,23 @@ export const manuscriptFonts=[
   {id:'gulim',label:'굴림 · 기기 글꼴',family:'Gulim, "굴림", var(--font-noto-sans), sans-serif'},
   {id:'system',label:'시스템 글꼴',family:'system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif'},
 ] as const;
+
 export type EditorPreferences={font:string;size:number;countMetric:CountMetric};
+
 export const editorCountMetricVersion=1;
+
 export const defaultEditorPreferences:EditorPreferences={font:'gowun',size:18,countMetric:'charactersWithSpaces'};
+
 export const fontSizes=[10,12,14,16,18,20,22,24,28,32,36,40,48,56,64,72];
-export function validFontSize(value:unknown):value is number{return typeof value==='number'&&Number.isFinite(value)&&value>=10&&value<=72&&Number.isInteger(value*2);}
+
+export function validFontSize(value:JsonValue|undefined):value is number{return inlineFontSizeSchema.safeParse(value).success;}
+
 export function parseEditorPreferences(raw:string|null):EditorPreferences{
   try{
     const value=JSON.parse(raw||'null');
     // Older font/size saves also persisted the old default; explicit choices made after this change keep their value.
     const validMetric=countMetrics.some(m=>m.id===value?.countMetric)&&(value.countMetric!=='charactersWithoutSpaces'||value.countMetricVersion===editorCountMetricVersion);
+
     return {font:manuscriptFonts.some(f=>f.id===value?.font)?value.font:'gowun',size:validFontSize(value?.size)?value.size:18,countMetric:validMetric?value.countMetric:defaultEditorPreferences.countMetric};
   }catch{return defaultEditorPreferences;}
 }

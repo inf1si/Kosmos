@@ -9,14 +9,23 @@ import { plainText, footnotes, wikiReferences, type RichNode } from '../src/lib/
 import { seedWorkspace } from '../src/lib/seed';
 
 const png=new Uint8Array([137,80,78,71,13,10,26,10,1,2,3]);
+
 const asFile=(bytes:Blob|Uint8Array|string,name:string)=>new File([bytes instanceof Uint8Array?Uint8Array.from(bytes).buffer:bytes],name);
+
 const fixture=(name:string)=>asFile(readFileSync(new URL(`./fixtures/note-import/${name}`,import.meta.url)),name);
+
 const all=(n:RichNode):RichNode[]=>[n,...(n.content||[]).flatMap(all)];
+
 const types=(n:RichNode)=>all(n).map(v=>v.type);
+
 /** Folder/note titles as an indented outline under the import folder, to compare whole trees at once. */
 function outline(state:ReturnType<typeof prepareNoteImport>['state'],rootId:string){
-  const nav=resolveNoteNavigation(state),title=(id:string)=>{const n=nav.nodes.find(v=>v.id===id)!;return n.type==='folder'?`[${n.title}]`:state.notes!.find(v=>v.id===id)!.title;};
+  const nav=resolveNoteNavigation(state),title=(id:string)=>{const n=nav.nodes.find(v=>v.id===id)!;
+
+return n.type==='folder'?`[${n.title}]`:state.notes!.find(v=>v.id===id)!.title;};
+
   const walk=(id:string,depth:number):string[]=>nav.nodes.filter(n=>n.parentId===id).flatMap(n=>[`${'  '.repeat(depth)}${title(n.id)}`,...walk(n.id,depth+1)]);
+
   return walk(rootId,0);
 }
 

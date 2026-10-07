@@ -6,26 +6,46 @@ import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
+
 const require = createRequire(import.meta.url);
+
 const { chromium } = require(process.env.KOSMOS_PLAYWRIGHT_MODULE || 'playwright-core');
+
 const base = process.env.KOSMOS_TEST_BASE_URL || 'http://127.0.0.1:3210';
+
 const output = resolve(process.env.KOSMOS_BROWSER_OUTPUT || 'test-results/note-quick-capture');
+
 await mkdir(output, { recursive: true });
+
 const browser = await chromium.launch({ executablePath: process.env.KOSMOS_CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+
 // Older checks start in the editor; the studio home has its own check (studio-home.mjs).
-await context.addInitScript(() => { try { const key = 'kosmos-app-preferences', value = JSON.parse(localStorage.getItem(key) || '{}'); if (!('studioStart' in value)) localStorage.setItem(key, JSON.stringify({ ...value, studioStart: 'last' })); } catch { /* Storage blocked: the test sees the home and fails loudly. */ } });
+await context.addInitScript(() => { try { const key = 'kosmos-app-preferences', value = JSON.parse(localStorage.getItem(key) || '{}');
+
+ if (!('studioStart' in value)) localStorage.setItem(key, JSON.stringify({ ...value, studioStart: 'last' })); } catch { /* Storage blocked: the test sees the home and fails loudly. */ } });
+
 const note = { ...newNote(), title: '합성 노트', content: fromText('첫 문단.\n\n둘째 문단은 들여쓰지 않는다.'), tags: ['생각'] };
+
 const other = { ...newNote(), title: '보관 노트', content: fromText('다른 태그'), tags: ['자료'] };
+
 let data = addNote(addNote(seedWorkspace(), other), note), version = 1, saves = 0;
+
 const workIds = data.works.map(w => w.id), initialContent = structuredClone(note.content), errors = [], layouts = [];
+
 const profile = { id: '11111111-1111-4111-8111-111111111111', aud: 'authenticated', role: 'authenticated', email: 'synthetic@example.invalid', created_at: '2026-10-04T00:00:00.000Z', app_metadata: { provider: 'email', providers: ['email'] }, user_metadata: {}, identities: [] };
+
 const enc = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+
 const token = `${enc({ alg: 'HS256', typ: 'JWT' })}.${enc({ sub: profile.id, exp: Math.floor(Date.now() / 1000) + 3600, role: 'authenticated' })}.synthetic-signature`;
+
 await context.addInitScript(({ profile, token, key }) => localStorage.setItem(key, JSON.stringify({ access_token: token, refresh_token: 'synthetic-refresh', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, user: profile })), { profile, token, key: process.env.KOSMOS_TEST_AUTH_STORAGE_KEY || 'sb-krakjollsufgnwealroh-auth-token' });
+
 await context.route('**/*.supabase.co/**', async (route) => {
     const request = route.request(), path = new URL(request.url()).pathname;
     let value = {};
+
     if (path.includes('/auth/v1/user'))
         value = profile;
     else if (path.endsWith('/authors'))
@@ -40,18 +60,31 @@ await context.route('**/*.supabase.co/**', async (route) => {
         saves++;
         value = { status: 'saved', version };
     }
+
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) });
 });
+
 await context.route('**/api/backup/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"connected":false,"configured":false}' }));
+
 if (context.routeWebSocket)
     await context.routeWebSocket('**/realtime/**', ws => ws.close());
+
 const page = await context.newPage();
+
 page.setDefaultTimeout(15000);
+
 page.on('pageerror', error => errors.push(error.message));
+
 const button = name => page.getByRole('button', { name, exact: true });
+
 const popover = () => page.locator('.popover');
-const until = async (check, label) => { for (let i = 0; i < 100; i++) { if (check()) return; await page.waitForTimeout(100); } throw new Error(`Timed out: ${label}`); };
+
+const until = async (check, label) => { for (let i = 0; i < 100; i++) { if (check()) return; await page.waitForTimeout(100); }
+
+ throw new Error(`Timed out: ${label}`); };
+
 const indent = scope => page.locator(`${scope} .manuscript p`).nth(1).evaluate(el => getComputedStyle(el).textIndent);
+
 try {
     await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
     await page.locator('.studio-panel .manuscript').first().waitFor();
@@ -105,12 +138,14 @@ try {
     await icebox.click();
     assert.equal(await icebox.getAttribute('aria-pressed'), 'true');
     assert(await page.locator('.notes-list').getByText('합성 노트', { exact: true }).isVisible());
+
     for (const width of [1280, 360]) {
         await page.setViewportSize({ width, height: 800 });
         await page.waitForTimeout(300);
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({ path: resolve(output, `notes-${width}.png`) });
     }
+
     assert.deepEqual(errors, []);
     const result = { environment: 'isolated Chromium synthetic author and Supabase responses', base, studioIndent, notes: data.notes.length, saves, errors };
     await writeFile(resolve(output, 'evidence.json'), JSON.stringify(result, null, 2) + '\n');

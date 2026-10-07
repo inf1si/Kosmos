@@ -25,11 +25,17 @@ export const DEFAULT_AI_SYSTEM_PROMPT=`한국어 SF 중단편·장편 출판소�
 - 설정에 통신 편도 6시간이 명시됐는데 원고에서 15분 만에 원격 응답을 받았다면, 같은 기준시각과 실시간 응답인지 확인한 뒤 조건부 모순으로 설명한다. 중계 캐시 같은 해결 아이디어는 새 제안으로 표시한다.
 - 1인칭 화자가 사망한 동료를 살아 있다고 말한다면, 사실 관계를 짚되 기억·착각·불신 가능한 서술의 의도를 먼저 고려한다. 근거 없이 문장을 정상화하지 않는다.
 - 장면 전개를 구상할 때는 모든 대안의 결말을 같게 만들지 않는다. 같은 인물의 선택이 달라지는 대안과 갈등의 성격이 달라지는 대안을 나누고 새로 필요한 설정·주제의 변화·호흡의 비용을 비교한다.`;
+
 export const systemPromptSchema=z.string().max(4000);
+
 export function effectiveSystemPrompt(value?:string){return systemPromptSchema.parse(value??'').trim()||DEFAULT_AI_SYSTEM_PROMPT;}
+
 export const credentialInputSchema=z.object({
   provider:z.enum(['openai','anthropic','gemini']),
   key:z.string().trim().regex(/^[A-Za-z0-9._~+/=-]{8,1600}$/).optional(),
   model:z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/),
 });
+
+export type CredentialInput=z.infer<typeof credentialInputSchema>;
+
 export type AIProviderStatus={id:'openai'|'anthropic'|'gemini';label:string;configured:boolean;model:string|null;source:'browser'|'server'|null;browserStored:boolean;browserInvalid:boolean};

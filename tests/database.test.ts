@@ -6,8 +6,10 @@ import { seedWorkspace } from '../src/lib/seed';
 import { uid,fromText } from '../src/lib/model';
 import { applyNavigation, resolveNavigation } from '../src/lib/document-navigation';
 import { activatePromptPreset,DEFAULT_PROMPT_ID,savePromptPreset } from '../src/lib/ai-prompt-presets';
+
 test('PostgreSQL: 권한, 버전 충돌, 재전송, 공개 분리, AI 호출 한도',async()=>{
  const pg=new PGlite();
+
  try{
  await pg.exec(`create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);create table storage.objects(id uuid,bucket_id text,name text);alter table storage.objects enable row level security;create function storage.foldername(text) returns text[] language sql as $$select string_to_array($1,'/')$$;grant usage on schema public,storage to anon,authenticated;create publication supabase_realtime;`);
  await pg.exec(await readFile(new URL('../supabase/migrations/001_studio.sql',import.meta.url),'utf8'));
@@ -35,6 +37,7 @@ test('PostgreSQL: 권한, 버전 충돌, 재전송, 공개 분리, AI 호출 한
  const noPreferences=structuredClone(legacy);delete noPreferences.aiPreferences;await assert.rejects(()=>pg.query('select public.save_workspace($1,5,$2::jsonb,$3)',[id,JSON.stringify(noPreferences),uid()]),/AI 프리셋/);
  const promptRow=await pg.query<{version:number;payload:typeof state}>('select version,payload from public.workspaces');assert.equal(promptRow.rows[0].version,5);assert.deepEqual(promptRow.rows[0].payload.aiPreferences,legacy.aiPreferences);
  legacy.aiPreferences=activatePromptPreset(legacy.aiPreferences,DEFAULT_PROMPT_ID);await pg.query('select public.save_workspace($1,5,$2::jsonb,$3)',[id,JSON.stringify(legacy),uid()]);
+
  for(let i=0;i<10;i++)await pg.query('select public.reserve_ai_call()');await assert.rejects(()=>pg.query('select public.reserve_ai_call()'),/limit/);
  await pg.query("select set_config('request.jwt.claim.sub',$1,false)",[other]);const hidden=await pg.query('select id from public.workspaces');assert.equal(hidden.rows.length,0);await assert.rejects(()=>pg.query('select public.save_workspace($1,2,$2::jsonb,$3)',[id,JSON.stringify(state),uid()]),/access/);
  await pg.exec('reset role;set role anon');await pg.query("select set_config('request.jwt.claim.sub','',false)");await assert.rejects(()=>pg.query('select payload from public.workspaces'),/permission/);

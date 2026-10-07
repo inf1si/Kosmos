@@ -1,4 +1,5 @@
 'use client';
+
 import { useMemo, useState, type DragEvent } from 'react';
 import { useStoredChoice } from './use-app-preferences';
 import { NOTES_HOME_VIEW_KEY, notesHomeViews } from '@/lib/app-preferences';
@@ -18,6 +19,7 @@ export function NotesHome({state,readonly,onOpen,onNew,onTemplate,onMove,onFolde
   const notes=state.notes||[];
   const recent=useMemo(()=>[...notes].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)),[notes]);
   const pinned=recent.filter(n=>n.pinned),inbox=recent.filter(n=>n.box==='inbox');
+
   return <div className="plot-board notes-home">
     <div className="board-bar"><div className="segmented" role="group" aria-label="노트 첫 화면 보기"><button type="button" aria-pressed={view==='home'} onClick={()=>choose('home')}>최근</button><button type="button" aria-pressed={view==='board'} onClick={()=>choose('board')}>보드</button></div><span>노트 {notes.length} · 수집함 {inbox.length}</span><button type="button" className="button" disabled={readonly} onClick={()=>onNew()}><Plus size={15}/>새 노트</button></div>
     {view==='board'?<NotesBoard state={state} readonly={readonly} onOpen={onOpen} onNew={onNew} onMove={onMove} onFolderWork={onFolderWork}/>
@@ -25,7 +27,9 @@ export function NotesHome({state,readonly,onOpen,onNew,onTemplate,onMove,onFolde
       {pinned.length>0&&<section aria-label="고정한 노트"><h3>고정한 노트 {pinned.length}</h3><div className="notes-home-grid">{pinned.map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
       <section aria-label="최근 수정"><h3>최근 수정</h3>{recent.length?<div className="notes-home-grid">{recent.slice(0,12).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div>:<p className="muted">아직 노트가 없습니다.</p>}</section>
       {inbox.length>0&&<section aria-label="수집함"><h3>수집함 {inbox.length} · 정리하거나 아이스박스로 옮길 노트</h3><div className="notes-home-grid">{inbox.slice(0,6).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
-      <section aria-label="템플릿"><h3>템플릿으로 시작</h3><div className="notes-home-grid">{noteTemplates.map(t=>{const Icon=templateIcons[t.id];return <button type="button" className="reference-card" key={t.id} disabled={readonly} onClick={()=>onTemplate(t.id)}><Icon size={16}/><span><strong>{t.title}</strong><small>{t.description}</small></span></button>;})}</div></section>
+      <section aria-label="템플릿"><h3>템플릿으로 시작</h3><div className="notes-home-grid">{noteTemplates.map(t=>{const Icon=templateIcons[t.id];
+
+return <button type="button" className="reference-card" key={t.id} disabled={readonly} onClick={()=>onTemplate(t.id)}><Icon size={16}/><span><strong>{t.title}</strong><small>{t.description}</small></span></button>;})}</div></section>
     </div>}
   </div>;
 }
@@ -34,7 +38,11 @@ export function NotesHome({state,readonly,onOpen,onNew,onTemplate,onMove,onFolde
 function NotesBoard({state,readonly,onOpen,onNew,onMove,onFolderWork}:{state:Workspace;readonly:boolean;onOpen:(id:string)=>void;onNew:(to?:NoteDestination)=>void;onMove:(id:string,to:NoteDestination)=>void;onFolderWork:(folderId:string,anchor:HTMLElement|null)=>void}){
   const columns=useMemo(()=>noteBoardColumns(state),[state]);
   const [dragging,setDragging]=useState(''),[over,setOver]=useState<string|null>(null);
-  function drop(e:DragEvent,folderId:string|null){e.preventDefault();const id=e.dataTransfer.getData('text/kosmos-note')||dragging;setOver(null);setDragging('');if(id&&!readonly)onMove(id,{parentId:folderId});}
+
+  function drop(e:DragEvent,folderId:string|null){e.preventDefault();const id=e.dataTransfer.getData('text/kosmos-note')||dragging;setOver(null);setDragging('');
+
+if(id&&!readonly)onMove(id,{parentId:folderId});}
+
   return <div className="board-columns">
     {columns.map(column=><section className={`board-column ${over===(column.folderId??'root')?'is-drop':''}`} key={column.folderId??'root'} aria-label={column.title}
       onDragOver={e=>{if(!dragging||readonly)return;e.preventDefault();setOver(column.folderId??'root');}} onDragLeave={()=>setOver(o=>o===(column.folderId??'root')?null:o)} onDrop={e=>drop(e,column.folderId)}>
@@ -44,8 +52,10 @@ function NotesBoard({state,readonly,onOpen,onNew,onMove,onFolderWork}:{state:Wor
     </section>)}
   </div>;
 }
+
 function BoardCard({note,readonly,onOpen,onDrag}:{note:PersonalNote;readonly:boolean;onOpen:(id:string)=>void;onDrag:(id:string)=>void}){
   const snippet=noteSnippet(note);
+
   return <button type="button" className="plot-card note-board-card" draggable={!readonly} onDragStart={e=>{e.dataTransfer.setData('text/kosmos-note',note.id);e.dataTransfer.effectAllowed='move';onDrag(note.id);}} onDragEnd={()=>onDrag('')} onClick={()=>onOpen(note.id)}>
     <span className="plot-card-meta">{note.box==='icebox'?<Snowflake size={12}/>:<Inbox size={12}/>}<span>{note.box==='icebox'?'아이스박스':'수집함'}</span><span>{noteDate(note.updatedAt)}</span></span>
     <strong>{noteTitle(note)}</strong>{snippet?<span className="plot-card-summary">{snippet}</span>:<span className="plot-card-summary empty">내용 없음</span>}

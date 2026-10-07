@@ -8,6 +8,7 @@ import { checkDocumentation } from '../scripts/check-documentation.mjs';
 
 test('문서 검사는 내부 경로·제목·대소문자·갱신 누락을 잡고 외부 링크·코드 예시는 제외한다',async()=>{
   const root=await mkdtemp(join(tmpdir(),'orbis-documentation-'));
+
   try{
     await mkdir(join(root,'docs'));await writeFile(join(root,'README.md'),'# 안내\n[사용법](docs/guide.md#한글-사용법)\n[외부](https://example.test/missing)\n`[코드](missing.md)`\n');
     await writeFile(join(root,'docs/guide.md'),'# 한글 사용법\n[돌아가기](../README.md)\n');

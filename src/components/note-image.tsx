@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { NodeViewWrapper, ReactNodeViewRenderer, type ReactNodeViewProps } from '@tiptap/react';
 import { NoteImage } from '@/lib/editor-extensions';
@@ -15,15 +16,28 @@ function NoteImageNode({node,selected}:ReactNodeViewProps){
     void (async()=>{
       try{
         let blob=(await db.assets.get([s.namespace,id]))?.blob;
-        if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${s.user}/${id}`);if(result.error)throw result.error;blob=result.data||undefined;if(blob)await db.assets.put({id,namespace:s.namespace,blob});}
+
+        if(!blob&&cloudConfigured){const result=await cloud().storage.from('private-assets').download(`${s.user}/${id}`);
+
+if(result.error)throw result.error;blob=result.data||undefined;
+
+if(blob)await db.assets.put({id,namespace:s.namespace,blob});}
+
         if(!blob)throw new Error('missing');
-        objectUrl=URL.createObjectURL(blob);if(alive)setUrl(objectUrl);else URL.revokeObjectURL(objectUrl);
+        objectUrl=URL.createObjectURL(blob);
+
+if(alive)setUrl(objectUrl);else URL.revokeObjectURL(objectUrl);
       }catch{if(alive)setFailed(true);}
     })();
-    return()=>{alive=false;if(objectUrl)URL.revokeObjectURL(objectUrl);};
+
+    return()=>{alive=false;
+
+if(objectUrl)URL.revokeObjectURL(objectUrl);};
   },[id,s.namespace,s.user]);
+
   return <NodeViewWrapper as="figure" className={`note-image ${selected?'is-selected':''}`} data-note-image={id} data-drag-handle="">
     {url?<img src={url} alt={alt}/>:<span className="note-image-state">{failed?`이미지를 불러오지 못했습니다 · ${alt||'이름 없음'}`:'이미지를 불러오는 중입니다.'}</span>}
   </NodeViewWrapper>;
 }
+
 export const NoteImageView=NoteImage.extend({addNodeView(){return ReactNodeViewRenderer(NoteImageNode);}});

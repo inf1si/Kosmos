@@ -1,4 +1,5 @@
 'use client';
+
 import { useMemo,useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { NovelDocument,RichNode,Work } from '@/lib/model';
@@ -15,10 +16,11 @@ export function DocumentStatistics({doc,work,selection}:{doc:NovelDocument;work:
   const whole=useMemo(()=>open?manuscriptStatistics(work.documents):null,[open,work.documents]);
   const value=(selected||stats)[metric.id],display=`${selected?'선택 영역 ':''}${value.toLocaleString()}${metric.unit}${metric.suffix?' · '+metric.suffix:''}`;
   const rows=[...countMetrics.map(m=>({key:m.id,label:m.label,unit:m.unit})),{key:'footnotes' as const,label:'각주 수',unit:'개'}];
+
   return <Popover open={open} onOpenChange={setOpen} align="end" width={380} title="문서 통계" description="표시 기준을 고르면 도구 모음에 바로 반영됩니다. 이 브라우저에 저장되는 보기 설정입니다." trigger={<button type="button" className={`char-count ${styles.trigger}`} aria-label={`${display} · 문서 통계 열기`} title="표시 기준·세부 통계">
     {selected&&<span className={styles.selection}>선택</span>}<span className="tape-counter" aria-hidden="true">{String(value).padStart(5,'0')}</span><span className="count-number">{value.toLocaleString()}</span>{metric.unit}<span className="count-suffix">{metric.suffix?' · '+metric.suffix:''}</span><ChevronDown size={12} aria-hidden="true"/>
   </button>}>
-    <div className={styles.root}><label>도구 모음에 표시<select aria-label="통계 표시 기준" value={metric.id} onChange={e=>setPreferences({countMetric:e.target.value as CountMetric})}>{countMetrics.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></label>
+    <div className={styles.root}><label>도구 모음에 표시<select aria-label="통계 표시 기준" value={metric.id} onChange={e=>setPreferences({countMetric:countMetrics.find(metric=>metric.id===e.target.value)?.id||'charactersWithSpaces'})}>{countMetrics.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></label>
       <p className={styles.document}>{doc.title}</p>
       <table><caption>본문 통계 비교</caption><thead><tr><th scope="col">기준</th><th scope="col">현재 문서</th>{selected&&<th scope="col">선택 영역</th>}<th scope="col">전체 원고</th></tr></thead><tbody>{rows.map(row=><tr key={row.key}><th scope="row">{row.label}<span className={styles.unit}> · {row.unit}</span></th><td>{stats[row.key].toLocaleString()}</td>{selected&&<td>{selected[row.key].toLocaleString()}</td>}<td>{whole?.[row.key].toLocaleString()}</td></tr>)}</tbody></table>
       <p className={styles.help}>전체 원고는 이 작품의 원고 {work.documents.filter(d=>d.kind==='scene').length}개 합계입니다. 설정집·메모는 합계에 넣지 않습니다.{!selected&&' 본문에서 글을 선택한 뒤 열면 선택 영역도 비교합니다.'}</p>
