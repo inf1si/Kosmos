@@ -12,7 +12,7 @@ type BoardMode='part'|'status'|'time';
 const modes:[BoardMode,string][]=[['part','부와 장'],['status','진행 상태'],['time','작중 시간']];
 
 /** Scene cards in columns by part (default), progress status or story day. */
-export function PlotBoard({documents,onOpen,onCreate}:{documents:NovelDocument[];onOpen:(id:string)=>void;onCreate:(chapter:string)=>void}){
+export function PlotBoard({documents,onOpen,onCreate}:{documents:NovelDocument[];onOpen:(id:string)=>void;onCreate:(chapter?:string)=>void}){
   const [{plotBoardMode}]=useAppPreferences();const [mode,setMode]=useState<BoardMode>(plotBoardMode);
   const scenes=documents.filter(d=>d.kind==='scene');const wiki=new Map(documents.filter(d=>d.kind==='wiki').map(d=>[d.id,d.title]));
 
@@ -23,7 +23,7 @@ export function PlotBoard({documents,onOpen,onCreate}:{documents:NovelDocument[]
   const total=scenes.reduce((n,d)=>n+countChars(d),0);
 
   return <div className="plot-board">
-    <div className="board-bar"><div className="segmented" role="group" aria-label="보드 기준">{modes.map(([value,label])=><button type="button" key={value} aria-pressed={mode===value} onClick={()=>setMode(value)}>{label}</button>)}</div><span>장면 {scenes.length} · {total.toLocaleString()}자</span><button type="button" className="button" onClick={()=>onCreate(mode==='part'&&columns.length?columns.at(-1)!.key:scenes.at(-1)?.chapter||'제1부')}><Plus size={15}/>장면 추가</button></div>
+    <div className="board-bar"><div className="segmented" role="group" aria-label="보드 기준">{modes.map(([value,label])=><button type="button" key={value} aria-pressed={mode===value} onClick={()=>setMode(value)}>{label}</button>)}</div><span>장면 {scenes.length} · {total.toLocaleString()}자</span><button type="button" className="button" onClick={()=>onCreate()}><Plus size={15}/>장면 추가</button></div>
     <div className="board-columns">
       {columns.map(column=><section className="board-column" key={column.key||'none'} aria-label={[column.kicker,column.title].filter(Boolean).join(' · ')}>
         <header>{column.kicker&&<small>{column.kicker}</small>}<strong>{column.title}</strong><span>{column.scenes.length}</span></header>

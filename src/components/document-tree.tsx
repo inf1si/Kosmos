@@ -7,7 +7,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ArrowDown, ArrowUp, BookPlus, ChevronDown, ChevronRight, Columns2, FileText, Folder, FolderPlus, GripVertical, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import { type NovelDocument, type Work, statuses, plainText, uid } from '@/lib/model';
 import { applyNavigation, createNavigationDocument, descendantsOf, insertFolder, moveNavigation, navigationSnapshot, resolveNavigation, restoreNavigation, siblingDestination, type DocumentDestination, type NavigationNode, type NavigationSnapshot } from '@/lib/document-navigation';
-import { IconButton, Popover } from './primitives';
+import { IconButton, Modal, Popover } from './primitives';
 import { WikiIcon } from './studio-icons';
 import styles from './document-tree.module.css';
 
@@ -27,7 +27,7 @@ const menuClose=(keep:{current:boolean})=>(e:Event)=>{if(keep.current){e.prevent
 
 type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void;onFolderWork?:(folderId:string,at:HTMLElement|null)=>void};
 
-export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onTrash,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onTrash?:(id:string)=>Promise<void>;noteView?:NoteView}){
+export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onTrash,onTrashFolder,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onTrash?:(id:string)=>Promise<void>;onTrashFolder?:(id:string)=>Promise<void>;noteView?:NoteView}){
   const noun=noteView?'노트':'문서',filtered=noteView?noteView.filtered:!!query.trim();
   const nav=useMemo(()=>resolveNavigation(work),[work]);const root=useRef<HTMLDivElement>(null);
   const [closed,setClosed]=useState<Set<string>>(new Set());const [dialog,setDialog]=useState<FormState|null>(null);
@@ -37,6 +37,7 @@ export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onC
   const [destination,setDestination]=useState('');const [place,setPlace]=useState('last');
   const [error,setError]=useState('');const [undo,setUndo]=useState<NavigationSnapshot|null>(null);
   const [movingToTrash,setMovingToTrash]=useState(false);const readonly=isReadonly||movingToTrash;
+  const [folderDelete,setFolderDelete]=useState<{id:string;title:string;documents:number;folders:number;replace:boolean}|null>(null);
   const [drag,setDrag]=useState<Drag|null>(null);const dragRef=useRef<Drag|null>(null);const suppressClick=useRef<{id:string;until:number}|null>(null);
   const documents=new Map(work.documents.map(d=>[d.id,d])),nodes=new Map(nav.nodes.map(n=>[n.id,n]));
   const branches=new Map<string,NavigationNode[]>();
@@ -130,6 +131,14 @@ return next;});}
 
     try{await onTrash(node.id);setUndo(null);window.setTimeout(()=>root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="대분류 추가"]')?.focus(),0);}
     catch(error){setError(error instanceof Error?error.message:`${noun}를 휴지통으로 옮기지 못했습니다.`);menuButtonOf({id:node.id})?.focus();}
+    finally{setMovingToTrash(false);}
+  }
+
+  async function deleteFolder(){
+    if(readonly||!folderDelete||!onTrashFolder)return;setMovingToTrash(true);setError('');
+
+    try{await onTrashFolder(folderDelete.id);setUndo(null);setFolderDelete(null);}
+    catch(error){setError(error instanceof Error?error.message:'폴더를 삭제하지 못했습니다.');}
     finally{setMovingToTrash(false);}
   }
 
@@ -235,6 +244,12 @@ return applyNavigation(latest,next);});}});}
 
     if(node?.type==='document'&&onTrash)entries.push({key:'trash-document',label:'휴지통으로 이동',title:!noteView&&work.documents.length<=1?'마지막 문서는 유지해야 합니다':undefined,icon:<Trash2 size={15}/>,disabled:readonly||!noteView&&work.documents.length<=1,divider:true,run:()=>afterMenu(()=>void moveToTrash(node))});
 
+    if(node?.type==='folder'&&onTrashFolder&&childNodes(node.id,node.sectionId).length)entries.push({key:'trash-folder',label:'폴더 전체 삭제',icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>afterMenu(()=>{
+      const subtree=descendantsOf(nav,node.id),count=work.documents.filter(d=>subtree.has(d.id)).length;
+      setError('');returnFocus.current=menuButtonOf(t);
+      setFolderDelete({id:node.id,title:title(node),documents:count,folders:nav.nodes.filter(n=>n.type==='folder'&&n.id!==node.id&&subtree.has(n.id)).length,replace:!noteView&&count===work.documents.length});
+    })});
+
     if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'대분류':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);
 
 if(section)next.sections=next.sections.filter(s=>s.id!==section.id);else next.nodes=next.nodes.filter(n=>n.id!==node!.id);
@@ -318,7 +333,7 @@ if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openFor
       </div>)}{!sectionClosed&&renderNodes(section.id,null,0)}{!sectionClosed&&!childNodes(null,section.id).length&&<p className={styles.empty}>문서를 추가하거나 여기로 옮겨주세요.</p>}</section>;
     })}
     {filtered&&!nav.nodes.some(show)&&<p className="empty-text">검색 결과가 없습니다.</p>}
-    {!dialog&&error&&<p className={styles.error} role="alert">{error}</p>}
+    {!dialog&&!folderDelete&&error&&<p className={styles.error} role="alert">{error}</p>}
     {drag?.active&&<div className={styles.ghost} style={{left:Math.max(4,Math.min(drag.x+12,typeof window==='undefined'?0:window.innerWidth-190)),top:drag.y+15}}>{nodes.get(drag.id)?title(nodes.get(drag.id)!):'문서'}<small>{drag.drop?.error|| (drag.drop?drag.drop.edge==='inside'?'하위에 넣기':drag.drop.edge==='before'?'앞에 놓기':'뒤에 놓기':'놓을 위치를 선택하세요.')}</small></div>}
     <Popover open={!!dialog} onOpenChange={open=>{if(!open){setDialog(null);setError('');}}} anchor={anchor} side={typeof window!=='undefined'&&window.innerWidth<700?'bottom':'right'} width={dialog?.type==='move'?340:280} title={formTitle} description={dialog?.type==='move'?(noteView?'하위 노트와 폴더도 함께 이동합니다.':'하위 문서와 폴더도 함께 이동합니다. 문서 종류와 부·장은 유지됩니다.'):undefined} onReturnFocus={()=>{const target=returnFocus.current;
 
@@ -331,5 +346,14 @@ if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButt
         {error&&<p role="alert" className={styles.error}>{error}</p>}<div className={styles.formButtons}><button type="button" className="button" onClick={()=>setDialog(null)}>취소</button><button type="submit" className="button primary" disabled={readonly}>{dialog?.type==='move'?'이동':'추가'}</button></div>
       </form>
     </Popover>
+    <Modal open={!!folderDelete} onClose={()=>{if(!movingToTrash){setFolderDelete(null);setError('');}}} title="폴더 전체 삭제" onReturnFocus={()=>{
+      if(returnFocus.current?.isConnected)returnFocus.current.focus();
+      else root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="대분류 추가"]')?.focus();
+    }}>
+      <p>‘{folderDelete?.title}’ 폴더를 전체 삭제할까요?</p>
+      <p className="field-help">{folderDelete?.documents?`하위 ${noun} ${folderDelete.documents}개는 휴지통에 보관합니다.${folderDelete.replace?' 빈 원고 하나를 남깁니다.':''}`:`하위 폴더 ${folderDelete?.folders||0}개도 삭제합니다.`}</p>
+      {folderDelete&&error&&<p className="error-message" role="alert">{error}</p>}
+      <div className="modal-actions"><button type="button" className="button" disabled={movingToTrash} onClick={()=>{setFolderDelete(null);setError('');}}>취소</button><button type="button" className="button danger" disabled={readonly} onClick={()=>void deleteFolder()}>{movingToTrash?'삭제 중':'삭제'}</button></div>
+    </Modal>
   </div>;
 }

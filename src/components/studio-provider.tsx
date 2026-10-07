@@ -13,7 +13,7 @@ import { applyNavigation, resolveNavigation } from '@/lib/document-navigation';
 import { preserveAIPreferences } from '@/lib/ai-prompt-presets';
 import { preserveNotes, preserveNoteDetails, prepareFolderWork, prepareNoteCopy, prepareNoteImport } from '@/lib/personal-notes';
 import { materializeNoteNavigation } from '@/lib/note-navigation';
-import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, trashWork as moveWorkToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
+import { materializeTrash, preserveTrash, trashNote as moveNoteToTrash, trashDocument as moveDocumentToTrash, trashDocumentFolder as moveDocumentFolderToTrash, trashNoteFolder as moveNoteFolderToTrash, trashWork as moveWorkToTrash, restoreTrash as restoreTrashItem, purgeTrash as purgeTrashItems } from '@/lib/workspace-trash';
 import type { NovelDocument } from '@/lib/model';
 import { isRejectedLegacyTrashSave,recoverLegacyTrash } from '@/lib/sync-recovery';
 import { useAppPreferences } from './use-app-preferences';
@@ -33,6 +33,7 @@ type StudioContextValue={
   addNoteAsset:(noteId:string,file:File)=>Promise<string>;importNotes:(bundle:ImportBundle,folderTitle:string)=>Promise<{folderId:string;count:number}>;createWorkFromFolder:(folderId:string,target:{title:string;form:Work['form']})=>Promise<string>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
   trashNote:(noteId:string)=>Promise<void>;
   trashDocument:(workId:string,docId:string)=>Promise<void>;trashWork:(workId:string)=>Promise<void>;
+  trashDocumentFolder:(workId:string,folderId:string)=>Promise<string>;trashNoteFolder:(folderId:string)=>Promise<void>;
   restoreTrash:(id:string)=>Promise<void>;purgeTrash:(ids:string[])=>Promise<void>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
   flush:()=>Promise<void>;syncNow:()=>Promise<void>;clearError:()=>void;
@@ -523,6 +524,26 @@ if(!row)throw new Error('기기 원고가 없습니다.');
     await flush();update(state=>moveDocumentToTrash(state,workId,docId));await flush();
   }
 
+  async function trashDocumentFolder(workId:string,folderId:string){
+    await flush();const before=dataRef.current!,targetNamespace=namespaceRef.current;
+    const next=moveDocumentFolderToTrash(before,workId,folderId);
+    await checkpoint(targetNamespace,before,'폴더 전체 삭제 전');
+
+    if(conflictRef.current||namespaceRef.current!==targetNamespace||dataRef.current!==before)throw new Error('삭제 준비 중 작업이 바뀌었습니다. 다시 시도하세요.');
+    update(()=>next);await flush();
+
+return next.works.find(w=>w.id===workId)!.documents[0].id;
+  }
+
+  async function trashNoteFolder(folderId:string){
+    await flush();const before=dataRef.current!,targetNamespace=namespaceRef.current;
+    const next=moveNoteFolderToTrash(before,folderId);
+    await checkpoint(targetNamespace,before,'노트 폴더 전체 삭제 전');
+
+    if(conflictRef.current||namespaceRef.current!==targetNamespace||dataRef.current!==before)throw new Error('삭제 준비 중 작업이 바뀌었습니다. 다시 시도하세요.');
+    update(()=>next);await flush();
+  }
+
   // A work in the trash must not stay in the public library, so its edition is withdrawn first. On a server without
   // that function this stops before the workspace changes, which also keeps the save from tripping the older trash guard.
   async function trashWork(workId:string){
@@ -550,7 +571,7 @@ if(!row)throw new Error('기기 원고가 없습니다.');
   }
 
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashWork,restoreTrash,purgeTrash,resolve,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});
 
 if(error)throw error;},
