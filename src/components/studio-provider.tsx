@@ -5,7 +5,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Workspace, LocalRecord, uid, Revision, Publication, makePublication, withdrawPublication, AssetMeta } from '@/lib/model';
 import { seedWorkspace } from '@/lib/seed';
 import { db, writeLocal, checkpoint, LocalConflict, listRevisions } from '@/lib/database';
-import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud, unpublishCloud } from '@/lib/cloud';
+import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud, unpublishCloud, authorLibrary, reorderLibrary } from '@/lib/cloud';
+import { previewPositions, previewPublicationPosition, previewPublications, reorderPreviewLibrary, type LibraryItem } from '@/lib/library-order';
 import { createBackup, readBackup } from '@/lib/backup';
 import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
 import type { Work } from '@/lib/model';
@@ -30,6 +31,7 @@ type StudioContextValue={
   importDocuments:(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']})=>Promise<string>;
   exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;unpublish:(workId:string)=>Promise<void>;
+  libraryPublications:()=>Promise<LibraryItem[]>;setLibraryOrder:(ids:string[])=>Promise<LibraryItem[]>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
   addNoteAsset:(noteId:string,file:File)=>Promise<string>;importNotes:(bundle:ImportBundle,folderTitle:string)=>Promise<{folderId:string;count:number}>;createWorkFromFolder:(folderId:string,target:{title:string;form:Work['form']})=>Promise<string>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
   trashNote:(noteId:string)=>Promise<void>;
@@ -391,8 +393,10 @@ if(cloudConfigured){await syncNow();const row=await db.workspaces.get(namespace)
 if(row?.dirty||conflictRef.current)throw new Error('클라우드 저장을 확인한 뒤 게시하세요.');}
 
     const work=dataRef.current!.works.find(w=>w.id===workId)!;await checkpoint(namespace,dataRef.current!,'게시 전 원고');
-    const pub=cloudConfigured?await publishCloud(cloudId.current!,workId,sceneIds):makePublication(work,sceneIds);
-    update(s=>({...s,works:s.works.map(w=>w.id===workId?{...w,publications:[...w.publications,pub].slice(-100),activePublicationId:pub.id}:w)}));await flush();
+    const pub=cloudConfigured?await publishCloud(cloudId.current!,workId,sceneIds):{...makePublication(work,sceneIds),libraryPosition:previewPublicationPosition(previewPositions(dataRef.current!),workId)};
+    update(state=>{const s=cloudConfigured?state:previewPositions(state);
+
+return {...s,works:s.works.map(w=>w.id===workId?{...w,publications:[...w.publications,pub].slice(-100),activePublicationId:pub.id}:w)};});await flush();
 
 return pub;
   }
@@ -404,6 +408,26 @@ return pub;
 
     if(cloudConfigured)await unpublishCloud(workId);
     update(state=>withdrawPublication(state,workId));await flush();
+  }
+
+  async function libraryPublications(){return cloudConfigured?authorLibrary():previewPublications(dataRef.current!);}
+
+  async function setLibraryOrder(ids:string[]){
+    await flush();
+
+    if(conflictRef.current||!dataRef.current)throw new Error('충돌을 확인한 뒤 서재 순서를 저장하세요.');
+    const targetNamespace=namespaceRef.current;
+
+    if(cloudConfigured){const result=await reorderLibrary(ids);
+
+      if(namespaceRef.current!==targetNamespace)throw new Error('계정이 바뀌었습니다. 순서 편집을 다시 열어주세요.');
+
+      return result;
+    }
+
+    const next=reorderPreviewLibrary(dataRef.current,ids);update(()=>next);await flush();
+
+return previewPublications(next);
   }
 
   async function addAsset(workId:string,docId:string,file:File){
@@ -606,6 +630,7 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
 
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
     snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
+    libraryPublications,setLibraryOrder,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});
 
 if(error)throw error;},

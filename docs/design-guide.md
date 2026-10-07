@@ -383,3 +383,9 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 원고·설정·메모·노트의 기존 DocHead **속성** 패널에 공용 `CustomPropertiesForm`을 둔다. 값 칩은 기존 `.chip`으로 세 개와 나머지 개수를 표시한다. 속성 추가는 기존 Popover(300px)·`.menu`·입력/선택 컴포넌트를 사용한다. 속성 행은 두 열에서 700px 이하 한 열로 바꾸고 체크박스·삭제 버튼은 줄어들지 않는다. 초점 외곽선에 내부 여백을 둔다.
 
 템플릿은 사이드바 Files 아이콘·기존 nav-item, wide Modal·segmented·transfer-export-row 체크 목록을 사용한다. 템플릿 사용/저장을 나누고 이름·포함 문서 수·넣을 위치를 보여준다. 삭제 확인은 기존 Modal과 `.button.danger`를 쓴다. 새 색·형태 토큰은 추가하지 않는다. 여섯 테마와 360px에서 확인한다. [기능 안내](workspace-templates.md).
+
+## 서재 정렬 화면
+
+공개 서재의 **정렬**은 수록 작품 제목 아래, 목록 위 오른쪽에 둔다. 기존 native select·공개 색/모양 토큰을 사용한다(14px, `var(--pub-ctl-r,6px)`, pub-brand 포커스 외곽선). 작가 지정순과 제목·게시일 기준을 표시한다. 새 테마 토큰은 없다.
+
+집필실 홈은 기존 board-bar에 ListOrdered 아이콘의 **서재 순서 편집** 버튼을 둔다. 넓은 Modal, 기존 label/select/button/reference-card와 ArrowUp/ArrowDown IconButton을 사용한다. 자동 정렬은 편집 목록에만 적용하고 저장/저장된 순서로는 modal-actions에 둔다. 목록은 최대 360px 안에서 세로 스크롤하며 긴 제목은 한 줄 말줄임으로 표시한다(원문·버튼 레이블·title은 유지). 첫/마지막 이동 버튼을 비활성화하고 게시 작품 없음·불러오는 중·저장 오류/완료를 표시한다. Esc/닫기는 홈의 호출 버튼에 초점을 돌린다. 여섯 테마 × 1280/360px에서 홈 버튼·공개 정렬·편집창을 확인한다. [사용 안내](library-order.md).

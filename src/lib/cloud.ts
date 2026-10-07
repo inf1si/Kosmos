@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { Workspace, workspaceSchema, Publication, publicationSchema } from './model';
+import { libraryItemSchema, type LibraryItem } from './library-order';
 import { applyNavigation, resolveNavigation } from './document-navigation';
 
 let client:SupabaseClient|null=null;
@@ -61,9 +62,27 @@ export async function unpublishCloud(workId:string):Promise<void>{
 }
 
 export async function publicPublications():Promise<Publication[]>{
-  const {data,error}=await cloud().from('publications').select('payload').eq('active',true).order('published_at',{ascending:false});
+  const {data,error}=await cloud().from('publications').select('payload,library_position').eq('active',true).order('library_position').order('published_at',{ascending:false});
 
   if(error)throw error;
 
-return (data||[]).map(row=>publicationSchema.parse(row.payload));
+return (data||[]).map(row=>publicationSchema.parse({...row.payload,libraryPosition:row.library_position}));
+}
+
+export async function authorLibrary():Promise<LibraryItem[]>{
+  const {data,error}=await cloud().rpc('get_author_library');
+
+  if(error)throw new Error(error.message);
+
+  return z.array(libraryItemSchema).parse(data);
+}
+
+export async function reorderLibrary(ids:string[]):Promise<LibraryItem[]>{
+  const {data,error}=await cloud().rpc('set_library_order',{p_publication_ids:ids});
+
+  if(error?.code==='PGRST202')throw new Error('서버에 서재 순서 기능이 아직 설치되지 않았습니다.');
+
+  if(error)throw new Error(error.message);
+
+  return z.array(libraryItemSchema).parse(data);
 }

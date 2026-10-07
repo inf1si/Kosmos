@@ -29,7 +29,7 @@ Workspace
 | `Workspace` | UUID `id`, `formatVersion`, 작품 배열, 첨부 메타데이터, 갱신 시각 |
 | `Work` | UUID, 제목·부제·소개, `단편/중편/장편`, 문서 배열, 판본 배열, 활성 판본 ID, 선택적 AI 대화·문서 트리 배열 |
 | `NovelDocument` | UUID, `scene/wiki/memo`, 제목, `chapter`, 리치 본문, 요약, 작업 상태, 분류, 시점·시간, 공개 여부·설명, 첨부 ID, 갱신 시각 |
-| `Publication` | UUID, 작품 ID·소개·게시 시각, 선택 장면 사본, 공개 설정 설명 사본 |
+| `Publication` | UUID, 작품 ID·소개·게시 시각, 선택 장면 사본, 공개 설정 설명 사본, 선택적 `libraryPosition` |
 | `PersonalNote` | UUID, 선택 제목, 리치 본문, tags, box(inbox/icebox), linkedWorkIds, assetIds, 생성·갱신 시각, 선택적 aiMessages |
 | `AssetMeta` | UUID, 작품 workId 또는 독립 노트 noteId 중 하나, 파일명, MIME 타입, 바이트 크기 |
 | `Revision` | UUID, 기기 namespace, 생성 시각·설명, 작업 공간 전체 사본 |
@@ -100,7 +100,7 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 | `workspaces` | 서버 행 UUID, owner UUID, version, payload, updated_at | 본인의 행 조회. 변경은 RPC |
 | `workspace_requests` | 작업 공간+요청 ID, payload 해시, 반영 버전·시각 | 직접 접근 불가. RPC의 재전송 확인용 |
 | `workspace_revisions` | 작업 공간·owner, 이전 payload, 생성 시각 | 본인의 이력 조회 가능. 현재 UI에는 연결하지 않음 |
-| `publications` | 판본 ID, owner·work ID, active, 공개 payload·시각 | 익명·로그인 사용자 모두 활성 판본의 허용 열만 조회 |
+| `publications` | 판본 ID, owner·work ID, active, 공개 payload·시각, `library_position` | 익명·로그인 사용자 모두 활성 판본의 허용 열만 조회 |
 | `ai_usage` | owner+DB 날짜, 예약 호출 횟수 | 직접 접근 불가. 호출 예약 RPC 사용 |
 
 서버 `workspaces.id`와 payload 내부 `Workspace.id`는 별개다. 서버 행 ID는 저장 RPC용이며, payload ID는 ZIP 형식과 작업 공간 식별용이다. 작가당 서버 작업 공간 행은 하나다.
@@ -113,6 +113,8 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 | `save_workspace` | `p_id`, `p_base_version`, `p_payload`, `p_request_id` | `saved`와 새 버전, 또는 `conflict`와 현재 버전·payload |
 | `publish_work` | `p_id`, `p_work_id`, `p_scene_ids` | 서버 작업본에서 공개 판본 생성·활성 전환, 판본 JSON 반환 |
 | `unpublish_work` | `p_work_id` | 그 작가의 해당 작품 활성 판본을 비활성화하고 바꾼 행 수 반환(이미 없으면 0). 판본 행은 지우지 않는다. 2026-10-07 [마이그레이션](../supabase/migrations/20261007081500_work_trash_unpublish.sql) |
+| `get_author_library` | 없음 | 허용 작가의 활성 판본 ID·작품 ID·공개 제목·게시일·순위만 반환 |
+| `set_library_order` | `p_publication_ids` UUID 배열 | 자신의 현재 활성 판본 전체 목록을 검증하고 작품별 순위만 변경, 정렬 메타데이터 반환 |
 | `reserve_ai_call` | 없음 | 해당 작가의 DB 날짜별 호출 수 증가. 최대 10회 |
 
 함수는 `SECURITY DEFINER`와 고정 `search_path`를 사용하고 `auth.uid()`를 확인한다. 기본 테이블의 쓰기 권한은 클라이언트에 주지 않는다. 권한 취소와 재부여는 Supabase의 기본 권한에 의존하지 않도록 SQL에 명시한다.
@@ -157,3 +159,11 @@ AI 질문 요청의 작품 `documentRange`·노트 `noteRange`(선택/문단, �
 `Workspace.templates[]`의 항목은 UUID·name(1~200자)·createdAt·scope(work/notes)·navigation과 문서 또는 노트 사본이다. 최대 100개이고 기존 문서 5,000개/노드 7,500개/깊이 24단계 계약을 적용한다. 선택된 자손은 한 번만 포함하고 포함하지 않은 부모는 루트로 만든다. 저장 및 적용할 때 문서·폴더·각주·블록·속성·첨부 ID를 새로 만든다. 내부 링크를 재연결하고 묶음 밖 문서 링크는 텍스트로 남긴다. 적용한 작품 문서는 비공개·집필 중, 노트는 작품 연결/고정 없음이다.
 
 첨부 메타데이터는 `workId | noteId | templateId` 중 하나만 갖는다. 템플릿 첨부는 저장할 때 별도 바이트로 복제하고 적용할 때 대상 소속으로 또 복제한다. 원본 문서/작품을 영구 삭제해도 템플릿 사본은 유지된다. 템플릿 삭제는 그 사본의 메타데이터만 제거하며 기존 복구 이력·Storage/Blob 바이트는 남는다. 형식 버전·테이블·RLS·Storage 정책은 유지한다. [사용법·이전 자료 보존](workspace-templates.md).
+
+## 서재 순서 메타데이터
+
+[서재 순서 SQL](../supabase/migrations/20261007150655_library_order.sql)은 `publications.library_position` bigint(1~9,007,199,254,740,991)을 추가한다. 기존 활성 작품의 최신 게시순을 초기 순위로 만들며 같은 작가/작품의 이전 판본에도 같은 값을 둔다. `assign_library_position` INSERT 트리거가 작가 작업 공간 행을 잠그고 재게시에는 이전 순위를, 첫 게시에는 마지막 순위+1을 부여한다. 트리거는 SECURITY INVOKER·빈 search_path이며 직접 실행 권한을 주지 않는다.
+
+두 조회/저장 RPC는 SECURITY DEFINER·빈 search_path, `auth.uid()`와 authors 등록 검사, owner 조건을 사용한다. PUBLIC·anon 실행은 취소하고 authenticated만 허용한다. 저장은 작업 공간·활성 판본 행 잠금 후 현재 판본 ID 전체와 입력 배열이 정확히 같은지 검사한다(중복·타인·누락·구판본 거절, 최대 100개). 기존 활성 슬롯을 재배치해 철회한 작품의 자리는 유지하며 공개 payload·게시일·판본 ID·원고를 수정하지 않는다. anon/authenticated에는 기존 활성 판본 RLS 아래 새 열의 SELECT만 추가한다. 다른 테이블 권한·RLS·Auth·Storage 정책은 그대로다.
+
+공개 조회는 DB 열을 `Publication.libraryPosition`으로 합쳐 읽는다. 기기 미리보기는 같은 선택 필드를 판본 사본에 저장하며 Workspace 최상위 필드·formatVersion·ZIP 버전 변경은 없다. 운영 순서는 작업 공간 복원으로 변경되지 않는다. [사용법과 동시 저장 범위](library-order.md).

@@ -70,7 +70,7 @@ Supabase 공개 키는 RLS와 함께 사용하는 값이다. `service_role`/secr
 1. [Supabase Dashboard](https://supabase.com/dashboard)에 로그인한다.
 2. 기존 빈 프로젝트가 있으면 먼저 확인한다. 이번 연결은 사용자가 만든 `Kosmos` 서울 프로젝트를 사용했다. 새 프로젝트가 필요할 때만 생성하며 DB 비밀번호는 계정 소유자가 보관한다.
 3. SQL Editor에서 [001_studio.sql](../supabase/migrations/001_studio.sql) 전체를 **새 프로젝트에 한 번** 실행한다.
-4. 이어 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql), [003_ai_preferences_guard.sql](../supabase/migrations/003_ai_preferences_guard.sql), [개인 노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql), [노트 계층·AI SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql), [휴지통 SQL](../supabase/migrations/20261004104045_workspace_trash_guard.sql), [작품 휴지통·게시 철회 SQL](../supabase/migrations/20261007081500_work_trash_unpublish.sql), [템플릿 보호 SQL](../supabase/migrations/20261007124540_workspace_templates_guard.sql)을 순서대로 실행한다. 6개 앱 테이블·private-assets 버킷·preserve_document_navigation·preserve_ai_preferences·preserve_personal_notes·preserve_note_details·preserve_workspace_trash·preserve_workspace_templates 트리거를 확인한다. 기존 프로젝트에는 미적용 번호만 추가하고 001을 다시 실행하지 않는다.
+4. 이어 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql), [003_ai_preferences_guard.sql](../supabase/migrations/003_ai_preferences_guard.sql), [개인 노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql), [노트 계층·AI SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql), [휴지통 SQL](../supabase/migrations/20261004104045_workspace_trash_guard.sql), [작품 휴지통·게시 철회 SQL](../supabase/migrations/20261007081500_work_trash_unpublish.sql), [템플릿 보호 SQL](../supabase/migrations/20261007124540_workspace_templates_guard.sql), [서재 순서 SQL](../supabase/migrations/20261007150655_library_order.sql)을 순서대로 실행한다. 6개 앱 테이블·private-assets 버킷·preserve_document_navigation·preserve_ai_preferences·preserve_personal_notes·preserve_note_details·preserve_workspace_trash·preserve_workspace_templates 트리거를 확인한다. 기존 프로젝트에는 미적용 번호만 추가하고 001을 다시 실행하지 않는다.
 5. Data API를 꺼두었다면 Integrations의 Data API 설정에서 활성화하고 필요한 public 테이블·함수를 노출한다. 노출과 읽기·쓰기 권한은 별개다. SQL의 RLS·GRANT를 유지한다.
 6. Realtime publication에 `workspaces`가 포함되었는지 확인한다.
 
@@ -147,3 +147,11 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 앱 배포 전에 [템플릿 보호 마이그레이션](../supabase/migrations/20261007124540_workspace_templates_guard.sql)을 적용한다. 기존 작업 공간 JSON에 템플릿·사용자 속성이 생긴 뒤 구버전 탭이 그 필드를 누락해 저장하는 요청을 거절한다. 명시적 빈 배열은 허용한다. 새 테이블·Auth·Storage·RLS 변경은 없다.
 
 운영 프로젝트에는 SQL을 적용했고 임시 테이블의 실제 트리거로 누락 거절/빈 배열 허용을 확인한 뒤 롤백했다. 함수는 SECURITY INVOKER, 빈 search_path이며 anon/authenticated 직접 실행 권한은 없다. 실제 작가 작업 공간 행은 변경하지 않았다. 앱 배포·로그인한 계정 저장 결과는 [검증 기록](../VERIFICATION.md)에서 별도로 기록한다. 열린 탭은 배포 뒤 새로고침한다.
+
+## 서재 순서 마이그레이션
+
+앱 배포 전에 [20261007150655_library_order.sql](../supabase/migrations/20261007150655_library_order.sql)을 한 번 적용한다. 공개 테이블에 순위 열·작가/작품 인덱스·INSERT 트리거와 작가 조회/저장 RPC를 추가한다. 기존 작품의 최신 게시순을 유지하며 공개 본문·판본 ID·게시일은 바꾸지 않는다. 재실행용 SQL이 아니므로 이미 적용한 프로젝트에서는 다시 실행하지 않는다.
+
+열의 NOT NULL·양수 제약, `assign_library_position` 트리거, `get_author_library()`·`set_library_order(uuid[])`를 확인한다. 두 RPC는 authenticated만 실행 가능하며 내부에서 허용 작가·owner·현재 판본 전체 목록을 검사한다. anon에는 활성 공개 판본의 순위 SELECT만 추가하며 쓰기 권한·기존 RLS·Auth·Storage 정책은 유지한다. 보안 진단의 authenticated SECURITY DEFINER 경고 두 항목은 이 의도된 RPC와 내부 소유자 검사를 함께 검토한다.
+
+운영 적용·CI·실제 계정 검증 여부는 [검증 기록](../VERIFICATION.md)을 따른다. 열린 집필실/서재 탭은 배포 후 새로고침한다.
