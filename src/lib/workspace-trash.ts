@@ -1,8 +1,8 @@
-import { workspaceSchema, type TrashItem, type Workspace, type Work } from './model';
+import { newDocument, workspaceSchema, type TrashItem, type Workspace, type Work } from './model';
 import { noteTitle, removeNote } from './personal-notes';
-import { applyNoteNavigation, resolveNoteNavigation } from './note-navigation';
+import { applyNoteNavigation, noteTreeWork, resolveNoteNavigation } from './note-navigation';
 import { removeDocument } from './document-deletion';
-import { applyNavigation, resolveNavigation } from './document-navigation';
+import { applyNavigation, descendantsOf, resolveNavigation } from './document-navigation';
 
 export function trashTitle(item:TrashItem){return item.type==='note'?noteTitle(item.note):item.type==='work'?item.work.title:item.document.title;}
 
@@ -55,6 +55,48 @@ if(!work||!document)throw new Error('휴지통으로 옮길 문서를 찾지 못
   if(beforeId)item.placement.beforeId=beforeId;
 
   return append({...removeDocument(state,workId,id),assets:state.assets},item);
+}
+
+/** Delete a folder tree in one update; its documents remain individually recoverable in the existing trash. */
+export function trashDocumentFolder(state:Workspace,workId:string,folderId:string):Workspace{
+  const work=state.works.find(w=>w.id===workId);
+
+  if(!work)throw new Error('폴더가 있는 작품을 찾지 못했습니다.');
+  const nav=resolveNavigation(work),folder=nav.nodes.find(n=>n.id===folderId&&n.type==='folder');
+
+  if(!folder)throw new Error('삭제할 폴더를 찾지 못했습니다.');
+  const removed=descendantsOf(nav,folderId),documents=work.documents.filter(d=>removed.has(d.id));
+
+  if((state.trash?.length||0)+documents.length>5000)throw new Error('휴지통이 가득 찼습니다. 일부 항목을 비운 뒤 다시 시도하세요.');
+  const siblings=nav.nodes.filter(n=>n.parentId===folder.parentId&&n.sectionId===folder.sectionId),beforeId=siblings[siblings.findIndex(n=>n.id===folderId)+1]?.id;
+  const section=nav.sections.find(s=>s.id===folder.sectionId)!,deletedAt=new Date().toISOString();
+  const conversations=new Map((work.aiConversations||[]).map(c=>[c.docId,c.messages]));
+
+  const items:TrashItem[]=documents.map(document=>({id:document.id,type:'document',workId,workTitle:work.title,deletedAt,document:structuredClone(document),
+    placement:{parentId:folder.parentId,childIds:[],section:structuredClone(section),...beforeId&&{beforeId}},
+    ...conversations.has(document.id)&&{aiMessages:structuredClone(conversations.get(document.id)!)}}));
+
+  const remaining=work.documents.filter(d=>!removed.has(d.id)),nodes=nav.nodes.filter(n=>!removed.has(n.id));
+
+  if(!remaining.length){const document=newDocument('scene','새 장면');remaining.push(document);nodes.push({id:document.id,type:'document',parentId:null,sectionId:nav.sections.find(s=>s.defaultKind==='scene')?.id||nav.sections[0].id});}
+
+  const next=applyNavigation({...work,documents:remaining,...work.aiConversations&&{aiConversations:work.aiConversations.filter(c=>!removed.has(c.docId))}},{...nav,nodes});
+
+  return checked({...state,works:state.works.map(w=>w.id===workId?next:w),trash:[...(state.trash||[]),...items]});
+}
+
+/** Note folders use the same atomic deletion; no replacement note is needed when the notes space becomes empty. */
+export function trashNoteFolder(state:Workspace,folderId:string):Workspace{
+  const nav=resolveNoteNavigation(state),folder=nav.nodes.find(n=>n.id===folderId&&n.type==='folder');
+
+  if(!folder)throw new Error('삭제할 폴더를 찾지 못했습니다.');
+  const removed=descendantsOf(noteTreeWork(state).navigation!,folderId),notes=(state.notes||[]).filter(n=>removed.has(n.id));
+
+  if((state.trash?.length||0)+notes.length>5000)throw new Error('휴지통이 가득 찼습니다. 일부 항목을 비운 뒤 다시 시도하세요.');
+  const siblings=nav.nodes.filter(n=>n.parentId===folder.parentId),beforeId=siblings[siblings.findIndex(n=>n.id===folderId)+1]?.id,deletedAt=new Date().toISOString();
+  const items:TrashItem[]=notes.map(note=>({id:note.id,type:'note',deletedAt,note:structuredClone(note),placement:{parentId:folder.parentId,childIds:[],...beforeId&&{beforeId}}}));
+
+  return checked(applyNoteNavigation({...state,notes:(state.notes||[]).filter(n=>!removed.has(n.id)),trash:[...(state.trash||[]),...items]},{...nav,nodes:nav.nodes.filter(n=>!removed.has(n.id))}));
 }
 
 /** Move a whole work to the trash. The caller withdraws its public edition first; the last work stays. */

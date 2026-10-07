@@ -10,6 +10,7 @@ import { NotesHome } from './notes-home';
 import { NoteCard } from './notes-reference';
 import { AIChat } from './ai-chat';
 import { editNoteTree, moveNote, noteTreeWork, treeDestination, type NoteDestination } from '@/lib/note-navigation';
+import { descendantsOf } from '@/lib/document-navigation';
 import { useStudio } from './studio-provider';
 import { GoogleAccountControl } from './studio-auth';
 import { IconButton, Popover, TooltipProvider } from './primitives';
@@ -92,6 +93,13 @@ if(compact)setSidebar(false);}
     if(active?.id===id){onSelect(visible.find(n=>n.id!==id)?.id||notes.find(n=>n.id!==id)?.id||'');setSide(null);}
   }
 
+  async function trashFolder(id:string){
+    const removed=descendantsOf(tree!.navigation!,id);
+    await s.trashNoteFolder(id);
+
+    if(active&&removed.has(active.id)){onSelect(visible.find(n=>!removed.has(n.id))?.id||notes.find(n=>!removed.has(n.id))?.id||'');setSide(null);}
+  }
+
   return <TooltipProvider><div className="studio notes-workspace">
     {sidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={closeSidebar}/>}
     {sidebar&&<aside className="studio-sidebar" ref={sidebarRef} aria-label="노트 탐색" role={compact?'dialog':undefined} aria-modal={compact||undefined}>
@@ -113,7 +121,7 @@ if(compact)setSidebar(false);}
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'backup'}))}><Archive size={16}/><span>백업과 복구</span></button>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings:notes'}))}><Settings size={16}/><span>설정</span></button>
       </nav>
-      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><div className="notes-list-view segmented" role="group" aria-label="노트 목록 보기"><button type="button" aria-pressed={listView==='tree'} onClick={()=>chooseList('tree')}>폴더</button><button type="button" aria-pressed={listView==='list'} onClick={()=>chooseList('list')}>최근 수정순</button></div>{listView==='tree'?<DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onTrash={trashNote} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'아직 노트가 없습니다.'}</p>}{!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">아직 노트가 없습니다. 새 노트에서 바로 입력하세요.</p>}</div>
+      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><div className="notes-list-view segmented" role="group" aria-label="노트 목록 보기"><button type="button" aria-pressed={listView==='tree'} onClick={()=>chooseList('tree')}>폴더</button><button type="button" aria-pressed={listView==='list'} onClick={()=>chooseList('list')}>최근 수정순</button></div>{listView==='tree'?<DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onTrash={trashNote} onTrashFolder={trashFolder} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'아직 노트가 없습니다.'}</p>}{!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">아직 노트가 없습니다. 새 노트에서 바로 입력하세요.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재"><Globe2 size={16}/></Link></div><ThemeControls/></footer>
     </aside>}
     <main className="studio-panel">

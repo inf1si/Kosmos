@@ -27,7 +27,7 @@ import { EditableCombobox } from './editable-combobox';
 import { useDrawerFocus } from './use-drawer-focus';
 import { NovelDocument, Work, newDocument, statuses, wikiReferences } from '@/lib/model';
 import { countChars } from '@/lib/outline';
-import { childrenOf, insertDocument, moveNavigation, resolveNavigation, siblingDestination } from '@/lib/document-navigation';
+import { descendantsOf, childrenOf, insertDocument, moveNavigation, resolveNavigation, siblingDestination } from '@/lib/document-navigation';
 import { cloudConfigured, cloud } from '@/lib/cloud';
 import { db } from '@/lib/database';
 import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences';
@@ -216,12 +216,23 @@ if(narrow())setSidebar(false);}
     if(splitId===id)setSplitId(null);
   }
 
-  // A new scene joins the part it belongs to: the given one, the open scene's, or the last.
+  async function trashFolder(id:string){
+    const removed=descendantsOf(resolveNavigation(work),id);
+    const next=await s.trashDocumentFolder(work.id,id);
+    setTabs(t=>t.filter(tab=>!removed.has(tab)));setBack(t=>t.filter(item=>!removed.has(item)));setForward(t=>t.filter(item=>!removed.has(item)));
+
+    if(removed.has(view)){setCurrent(next);setLastDoc(next);setProperties(false);setReference(null);}
+    else if(removed.has(lastDoc))setLastDoc(next);
+
+    if(splitId&&removed.has(splitId))setSplitId(null);
+  }
+
+  // A part is set only when the user explicitly adds a scene to that part in the plot board.
   function createDoc(kind:NovelDocument['kind'],chapter?:string,open=true){
     const d=newDocument(kind,kind==='scene'?'새 장면':kind==='wiki'?'새 설정':'새 메모');
 
-if(kind==='scene')d.chapter=chapter??(active.kind==='scene'?active.chapter:scenes.at(-1)?.chapter??'제1부');
-    organizeWork(w=>{const nav=resolveNavigation(w),neighbor=w.documents.findLast(item=>item.kind===kind&&(kind!=='scene'||item.chapter===d.chapter)),node=nav.nodes.find(n=>n.id===neighbor?.id);
+if(kind==='scene')d.chapter=chapter??'';
+    organizeWork(w=>{const nav=resolveNavigation(w),neighbor=chapter!==undefined?w.documents.findLast(item=>item.kind===kind&&item.chapter===chapter):w.documents.find(item=>item.id===active.id&&item.kind===kind)||w.documents.findLast(item=>item.kind===kind),node=nav.nodes.find(n=>n.id===neighbor?.id);
 
 return insertDocument(w,d,node?{sectionId:node.sectionId,parentId:node.parentId}:undefined);});
 
@@ -262,7 +273,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
         <button type="button" className="nav-item" onClick={()=>modal('settings')}><Settings size={16}/><span>설정</span></button>
       </nav>
       <div className="sidebar-scroll">
-        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument}/>
+        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument} onTrashFolder={trashFolder}/>
         {query.trim()&&<WorkspaceNoteResults query={query} onOpen={id=>openNotes(id)}/>}
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(work.id)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
@@ -355,7 +366,7 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
       {doc.kind!=='memo'&&<button type="button" className="chip ghost" aria-expanded={open} aria-controls="doc-properties" onClick={onToggle}>{open?<X size={13}/>:<SlidersHorizontal size={13}/>}속성</button>}
     </div>
     {open&&doc.kind!=='memo'&&<div className="doc-props" id="doc-properties">{doc.kind==='scene'?<>
-      <label>부 · 장 (발행 구분)<input value={doc.chapter} disabled={readonly} placeholder="예: 제1부 · 남겨진 시간" onChange={e=>onPatch({chapter:e.target.value})}/></label>
+      <label>부 · 장 (발행 구분)<input value={doc.chapter} disabled={readonly} placeholder="선택 사항" onChange={e=>onPatch({chapter:e.target.value})}/></label>
       <EditableCombobox label="시점 인물" value={doc.pov} options={wiki.filter(w=>w.category.trim()==='인물').map(w=>w.title)} disabled={readonly} onChange={pov=>onPatch({pov})}/>
       <label>작중 시간<input value={doc.storyTime} disabled={readonly} placeholder="예: 귀환일 · 08:40" onChange={e=>onPatch({storyTime:e.target.value})}/></label>
       <label className="wide">장면 요약<textarea rows={3} value={doc.summary} disabled={readonly} onChange={e=>onPatch({summary:e.target.value})}/></label>

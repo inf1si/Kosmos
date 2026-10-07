@@ -257,7 +257,7 @@ export function fromText(text:string):RichNode {
 }
 
 export function newDocument(kind:NovelDocument['kind'],title:string):NovelDocument {
-  return {id:uid(),kind,title,chapter:kind==='scene'?'제1부':'',content:fromText(''),summary:'',status:'draft',category:kind==='wiki'?'기타':'',pov:'',storyTime:'',isPublic:false,publicSummary:'',updatedAt:new Date().toISOString(),assetIds:[]};
+  return {id:uid(),kind,title,chapter:'',content:fromText(''),summary:'',status:'draft',category:kind==='wiki'?'기타':'',pov:'',storyTime:'',isPublic:false,publicSummary:'',updatedAt:new Date().toISOString(),assetIds:[]};
 }
 
 export function makePublication(work:Work,sceneIds:string[]):Publication {
