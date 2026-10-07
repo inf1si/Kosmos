@@ -7,6 +7,8 @@
 - 로컬 타입·프로덕션 빌드·문서·diff 공백 검사, Anti Slop 174개 파일·19개 규칙 진단 0을 확인했다. CSS 표시 변경이므로 새 Node 테스트는 추가하지 않았다.
 - 변경 후 합성 IndexedDB 최적화 프로덕션 Chromium의 여섯 테마 × 1280/360px 12개 화면에서 16px·line-clamp 4·긴 문단 높이 121.56px·가로 넘침/페이지 오류 0을 확인했다. 같은 합성 문단의 브라우저 문자 범위 측정은 보라 라이트에서 데스크톱 46→79, 모바일 64→97로 늘었다. 빈 문단 뒤 짧은 문단은 한 줄/30.39px, 공백 없는 긴 글은 네 줄로 제한되며 첫 문단 추출·문단 내 줄바꿈·다음 문단 제외와 실제 작품 읽기 링크가 유지됐다. 데스크톱 전/후와 모바일 사이버 다크 화면을 직접 봤다. Git 제외 `test-results/library-density/`에 증거를 보관한다. 실제 원고 변경·유료 AI 호출은 0이다. 다른 브라우저·터치는 미확인이고 PR/main CI·운영 검증은 후속 기록으로 구분한다. [독서 안내](docs/user-guide.md#8-독서와-공개-설정집)·[디자인](docs/design-guide.md#5-글꼴과-글자-크기).
 
+- 후속 운영 확인: [PR #35](https://github.com/inf1si/Kosmos/pull/35)을 main `1f0104933cdd1fcf96d76c5bc6bd8d3828409eba`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37638901987)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37639170223)가 통과했다(173개 기존 검사·빌드·타입·문서·실제 age 왕복·Anti Slop 0건). 기능 커밋 뒤 문서 41개·696개 내부 링크와 변경 경로 갱신 규칙도 확인했다. 미리보기 READY(`dpl_9LCQC8V2ihtH4opBNmgakNpuNwv1`)·운영 READY(`dpl_BsnnzJT3dsXHyAHwDdCfX1x9UQcK`), 정확한 main SHA와 `kosmos-ashy.vercel.app` 별칭을 확인했다. 운영 서재 작품 3개의 여섯 테마 × 1280/360px에서 16px·4줄 제한·약 122px 이하·가로 넘침/페이지 오류 0, 실제 작품 읽기 링크를 확인했다. 운영 원고·게시 순서는 변경하지 않았다. 새 크기는 열린 서재를 새로고침하면 적용된다.
+
 ## 2026-10-07 — 섹션·사용자 속성·문서 템플릿·빈 제목
 
 - 기준 main `053e3ecec8de7aec71fa3bbe2dd712c8a5da5c09`를 fetch하고 새 브랜치에서 작업했다. 기존 집필실·노트 구조와 원고/설정/메모 종류를 유지하며 표시 명칭을 섹션으로 바꿨다. 새 필드는 버전 1 작업 공간의 선택 항목이고 속성·템플릿은 공개 판본에 포함하지 않는다.
