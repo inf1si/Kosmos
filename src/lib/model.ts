@@ -297,6 +297,9 @@ export function newDocument(kind:NovelDocument['kind'],title:string):NovelDocume
 
 export function documentTitle(doc:Pick<NovelDocument,'title'>):string{return doc.title.trim()||'제목 없음';}
 
+/** Settings named as a document's POV. Titles may be empty, so an empty POV names nobody. */
+export function povSettings(documents:NovelDocument[],pov:string):NovelDocument[]{return pov.trim()?documents.filter(d=>d.kind==='wiki'&&d.title===pov):[];}
+
 export function makePublication(work:Work,sceneIds:string[]):Publication {
   const selected=new Set(sceneIds);
   const scenes=work.documents.filter(d=>d.kind==='scene'&&selected.has(d.id));

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { workspaceSchema,plainText,wikiReferences } from '@/lib/model';
+import { workspaceSchema,plainText,wikiReferences,povSettings } from '@/lib/model';
 import { writerClient } from '@/lib/server-auth';
 import { providerSchema,providerConfig,requestReview } from '@/lib/ai-provider';
 import { readLimitedJson,BodyLimitError } from '@/lib/http';
@@ -29,7 +29,7 @@ if(error||!data)return Response.json({error:'작가 권한을 확인하세요.'}
     const text=plainText(doc.content);
 
 if(text.length>12000)return Response.json({error:'첫 AI 버전은 12,000자 이하 장면을 검토합니다.'},{status:413});
-    const linked=wikiReferences(doc.content);const references=work.documents.filter(d=>d.kind==='wiki'&&(linked.includes(d.id)||d.title===doc.pov)).slice(0,8);
+    const linked=wikiReferences(doc.content);const pov=new Set(povSettings(work.documents,doc.pov).map(d=>d.id)),references=work.documents.filter(d=>d.kind==='wiki'&&(linked.includes(d.id)||pov.has(d.id))).slice(0,8);
     const context=references.map(d=>({id:d.id,title:d.title,text:plainText(d.content).slice(0,1800)}));
     const budget=await client.rpc('reserve_ai_call');
 

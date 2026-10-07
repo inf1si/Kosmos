@@ -1,6 +1,6 @@
 'use client';
 
-import { documentTitle } from '@/lib/model';
+import { documentTitle, povSettings } from '@/lib/model';
 
 import { providerSchema } from '@/lib/ai-provider';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -38,7 +38,7 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
   const [settingsOpen,setSettingsOpen]=useState(false);
   const activePreset=activePromptPreset(s.state?.aiPreferences),systemPrompt=activePreset.prompt;
   const [prompt,setPrompt]=useState('');const [busy,setBusy]=useState(false);const [pending,setPending]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');
-  const [aiDefaults]=useAppPreferences();const [includeManuscript,setIncludeManuscript]=useState(aiDefaults.aiIncludeManuscript);const [sourceIds,setSourceIds]=useState(()=>noteId||!aiDefaults.aiAttachLinked?[]:[...new Set([...wikiReferences(doc.content),...work!.documents.filter(d=>d.kind==='wiki'&&d.title===doc.pov).map(d=>d.id)])].slice(0,8));
+  const [aiDefaults]=useAppPreferences();const [includeManuscript,setIncludeManuscript]=useState(aiDefaults.aiIncludeManuscript);const [sourceIds,setSourceIds]=useState(()=>noteId||!aiDefaults.aiAttachLinked?[]:[...new Set([...wikiReferences(doc.content),...povSettings(work!.documents,doc.pov).map(d=>d.id)])].slice(0,8));
   const [sourcesOpen,setSourcesOpen]=useState(false);const [sourceQuery,setSourceQuery]=useState('');const [resetOpen,setResetOpen]=useState(false);
   const log=useRef<HTMLDivElement>(null);const textarea=useRef<HTMLTextAreaElement>(null);const disposed=useRef(false);const settingsTrigger=useRef<HTMLElement|null>(null);
   const availableIds=new Set(materials.filter(d=>d.id!==doc.id).map(d=>d.id));const selectedIds=sourceIds.filter(id=>availableIds.has(id));
