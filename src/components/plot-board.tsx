@@ -1,5 +1,7 @@
 'use client';
 
+import { documentTitle } from '@/lib/model';
+
 import { documentSchema } from '@/lib/model';
 import { useState } from 'react';
 import { useAppPreferences } from './use-app-preferences';
@@ -14,7 +16,7 @@ const modes:[BoardMode,string][]=[['part','부와 장'],['status','진행 상태
 /** Scene cards in columns by part (default), progress status or story day. */
 export function PlotBoard({documents,onOpen,onCreate}:{documents:NovelDocument[];onOpen:(id:string)=>void;onCreate:(chapter?:string)=>void}){
   const [{plotBoardMode}]=useAppPreferences();const [mode,setMode]=useState<BoardMode>(plotBoardMode);
-  const scenes=documents.filter(d=>d.kind==='scene');const wiki=new Map(documents.filter(d=>d.kind==='wiki').map(d=>[d.id,d.title]));
+  const scenes=documents.filter(d=>d.kind==='scene');const wiki=new Map(documents.filter(d=>d.kind==='wiki').map(d=>[d.id,documentTitle(d)]));
 
   const columns:SceneGroup[]=mode==='part'?groupScenes(scenes,d=>d.chapter,'부 미지정',true)
     :mode==='status'?(documentSchema.shape.status.options).map(status=>({key:status,kicker:'',title:statuses[status],scenes:scenes.filter(d=>d.status===status)}))
@@ -31,7 +33,7 @@ export function PlotBoard({documents,onOpen,onCreate}:{documents:NovelDocument[]
 
 return <button type="button" className="plot-card" key={d.id} onClick={()=>onOpen(d.id)}>
           <span className="plot-card-meta"><i className={`status-dot ${d.status}`} aria-hidden="true"/><span>{statuses[d.status]}</span><span>{countChars(d).toLocaleString()}자</span></span>
-          <strong>{d.title}</strong>{d.summary?<span className="plot-card-summary">{d.summary}</span>:<span className="plot-card-summary empty">요약 없음</span>}
+          <strong>{documentTitle(d)}</strong>{d.summary?<span className="plot-card-summary">{d.summary}</span>:<span className="plot-card-summary empty">요약 없음</span>}
           {(d.pov||links.length>0||d.storyTime)&&<span className="plot-card-chips">{d.pov&&<span className="chip soft"><User size={12}/>{d.pov}</span>}{links.slice(0,2).map(t=><span className="chip soft" key={t}><Link2 size={12}/>{t}</span>)}{links.length>2&&<span className="chip soft">+{links.length-2}</span>}{d.storyTime&&<span className="chip"><Clock3 size={12}/>{d.storyTime}</span>}</span>}
         </button>;})}
         {mode==='part'&&<button type="button" className="board-add" onClick={()=>onCreate(column.key)}><Plus size={14}/>이 부에 장면 추가</button>}

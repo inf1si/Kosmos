@@ -6,6 +6,7 @@ import { navigationSchema, navigationIssues } from './document-navigation-schema
 import { aiPreferencesSchema } from './ai-prompt-presets';
 import { cellSpan, formatNumber, inlineFontSize, validListStyle } from './manuscript-format';
 import { jsonValueSchema, type JsonValue } from './json-value';
+import { customPropertiesSchema } from './custom-properties';
 
 export type RichAttributes = { [key: string]: JsonValue | undefined };
 
@@ -118,11 +119,12 @@ const noteContentSchema = z.custom<RichNode>(value => {
 }, '지원하지 않는 노트 형식입니다.');
 
 export const documentSchema = z.object({
-  id: z.uuid(), kind: z.enum(['scene','wiki','memo']), title: z.string().min(1).max(300),
+  id: z.uuid(), kind: z.enum(['scene','wiki','memo']), title: z.string().max(300),
   chapter: z.string().max(300), content: contentSchema, summary: z.string().max(20000),
   status: z.enum(['idea','draft','review','done']), category: z.string().max(200),
   pov: z.string().max(200), storyTime: z.string().max(300), isPublic: z.boolean(),
   publicSummary: z.string().max(30000), updatedAt: z.string(), assetIds: z.array(z.uuid()).max(200),
+  customProperties:customPropertiesSchema.optional(),
 });
 
 export type NovelDocument = z.infer<typeof documentSchema>;
@@ -155,14 +157,35 @@ export const noteSchema = z.object({
   tags:z.array(z.string().trim().min(1).max(40)).max(20),box:z.enum(['inbox','icebox']),
   linkedWorkIds:z.array(z.uuid()).max(100),assetIds:z.array(z.uuid()).max(200),
   createdAt:z.string(),updatedAt:z.string(),aiMessages:chatMessagesSchema.optional(),pinned:z.boolean().optional(),
+  customProperties:customPropertiesSchema.optional(),
 }).superRefine((note,ctx)=>{
   for(const key of ['tags','linkedWorkIds','assetIds'] as const)if(new Set(note[key]).size!==note[key].length)ctx.addIssue({code:'custom',message:'노트의 중복 연결을 확인하세요.',path:[key]});
 });
 
 export type PersonalNote = z.infer<typeof noteSchema>;
 
-export const assetSchema = z.object({id:z.uuid(),workId:z.uuid().optional(),noteId:z.uuid().optional(),name:z.string().max(300),type:z.enum(['image/png','image/jpeg','image/webp']),size:z.number().int().min(0).max(10*1024*1024)}).superRefine((asset,ctx)=>{
-  if(!!asset.workId===!!asset.noteId)ctx.addIssue({code:'custom',message:'첨부의 소속을 확인하세요.'});
+const templateBase={id:z.uuid(),name:z.string().trim().min(1).max(200),createdAt:z.iso.datetime(),navigation:navigationSchema};
+
+export const workspaceTemplateSchema=z.discriminatedUnion('scope',[
+  z.object({...templateBase,scope:z.literal('work'),documents:z.array(documentSchema).min(1).max(5000)}),
+  z.object({...templateBase,scope:z.literal('notes'),notes:z.array(noteSchema).min(1).max(5000)}),
+]).superRefine((template,ctx)=>{
+  const items=template.scope==='work'?template.documents:template.notes;
+
+  if(new Set(items.map(d=>d.id)).size!==items.length)ctx.addIssue({code:'custom',message:'템플릿 문서 ID가 중복됩니다.'});
+
+  for(const message of navigationIssues(template.navigation,items.map(d=>d.id)))ctx.addIssue({code:'custom',message});
+  const placed=new Set(template.navigation.nodes.filter(n=>n.type==='document').map(n=>n.id));
+
+  if(items.some(d=>!placed.has(d.id)))ctx.addIssue({code:'custom',message:'템플릿 문서의 위치를 확인하세요.'});
+
+  if(template.scope==='notes'&&(template.navigation.sections.length!==1||template.navigation.sections[0].id!=='notes'))ctx.addIssue({code:'custom',message:'노트 템플릿의 위치를 확인하세요.'});
+});
+
+export type WorkspaceTemplate=z.infer<typeof workspaceTemplateSchema>;
+
+export const assetSchema = z.object({id:z.uuid(),workId:z.uuid().optional(),noteId:z.uuid().optional(),templateId:z.uuid().optional(),name:z.string().max(300),type:z.enum(['image/png','image/jpeg','image/webp']),size:z.number().int().min(0).max(10*1024*1024)}).superRefine((asset,ctx)=>{
+  if([asset.workId,asset.noteId,asset.templateId].filter(Boolean).length!==1)ctx.addIssue({code:'custom',message:'첨부의 소속을 확인하세요.'});
 });
 
 export type AssetMeta = z.infer<typeof assetSchema>;
@@ -194,6 +217,7 @@ export const workspaceSchema = z.object({
   notes:z.array(noteSchema).max(5000).optional(),
   noteNavigation:noteNavigationSchema.optional(),
   trash:z.array(trashItemSchema).max(5000).optional(),
+  templates:z.array(workspaceTemplateSchema).max(100).optional(),
 }).superRefine((data,ctx)=>{
   const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...(data.trash||[]).map(t=>t.id)];
 
@@ -204,6 +228,16 @@ export const workspaceSchema = z.object({
   if((data.notes||[]).filter(n=>n.aiMessages?.length).length>200)ctx.addIssue({code:'custom',message:'노트 대화는 최대 200개까지 보관할 수 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
   const workIds=new Set(data.works.map(w=>w.id));
+
+  const templateIds=new Set((data.templates||[]).map(t=>t.id));
+
+  if(templateIds.size!==(data.templates||[]).length||[...templateIds].some(id=>ids.includes(id)))ctx.addIssue({code:'custom',message:'템플릿 ID가 중복됩니다.'});
+
+  for(const template of data.templates||[]){
+    const items=template.scope==='work'?template.documents:template.notes;
+
+    if(items.some(d=>d.assetIds.some(id=>assets.get(id)?.templateId!==template.id)))ctx.addIssue({code:'custom',message:'템플릿 첨부 연결을 확인하세요.'});
+  }
 
   for(const item of data.trash||[]){
     if(item.type==='work'){
@@ -259,6 +293,8 @@ export function fromText(text:string):RichNode {
 export function newDocument(kind:NovelDocument['kind'],title:string):NovelDocument {
   return {id:uid(),kind,title,chapter:'',content:fromText(''),summary:'',status:'draft',category:kind==='wiki'?'기타':'',pov:'',storyTime:'',isPublic:false,publicSummary:'',updatedAt:new Date().toISOString(),assetIds:[]};
 }
+
+export function documentTitle(doc:Pick<NovelDocument,'title'>):string{return doc.title.trim()||'제목 없음';}
 
 export function makePublication(work:Work,sceneIds:string[]):Publication {
   const selected=new Set(sceneIds);

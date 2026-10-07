@@ -4,8 +4,10 @@ import { documentSchema } from '@/lib/model';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Archive, ArrowLeft, FileUp, Cloud, StickyNote, Trash2, Globe2, HardDrive, Inbox, House, Link2, MoreHorizontal, NotebookPen, Pin, PinOff, PanelLeft, Paperclip, Plus, RotateCcw, Search, Settings, SlidersHorizontal, Snowflake, Sparkles, Tag, Waypoints, X } from 'lucide-react';
+import { Archive, ArrowLeft, Files, FileUp, Cloud, StickyNote, Trash2, Globe2, HardDrive, Inbox, House, Link2, MoreHorizontal, NotebookPen, Pin, PinOff, PanelLeft, Paperclip, Plus, RotateCcw, Search, Settings, SlidersHorizontal, Snowflake, Sparkles, Tag, Waypoints, X } from 'lucide-react';
 import { DocumentTree } from './document-tree';
+import { WorkspaceTemplates, type TemplateDialogRequest } from './workspace-templates';
+import { CustomPropertiesForm, CustomPropertyChips } from './custom-properties';
 import { NotesHome } from './notes-home';
 import { NoteCard } from './notes-reference';
 import { AIChat } from './ai-chat';
@@ -38,6 +40,7 @@ type Props={activeId:string;captureId:string;onSelect:(id:string)=>void;onReturn
 
 export function PersonalNotes({activeId,captureId,onSelect,onReturn,onNew,onOpenWork}:Props){
   const s=useStudio(),notes=s.state?.notes||EMPTY_NOTES;
+  const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);
   const [sidebar,setSidebar]=useState(false),[compact,setCompact]=useState(true),[side,setSide]=useState<'links'|'ai'|null>(null);
   const [listView,chooseList]=useStoredChoice(NOTES_LIST_VIEW_KEY,notesListViews,'tree'),[importOpen,setImportOpen]=useState(false),[folderWork,setFolderWork]=useState<{id:string;anchor:HTMLElement|null}|null>(null);
   const [query,setQuery]=useState(''),[filterOpen,setFilterOpen]=useState(false),[box,setBox]=useState<'all'|'inbox'|'icebox'>('all'),[tag,setTag]=useState(''),[workId,setWorkId]=useState('');
@@ -118,10 +121,11 @@ if(compact)setSidebar(false);}
         <div className="notes-views segmented" role="group" aria-label="노트 보기">{([['all','전체',notes.length],['inbox','수집함',inbox],['icebox','아이스박스',icebox]] as const).map(([value,label,count])=><button type="button" key={value} aria-pressed={box===value} onClick={()=>setBox(value)}>{label}<small>{count}</small></button>)}</div>
         <button type="button" className="nav-item" disabled={readonly} onClick={()=>setImportOpen(true)}><FileUp size={16}/><span>노트 가져오기</span></button>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'trash'}))}><Trash2 size={16}/><span>휴지통</span><small>{s.state.trash?.length||0}</small></button>
+        <button type="button" className="nav-item" disabled={readonly} onClick={()=>setTemplateRequest({})}><Files size={16}/><span>템플릿</span></button>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'backup'}))}><Archive size={16}/><span>백업과 복구</span></button>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings:notes'}))}><Settings size={16}/><span>설정</span></button>
       </nav>
-      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><div className="notes-list-view segmented" role="group" aria-label="노트 목록 보기"><button type="button" aria-pressed={listView==='tree'} onClick={()=>chooseList('tree')}>폴더</button><button type="button" aria-pressed={listView==='list'} onClick={()=>chooseList('list')}>최근 수정순</button></div>{listView==='tree'?<DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onTrash={trashNote} onTrashFolder={trashFolder} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'아직 노트가 없습니다.'}</p>}{!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">아직 노트가 없습니다. 새 노트에서 바로 입력하세요.</p>}</div>
+      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><div className="notes-list-view segmented" role="group" aria-label="노트 목록 보기"><button type="button" aria-pressed={listView==='tree'} onClick={()=>chooseList('tree')}>폴더</button><button type="button" aria-pressed={listView==='list'} onClick={()=>chooseList('list')}>최근 수정순</button></div>{listView==='tree'?<DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'아직 노트가 없습니다.'}</p>}{!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">아직 노트가 없습니다. 새 노트에서 바로 입력하세요.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재"><Globe2 size={16}/></Link></div><ThemeControls/></footer>
     </aside>}
     <main className="studio-panel">
@@ -146,12 +150,14 @@ return;}
 const work=works.find(w=>w.documents.some(d=>d.id===id));
 
 if(work)onOpenWork(work.id,id);}}/>}</div></aside></>}
+    {templateRequest&&<WorkspaceTemplates source={{scope:'notes'}} request={templateRequest} onClose={()=>setTemplateRequest(null)} onCreated={select}/>}
     <NotesImportDialog open={importOpen} onClose={()=>setImportOpen(false)} onImported={()=>{setQuery('');setBox('all');setTag('');setWorkId('');chooseList('tree');}}/>
     {folderWork&&<FolderWorkPopover key={folderWork.id} folderId={folderWork.id} anchor={folderWork.anchor} onClose={()=>setFolderWork(null)} onCreated={id=>{setFolderWork(null);onOpenWork(id);}}/>}
   </div></TooltipProvider>;
 }
 
 function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork}:{note:PersonalNote;readonly:boolean;links:number;linksOpen:boolean;onLinks:()=>void;onPatch:(patch:Parameters<typeof patchNote>[2])=>void;onOpenWork:Props['onOpenWork']}){
+  const [propertiesOpen,setPropertiesOpen]=useState(false);
   const s=useStudio(),[panel,setPanel]=useState<'tags'|'works'|'copy'|'files'|null>(null),[draftTag,setDraftTag]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [target,setTarget]=useState(s.state!.works[0].id),[kind,setKind]=useState<NovelDocument['kind']>('memo');
   const available=s.state!.works,targetId=available.some(w=>w.id===target)?target:available[0].id;
@@ -197,6 +203,8 @@ try{const id=await s.copyNote(note.id,targetId,kind);onOpenWork(targetId,id);}ca
       {note.linkedWorkIds.map(id=>{const work=available.find(w=>w.id===id);
 
 return work?<button type="button" className="chip soft" key={id} onClick={()=>onOpenWork(id)}><Link2 size={13}/>{work.title}</button>:null;})}
+      <CustomPropertyChips properties={note.customProperties} onOpen={()=>setPropertiesOpen(true)}/>
+      <button type="button" className="chip ghost" aria-expanded={propertiesOpen} onClick={()=>setPropertiesOpen(open=>!open)}><SlidersHorizontal size={13}/>속성</button>
       <DropdownMenu.Root modal={false}>
         <DropdownMenu.Trigger asChild><button type="button" className="icon-button notes-head-more" aria-label="노트 더 보기" title="노트 더 보기"><MoreHorizontal size={15}/></button></DropdownMenu.Trigger>
         <DropdownMenu.Portal><DropdownMenu.Content className="menu" align="start" sideOffset={4} collisionPadding={12} onCloseAutoFocus={e=>{if(keepMenuFocus.current){e.preventDefault();keepMenuFocus.current=false;}}}>
@@ -212,6 +220,7 @@ return work?<button type="button" className="chip soft" key={id} onClick={()=>on
 
 if(!file)return;setBusy(true);setError('');void s.addNoteAsset(note.id,file).catch(e=>setError(e instanceof Error?e.message:'이미지를 첨부하지 못했습니다.')).finally(()=>setBusy(false));}}/></label>{busy&&<p className="muted" role="status">첨부를 저장하는 중입니다.</p>}{error&&<p className="danger" role="alert">{error}</p>}</div></Popover>
     </div>
+    {propertiesOpen&&<div className="doc-props"><CustomPropertiesForm properties={note.customProperties} disabled={effectiveReadonly} onChange={customProperties=>onPatch({customProperties})}/></div>}
     <div className="doc-divider"/>
   </div>;
 }

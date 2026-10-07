@@ -27,7 +27,7 @@ export function navigationIssues(nav:DocumentNavigation,documentIds:string[]):st
   if(sections.size!==nav.sections.length||nodes.size!==nav.nodes.length)return ['문서 정리 구조에 중복 ID가 있습니다.'];
 
   for(const n of nav.nodes){
-    if(!sections.has(n.sectionId))return ['문서의 대분류를 찾지 못했습니다.'];
+    if(!sections.has(n.sectionId))return ['문서의 섹션을 찾지 못했습니다.'];
 
     if(n.type==='document'&&!docs.has(n.id))return ['정리 구조의 문서를 찾지 못했습니다.'];
 

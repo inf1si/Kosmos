@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { customPropertiesSchema } from './custom-properties';
 import { assetSchema } from './model';
 import { zipUncompressedSize, zipOriginalName } from './zip-metadata';
 import MarkdownIt from 'markdown-it';
@@ -32,7 +33,7 @@ type HtmlElement=HtmlNode & {name:string;attribs:Record<string,string>;children:
 
 export type ImportedAsset={key:string;name:string;blob:Blob};
 
-export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string;tags?:string[];created?:string;updated?:string;place?:string};
+export type ImportedPage={key:string;title:string;kind:NovelDocument['kind'];content:RichNode;assetKeys:string[];chapter:string;category:string;summary:string;tags?:string[];created?:string;updated?:string;place?:string;customProperties?:NovelDocument['customProperties']};
 
 export type ImportBundle={source:string;pages:ImportedPage[];assets:ImportedAsset[];warnings:string[];navigation?:DocumentNavigation;sourceIds?:Record<string,string>};
 
@@ -394,7 +395,7 @@ throw new Error(`${key}: UTF-8 또는 EUC-KR로 저장한 파일을 선택하세
 
   let metadata=new Map<string,Partial<ImportedPage>>();const metaBytes=entries.get('kosmos-transfer.json');
 
-  if(metaBytes){const parsed=z.object({format:z.literal('kosmos-transfer'),version:z.literal(1),navigation:navigationSchema.optional(),documents:z.array(z.object({id:z.uuid().optional(),path:z.string().min(1).max(1000),title:z.string().min(1).max(300).optional(),kind:z.enum(['scene','wiki','memo']).optional(),chapter:z.string().max(300).optional(),category:z.string().max(200).optional(),summary:z.string().max(20000).optional()})).max(MAX_PAGES)}).safeParse(JSON.parse(decode('kosmos-transfer.json',metaBytes)));
+  if(metaBytes){const parsed=z.object({format:z.literal('kosmos-transfer'),version:z.literal(1),navigation:navigationSchema.optional(),documents:z.array(z.object({id:z.uuid().optional(),path:z.string().min(1).max(1000),title:z.string().max(300).optional(),kind:z.enum(['scene','wiki','memo']).optional(),chapter:z.string().max(300).optional(),category:z.string().max(200).optional(),summary:z.string().max(20000).optional(),customProperties:customPropertiesSchema.optional()})).max(MAX_PAGES)}).safeParse(JSON.parse(decode('kosmos-transfer.json',metaBytes)));
 
 if(!parsed.success)throw new Error('문서 묶음의 정보를 확인하세요.');metadata=new Map(parsed.data.documents.map(d=>[path(d.path),d]));
 
@@ -485,7 +486,9 @@ if(target)shown.add(target);}
     else if(['md','markdown','txt','html','htm','csv'].includes(ext)){
       const source=decode(key,bytes,MAX_TEXT,true),meta=metadata.get(key);const page:ImportedPage={key,title:baseTitle(key),kind:meta?.kind&&['scene','wiki','memo'].includes(meta.kind)?meta.kind:'memo',content:fromText(''),assetKeys:[],chapter:meta?.chapter||key.split('/').slice(0,-1).join('/').slice(0,300),category:meta?.category||'',summary:meta?.summary||''};
 
-      if(meta?.title)page.title=meta.title.slice(0,300);
+      page.customProperties=meta?.customProperties;
+
+      if(meta?.title!==undefined)page.title=meta.title.slice(0,300);
       else if(['html','htm'].includes(ext)){const tree=parseDocument(source);page.title=(elements(tree,'h1').find(n=>n.attribs.class?.includes('page-title'))||elements(tree,'title')[0])?text(elements(tree,'h1').find(n=>n.attribs.class?.includes('page-title'))||elements(tree,'title')[0]).trim().slice(0,300)||page.title:page.title;}
       else if(['md','markdown'].includes(ext)&&/^#\s+[^\n]+/.test(source))page.title=source.match(/^#\s+([^\n]+)/)![1].trim().slice(0,300);
       bundle.pages.push(page);sources.set(key,source);
@@ -561,7 +564,7 @@ if('workId'in target&&!state.works.some(w=>w.id===workId))throw new Error('작�
   const documents=choices.map(choice=>{
     const page=bundle.pages.find(p=>p.key===choice.key);
 
-if(!page)throw new Error('가져올 문서가 바뀌었습니다.');const d=newDocument(choice.kind,choice.title.trim());d.id=ids.get(page.key)!;d.chapter=page.chapter;d.category=page.category||d.category;d.summary=page.summary;d.content=structuredClone(page.content);
+if(!page)throw new Error('가져올 문서가 바뀌었습니다.');const d=newDocument(choice.kind,choice.title.trim());d.id=ids.get(page.key)!;d.chapter=page.chapter;d.category=page.category||d.category;d.summary=page.summary;d.customProperties=page.customProperties?.map(p=>({...p,id:uid()}));d.content=structuredClone(page.content);
 
     const visit=(node:RichNode)=>{if(node.type==='footnote')node.attrs={...node.attrs,noteId:uid()};
 
@@ -758,15 +761,15 @@ attachments.push(format==='html'?`<p><img src="${esc(name)}" alt="${esc(meta.nam
 
     let output:string;
 
-    if(format==='html'){const notes:{id:string;text:string}[]=[];const body=htmlRender(d.content,filenames,notes);output=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(d.title)}</title></head><body><article><h1>${esc(d.title)}</h1>${body}${attachments.join('')}<section class="footnotes"><h2>각주</h2>${notes.map((n,i)=>`<p id="note-${i+1}">${i+1}. ${esc(n.text)}</p>`).join('')}</section></article></body></html>`;}
-    else {const notes:string[]=[];output=`# ${mdEsc(d.title)}\n\n${mdRender(d.content,filenames,notes)}${attachments.join('\n\n')}\n\n${notes.map((n,i)=>`[^${i+1}]: ${n.replace(/\n/g,'\n    ')}`).join('\n')}`;}
+    if(format==='html'){const notes:{id:string;text:string}[]=[];const body=htmlRender(d.content,filenames,notes);output=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(d.title)}</title></head><body><article>${d.title.trim()?`<h1>${esc(d.title)}</h1>`:''}${body}${attachments.join('')}<section class="footnotes"><h2>각주</h2>${notes.map((n,i)=>`<p id="note-${i+1}">${i+1}. ${esc(n.text)}</p>`).join('')}</section></article></body></html>`;}
+    else {const notes:string[]=[];output=`${d.title.trim()?`# ${mdEsc(d.title)}\n\n`:''}${mdRender(d.content,filenames,notes)}${attachments.join('\n\n')}\n\n${notes.map((n,i)=>`[^${i+1}]: ${n.replace(/\n/g,'\n    ')}`).join('\n')}`;}
 
     total+=encoder.encode(output).length;
 
 if(total>MAX_BYTES)throw new Error('내보내기 크기가 100MB를 넘습니다.');zip.file(filenames.get(d.id)!,output);
   }
 
-  zip.file('kosmos-transfer.json',JSON.stringify({format:'kosmos-transfer',version:1,workTitle:work.title,navigation:subsetNavigation(resolveNavigation(work),docs.map(d=>d.id),docs.length===work.documents.length),documents:docs.map(d=>({id:d.id,path:filenames.get(d.id),title:d.title,kind:d.kind,chapter:d.chapter,category:d.category,summary:d.summary}))},null,2));
+  zip.file('kosmos-transfer.json',JSON.stringify({format:'kosmos-transfer',version:1,workTitle:work.title,navigation:subsetNavigation(resolveNavigation(work),docs.map(d=>d.id),docs.length===work.documents.length),documents:docs.map(d=>({id:d.id,path:filenames.get(d.id),title:d.title,kind:d.kind,chapter:d.chapter,category:d.category,summary:d.summary,customProperties:d.customProperties}))},null,2));
   zip.file('README-ORBIS-TERTIUS.txt','Orbis Tertius 문서 교환용 파일입니다. 초안과 비공개 설정을 포함할 수 있습니다.\nNotion: 설정 → 가져오기 → ZIP. Obsidian: Markdown 묶음을 압축 해제하세요.\n복구 이력과 공개 판본은 포함하지 않습니다. 전체 보관은 Orbis Tertius 전체 백업을 사용하세요.\n문서 내 이미지는 Orbis Tertius에서는 별도 첨부로 가져오며, 표·데이터베이스·앱 고유 기능은 완전히 복원되지 않습니다.');
 
   return{blob:await zip.generateAsync({type:'blob',compression:'DEFLATE'}),name:`${safeFilename(work.title)}-${format}.zip`};

@@ -139,3 +139,9 @@ pnpm exec tsx tests/browser/note-metadata-focus.mjs
 [폴더째 노트 가져오기 회귀 검사](../tests/browser/note-import-formats.mjs)도 같은 설정으로 실행한다. 숨김 폴더가 있는 Obsidian식 폴더(Markdown·PNG·Word·한글 hwp)를 **폴더 선택**으로 고른 뒤 미리보기 수·기본 폴더 이름, 여섯 테마 × 1280/360px의 파일·폴더 선택 배치와 가로 넘침, 가져온 폴더 구조·`[[링크]]` 2개·본문 이미지·Word 목록을 확인한다. 파일이 한 하위 폴더에만 있는 경우, 세로 병합 표의 3행·1열과 새로고침 유지, ZIP 루트 스크리브너와 별도 Markdown의 동시 가져오기·저장·새로고침도 확인한다. Playwright가 한글 이름의 폴더 업로드 파일을 읽지 못해 이 검사의 파일·폴더 이름은 영문이다. 화면은 `test-results/note-import-formats`에 저장한다.
 
 커서 명령 회귀 검사는 [note-inline-commands.mjs](../tests/browser/note-inline-commands.mjs)를 같은 브라우저 환경 변수로 실행한다. 합성 로그인·저장·AI 응답만 사용하며 원문 범위 검증은 [note-inline-ai.test.ts](../tests/note-inline-ai.test.ts)에 있다.
+
+## 사용자 속성·저장한 템플릿
+
+노트 제목 아래 **속성 → 속성 추가**에서 텍스트·숫자·날짜·체크박스를 추가한다. 노트의 작품 연결·태그·상태와 별개이며 문서당 최대 40개다. 작품으로 사본 가져오기와 폴더로 새 작품 만들기도 사용자 속성을 옮긴다.
+
+문서/폴더 메뉴 **템플릿으로 저장**, 사이드바 **템플릿**에서 한 노트·여러 노트·폴더 전체를 저장하고 다시 만든다. 본문 이미지·체크리스트·사용자 속성·묶음 내부 링크를 복사하며 작품 연결·고정·AI 대화는 복사하지 않는다. 기존 노트 홈의 기본 템플릿과 별도 기능이다. [사용법·백업](workspace-templates.md).

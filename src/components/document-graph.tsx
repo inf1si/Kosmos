@@ -1,5 +1,7 @@
 'use client';
 
+import { documentTitle } from '@/lib/model';
+
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { ArrowUpRight, FileText, Focus, Network, RotateCcw, Search, SlidersHorizontal, StickyNote, ZoomIn, ZoomOut } from 'lucide-react';
 import { NovelDocument, statuses } from '@/lib/model';
@@ -176,7 +178,7 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
       </Popover>
     </header>
     {mode === 'local' && <div className={styles.localControls}>
-      <label>중심 문서<select aria-label="그래프 중심 문서" value={center} onChange={e => {setCenter(e.target.value); setSelected(e.target.value);}}>{documents.map(d => <option value={d.id} key={d.id}>{d.title}</option>)}</select></label>
+      <label>중심 문서<select aria-label="그래프 중심 문서" value={center} onChange={e => {setCenter(e.target.value); setSelected(e.target.value);}}>{documents.map(d => <option value={d.id} key={d.id}>{documentTitle(d)}</option>)}</select></label>
       <label>범위<select aria-label="주변 연결 단계" value={depth} onChange={e => setDepth(Number(e.target.value))}>{[1, 2, 3].map(n => <option key={n} value={n}>{n}단계</option>)}</select></label>
     </div>}
     {visible.limited && <p className={styles.notice}>검색 결과 {visible.total}개 중 최대 {GRAPH_LIMIT}개 문서와 {GRAPH_EDGE_LIMIT}개 연결을 표시합니다. 검색이나 주변 연결로 범위를 좁혀주세요.</p>}
@@ -197,10 +199,10 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
         <div className={styles.nodes}>
           {visible.documents.map(d => {const p = screen(point(d.id)), chosen = d.id === doc?.id, small = compact && !chosen;
 
- return <button type="button" key={d.id} className={`${styles.node} ${small ? styles.compact : ''}`} style={{transform: `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`}} aria-pressed={chosen} aria-label={`문서 선택: ${d.title}`} title={`${d.title} · ${kindNames[d.kind]}${d.category ? ` · ${d.category}` : ''}`}
+ return <button type="button" key={d.id} className={`${styles.node} ${small ? styles.compact : ''}`} style={{transform: `translate(${p.x}px, ${p.y}px) translate(-50%, -50%)`}} aria-pressed={chosen} aria-label={`문서 선택: ${documentTitle(d)}`} title={`${documentTitle(d)} · ${kindNames[d.kind]}${d.category ? ` · ${d.category}` : ''}`}
             onPointerDown={e => startDrag(e, d.id)} onClick={() => {if (!suppressClick.current) setSelected(d.id);}}
             onKeyDown={e => {if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {e.preventDefault(); onOpen(d.id);}}}>
-            <DocIcon doc={d} size={13}/>{!small && <span>{d.title}</span>}{!small && d.kind === 'scene' && <i className={`status-dot ${d.status}`} role="img" aria-label={statuses[d.status]}/>}
+            <DocIcon doc={d} size={13}/>{!small && <span>{documentTitle(d)}</span>}{!small && d.kind === 'scene' && <i className={`status-dot ${d.status}`} role="img" aria-label={statuses[d.status]}/>}
           </button>;})}
         </div>
         {!visible.documents.length && <div className={styles.empty}><Network size={24}/><strong>표시할 문서가 없습니다.</strong><p>검색어나 필터를 조정해보세요.</p><button type="button" className="button" onClick={resetFilters}>필터 초기화</button></div>}
@@ -209,15 +211,15 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
       </div>
       <aside className={styles.inspector} aria-label="그래프 문서 정보">
         {doc ? <>
-          <span className={styles.kicker}><DocIcon doc={doc} size={13}/>{kindNames[doc.kind]}{doc.category && ` · ${doc.category}`}{doc.kind === 'scene' && <> · {statuses[doc.status]}</>}</span><h2>{doc.title}</h2>
+          <span className={styles.kicker}><DocIcon doc={doc} size={13}/>{kindNames[doc.kind]}{doc.category && ` · ${doc.category}`}{doc.kind === 'scene' && <> · {statuses[doc.status]}</>}</span><h2>{documentTitle(doc)}</h2>
           {doc.summary && <p className={styles.summary}>{doc.summary}</p>}
           <div className={styles.docActions}><button type="button" className="button" onClick={() => onOpen(doc.id)}><ArrowUpRight size={14}/>문서 열기</button><button type="button" className="button" onClick={() => {setCenter(doc.id); setMode('local');}}><Network size={14}/>주변 연결</button></div>
           <h3>연결된 문서 <span>{related.length}</span></h3>
           {related.length ? <ul className={styles.relatedList}>{related.map(d => {const edges = neighbors.filter(e => e.source === d.id || e.target === d.id);
 
- return <li key={d.id}><button type="button" className={styles.related} onClick={() => selectNeighbor(d.id)}><DocIcon doc={d}/><span><strong>{d.title}</strong><small>{[...new Set(edges.map(e => e.kind === 'pov' ? '시점 인물' : e.source === doc.id ? '이 문서에서 연결' : '이 문서를 참조'))].join(' · ')}</small></span></button></li>;})}</ul> : <p className={styles.hint}>본문의 ‘설정 링크 추가’로 다른 문서를 연결할 수 있습니다.</p>}
+ return <li key={d.id}><button type="button" className={styles.related} onClick={() => selectNeighbor(d.id)}><DocIcon doc={d}/><span><strong>{documentTitle(d)}</strong><small>{[...new Set(edges.map(e => e.kind === 'pov' ? '시점 인물' : e.source === doc.id ? '이 문서에서 연결' : '이 문서를 참조'))].join(' · ')}</small></span></button></li>;})}</ul> : <p className={styles.hint}>본문의 ‘설정 링크 추가’로 다른 문서를 연결할 수 있습니다.</p>}
         </> : <p className={styles.hint}>문서를 선택하면 연결된 문서를 볼 수 있습니다. 두 번 누르면 문서가 열립니다.</p>}
-        <details className={styles.documentList}><summary>표시된 문서 목록 · {visible.documents.length}개</summary>{visible.documents.map(d => <button type="button" key={d.id} aria-pressed={d.id === doc?.id} onClick={() => setSelected(d.id)}><DocIcon doc={d}/><span>{d.title}</span></button>)}</details>
+        <details className={styles.documentList}><summary>표시된 문서 목록 · {visible.documents.length}개</summary>{visible.documents.map(d => <button type="button" key={d.id} aria-pressed={d.id === doc?.id} onClick={() => setSelected(d.id)}><DocIcon doc={d}/><span>{documentTitle(d)}</span></button>)}</details>
       </aside>
     </div>
   </section>;
