@@ -4,13 +4,25 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 import {seedWorkspace} from '../src/lib/seed';
 import {makePublication,newDocument,uid,workspaceSchema} from '../src/lib/model';
-import {librarySort,previewPositions,previewPublicationPosition,previewPublications,reorderPreviewLibrary,sortPublications} from '../src/lib/library-order';
+import {librarySort,moveLibraryItem,previewPositions,previewPublicationPosition,previewPublications,reorderPreviewLibrary,sortPublications} from '../src/lib/library-order';
 
 function fixture(){const state=seedWorkspace();
 
 for(const [index,work] of state.works.entries()){const p=makePublication(work,[work.documents.find(d=>d.kind==='scene')!.id]);p.title=index?'가나다 10':'가나다 2';p.publishedAt=index?'2026-10-01T00:00:00Z':'2026-10-02T00:00:00Z';work.publications=[p];work.activePublicationId=p.id;}
 
 return state;}
+
+test('작품을 앞·뒤·첫·마지막으로 옮겨도 원본 판본·게시일·저장 순위는 유지한다',()=>{
+ const [a,b]=previewPublications(fixture()),c={...b,id:uid(),title:'다른 작품'},d={...a,id:uid(),title:'마지막 작품'},items=[a,b,c,d],before=structuredClone(items);
+ assert.deepEqual(moveLibraryItem(items,a.id,d.id,'after').map(p=>p.id),[b.id,c.id,d.id,a.id]);
+ assert.deepEqual(moveLibraryItem(items,d.id,a.id,'before').map(p=>p.id),[d.id,a.id,b.id,c.id]);
+ assert.deepEqual(moveLibraryItem(items,a.id,c.id,'before').map(p=>p.id),[b.id,a.id,c.id,d.id]);
+ assert.deepEqual(moveLibraryItem(items,c.id,a.id,'after').map(p=>p.id),[a.id,c.id,b.id,d.id]);
+ assert.deepEqual(moveLibraryItem(items,a.id,b.id,'before'),items);assert.deepEqual(moveLibraryItem(items,b.id,a.id,'after'),items);
+ assert.equal(moveLibraryItem(items,a.id,a.id,'after'),items);assert.equal(moveLibraryItem(items,'missing',a.id,'before'),items);assert.equal(moveLibraryItem(items,a.id,'missing','after'),items);
+ const moved=moveLibraryItem(items,a.id,d.id,'after');assert.equal(moved.at(-1),a);assert.deepEqual(items,before);
+ assert.deepEqual(moveLibraryItem([],a.id,b.id,'before'),[]);assert.deepEqual(moveLibraryItem([a],a.id,a.id,'after'),[a]);
+});
 
 test('서재 사전순·게시일순·작가순은 독립적이고 숫자 제목과 동률도 안정적으로 정렬한다',()=>{
  const state=fixture(),[a,b]=previewPublications(state);a.libraryPosition=2;b.libraryPosition=1;
