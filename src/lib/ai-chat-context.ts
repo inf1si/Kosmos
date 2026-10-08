@@ -22,7 +22,7 @@ export function chatContext(data:Workspace,input:ChatInput){
     if(text!==input.documentRange.text)throw new ChatContextError('선택한 글이 저장본과 다릅니다. 다시 선택하세요.',409);
   }
 
-  if(text.length>12000)throw new ChatContextError('현재 원고는 12,000자까지 보낼 수 있습니다. 원고 포함을 끄거나 장면을 나누세요.',413);
+  if(text.length>12000)throw new ChatContextError('현재 원고는 12,000자까지 보낼 수 있습니다. 원고 포함을 끄거나 문서를 나누세요.',413);
   const ids=[...new Set(input.sourceIds)];const sources=ids.map(id=>work.documents.find(d=>d.id===id));
 
   if(sources.some(d=>!d))throw new ChatContextError('같은 작품의 자료만 선택할 수 있습니다.',400);

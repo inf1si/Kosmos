@@ -55,7 +55,7 @@ test('문서 삭제는 하위 순서·공개 판본·공유 첨부를 보존하�
 
 test('마지막 문서 삭제는 빈 원고를 남기고 없는 대상은 거절한다',()=>{
   const state=seedWorkspace(),last=state.works[1],before=structuredClone(state),removed=removeDocument(state,last.id,last.documents[0].id),replacement=removed.works[1].documents[0];
-  assert.equal(removed.works[1].documents.length,1);assert.notEqual(replacement.id,last.documents[0].id);assert.equal(replacement.title,'새 장면');assert.equal(replacement.chapter,'');assert.equal(replacement.content.content?.[0].content?.length||0,0);
+  assert.equal(removed.works[1].documents.length,1);assert.notEqual(replacement.id,last.documents[0].id);assert.equal(replacement.title,'새 문서');assert.equal(replacement.chapter,'');assert.equal(replacement.content.content?.[0].content?.length||0,0);
   assert.equal(resolveNavigation(removed.works[1]).nodes.find(n=>n.id===replacement.id)?.parentId,null);assert(workspaceSchema.safeParse(removed).success);assert.deepEqual(state,before);
   assert.throws(()=>removeDocument(state,uid(),uid()),/찾지/);assert.throws(()=>removeNote(state,uid()),/찾지/);
   const work=state.works[0],deleted=removeDocument(state,work.id,work.documents.find(d=>d.kind==='wiki')!.id);

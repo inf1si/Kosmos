@@ -12,7 +12,7 @@ export function removeDocument(state:Workspace,workId:string,docId:string):Works
   const nodes=nav.nodes.flatMap(n=>n.id===docId?children:n.parentId===docId?[]:[n]);
   const documents=work.documents.filter(d=>d.id!==docId);
 
-  if(!documents.length){const replacement=newDocument('scene','새 장면');documents.push(replacement);nodes.push({id:replacement.id,type:'document',sectionId:nav.sections.find(s=>s.defaultKind==='scene')?.id||nav.sections[0].id,parentId:null});}
+  if(!documents.length){const replacement=newDocument('scene','새 문서');documents.push(replacement);nodes.push({id:replacement.id,type:'document',sectionId:nav.sections.find(s=>s.defaultKind==='scene')?.id||nav.sections[0].id,parentId:null});}
 
   const usedAssets=new Set(documents.flatMap(d=>d.assetIds));
   const removedAssets=new Set(doc.assetIds.filter(id=>!usedAssets.has(id)));
