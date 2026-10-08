@@ -7,7 +7,10 @@
 - 로컬 전체 Node 검사 **185개·실패 0**, 타입·최적화 프로덕션 빌드 통과. Anti Slop **178개 파일·19개 규칙·진단 0**. JSON 버전·SQL·RLS·Auth·첨부 삭제 방식은 바꾸지 않았다.
 - 합성 Supabase 전체 응답을 가로챈 로컬 최적화 프로덕션 Chromium(`tests/browser/folder-restore.mjs`): 문서 3개인 폴더 삭제 후 집필실·노트 사이드바와 창이 모두 **1개**, 노트 2개인 폴더 삭제 후 노트 사이드바·창도 **1개**다. 두 공간 각각 여섯 테마 × 1280/360px **24개 화면**, 가로 넘침·페이지 오류 0. 첫 시도는 모바일 노트 전환으로 닫힌 탐색창을 열지 않아 검사기가 멈췄고, 실제 탐색창 열기 동작을 추가해 재검사했다.
 - 문서/노트 폴더 복원 후 서버 모의 사본의 계층·형제 순서가 원본과 같고 개수는 0이다. 문서 복원 후 검색 입력 초점, 삭제/복원/영구 삭제의 서버 사본 반영·새로고침 보존을 확인했다. 데스크톱 보라 라이트·모바일 사이버 다크 화면을 직접 봤다. 증거는 Git 제외 `test-results/trash-restore-guards/`에 보관한다. 실제 계정 원고 변경·유료 AI 호출은 0이다. 실제 작가 계정·다중 기기·터치는 미확인이며 PR/main CI와 운영 확인은 후속 기록으로 구분한다.
-- `pnpm docs:check`는 문서 **42개·내부 링크 738개**를 확인했고 diff 공백 검사도 통과했다. 기능 커밋 기준 문서 갱신 검사는 게시 전에 별도로 실행한다. [휴지통](docs/workspace-trash.md)·[모델/복원 검사](tests/workspace-trash.test.ts)·[화면 검사](tests/browser/folder-restore.mjs).
+- `pnpm docs:check`는 문서 **42개·내부 링크 738개**를 확인했고 diff 공백 검사도 통과했다. 기능 커밋 뒤 기준 main 대비 문서 갱신 규칙도 통과했다. [휴지통](docs/workspace-trash.md)·[모델/복원 검사](tests/workspace-trash.test.ts)·[화면 검사](tests/browser/folder-restore.mjs).
+
+- 후속 운영 확인: [PR #38](https://github.com/inf1si/Kosmos/pull/38)을 main `7c7f0f4d653778a9af915af936a472da41b4d117`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37721344639)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37721512638)가 타입·185개 검사·빌드·문서·실제 age 왕복·Anti Slop 178개 파일/19개 규칙/0건을 통과했다. Vercel 미리보기 READY(`dpl_5TD83inC6ZwifVAnkppL9fWCpgiD`)·운영 READY(`dpl_8EdawE58L3UJmnow9YUnHELLztUJ`), 정확한 main SHA와 `kosmos-ashy.vercel.app` 별칭을 확인했다.
+- 운영 URL의 배포된 앱에서도 Supabase/백업 응답을 합성 자료로 가로채 같은 집필실·노트 24개 화면과 삭제/복원/영구 삭제/새로고침·계층/순서·양쪽 사이드바와 창의 개수를 재확인했다. 가로 넘침·페이지 오류 0이며 운영 모바일 화면도 직접 봤다. 별도 익명 Chromium은 실제 공개 서재의 읽기 링크·1280/360px 로그인 화면의 비밀번호/Google 진입점·HTTP 200·가로 넘침/페이지 오류 0을 확인했다. 실제 작가 데이터 저장/삭제는 하지 않았으며 운영 계정의 기존 휴지통은 미확인이다. 증거는 Git 제외 `test-results/trash-restore-guards-production/`에 보관한다. 소유한 로컬 서버는 종료했다. 열린 집필실/노트는 새로고침한다.
 
 ## 2026-10-08 — main 검토 보완(PR #30~#36)
 
