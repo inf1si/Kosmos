@@ -17,6 +17,7 @@
 | AI 동작 | Lucide 아이콘: AI 질문 Sparkles, 요약 ListCollapse, 문장 다듬기 PenLine, 아이디어 확장 Lightbulb, 질문하기 MessageCircleQuestionMark, 내 스킬 WandSparkles | `/` 메뉴, 선택 글 우클릭 |
 | 정리·공개 순서 도구 | Lucide 아이콘: 템플릿 Files, 서재 순서 편집 ListOrdered, 순서 이동 GripVertical | 사이드바 **템플릿**, 집필실 홈 board-bar, 트리·서재 순서 손잡이 |
 | 앱 설정·작품 설정 | Lucide 아이콘: 앱 전체 **설정** Settings(톱니), 작품 정보·AI 설정·스킬 관리 Settings2(조절 톱니). 설정 창 구역은 화면 Palette, 원고 표시 Type, 집필 도구 LayoutGrid, 노트 StickyNote, AI Sparkles, 저장 · 백업 Archive, 단축키 Keyboard | 사이드바 **설정**, 설정 창 구역 목록 |
+| 로그인 계정·로그아웃 | Lucide 아이콘: 계정 User, 로그아웃 LogOut | 집필실·노트 상단 **로그인 계정** Popover |
 | 오른쪽 정보 영역 | 참고 패널 규격: 폭 300px, `--side` 바탕, 안쪽 20px 18px, 소제목 12px 600 `--muted` | 참고 패널, 그래프 정보 |
 | 카드 묶음 | `board-column` + `plot-card` | 플롯보드 |
 | 버튼 옆 작은 설정·필터·입력 | `Popover`, 행 동작은 `.menu`(8절 **떠 있는 창**) | 트리 메뉴, 문서 통계, 그래프 필터 |
@@ -279,7 +280,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 **휴지통.** 공유 휴지통은 양쪽 사이드바의 Trash2 `nav-item`에서 연다. 기존 `Modal`(검색칸은 `<label>`이 아닌 `div.sidebar-search`)·`sidebar-search`·`reference-card`·`.button`·`IconButton`을 재사용하고 추가 CSS는 배치만 정의한다. 폴더 전체 삭제는 폴더 이름 한 줄(Folder 아이콘, 둘째 줄 **폴더 · 작품 · 문서 n개**)로 묶어 한 번에 복원·영구 삭제한다. 집필실·노트 사이드바와 창의 개수는 같은 공통 계산을 사용해 폴더당 **1개**로 표시하며 내부 문서/노트 수는 폴더 행에 별도로 둔다. 이동은 확인창 없이 처리하고 영구 삭제/비우기 확인은 질문 한 줄과 이력·백업 보존 한 줄로 제한하고, 실행 버튼은 `.button.danger`를 쓴다. [휴지통](workspace-trash.md).
 
-**계정.** 집필실의 로그인 계정 관리는 상단 `IconButton`과 기존 `Popover`·`.button`으로 구성한다. 로그인 화면의 Google 버튼도 `.button`을 사용하며 연결 상태·오류는 13px 토큰 문구를 쓴다. 계정 연결은 원고 도구와 구분해 상단 계정 버튼에 둔다.
+**계정.** 집필실·노트의 로그인 계정 관리는 상단 User `IconButton`과 기존 `Popover`·`.button`으로 구성한다. Google 연결 안내 아래 LogOut 아이콘과 **로그아웃** 버튼을 둔다. 처리 중에는 연결·로그아웃을 잠그고 **연결 중…**/**로그아웃 중…**으로 표시한다. 로그인 화면의 Google 버튼도 `.button`을 사용하며 연결 상태·오류는 13px 토큰 문구를 쓴다. 계정 동작은 상단 계정 버튼에 둔다.
 
 **사용자 속성.** 원고·설정·메모·노트의 기존 DocHead **속성** 패널에 공용 `CustomPropertiesForm`을 둔다. 값 칩은 기존 `.chip`으로 세 개와 나머지 개수를 표시한다. 속성 추가는 기존 Popover(300px)와 입력/선택 컴포넌트를 사용한다. 속성 행은 두 열에서 700px 이하 한 열로 바뀐다. 삭제 `IconButton`은 입력칸 아래쪽에 맞춰 입력칸 가운데에 오고, 체크박스 줄은 입력칸 높이(38px)를 써서 같은 선에 놓인다.
 

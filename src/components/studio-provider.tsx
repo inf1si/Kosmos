@@ -634,5 +634,9 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});
 
 if(error)throw error;},
-    logout:async()=>{await flush();await syncNow();await cloud().auth.signOut();},flush,syncNow,clearError:()=>setError('')}}>{children}</Context.Provider>;
+    logout:async()=>{await flush();await syncNow();await flush();const {error}=await cloud().auth.signOut({scope:'local'});
+
+if(error){const message='서버 로그아웃을 확인하지 못했습니다.';setError(message);throw new Error(message,{cause:error});}
+
+setError('');syncError.current=null;},flush,syncNow,clearError:()=>setError('')}}>{children}</Context.Provider>;
 }
