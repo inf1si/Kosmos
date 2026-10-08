@@ -45,7 +45,7 @@ export function StudioHome({state,resume,currentWorkId,readonly,onOpen,onOpenWor
   const collapseKey=`kosmos-work-shelf-collapse:${s.namespace}`;
   const [closed,setClosed]=useState(()=>collapsedShelves(collapseKey));
   const root=useRef<HTMLDivElement>(null),anchor=useRef<HTMLElement|null>(null),returnFocus=useRef<HTMLElement|null>(null),focusWork=useRef<string|null>(null),newShelfTrigger=useRef<HTMLButtonElement>(null);
-  const moveTarget=form?.type==='move'?works.get(form.id):undefined,deleteTarget=shelves.find(shelf=>shelf.id===deleting);
+  const moveTarget=form?.type==='move'?works.get(form.id):undefined,deleteTarget=shelves.find(shelf=>shelf.id===deleting),deleteCount=deleteTarget?.workIds.filter(id=>works.has(id)).length||0;
 
   function apply(fn:(latest:Workspace)=>Workspace){
     if(readonly)return false;
@@ -126,7 +126,7 @@ return false;}
       <form className="account-login" onSubmit={e=>{e.preventDefault();submit();}}>{form?.type==='move'?<><p>{moveTarget?.title}</p><label>옮길 책장<select aria-label="옮길 책장" value={destination} disabled={readonly} onChange={e=>setDestination(e.target.value)}>{shelves.map(shelf=><option key={shelf.id} value={shelf.id}>{workShelfTitle(shelf)}</option>)}</select></label></>:<label>책장 이름<input autoFocus value={name} maxLength={80} disabled={readonly} placeholder="이름 없는 책장" onChange={e=>setName(e.target.value)}/></label>}{error&&<p className="error-message" role="alert">{error}</p>}<button type="submit" className="button primary" disabled={readonly||form?.type==='move'&&(!moveTarget||destination===shelfForWork(state,moveTarget.id))}>{form?.type==='move'?'옮기기':form?.type==='rename'?'이름 저장':'책장 만들기'}</button></form>
     </Popover>
     <Modal open={!!deleteTarget} onClose={()=>setDeleting(null)} title="책장 삭제" description={deleteTarget?`‘${workShelfTitle(deleteTarget)}’를 삭제할까요?`:undefined} onReturnFocus={restoreFocus}>
-      <p className="field-help">작품은 ‘{workShelfTitle(shelves.find(shelf=>shelf.id===DEFAULT_WORK_SHELF)!)}’ 책장에 옮깁니다.</p>{error&&<p className="error-message" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button" onClick={()=>setDeleting(null)}>취소</button><button type="button" className="button danger" disabled={readonly} onClick={()=>{if(deleting&&apply(latest=>removeWorkShelf(latest,deleting)))setDeleting(null);}}>책장 삭제</button></div>
+      <p className="field-help">{deleteCount?`작품 ${deleteCount}개를 ‘${workShelfTitle(shelves.find(shelf=>shelf.id===DEFAULT_WORK_SHELF)!)}’에 옮깁니다. 원고와 게시 상태는 그대로입니다.`:'작품이 없는 책장입니다.'}</p>{error&&<p className="error-message" role="alert">{error}</p>}<div className="modal-actions"><button type="button" className="button" onClick={()=>setDeleting(null)}>취소</button><button type="button" className="button danger" disabled={readonly} onClick={()=>{if(deleting&&apply(latest=>removeWorkShelf(latest,deleting)))setDeleting(null);}}>책장 삭제</button></div>
     </Modal>
   </div>;
 }

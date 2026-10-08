@@ -373,7 +373,8 @@ try {
     await shelf('구상').locator(`[data-work-id="${original.works[1].id}"]`).waitFor();
     await moveWork(original.works[1], '보관');
     await page.locator('.work-card').click();
-    assert.deepEqual(await page.locator('.work-menu-shelf').allTextContents(), ['기본 책장', '보관', '구상']);
+    // The switcher lists only shelves that hold a work; '구상' is empty after the move.
+    assert.deepEqual(await page.locator('.work-menu-shelf').allTextContents(), ['기본 책장', '보관']);
     await page.locator('#work-menu').getByRole('button', { name: /^보관할 작품/ }).click();
     await page.locator('.manuscript').first().waitFor();
     await page.locator('.studio-tools').getByRole('button', { name: '집필실 홈', exact: true }).click();
@@ -404,6 +405,9 @@ try {
     await shelf('구상').locator(`[data-work-id="${original.works[1].id}"]`).waitFor();
     await menu('잠시 멈춘 작품', '책장 삭제');
     const deletion = page.getByRole('dialog', { name: '책장 삭제', exact: true });
+
+    // The default shelf's title already ends in 책장, so the help must not repeat the word.
+    await deletion.getByText(/^작품 \d+개를 ‘기본 책장’에 옮깁니다\. 원고와 게시 상태는 그대로입니다\.$/).waitFor();
     await deletion.getByRole('button', { name: '취소', exact: true }).click();
     await shelf('잠시 멈춘 작품').waitFor();
     await menu('잠시 멈춘 작품', '책장 삭제');
@@ -455,6 +459,9 @@ try {
         const overflow = await page.evaluate(() => [document.documentElement, ...document.querySelectorAll('.studio-home,.notes-home-body,.work-shelf-heading,.work-shelf-card')].flatMap(n => n.scrollWidth > n.clientWidth + 1 ? [n.className || n.tagName] : []));
         assert.deepEqual(overflow, []);
 
+        // Work cards fill their grid cell, so cards in the same row share one height.
+        assert.deepEqual(await page.locator('.work-shelf-card').evaluateAll(cells => cells.filter(cell => Math.abs(cell.querySelector('.reference-card').getBoundingClientRect().height - cell.getBoundingClientRect().height) > 1).length), 0);
+
         const typography = await page.locator('.work-shelf-heading h3').first().evaluate(node => {
             const style = getComputedStyle(node);
 
@@ -471,8 +478,14 @@ try {
         const ghost = await page.locator('.work-shelf-ghost').boundingBox();
         assert(ghost.x >= 0 && ghost.y >= 0 && ghost.x + ghost.width <= width + 1 && ghost.y + ghost.height <= (width === 360 ? 740 : 900) + 1);
         assert.equal(await card(original.works[2].id).locator('.work-work-grip').evaluate(n => getComputedStyle(n).touchAction), 'none');
-        const indicator = await card(original.works[1].id).evaluate(n => ({ height: getComputedStyle(n, '::after').height, color: getComputedStyle(n, '::after').backgroundColor }));
-        assert.equal(indicator.height, '2px');assert.notEqual(indicator.color, 'rgba(0, 0, 0, 0)');
+        const indicator = await card(original.works[1].id).evaluate(n => ({ axis: n.dataset.dropAxis, width: getComputedStyle(n, '::after').width, height: getComputedStyle(n, '::after').height, color: getComputedStyle(n, '::after').backgroundColor }));
+
+        // Cards side by side get a vertical line in the column gap; a single column keeps the horizontal line.
+        if (width === 1280) assert.equal(indicator.axis, 'x');
+
+        if (width === 360) assert.equal(indicator.axis, 'y');
+
+        assert.equal(indicator.axis === 'x' ? indicator.width : indicator.height, '2px');assert.notEqual(indicator.color, 'rgba(0, 0, 0, 0)');
         await page.screenshot({ path: resolve(output, `drag-${palette}-${theme}-${width}.png`) });
         await page.keyboard.press('Escape');await endDrag();
         await page.screenshot({ path: resolve(output, `home-${palette}-${theme}-${width}.png`) });
