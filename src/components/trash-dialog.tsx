@@ -3,41 +3,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { Book, FileText, Folder, Search, StickyNote, Trash2 } from 'lucide-react';
 import { type TrashItem } from '@/lib/model';
-import { trashTitle } from '@/lib/workspace-trash';
+import { trashRows, type TrashRow } from '@/lib/workspace-trash';
 import { useStudio } from './studio-provider';
 import { IconButton, Modal } from './primitives';
-
-type Row={id:string;ids:string[];title:string;first:TrashItem;deletedAt:string};
 
 export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:()=>void;onReturnFocus:()=>void}){
   const s=useStudio(),search=useRef<HTMLInputElement>(null),confirmFocus=useRef<HTMLElement|null>(null);
   const [query,setQuery]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [confirm,setConfirm]=useState<{ids:string[];title?:string}|null>(null);
   useEffect(()=>{if(open){setQuery('');setError('');setMessage('');setConfirm(null);}},[open]);
-  const items=[...(s.state?.trash||[])].sort((a,b)=>b.deletedAt.localeCompare(a.deletedAt));
+  const items=s.state?.trash||[],rows=trashRows(items);
   const scope=(item:TrashItem)=>item.type==='note'?`노트 · ${item.note.box==='icebox'?'아이스박스':'수집함'}`:item.type==='work'?`작품 · 문서 ${item.work.documents.length}개`:`문서 · ${item.workTitle}`;
-  // Items from one folder-wide deletion share the folder ID and restore or purge together as one row.
-  const rows:Row[]=[],folders=new Map<string,Row>();
-
-  for(const item of items){
-    const folder=item.type==='work'?undefined:item.folder,row=folder&&folders.get(folder.id);
-
-    if(row){row.ids.push(item.id);continue;}
-
-    const next={id:folder?.id||item.id,ids:[item.id],title:folder?.title||trashTitle(item),first:item,deletedAt:item.deletedAt};
-
-    if(folder)folders.set(folder.id,next);
-
-    rows.push(next);
-  }
-
-  const rowScope=(row:Row)=>row.id===row.first.id?scope(row.first):row.first.type==='document'?`폴더 · ${row.first.workTitle} · 문서 ${row.ids.length}개`:`노트 폴더 · 노트 ${row.ids.length}개`;
+  const rowScope=(row:TrashRow)=>row.id===row.first.id?scope(row.first):row.first.type==='document'?`폴더 · ${row.first.workTitle} · 문서 ${row.ids.length}개`:`노트 폴더 · 노트 ${row.ids.length}개`;
   const visible=rows.filter(row=>`${row.title} ${rowScope(row)}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const readonly=busy||!!s.conflict;
 
   function requestPurge(ids:string[],at:HTMLElement,title?:string){confirmFocus.current=at;setError('');setConfirm({ids,title:title&&title.length>40?`${title.slice(0,40)}…`:title});}
 
-  async function restore(row:Row){
+  async function restore(row:TrashRow){
     setBusy(true);setError('');setMessage('');
 
     try{await s.restoreTrash(row.id);setMessage('복원했습니다.');search.current?.focus();}

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { PGlite } from '@electric-sql/pglite';
 import JSZip from 'jszip';
 import { seedWorkspace } from '../src/lib/seed';
@@ -8,7 +9,7 @@ import { fromText, makePublication, uid, workspaceSchema, type Workspace } from 
 import { addNote, newNote } from '../src/lib/personal-notes';
 import { editNoteTree, moveNote } from '../src/lib/note-navigation';
 import { applyNavigation, insertFolder, moveNavigation, resolveNavigation } from '../src/lib/document-navigation';
-import { materializeTrash, preserveTrash, purgeTrash, restoreTrash, trashDocument, trashDocumentFolder, trashNote, trashNoteFolder } from '../src/lib/workspace-trash';
+import { materializeTrash, preserveTrash, purgeTrash, restoreTrash, trashDocument, trashDocumentFolder, trashNote, trashNoteFolder, trashRows, trashWork } from '../src/lib/workspace-trash';
 import { createBackup, readBackup } from '../src/lib/backup';
 
 function treeOrder(nav:{nodes:{id:string;parentId:string|null;sectionId?:string}[]}){
@@ -48,6 +49,75 @@ function folderTree(){
 
  return {state:materializeTrash(state),work,folder,chapter,a:x,b:y,c:z};
 }
+
+function damagedFolder(){
+ const {state,work,folder}=folderTree(),next=trashDocumentFolder(state,work.id,folder),item=next.trash!.find(t=>t.type==='document'&&t.folder?.nodes)!;
+ assert(item.type==='document'&&item.folder);const a=uid(),b=uid();
+ item.folder.nodes=[{id:folder,parentId:null,title:'1부'},{id:item.id,parentId:a},{id:a,parentId:b},{id:b,parentId:a}];
+
+ return {next,folder};
+}
+
+test('휴지통의 순환 폴더 구조는 작업공간 검증에서 거절한다',()=>{
+ assert.equal(workspaceSchema.safeParse(damagedFolder().next).success,false);
+});
+
+test('검증을 우회한 폴더 복원도 멈추지 않고 원본을 보존하며 거절한다',()=>{
+ const {next,folder}=damagedFolder();
+
+ // Bound the real restore call so a regression cannot freeze the test process.
+ const code=`import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {restoreTrash} from './src/lib/workspace-trash.ts';
+ const {next,folder}=JSON.parse(readFileSync(0,'utf8')),before=structuredClone(next);
+ assert.throws(()=>restoreTrash(next,folder),/휴지통 폴더/);assert.deepEqual(next,before);`;
+
+ const result=spawnSync(process.execPath,['--import','tsx','--input-type=module','--eval',code],{cwd:new URL('..',import.meta.url),input:JSON.stringify({next,folder}),encoding:'utf8',timeout:10000});
+ assert.equal(result.error,undefined,`복원이 끝나지 않았습니다: ${result.error?.message}`);assert.equal(result.status,0,result.stderr);
+});
+
+test('폴더 복원 정보는 유일한 루트·부모·ID·깊이를 검사하고 원래 외부 부모는 허용한다',()=>{
+ const {state,work,folder}=folderTree(),next=trashDocumentFolder(state,work.id,folder),item=next.trash!.find(t=>t.type==='document'&&t.folder?.nodes)!;
+ assert(item.type==='document'&&item.folder?.nodes);const nodes=item.folder.nodes;
+
+ const invalid=[[],nodes.filter(n=>n.id!==folder),[...nodes,nodes[0]],nodes.map(n=>n.id===folder?{...n,title:undefined}:n),
+  nodes.map(n=>n.id!==folder?{...n,parentId:null}:n),nodes.map(n=>n.id!==folder?{...n,parentId:uid()}:n),
+  nodes.map(n=>n.id===folder?{...n,parentId:folder}:n),nodes.map(n=>n.id===folder?{...n,parentId:nodes.find(x=>x.id!==folder)!.id}:n)];
+
+ const deep:{id:string;parentId:string|null;title:string}[]=Array.from({length:25},(_,i)=>({id:i===0?folder:uid(),parentId:null,title:'하위 폴더'}));
+ deep.forEach((n,i)=>{if(i)n.parentId=deep[i-1].id;});invalid.push(deep);
+
+ for(const damaged of invalid){
+  const copy=structuredClone(next),target=copy.trash!.find(t=>t.id===item.id)!;assert(target.type==='document'&&target.folder);
+  target.folder.nodes=damaged;assert.equal(workspaceSchema.safeParse(copy).success,false);assert.throws(()=>restoreTrash(copy,folder),/휴지통 폴더/);
+ }
+
+ // A deleted nested folder still points at a live parent outside the saved subtree.
+ let nested=insertFolder(work,'상위',{sectionId:'scene',parentId:null});const outer=resolveNavigation(nested).nodes.find(n=>n.type==='folder'&&n.title==='상위')!.id;
+ nested=moveNavigation(nested,folder,{sectionId:'scene',parentId:outer});const before={...state,works:state.works.map(w=>w.id===work.id?nested:w)},deleted=trashDocumentFolder(before,work.id,folder);
+ assert(workspaceSchema.safeParse(deleted).success);assert.deepEqual(treeOrder(restoreTrash(deleted,folder).works[0].navigation!),treeOrder(nested.navigation!));
+});
+
+test('휴지통 표시 개수는 문서·노트 폴더를 각각 하나로 묶고 낱개·작품도 센다',()=>{
+ const docs=folderTree(),folderTrash=trashDocumentFolder(docs.state,docs.work.id,docs.folder);
+ const n=notes();let noteState=editNoteTree(n.state,w=>insertFolder(w,'묶음',{sectionId:'notes',parentId:null}));
+ const noteFolder=noteState.noteNavigation!.nodes.find(n=>n.type==='folder'&&n.title==='묶음')!.id;noteState=moveNote(noteState,n.parent.id,{parentId:noteFolder});
+ const single=trashDocument(docs.state,docs.work.id,docs.work.documents.find(d=>![docs.a.id,docs.b.id,docs.c.id].includes(d.id))!.id).trash![0];
+ const work=trashWork(seedWorkspace(),seedWorkspace().works[1].id).trash![0];
+ const items=[...folderTrash.trash!,...trashNoteFolder(noteState,noteFolder).trash!,single,work].map((item,i)=>({...item,deletedAt:new Date(Date.UTC(2026,9,8,0,i)).toISOString()}));
+ const before=structuredClone(items),rows=trashRows(items);
+ assert.equal(rows.length,4);assert.deepEqual(rows.map(row=>row.id),[work.id,single.id,noteFolder,docs.folder]);
+ assert.deepEqual(rows.find(row=>row.id===docs.folder)!.ids.slice().sort(),[docs.a.id,docs.b.id,docs.c.id].sort());assert.deepEqual(items,before);
+ assert.equal(trashRows(purgeTrash(folderTrash,[docs.b.id]).trash).length,1);assert.equal(trashRows(restoreTrash(folderTrash,docs.folder).trash).length,0);assert.deepEqual(trashRows(),[]);
+});
+
+test('폴더 계층을 ZIP으로 왕복하고 무결성이 맞아도 순환 구조가 있으면 가져오기를 거절한다',async()=>{
+ const {state,work,folder}=folderTree(),deleted=trashDocumentFolder(state,work.id,folder),zip=await createBackup(deleted,[],[]),backup=await readBackup(zip);
+ assert.deepEqual(backup.data.trash,deleted.trash);assert.deepEqual(treeOrder(restoreTrash(backup.data,folder).works[0].navigation!),treeOrder(work.navigation!));
+ const files=await JSZip.loadAsync(await zip.arrayBuffer()),raw=JSON.parse(await files.file('workspace.json')!.async('string')),item=raw.trash.find((t:{folder?:{nodes?:unknown}})=>t.folder?.nodes);
+ item.folder.nodes.find((n:{id:string})=>n.id===folder).parentId=folder;
+ const content=new TextEncoder().encode(JSON.stringify(raw)),manifest=JSON.parse(await files.file('manifest.json')!.async('string')),entry=manifest.files.find((f:{path:string})=>f.path==='workspace.json');
+ entry.bytes=content.length;entry.sha256=Buffer.from(await crypto.subtle.digest('SHA-256',content)).toString('hex');files.file('workspace.json',content);files.file('manifest.json',JSON.stringify(manifest));
+ const damaged=await files.generateAsync({type:'blob'});await assert.rejects(()=>readBackup(damaged),/휴지통 폴더/);
+});
 
 test('폴더 전체 삭제는 폴더째 복원해 하위 폴더·빈 폴더·문서 순서·AI 대화를 돌려놓는다',()=>{
  const {state,work,folder,a,b,c}=folderTree(),next=trashDocumentFolder(state,work.id,folder);

@@ -195,7 +195,18 @@ const trashPlacementSchema=z.object({parentId:z.uuid().nullable(),beforeId:z.uui
 
 // Folder-wide deletion keeps one document/note item per entry, all sharing the folder ID. The first also keeps the deleted tree
 // in sibling order (a title marks a folder), so one restore rebuilds it. Older servers and tabs accept or drop the extra field.
-const trashFolderSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),nodes:z.array(z.object({id:z.uuid(),parentId:z.uuid().nullable(),title:z.string().trim().min(1).max(300).optional()})).max(7500).optional()});
+export const trashFolderSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),nodes:z.array(z.object({id:z.uuid(),parentId:z.uuid().nullable(),title:z.string().trim().min(1).max(300).optional()})).min(1).max(7500).optional()}).superRefine((folder,ctx)=>{
+  if(!folder.nodes)return; // Older items only kept the folder's name and ID.
+  const root=folder.nodes.find(n=>n.id===folder.id),ids=new Set(folder.nodes.map(n=>n.id));
+  const invalidRoot=!root?.title||folder.nodes.some(n=>n.id!==folder.id&&n.parentId===null);
+
+  // The root may refer to its former live parent. Every other parent belongs to the saved tree.
+  const nodes=folder.nodes.map(n=>({id:n.id,sectionId:'trash',parentId:n.id===folder.id&&(!n.parentId||!ids.has(n.parentId))?null:n.parentId,
+    ...n.title?{type:'folder' as const,title:n.title}:{type:'document' as const}}));
+
+  if(invalidRoot||navigationIssues({version:1,sections:[{id:'trash',title:'휴지통',defaultKind:'scene'}],nodes},folder.nodes.filter(n=>!n.title).map(n=>n.id)).length)
+    ctx.addIssue({code:'custom',message:'휴지통 폴더 구조가 손상되어 복원할 수 없습니다.',path:['nodes']});
+});
 
 export const trashItemSchema=z.discriminatedUnion('type',[
   z.object({id:z.uuid(),type:z.literal('note'),deletedAt:z.iso.datetime(),note:noteSchema,placement:trashPlacementSchema,folder:trashFolderSchema.optional()}),

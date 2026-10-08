@@ -1,5 +1,5 @@
 import { documentTitle } from './model';
-import { newDocument, workspaceSchema, type TrashItem, type Workspace, type Work } from './model';
+import { newDocument, trashFolderSchema, workspaceSchema, type TrashItem, type Workspace, type Work } from './model';
 import { asDocumentNavigation, asNoteNavigation } from './note-navigation-schema';
 import type { DocumentNavigation } from './document-navigation-schema';
 import { noteTitle, removeNote } from './personal-notes';
@@ -8,6 +8,26 @@ import { removeDocument } from './document-deletion';
 import { applyNavigation, descendantsOf, resolveNavigation } from './document-navigation';
 
 export function trashTitle(item:TrashItem){return item.type==='note'?noteTitle(item.note):item.type==='work'?item.work.title:documentTitle(item.document);}
+
+export type TrashRow={id:string;ids:string[];title:string;first:TrashItem;deletedAt:string};
+
+/** One folder-wide deletion is one visible item in the dialog and both sidebars. */
+export function trashRows(items:readonly TrashItem[]=[]):TrashRow[]{
+  const rows:TrashRow[]=[],folders=new Map<string,TrashRow>();
+
+  for(const item of [...items].sort((a,b)=>b.deletedAt.localeCompare(a.deletedAt))){
+    const folder=item.type==='work'?undefined:item.folder,row=folder&&folders.get(folder.id);
+
+    if(row){row.ids.push(item.id);continue;}
+
+    const next={id:folder?.id||item.id,ids:[item.id],title:folder?.title||trashTitle(item),first:item,deletedAt:item.deletedAt};
+
+    if(folder)folders.set(folder.id,next);
+    rows.push(next);
+  }
+
+  return rows;
+}
 
 /** Every attachment a trash item still holds. A work also owns attachments no document references any more. */
 function heldAssets(item:TrashItem,state:Workspace){
@@ -133,12 +153,20 @@ return place(null);}
 
 /** Put a deleted folder tree back before its old next sibling. Items purged since drop out and their children move up. */
 function insertTree(nav:DocumentNavigation,group:FolderItem[],sectionId:string,parentId:string|null):DocumentNavigation{
-  const folder=group[0].folder!,live=new Set(nav.nodes.map(n=>n.id)),present=new Set(group.map(t=>t.id));
-  const saved=group.find(t=>t.folder?.nodes)?.folder?.nodes||[{id:folder.id,parentId:null,title:folder.title}];
+  const parsed=trashFolderSchema.safeParse(group.find(t=>t.folder?.nodes)?.folder||group[0].folder);
+
+  if(!parsed.success)throw new Error('휴지통 폴더 구조가 손상되어 복원할 수 없습니다.');
+  const folder=parsed.data,live=new Set(nav.nodes.map(n=>n.id)),present=new Set(group.map(t=>t.id));
+  const saved=folder.nodes||[{id:folder.id,parentId:null,title:folder.title}];
   const tree:{id:string;parentId:string|null;title?:string}[]=[...saved,...group.flatMap(t=>saved.some(n=>n.id===t.id)?[]:[{id:t.id,parentId:folder.id}])],byId=new Map(tree.map(n=>[n.id,n]));
   const kept=tree.filter(n=>n.title?!live.has(n.id):present.has(n.id)),keep=new Set(kept.map(n=>n.id));
 
-  const up=(id:string|null)=>{while(id&&byId.has(id)&&!keep.has(id))id=byId.get(id)!.parentId;
+  const up=(id:string|null)=>{const seen=new Set<string>();
+
+    while(id&&byId.has(id)&&!keep.has(id)){
+      if(seen.has(id))throw new Error('휴지통 폴더 구조가 손상되어 복원할 수 없습니다.');
+      seen.add(id);id=byId.get(id)!.parentId;
+    }
 
 return id&&keep.has(id)?id:parentId;};
 

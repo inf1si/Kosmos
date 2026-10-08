@@ -277,7 +277,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 - **빠른 메모:** 집필실 탭 줄의 StickyNote `IconButton`(Alt+N)이 340px `Popover`를 연다. 제목 14px·설명 한 줄, 4줄 textarea, `popover-actions`의 **노트에서 열기**·**수집함에 넣기**(`.button`, 게시 준비가 화면의 주요 버튼으로 남는다). 저장 결과는 `muted` 한 줄(`role=status`)로 보이고 입력칸을 비워 연달아 적게 한다. 화면을 노트로 바꾸지 않는다.
 - 브라우저가 예약한 단축키(Ctrl/Cmd+Shift+N·T·W 등)는 쓰지 않는다. [노트 사용법](personal-notes.md).
 
-**휴지통.** 공유 휴지통은 양쪽 사이드바의 Trash2 `nav-item`에서 연다. 기존 `Modal`(검색칸은 `<label>`이 아닌 `div.sidebar-search`)·`sidebar-search`·`reference-card`·`.button`·`IconButton`을 재사용하고 추가 CSS는 배치만 정의한다. 폴더 전체 삭제는 폴더 이름 한 줄(Folder 아이콘, 둘째 줄 **폴더 · 작품 · 문서 n개**)로 묶어 한 번에 복원·영구 삭제한다. 이동은 확인창 없이 처리하고 영구 삭제/비우기 확인은 질문 한 줄과 이력·백업 보존 한 줄로 제한하고, 실행 버튼은 `.button.danger`를 쓴다. [휴지통](workspace-trash.md).
+**휴지통.** 공유 휴지통은 양쪽 사이드바의 Trash2 `nav-item`에서 연다. 기존 `Modal`(검색칸은 `<label>`이 아닌 `div.sidebar-search`)·`sidebar-search`·`reference-card`·`.button`·`IconButton`을 재사용하고 추가 CSS는 배치만 정의한다. 폴더 전체 삭제는 폴더 이름 한 줄(Folder 아이콘, 둘째 줄 **폴더 · 작품 · 문서 n개**)로 묶어 한 번에 복원·영구 삭제한다. 집필실·노트 사이드바와 창의 개수는 같은 공통 계산을 사용해 폴더당 **1개**로 표시하며 내부 문서/노트 수는 폴더 행에 별도로 둔다. 이동은 확인창 없이 처리하고 영구 삭제/비우기 확인은 질문 한 줄과 이력·백업 보존 한 줄로 제한하고, 실행 버튼은 `.button.danger`를 쓴다. [휴지통](workspace-trash.md).
 
 **계정.** 집필실의 로그인 계정 관리는 상단 `IconButton`과 기존 `Popover`·`.button`으로 구성한다. 로그인 화면의 Google 버튼도 `.button`을 사용하며 연결 상태·오류는 13px 토큰 문구를 쓴다. 계정 연결은 원고 도구와 구분해 상단 계정 버튼에 둔다.
 
