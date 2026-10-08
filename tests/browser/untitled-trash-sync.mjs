@@ -146,6 +146,11 @@ try {
     await page.getByRole('button', { name: /^휴지통/ }).first().click();
     const row = page.locator(`.trash-row[data-trash-id="${original.id}"]`);
     await row.getByRole('button', { name: '복원', exact: true }).click();
+
+    // The status already reads synced before the restore is sent, so wait for the server copy itself.
+    for (let i = 0; i < 60 && data.trash.length; i++)
+        await page.waitForTimeout(250);
+
     await page.waitForFunction(() => document.body.textContent.includes('클라우드 동기화됨'));
     assert.deepEqual(data.works[0].documents.find(d => d.id === original.id), original);
     assert.equal(data.trash.length, 0);

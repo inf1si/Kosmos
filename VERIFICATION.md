@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-10-08 — 전체 기능 리뷰 보완
+
+- 원고 N 표기: [집필실 홈 검사](tests/browser/studio-home.mjs)의 상단 줄 기대값을 **원고 N**으로 바꿔 여섯 테마 × 1280/360px 통과, [작품 동작 검사](tests/browser/work-actions.mjs) 통과. 로컬 모의 공개 자료로 공개 서재 1280/360px의 분류 줄이 “01 · 소설”이고 가로 넘침 0임을 확인했다.
+- 기준 main `acbb2771d7f7b8a6d2b52a3ffae51e1334ff48e0`을 fetch했다. 개발 서버 + 합성 Supabase 응답의 Chromium으로 홈·원고·분할·참고 패널·플롯보드·문서 그래프·노트·AI 대화 창·휴지통·템플릿·백업 ZIP 생성/선택·문서 내보내기·게시 준비·작품 정보·서재 순서와 공개 서재/독서/설정집을 직접 조작했다.
+- 수정 전 카세트·사이버 분할 편집의 서식 도구가 높이 46px·내용 96~100px로 원고를 덮는 것을 재현했고, [분할 도구·게시 기본 선택 회귀 검사](tests/browser/split-toolbar-publish.mjs)가 수정 전 카세트에서 실패, 수정 후 여섯 테마 × 1280px 분할과 게시 기본 선택이 통과했다.
+- 기존 [집필실 홈](tests/browser/studio-home.mjs)·[작품 동작](tests/browser/work-actions.mjs)·[폴더 복원](tests/browser/folder-restore.mjs)·[서재 순서 드래그](tests/browser/library-order-drag.mjs)·[빈 제목 휴지통 저장](tests/browser/untitled-trash-sync.mjs) 브라우저 검사가 통과했다. 이 환경(Node 22.22.0)에서 실패하던 폴더 복원 Node 검사는 수정 후 통과했다(Node 186개·실패 0). 빈 제목 휴지통 브라우저 검사는 수정 전 main에서도 3번 중 2번 복원 직후 확인에서 실패했고, 서버 사본을 기다리게 고친 뒤 4번 연속 통과했다.
+- 운영 사이트·실제 계정·실제 AI 응답·모바일 기기는 확인하지 않았다.
+
 ## 2026-10-08 — 집필실·노트 로그아웃 버튼
 
 - 기준 main `acbb2771d7f7b8a6d2b52a3ffae51e1334ff48e0`를 fetch했다. 내부 logout은 있었지만 공용 계정 Popover에 버튼이 없었다. 변경 전 [브라우저 검사](tests/browser/account-logout.mjs)는 **로그아웃** 버튼을 찾지 못해 실패했다. 기존 계정 UI와 저장 큐를 재사용하며 SQL·저장 형식·인증 제공자 설정은 변경하지 않았다.
