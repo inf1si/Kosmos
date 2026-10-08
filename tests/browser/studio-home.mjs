@@ -94,7 +94,7 @@ const home=()=>page.locator('.studio-home');
 
 const title=()=>page.getByRole('textbox',{name:'문서 제목'}).first();
 
-const card=(section,name)=>home().getByRole('region',{name:section}).getByRole('button',{name:new RegExp(`^${name}`)});
+const card=(section,name)=>home().getByRole('region',{name:section==='작품'?'기본 책장 책장':section,exact:true}).locator('.reference-card').filter({hasText:name});
 
 const dialog=()=>page.getByRole('dialog',{name:'설정'});
 

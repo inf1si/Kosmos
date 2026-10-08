@@ -2,10 +2,11 @@
 
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { useEffect, useState, type ReactNode } from 'react';
-import { BookOpen, GlobeOff, Settings2, Trash2 } from 'lucide-react';
+import { BookOpen, GlobeOff, LibraryBig, Settings2, Trash2 } from 'lucide-react';
 import { workSchema, type Work, type Workspace } from '@/lib/model';
 import { Modal } from './primitives';
 import { useStudio } from './studio-provider';
+import { moveWorkToShelf, shelfForWork, workShelves } from '@/lib/work-shelves';
 
 export type WorkConfirm={type:'unpublish'|'trash';workId:string};
 
@@ -16,12 +17,13 @@ const editionDate=(work:Work)=>{const at=work.publications.find(p=>p.id===work.a
 return at?new Date(at).toLocaleDateString('ko-KR'):'';};
 
 /** Right-click (long press on touch, Shift+F10 on a keyboard) on a work card: the same actions as the work settings. */
-export function WorkContextMenu({work,canTrash,readonly,onOpen,onEdit,onConfirm,children}:{work:Work;canTrash:boolean;readonly:boolean;onOpen:()=>void;onEdit:()=>void;onConfirm:(confirm:WorkConfirm)=>void;children:ReactNode}){
+export function WorkContextMenu({work,canTrash,readonly,onOpen,onEdit,onConfirm,onMove,children}:{work:Work;canTrash:boolean;readonly:boolean;onOpen:()=>void;onEdit:()=>void;onConfirm:(confirm:WorkConfirm)=>void;onMove?:()=>void;children:ReactNode}){
   return <ContextMenu.Root modal={false}>
     <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
     <ContextMenu.Portal><ContextMenu.Content className="menu work-context-menu" collisionPadding={12} aria-label={`${work.title} 작품 메뉴`}>
       <ContextMenu.Item className="menu-item" onSelect={onOpen}><BookOpen size={15}/>열기</ContextMenu.Item>
       <ContextMenu.Item className="menu-item" onSelect={onEdit}><Settings2 size={15}/>작품 정보 편집</ContextMenu.Item>
+      {onMove&&<ContextMenu.Item className="menu-item" disabled={readonly} onSelect={onMove}><LibraryBig size={15}/>책장 이동</ContextMenu.Item>}
       {work.activePublicationId&&<ContextMenu.Item className="menu-item" disabled={readonly} onSelect={()=>onConfirm({type:'unpublish',workId:work.id})}><GlobeOff size={15}/>게시 철회</ContextMenu.Item>}
       <ContextMenu.Separator className="menu-separator"/>
       <ContextMenu.Item className="menu-item" disabled={readonly||!canTrash} title={canTrash?undefined:lastWork} onSelect={()=>onConfirm({type:'trash',workId:work.id})}><Trash2 size={15}/>휴지통으로 이동</ContextMenu.Item>
@@ -34,7 +36,7 @@ export function WorkDialogs({state,settingsId,confirm,readonly,onSettings,onConf
   const s=useStudio(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState('');
   const work=state.works.find(w=>w.id===settingsId),target=state.works.find(w=>w.id===confirm?.workId),canTrash=state.works.length>1;
   useEffect(()=>{setError('');},[confirm]);
-  useEffect(()=>{setDone('');},[settingsId]);
+  useEffect(()=>{setDone('');setError('');},[settingsId]);
 
   function patch(id:string,value:Partial<Pick<Work,'title'|'subtitle'|'description'|'form'>>){s.update(next=>({...next,works:next.works.map(w=>w.id===id?{...w,...value}:w)}));}
 
@@ -57,6 +59,9 @@ export function WorkDialogs({state,settingsId,confirm,readonly,onSettings,onConf
       <div className="form-grid">
         <label>작품명<input value={work.title} onChange={e=>{if(e.target.value)patch(work.id,{title:e.target.value});}}/></label>
         <label>형식<select value={work.form} onChange={e=>patch(work.id,{form:workSchema.shape.form.parse(e.target.value)})}>{['단편','중편','장편'].map(v=><option key={v}>{v}</option>)}</select></label>
+        <label>책장<select aria-label="책장" disabled={readonly} value={shelfForWork(state,work.id)} onChange={e=>{const shelfId=e.target.value;
+
+try{s.update(next=>moveWorkToShelf(next,work.id,shelfId));setError('');}catch(cause){setError(cause instanceof Error?cause.message:'책장을 옮기지 못했습니다.');}}}>{workShelves(state).map(shelf=><option key={shelf.id} value={shelf.id}>{shelf.title}</option>)}</select></label>
         <label>부제<input value={work.subtitle} onChange={e=>patch(work.id,{subtitle:e.target.value})}/></label>
         <label>작품 소개<textarea rows={4} value={work.description} onChange={e=>patch(work.id,{description:e.target.value})}/></label>
       </div>
@@ -65,7 +70,7 @@ export function WorkDialogs({state,settingsId,confirm,readonly,onSettings,onConf
         {work.activePublicationId&&<button type="button" className="button" disabled={readonly} onClick={()=>onConfirm({type:'unpublish',workId:work.id})}><GlobeOff size={15}/>게시 철회</button>}
         <button type="button" className="button" disabled={readonly||!canTrash} title={canTrash?undefined:lastWork} onClick={()=>onConfirm({type:'trash',workId:work.id})}><Trash2 size={15}/>휴지통으로 이동</button>
       </div>
-      {done&&<p className="field-help work-settings-done" role="status">{done}</p>}
+      {error&&<p className="error-message" role="alert">{error}</p>}{done&&<p className="field-help work-settings-done" role="status">{done}</p>}
     </>}</Modal>
     <Modal className="trash-confirm" open={!!target} onClose={()=>{if(!busy)onConfirm(null);}} title={confirm?.type==='unpublish'?'게시 철회':'작품을 휴지통으로 이동'}
       description={target?confirm?.type==='unpublish'?`‘${target.title}’를 공개 서재에서 내릴까요?`:`‘${target.title}’와 문서 ${docs}개를 휴지통으로 옮길까요?`:undefined}>

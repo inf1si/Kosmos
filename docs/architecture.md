@@ -143,3 +143,7 @@ Google OAuth 앱·웹 클라이언트는 사용자가 생성했다. 새 비밀�
 [editor-extensions.ts](../src/lib/editor-extensions.ts)는 표·첨자·강조·각주/설정 링크·안정된 문단 ID·문단 속성을 공유한다. [editor-search.ts](../src/lib/editor-search.ts)는 ProseMirror 텍스트 위치와 Decoration을 사용하고 검색 강조는 원고에 저장하지 않는다. [manuscript-format.ts](../src/lib/manuscript-format.ts)는 편집기·독서·교환 파일의 안전한 서식 변환을 공유한다. [편집 안내](editor-tools.md). 본문 노드 추가 외에 DB·서버 저장 방식·게시 권한·AI 프롬프트는 바꾸지 않았다.
 
 서재의 작가 순서는 공개 테이블 메타데이터 RPC로 조회·저장하며 원고 workspace 저장과 별개다. 첫 게시/재게시 트리거가 작품 자리를 유지하고 공개 SSR 조회가 순위를 함께 전달한다. 독자의 정렬 선택은 브라우저 설정이다. [계약과 범위](library-order.md).
+
+## 작품 책장
+
+[work-shelves.ts](../src/lib/work-shelves.ts)는 선택적 `Workspace.workShelves`의 기본 책장 보충·이름·배치·이전 백업 보존을 처리한다. StudioHome과 사이드바 전환 메뉴가 이 메타데이터로 묶고, WorkDialogs/StudioDialogs에서 같은 이동을 사용한다. provider의 기존 저장 큐를 공유하며 trash 검증 전에 영구 삭제한 작품 참조를 정리한다. 공개 데이터 생성과 서재 순위 RPC에는 연결하지 않는다. [사용법과 계약](work-shelves.md).
