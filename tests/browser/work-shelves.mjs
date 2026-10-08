@@ -252,6 +252,10 @@ try {
 
         assert.equal(typography.size, '12px');
         assert.equal(typography.weight, '600');
+        await button(`${original.works[2].title} 책장 이동`).hover();
+        await page.getByRole('tooltip', { name: '책장 이동', exact: true }).waitFor();
+        const tooltip = await page.locator('.tooltip').boundingBox();
+        assert(tooltip.x >= 0 && tooltip.x + tooltip.width <= width + 1);
         await page.screenshot({ path: resolve(output, `home-${palette}-${theme}-${width}.png`) });
         await button('새 책장').click();
         await page.getByLabel('책장 이름', { exact: true }).waitFor();
