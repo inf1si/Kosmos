@@ -2,7 +2,7 @@
 
 모델의 기준은 [model.ts](../src/lib/model.ts)와 [001_studio.sql](../supabase/migrations/001_studio.sql)이다. JSON 형식 버전은 현재 **1**이다.
 
-새 빈 작품은 `Work.navigation`에 **본문** 폴더와 그 아래 첫 문서을 명시하며, 새 문서의 `chapter` 기본값은 빈 문자열이다. 폴더 전체 삭제는 기존 문서/노트 휴지통 사본들을 한 번에 추가한다. 폴더 자체는 별도 항목이 아니며 계층은 선택 필드 `folder.nodes`와 기기 `Revision`에 보관한다. JSON 버전·RPC·SQL 형식을 변경하지 않는다.
+새 빈 작품은 `Work.navigation`에 **본문** 폴더와 그 아래 첫 문서를 명시하며, 새 문서의 `chapter` 기본값은 빈 문자열이다. 폴더 전체 삭제는 기존 문서/노트 휴지통 사본들을 한 번에 추가한다. 폴더 자체는 별도 항목이 아니며 계층은 선택 필드 `folder.nodes`와 기기 `Revision`에 보관한다. JSON 버전·RPC·SQL 형식을 변경하지 않는다.
 
 ## 작업 공간 JSON
 

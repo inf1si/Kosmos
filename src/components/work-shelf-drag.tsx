@@ -9,7 +9,7 @@ import treeStyles from './document-tree.module.css';
 
 type Kind='shelf'|'work';
 
-type Drop={shelfId:string;id?:string;edge:'before'|'after'|'inside'};
+type Drop={shelfId:string;id?:string;edge:'before'|'after'|'inside';axis?:'x'|'y'};
 
 type Drag={kind:Kind;id:string;pointerId:number;startX:number;startY:number;x:number;y:number;active:boolean;drop?:Drop};
 
@@ -53,7 +53,7 @@ return Math.hypot(Math.max(rect.left-x,0,x-rect.right),Math.max(rect.top-y,0,y-r
   if(target.dataset.workId===drag.id)return;
   const rect=target.getBoundingClientRect(),columns=cards.some(card=>card!==target&&Math.abs(card.getBoundingClientRect().top-rect.top)<4);
 
-  return {shelfId,id:target.dataset.workId,edge:columns?(x<rect.left+rect.width/2?'before':'after'):(y<rect.top+rect.height/2?'before':'after')};
+  return {shelfId,id:target.dataset.workId,axis:columns?'x':'y',edge:columns?(x<rect.left+rect.width/2?'before':'after'):(y<rect.top+rect.height/2?'before':'after')};
 }
 
 /** Commit only on release; cancelled gestures never enter workspace autosave. */
@@ -139,5 +139,5 @@ if(target)commit(kind,id,{shelfId,id:target,edge:direction<0?'before':'after'});
   const targetTitle=drop?.id?state.works.find(w=>w.id===drop.id)?.title||'':drop?workShelfTitle(shelves.find(s=>s.id===drop.shelfId)||{title:''}):'';
   const feedback=<><span className="library-order-announcement" role="status">{notice}</span>{drag?.active&&createPortal(<div className={`${treeStyles.ghost} work-shelf-ghost`} style={{left:Math.max(4,Math.min(drag.x+12,window.innerWidth-190)),top:Math.max(4,Math.min(drag.y+15,window.innerHeight-90))}}>{short(dragTitle)}<small>{drop?`${short(targetTitle)} ${drop.edge==='inside'?'책장에 놓기':drop.edge==='before'?'앞에 놓기':'뒤에 놓기'}`:'놓을 위치를 선택하세요.'}</small></div>,document.body)}</>;
 
-  return {grip,feedback,shelfProps:(id:string)=>({'data-dragging':drag?.active&&drag.kind==='shelf'&&drag.id===id||undefined,'data-drop-edge':drop?.shelfId===id&&(drag?.kind==='shelf'||drop.edge==='inside')?drop.edge:undefined}),workProps:(id:string)=>({'data-dragging':drag?.active&&drag.kind==='work'&&drag.id===id||undefined,'data-drop-edge':drop?.id===id?drop.edge:undefined})};
+  return {grip,feedback,shelfProps:(id:string)=>({'data-dragging':drag?.active&&drag.kind==='shelf'&&drag.id===id||undefined,'data-drop-edge':drop?.shelfId===id&&(drag?.kind==='shelf'||drop.edge==='inside')?drop.edge:undefined}),workProps:(id:string)=>({'data-dragging':drag?.active&&drag.kind==='work'&&drag.id===id||undefined,'data-drop-edge':drop?.id===id?drop.edge:undefined,'data-drop-axis':drop?.id===id?drop.axis:undefined})};
 }
