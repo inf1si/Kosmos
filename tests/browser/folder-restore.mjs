@@ -7,6 +7,8 @@ import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { workspaceSchema } from '../../src/lib/model.ts';
 import { applyNavigation, insertFolder, moveNavigation, resolveNavigation } from '../../src/lib/document-navigation.ts';
+import { addNote, newNote } from '../../src/lib/personal-notes.ts';
+import { editNoteTree, moveNote } from '../../src/lib/note-navigation.ts';
 
 const require = createRequire(import.meta.url);
 
@@ -41,6 +43,16 @@ for (const [id, to] of [[null, { sectionId: 'scene', parentId: folder }], [a.id,
 
 data = workspaceSchema.parse({ ...data, works: data.works.map((w, i) => i === 0 ? work : applyNavigation(w, resolveNavigation(w))), trash: [] });
 
+const parentNote = { ...newNote(), title: '합성 부모 노트' }, childNote = { ...newNote(), title: '합성 하위 노트' };
+
+data = addNote(addNote(data, parentNote), childNote, { parentId: parentNote.id });
+
+data = editNoteTree(data, w => insertFolder(w, '합성 노트묶음', { sectionId: 'notes', parentId: null }));
+
+const noteFolder = data.noteNavigation.nodes.find(n => n.type === 'folder' && n.title === '합성 노트묶음').id;
+
+data = moveNote(data, parentNote.id, { parentId: noteFolder });
+
 // Each node with its children in order, so a restore that reorders, moves or drops a folder fails.
 const sceneTree = nav => {
     const visit = parentId => nav.nodes.filter(n => n.parentId === parentId && n.sectionId === 'scene').map(n => `${n.id}(${visit(n.id)})`).join(',');
@@ -49,6 +61,8 @@ const sceneTree = nav => {
 };
 
 const original = sceneTree(data.works[0].navigation), errors = [];
+
+const originalNotes = structuredClone(data.noteNavigation);
 
 const browser = await chromium.launch({ executablePath: process.env.KOSMOS_CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 
@@ -108,6 +122,22 @@ async function saved(check) {
     assert(check(), 'The change must reach the server copy');
 }
 
+async function sidebarCount(count) {
+    if (!await page.getByRole('button', { name: /^휴지통/ }).first().isVisible())
+        await button('사이드바 열기').click();
+    assert.equal(await page.getByRole('button', { name: /^휴지통/ }).first().locator('small').textContent(), String(count));
+}
+
+async function modalCount(count) {
+    assert.equal(await page.locator('.trash-tools > .field-help').textContent(), `${count}개`);
+    assert.equal(await page.locator('.trash-row').count(), count);
+}
+
+async function reload() {
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: /^휴지통/ }).first().waitFor({ state: 'attached' });
+}
+
 try {
     await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
     await page.locator('.manuscript').first().waitFor();
@@ -133,28 +163,97 @@ try {
 
                 if ((await page.locator('html').getAttribute('data-theme') === 'dark') !== dark)
                     await button(dark ? '다크 모드로 전환' : '라이트 모드로 전환').click();
+                await sidebarCount(1);
                 await page.getByRole('button', { name: /^휴지통/ }).first().click();
                 const row = page.locator(`.trash-row[data-trash-id="${folder}"]`);
 
                 assert.equal(await page.locator('.trash-row').count(), 1, 'A folder-wide deletion is one trash row');
                 assert.match(await row.textContent(), /합성 1부.*폴더 · .+ · 문서 3개/);
+                await modalCount(1);
                 assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
                 await page.screenshot({ path: resolve(output, `trash-${width}-${palette}-${dark ? 'dark' : 'light'}.png`) });
                 await page.keyboard.press('Escape');
                 await page.locator('.trash-tools').waitFor({ state: 'hidden' });
+                // Both consumers show the same account trash count, even before any note deletion.
+                await button('노트').click();
+                await sidebarCount(1);
+                await button('집필실').click();
                 console.log('PASS', width, palette, dark ? 'dark' : 'light');
             }
 
     await page.setViewportSize({ width: 1280, height: 900 });
+    await reload();
+    await sidebarCount(1);
     await page.getByRole('button', { name: /^휴지통/ }).first().click();
     await page.locator(`.trash-row[data-trash-id="${folder}"]`).getByRole('button', { name: '복원', exact: true }).click();
     await saved(() => data.trash.length === 0);
+    await modalCount(0);
+    assert(await page.getByRole('textbox', { name: '휴지통 검색', exact: true }).evaluate(el => el === document.activeElement));
     assert.equal(sceneTree(data.works[0].navigation), original, 'Restore must rebuild the folder tree in its old place and order');
     await page.keyboard.press('Escape');
 
     for (const title of ['합성 1부', '합성 1장', '합성 빈 폴더'])
         await button(`${title} 메뉴`).waitFor({ state: 'attached' });
     await page.screenshot({ path: resolve(output, 'restored-tree.png') });
+    await sidebarCount(0);
+    await reload();
+    await sidebarCount(0);
+    console.log('PASS document restore and reload');
+
+    await button('노트').click();
+    await button('합성 노트묶음 메뉴').click();
+    await page.getByRole('menuitem', { name: '폴더 전체 삭제' }).click();
+    await button('삭제').click();
+    await saved(() => data.trash.length === 2);
+
+    for (const width of [1280, 360])
+        for (const palette of ['보라', '카세트', '사이버'])
+            for (const dark of [false, true]) {
+                await page.setViewportSize({ width, height: 800 });
+
+                if (!await button(`${palette} 테마`).isVisible())
+                    await button('사이드바 열기').click();
+                await button(`${palette} 테마`).click();
+
+                if ((await page.locator('html').getAttribute('data-theme') === 'dark') !== dark)
+                    await button(dark ? '다크 모드로 전환' : '라이트 모드로 전환').click();
+                await sidebarCount(1);
+                await page.getByRole('button', { name: /^휴지통/ }).first().click();
+                await modalCount(1);
+                assert.match(await page.locator('.trash-row').textContent(), /합성 노트묶음.*노트 폴더 · 노트 2개/);
+                assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+                await page.screenshot({ path: resolve(output, `notes-trash-${width}-${palette}-${dark ? 'dark' : 'light'}.png`) });
+                await page.keyboard.press('Escape');
+                await page.locator('.trash-tools').waitFor({ state: 'hidden' });
+                console.log('PASS notes', width, palette, dark ? 'dark' : 'light');
+            }
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await reload();
+    await sidebarCount(1);
+    await page.getByRole('button', { name: /^휴지통/ }).first().click();
+    await page.locator(`.trash-row[data-trash-id="${noteFolder}"]`).getByRole('button', { name: '복원', exact: true }).click();
+    await saved(() => data.trash.length === 0);
+    assert.deepEqual(data.noteNavigation, originalNotes);
+    await modalCount(0);
+    await page.keyboard.press('Escape');
+    await sidebarCount(0);
+    await reload();
+    await button('합성 노트묶음 메뉴').click();
+    await page.getByRole('menuitem', { name: '폴더 전체 삭제' }).click();
+    await button('삭제').click();
+    await saved(() => data.trash.length === 2);
+    await page.getByRole('button', { name: /^휴지통/ }).first().click();
+    await button('합성 노트묶음 영구 삭제').click();
+    await button('삭제').click();
+    await saved(() => data.trash.length === 0);
+    await modalCount(0);
+    assert(!data.notes.some(n => n.id === parentNote.id || n.id === childNote.id));
+    await page.keyboard.press('Escape');
+    await sidebarCount(0);
+    await reload();
+    await sidebarCount(0);
+    console.log('PASS note restore, purge and reload');
     assert.deepEqual(errors, []);
     console.log('PASS restore');
 } finally {

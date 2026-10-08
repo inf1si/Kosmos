@@ -1,6 +1,7 @@
 'use client';
 
 import { documentSchema } from '@/lib/model';
+import { trashRows } from '@/lib/workspace-trash';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -120,7 +121,7 @@ if(compact)setSidebar(false);}
         </Popover></div>
         <div className="notes-views segmented" role="group" aria-label="노트 보기">{([['all','전체',notes.length],['inbox','수집함',inbox],['icebox','아이스박스',icebox]] as const).map(([value,label,count])=><button type="button" key={value} aria-pressed={box===value} onClick={()=>setBox(value)}>{label}<small>{count}</small></button>)}</div>
         <button type="button" className="nav-item" disabled={readonly} onClick={()=>setImportOpen(true)}><FileUp size={16}/><span>노트 가져오기</span></button>
-        <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'trash'}))}><Trash2 size={16}/><span>휴지통</span><small>{s.state.trash?.length||0}</small></button>
+        <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'trash'}))}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state.trash).length}</small></button>
         <button type="button" className="nav-item" disabled={readonly} onClick={()=>setTemplateRequest({})}><Files size={16}/><span>템플릿</span></button>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'backup'}))}><Archive size={16}/><span>백업과 복구</span></button>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings:notes'}))}><Settings size={16}/><span>설정</span></button>
