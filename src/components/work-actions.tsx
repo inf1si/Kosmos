@@ -6,7 +6,7 @@ import { BookOpen, GlobeOff, LibraryBig, Settings2, Trash2 } from 'lucide-react'
 import { workSchema, type Work, type Workspace } from '@/lib/model';
 import { Modal } from './primitives';
 import { useStudio } from './studio-provider';
-import { moveWorkToShelf, shelfForWork, workShelves } from '@/lib/work-shelves';
+import { moveWorkToShelf, shelfForWork, workShelves, workShelfTitle } from '@/lib/work-shelves';
 
 export type WorkConfirm={type:'unpublish'|'trash';workId:string};
 
@@ -61,7 +61,7 @@ export function WorkDialogs({state,settingsId,confirm,readonly,onSettings,onConf
         <label>형식<select value={work.form} onChange={e=>patch(work.id,{form:workSchema.shape.form.parse(e.target.value)})}>{['단편','중편','장편'].map(v=><option key={v}>{v}</option>)}</select></label>
         <label>책장<select aria-label="책장" disabled={readonly} value={shelfForWork(state,work.id)} onChange={e=>{const shelfId=e.target.value;
 
-try{s.update(next=>moveWorkToShelf(next,work.id,shelfId));setError('');}catch(cause){setError(cause instanceof Error?cause.message:'책장을 옮기지 못했습니다.');}}}>{workShelves(state).map(shelf=><option key={shelf.id} value={shelf.id}>{shelf.title}</option>)}</select></label>
+try{s.update(next=>moveWorkToShelf(next,work.id,shelfId));setError('');}catch(cause){setError(cause instanceof Error?cause.message:'책장을 옮기지 못했습니다.');}}}>{workShelves(state).map(shelf=><option key={shelf.id} value={shelf.id}>{workShelfTitle(shelf)}</option>)}</select></label>
         <label>부제<input value={work.subtitle} onChange={e=>patch(work.id,{subtitle:e.target.value})}/></label>
         <label>작품 소개<textarea rows={4} value={work.description} onChange={e=>patch(work.id,{description:e.target.value})}/></label>
       </div>

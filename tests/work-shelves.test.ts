@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { seedWorkspace } from '../src/lib/seed';
 import { uid, workspaceSchema } from '../src/lib/model';
-import { addWorkShelf, DEFAULT_WORK_SHELF, moveWorkShelf, moveWorkToShelf, preserveWorkShelves, removeWorkShelf, renameWorkShelf, shelfForWork, workShelves } from '../src/lib/work-shelves';
+import { addWorkShelf, DEFAULT_WORK_SHELF, moveWorkShelf, moveWorkToShelf, reorderWorkShelf, placeWorkOnShelf, workShelfTitle, preserveWorkShelves, removeWorkShelf, renameWorkShelf, shelfForWork, workShelves } from '../src/lib/work-shelves';
 import { createBackup, readBackup } from '../src/lib/backup';
 import { purgeTrash, restoreTrash, trashWork } from '../src/lib/workspace-trash';
 
@@ -30,9 +30,9 @@ test('작품이 있는 책장을 지우면 모두 기본 책장으로 옮기고 
   assert.throws(()=>removeWorkShelf(state,DEFAULT_WORK_SHELF),/유지/);
 });
 
-test('빈 이름·중복 이름·없는 작품/책장·40개 제한과 중복/손상 위치를 거절한다',()=>{
+test('긴 이름·중복 이름·없는 작품/책장·40개 제한과 중복/손상 위치를 거절한다',()=>{
   let state=addWorkShelf(seedWorkspace(),'보관');const id=state.workShelves!.at(-1)!.id;
-  assert.throws(()=>addWorkShelf(state,' '),/1~80/);assert.throws(()=>addWorkShelf(state,' 보관 '),/같은 이름/);
+  assert.throws(()=>addWorkShelf(state,'가'.repeat(81)),/80/);assert.throws(()=>addWorkShelf(state,' 보관 '),/같은 이름/);
   assert.throws(()=>renameWorkShelf(state,id,'기본 책장'),/같은 이름/);
   assert.throws(()=>moveWorkToShelf(state,uid(),id),/작품/);assert.throws(()=>moveWorkToShelf(state,state.works[0].id,uid()),/책장/);
   const duplicated=structuredClone(state);duplicated.workShelves![1].workIds.push(state.works[0].id);assert.throws(()=>workspaceSchema.parse(duplicated),/중복/);
@@ -76,4 +76,47 @@ test('전체 ZIP과 복구 이력에서 책장 이름·순서·작품 위치를 
   state=moveWorkToShelf(state,state.works[1].id,id);state=moveWorkShelf(state,id,-1);
   const restored=await readBackup(await createBackup(state,[{id:uid(),namespace:'synthetic',createdAt:new Date().toISOString(),label:'책장 정리',data:state}],[]));
   assert.deepEqual(restored.data.workShelves,state.workShelves);assert.deepEqual(restored.revisions[0].data.workShelves,state.workShelves);assert.deepEqual(restored.data.works,state.works);
+});
+
+
+test('이름을 비운 책장 여러 개를 만들고 이름 변경·백업에서도 빈 값을 보존한다',async()=>{
+  let state=addWorkShelf(addWorkShelf(seedWorkspace(),' '),'');
+  const ids=state.workShelves!.slice(1).map(s=>s.id);
+  assert.notEqual(ids[0],ids[1]);assert.deepEqual(state.workShelves!.slice(1).map(s=>s.title),['','']);
+  state=renameWorkShelf(state,DEFAULT_WORK_SHELF,'');
+  assert.equal(workShelfTitle(state.workShelves![0]),'이름 없는 책장');
+  assert.doesNotThrow(()=>workspaceSchema.parse(state));
+  const restored=await readBackup(await createBackup(state,[],[]));
+  assert.deepEqual(restored.data.workShelves,state.workShelves);
+});
+
+test('책장을 앞뒤로 끌고 작품을 같은 책장 또는 다른 책장의 지정 위치로 옮긴다',()=>{
+  const original=seedWorkspace();let state=addWorkShelf(addWorkShelf(original,'보관'),'구상');
+  const [first,second,third]=state.workShelves!.map(s=>s.id),[a,b]=state.works.map(w=>w.id);
+  state=reorderWorkShelf(state,third,first,'before');
+  assert.deepEqual(state.workShelves!.map(s=>s.id),[third,first,second]);
+  state=reorderWorkShelf(state,third,second,'after');
+  assert.deepEqual(state.workShelves!.map(s=>s.id),[first,second,third]);
+  state=placeWorkOnShelf(state,b,first,{id:a,edge:'before'});
+  assert.deepEqual(state.workShelves![0].workIds,[b,a]);
+  state=placeWorkOnShelf(state,a,second);
+  state=placeWorkOnShelf(state,b,second,{id:a,edge:'after'});
+  assert.deepEqual(state.workShelves!.map(s=>s.workIds),[[],[a,b],[]]);
+  assert.equal(state.works,original.works);assert.equal(state.assets,original.assets);
+  assert.equal(original.workShelves,undefined);
+  assert.equal(reorderWorkShelf(state,first,first,'after'),state);
+  assert.equal(placeWorkOnShelf(state,b,second,{id:a,edge:'after'}),state);
+  assert.equal(placeWorkOnShelf(state,a,second,{id:a,edge:'before'}),state);
+  assert.throws(()=>placeWorkOnShelf(state,b,third,{id:a,edge:'before'}),/위치/);
+  assert.throws(()=>reorderWorkShelf(state,uid(),first,'before'),/책장/);
+  assert.throws(()=>placeWorkOnShelf(state,uid(),third),/작품/);
+});
+
+test('드래그로 정리한 뒤에도 휴지통 작품의 책장과 복원 위치를 유지한다',()=>{
+  let state=addWorkShelf(seedWorkspace(),'보관');const id=state.workShelves!.at(-1)!.id,[a,b]=state.works.map(w=>w.id);
+  state=trashWork(state,b);state=placeWorkOnShelf(state,a,id);
+  assert.deepEqual(workShelves(state)[0].workIds,[b]);
+  state=reorderWorkShelf(state,id,DEFAULT_WORK_SHELF,'before');state=restoreTrash(state,b);
+  assert.equal(shelfForWork(state,b),DEFAULT_WORK_SHELF);assert.equal(shelfForWork(state,a),id);
+  assert.doesNotThrow(()=>workspaceSchema.parse(state));
 });

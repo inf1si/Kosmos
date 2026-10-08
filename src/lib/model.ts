@@ -227,7 +227,7 @@ if(p.parentId===item.id||p.beforeId===item.id||p.childIds.includes(item.id)||new
 
 export type TrashItem=z.infer<typeof trashItemSchema>;
 
-export const workShelfSchema=z.object({id:z.union([z.literal('default'),z.uuid()]),title:z.string().trim().min(1).max(80),workIds:z.array(z.uuid()).max(5100)});
+export const workShelfSchema=z.object({id:z.union([z.literal('default'),z.uuid()]),title:z.string().trim().max(80),workIds:z.array(z.uuid()).max(5100)});
 
 export type WorkShelf=z.infer<typeof workShelfSchema>;
 
