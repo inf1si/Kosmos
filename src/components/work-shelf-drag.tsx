@@ -16,7 +16,14 @@ type Drag={kind:Kind;id:string;pointerId:number;startX:number;startY:number;x:nu
 const short=(title:string)=>title.length>24?`${title.slice(0,24)}…`:title;
 
 function detectDrop(root:HTMLElement|null,drag:Drag,x:number,y:number):Drop|undefined{
-  const element=document.elementFromPoint(x,y),shelf=element?.closest<HTMLElement>('[data-work-shelf]'),scroller=root?.querySelector('.notes-home-body');
+  const element=document.elementFromPoint(x,y),scroller=root?.querySelector('.notes-home-body');
+  let shelf=element?.closest<HTMLElement>('[data-work-shelf]');
+
+  // The insertion line sits in the gap, which belongs to the scrolling body.
+  if(!shelf&&root){const rows=[...root.querySelectorAll<HTMLElement>('[data-work-shelf]')],first=rows[0]?.getBoundingClientRect(),last=rows.at(-1)?.getBoundingClientRect();
+
+    if(first&&last&&x>=first.left&&x<=first.right&&y>=first.top&&y<=last.bottom)shelf=rows.find(row=>y<=row.getBoundingClientRect().bottom);
+  }
 
   if(!shelf||!root?.contains(shelf)||!scroller)return;
   const bounds=scroller.getBoundingClientRect();

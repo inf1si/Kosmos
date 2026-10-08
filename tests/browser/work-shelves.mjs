@@ -187,6 +187,13 @@ async function checkDrag() {
     assert.deepEqual(await order(), [defaultId, blankB, blankA]);
     await beginDrag('shelf', blankB, shelfById(blankA), 'after', true);await endDrag(true);
     assert.deepEqual(await order(), [defaultId, blankA, blankB]);
+    const gapFrom = await shelfById(blankB).locator('.work-shelf-grip').boundingBox(), gapTarget = await shelfById(defaultId).boundingBox();
+    await page.mouse.move(gapFrom.x + gapFrom.width / 2, gapFrom.y + gapFrom.height / 2);await page.mouse.down();
+    await page.mouse.move(gapTarget.x + gapTarget.width / 2, gapTarget.y + gapTarget.height + 12, { steps: 8 });
+    await page.waitForFunction(id => document.querySelector(`[data-work-shelf="${id}"]`)?.dataset.dropEdge === 'before', blankA);
+    await endDrag();assert.deepEqual(await order(), [defaultId, blankB, blankA]);
+    await shelfById(blankB).locator('.work-shelf-grip').press('ArrowDown');
+    assert.deepEqual(await order(), [defaultId, blankA, blankB]);
     await beginDrag('work', c, card(a), 'before');await endDrag();
     assert.deepEqual(await workOrder(defaultId), [c, a, b]);
     await card(c).locator('.work-work-grip').press('ArrowDown');
