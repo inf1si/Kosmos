@@ -10,6 +10,9 @@
 - 별도 로컬 개발 서버의 기기 미리보기(공개 환경 값을 비워 계정 연결 없이 실행)에서는 실제 IndexedDB에 합성 작품 세 개를 넣고 **드래그 → 서재 순서 저장 → 서재 기본 작가 지정순 → 새로고침 유지**를 확인했다. 원고·활성 판본 ID는 그대로이고 브라우저 오류 0, `/studio`·`/library` HTTP 200이다. 실행 도구 연결이 한 번 끊겼으나 복구 후 검사를 끝냈다.
 - 실제 계정의 공개 순서는 변경하지 않았고 유료 AI 호출은 0이다. 화면 증거는 Git 제외 `test-results/library-order-drag/`에 보관한다. PR/main CI·운영은 후속 기록으로 구분한다. [사용법](docs/library-order.md)·[브라우저 검사](tests/browser/library-order-drag.mjs).
 
+- 후속 배포: [PR #39](https://github.com/inf1si/Kosmos/pull/39)를 main `22434f979787fc1a2a8dba2603afb2543b780e16`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37724007199)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37724146055)가 타입·186개 검사·빌드·문서·실제 age 왕복·Anti Slop 179개 파일/19개 규칙/0건을 통과했다. Vercel 미리보기 READY(`dpl_8E2Emwf7w7uXpySPfEtLJU9jHL52`)·운영 READY(`dpl_5FJPPRZoi28y7qT7NMcccEh3fR9c`), 정확한 main SHA와 `kosmos-ashy.vercel.app` 별칭을 확인했다.
+- 운영 앱의 모든 Supabase/백업 응답을 합성 사본으로 가로챈 같은 Chromium 검사도 마우스·방향키·터치 에뮬레이션·취소·가장자리 스크롤·자동 정렬·저장 실패/재시도/잠금·새로고침/닫기 폐기·빈/한 작품 경계와 여섯 테마 × 1280/360px **12개 드래그 화면**을 통과했다. 페이지 오류·넘침 0, 드래그 중 툴팁 0이며 데스크톱/모바일 화면을 직접 봤다. 별도 실제 익명 브라우저는 서재 읽기 링크 9개·집필실 비밀번호/Google 로그인 진입을 두 폭에서 HTTP 200·넘침/페이지 오류 0으로 확인했다. 운영 순서 쓰기는 합성 응답에만 수행했고 실제 계정은 변경하지 않았다. 증거는 Git 제외 `test-results/library-order-drag-production/`에 보관한다. 열린 집필실은 새로고침한다.
+
 ## 2026-10-08 — 폴더 복원 검증·휴지통 개수
 
 - 기준 main `6ad1eb0bfc88db3c32ac7bf3c940667411afa722`(Claude PR #37)을 fetch했다. 손상된 `folder.nodes`의 빠진 문서 부모가 서로 순환하면 스키마를 통과하고 복원 호출이 끝나지 않았다. 수정 전 새 검사 두 개가 실패했고, 격리한 복원 프로세스는 4초 제한으로 종료됐다. 수정 후 스키마와 실제 복원이 오류로 거절하고 원본/휴지통을 보존한다.
