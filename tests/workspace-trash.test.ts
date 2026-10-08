@@ -65,8 +65,9 @@ test('휴지통의 순환 폴더 구조는 작업공간 검증에서 거절한�
 test('검증을 우회한 폴더 복원도 멈추지 않고 원본을 보존하며 거절한다',()=>{
  const {next,folder}=damagedFolder();
 
- // Bound the real restore call so a regression cannot freeze the test process.
- const code=`import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {restoreTrash} from './src/lib/workspace-trash.ts';
+ // Bound the real restore call so a regression cannot freeze the test process. Some Node 22 releases expose the
+ // tsx-compiled module only as a default export, so read restoreTrash from either shape.
+ const code=`import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';const trash=await import('./src/lib/workspace-trash.ts'),{restoreTrash}=trash.restoreTrash?trash:trash.default;
  const {next,folder}=JSON.parse(readFileSync(0,'utf8')),before=structuredClone(next);
  assert.throws(()=>restoreTrash(next,folder),/휴지통 폴더/);assert.deepEqual(next,before);`;
 

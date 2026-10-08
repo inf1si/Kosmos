@@ -1,5 +1,12 @@
 # 구현 검증
 
+## 2026-10-08 — 전체 기능 리뷰 보완
+
+- 기준 main `acbb2771d7f7b8a6d2b52a3ffae51e1334ff48e0`을 fetch했다. 개발 서버 + 합성 Supabase 응답의 Chromium으로 홈·원고·분할·참고 패널·플롯보드·문서 그래프·노트·AI 대화 창·휴지통·템플릿·백업 ZIP 생성/선택·문서 내보내기·게시 준비·작품 정보·서재 순서와 공개 서재/독서/설정집을 직접 조작했다.
+- 수정 전 카세트·사이버 분할 편집의 서식 도구가 높이 46px·내용 96~100px로 원고를 덮는 것을 재현했고, [분할 도구·게시 기본 선택 회귀 검사](tests/browser/split-toolbar-publish.mjs)가 수정 전 카세트에서 실패, 수정 후 여섯 테마 × 1280px 분할과 게시 기본 선택이 통과했다.
+- 기존 [집필실 홈](tests/browser/studio-home.mjs)·[작품 동작](tests/browser/work-actions.mjs)·[폴더 복원](tests/browser/folder-restore.mjs)·[서재 순서 드래그](tests/browser/library-order-drag.mjs)·[빈 제목 휴지통 저장](tests/browser/untitled-trash-sync.mjs) 브라우저 검사가 통과했다. 이 환경(Node 22.22.0)에서 실패하던 폴더 복원 Node 검사는 수정 후 통과했다(Node 186개·실패 0). 빈 제목 휴지통 브라우저 검사는 수정 전 main에서도 3번 중 2번 복원 직후 확인에서 실패했고, 서버 사본을 기다리게 고친 뒤 4번 연속 통과했다.
+- 운영 사이트·실제 계정·실제 AI 응답·모바일 기기는 확인하지 않았다.
+
 ## 2026-10-08 — 제목 없는 휴지통 문서의 서버 저장 거절
 
 - 기준 main `7d39160c8106c709b49ab00a1529352d71940b32`를 fetch했다. 실제 운영 `guard_workspace_trash`가 저장 스키마와 달리 문서의 빈 제목을 거절하는 조건을 확인했다. 운영 원고/휴지통 본문을 읽거나 수정하지 않고 함수 정의와 집계만 조회했다. 사용자의 브라우저 대기열은 직접 조회하지 않았다.

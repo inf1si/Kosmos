@@ -38,7 +38,8 @@ if(value==='trash'||String(value).startsWith('settings'))trashFocus.current=docu
 
 if(value==='backup')void s.revisions().then(setHistory);
 
-if(value==='publish')setSelected(work?.documents.filter(d=>d.kind==='scene').map(d=>d.id)||[]);
+// An empty draft (a new or replacement document) stays unchecked so it is not published by default.
+if(value==='publish')setSelected(work?.documents.filter(d=>d.kind==='scene'&&plainText(d.content).trim()).map(d=>d.id)||[]);
 
 if(value==='new-work')setTitle('');};
 
