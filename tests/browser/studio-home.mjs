@@ -116,7 +116,7 @@ try{
   assert.equal(await editor().count(),0,'home replaces the editor on entry');
   assert.equal(await activeTab(),'집필실 홈');
   assert.equal(await page.locator('.studio-tools').getByRole('button',{name:'집필실 홈'}).getAttribute('aria-pressed'),'true');
-  assert.match(await home().locator('.board-bar>span').innerText(),new RegExp(`^작품 ${data.works.length} · 문서 \\d+ · [\\d,]+자$`));
+  assert.match(await home().locator('.board-bar>span').innerText(),new RegExp(`^작품 ${data.works.length} · 원고 \\d+ · [\\d,]+자$`));
   assert.equal(await card('작품','').count(),data.works.length,'one card per work');
   assert.equal(await card('작품',first.title).getAttribute('aria-current'),'true');
   assert.match(await card('이어 쓰기','').innerText(),new RegExp(first.documents.find(d=>d.kind==='scene').title));

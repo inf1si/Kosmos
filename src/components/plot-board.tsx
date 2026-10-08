@@ -25,7 +25,7 @@ export function PlotBoard({documents,onOpen,onCreate}:{documents:NovelDocument[]
   const total=scenes.reduce((n,d)=>n+countChars(d),0);
 
   return <div className="plot-board">
-    <div className="board-bar"><div className="segmented" role="group" aria-label="보드 기준">{modes.map(([value,label])=><button type="button" key={value} aria-pressed={mode===value} onClick={()=>setMode(value)}>{label}</button>)}</div><span>문서 {scenes.length} · {total.toLocaleString()}자</span><button type="button" className="button" onClick={()=>onCreate()}><Plus size={15}/>문서 추가</button></div>
+    <div className="board-bar"><div className="segmented" role="group" aria-label="보드 기준">{modes.map(([value,label])=><button type="button" key={value} aria-pressed={mode===value} onClick={()=>setMode(value)}>{label}</button>)}</div><span>원고 {scenes.length} · {total.toLocaleString()}자</span><button type="button" className="button" onClick={()=>onCreate()}><Plus size={15}/>문서 추가</button></div>
     <div className="board-columns">
       {columns.map(column=><section className="board-column" key={column.key||'none'} aria-label={[column.kicker,column.title].filter(Boolean).join(' · ')}>
         <header>{column.kicker&&<small>{column.kicker}</small>}<strong>{column.title}</strong><span>{column.scenes.length}</span></header>
