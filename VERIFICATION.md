@@ -9,6 +9,9 @@
 - Google 연결 상태의 노트에서도 입력 직후 서버 저장 503 → 로그아웃 → 새로고침 → 같은 계정 로그인 → 기존 pendingRequest ID 재전송/저장/dirty 해제를 확인했다. 기기 저장을 QuotaExceededError로 실패시키면 종료 요청 없이 로그인·현재 입력·메뉴 재시도가 유지됐다. AI 전송 0, 실제 작가 계정·운영 원고는 사용하지 않았다. 증거는 Git 제외 `test-results/account-logout-optimized/`에 보관한다.
 - 실제 Supabase의 사용자 로그아웃·Google 로그인 승인·다른 기기 세션 유지·실제 모바일/다른 브라우저는 미확인이다. PR/main CI·운영 앱 확인은 후속 기록으로 구분한다. [계정 안내](docs/google-login.md#로그아웃)·[저장 계약](docs/synchronization.md#게시복원로그아웃).
 
+- 후속 배포: [PR #43](https://github.com/inf1si/Kosmos/pull/43)을 main `7b832f30b811850738cca46c4762741d6678f6b2`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37765196916)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37765444183)가 문서·타입·전체 **186개 검사·실패 0**·빌드·실제 age 왕복·Anti Slop **181개 파일/19개 규칙/0건**을 통과했다. Vercel 미리보기 READY(`dpl_HWDZomatxzi2gfjXBFSen8C98pME`)·운영 READY(`dpl_B2RmBqY7PssrMDk8uLXcsDHMA4aY`), 정확한 main SHA와 `www.orbiter.ink`/`orbiter.ink`/`kosmos-ashy.vercel.app` 별칭을 확인했다.
+- `https://www.orbiter.ink`의 실제 배포 앱에서도 같은 Chromium 검사를 통과했다. 계정 메뉴의 두 소비 화면·여섯 테마·두 폭 **24개 화면**, 정상 종료/새로고침/재로그인, 서버 인증 500·저장 503·기기 저장 실패와 기존 대기 요청 재전송에서 페이지 오류·가로 넘침 0이다. 인증·원고 저장·종료 요청은 전부 합성 응답으로 격리했고 실제 사용자 세션·원고·AI는 사용하지 않았다. 운영 데스크톱·모바일 화면을 직접 확인했다. Git 제외 `test-results/account-logout-production/`에 증거를 보관한다. 열린 집필실·노트는 새로고침한다. 이 운영 기록의 문서 커밋은 기능 배포와 구분한다.
+
 ## 2026-10-08 — 제목 없는 휴지통 문서의 서버 저장 거절
 
 - 기준 main `7d39160c8106c709b49ab00a1529352d71940b32`를 fetch했다. 실제 운영 `guard_workspace_trash`가 저장 스키마와 달리 문서의 빈 제목을 거절하는 조건을 확인했다. 운영 원고/휴지통 본문을 읽거나 수정하지 않고 함수 정의와 집계만 조회했다. 사용자의 브라우저 대기열은 직접 조회하지 않았다.
