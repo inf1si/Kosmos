@@ -10,6 +10,10 @@
 
 2026-10-01에 실제 Supabase 서울 프로젝트에 최초 SQL을 적용했다. 6개 테이블의 RLS, RPC 4개, 비공개 버킷과 Realtime 대상 테이블을 확인했고 공개 회원가입을 닫았다. 익명 REST 접근 검사 7개가 통과했다. 이후 작가 계정 1명·허용 목록·로그인, Vercel GitHub 연결·운영 배포와 기본 클라우드 시험까지 완료했다. 다른 기기 첨부·충돌과 운영 ZIP 파일 복원은 남아 있다. 기존 시험 ZIP의 원고·첨부 복원은 별도 로컬 origin에서 확인했다. 아래 설치 절차를 이미 적용한 프로젝트에 반복 실행하지 않는다. 새 비밀번호 입력·등록은 계정 소유자가 직접 수행한다. [검증 기록](../VERIFICATION.md).
 
+## 제목 없는 문서 휴지통 저장 수정 (2026-10-08)
+
+기존 작품 휴지통 SQL 뒤에 [20261008055311_untitled_trash_documents.sql](../supabase/migrations/20261008055311_untitled_trash_documents.sql)을 적용한다. 제목 없는 문서를 허용하는 앱과 달리 서버가 휴지통 문서의 빈 제목을 거절해 모든 후속 저장이 실패하던 조건을 제거한다. 기존 제목·본문·휴지통 데이터와 트리거/RLS/권한은 바꾸지 않는다. 기존 마이그레이션을 다시 실행하면 이전 함수로 돌아가므로 새 프로젝트도 이 SQL을 마지막 휴지통 보호 수정으로 실행한다. 운영에는 `untitled_trash_documents`(버전 `20261008055831`)가 적용됐고 함수 정의/권한을 확인했다. 앱 재배포·대기열 초기화 없이 열린 앱의 기존 저장 재시도가 동작한다. 실제 작가 브라우저에서 저장 완료 여부는 별도 확인한다.
+
 ## 1. 로컬 실행
 
 프로젝트 폴더 `novel-studio`를 터미널의 현재 디렉터리로 연다. Node.js 22 또는 24, pnpm 11.19.0이 필요하다.
@@ -70,7 +74,7 @@ Supabase 공개 키는 RLS와 함께 사용하는 값이다. `service_role`/secr
 1. [Supabase Dashboard](https://supabase.com/dashboard)에 로그인한다.
 2. 기존 빈 프로젝트가 있으면 먼저 확인한다. 이번 연결은 사용자가 만든 `Kosmos` 서울 프로젝트를 사용했다. 새 프로젝트가 필요할 때만 생성하며 DB 비밀번호는 계정 소유자가 보관한다.
 3. SQL Editor에서 [001_studio.sql](../supabase/migrations/001_studio.sql) 전체를 **새 프로젝트에 한 번** 실행한다.
-4. 이어 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql), [003_ai_preferences_guard.sql](../supabase/migrations/003_ai_preferences_guard.sql), [개인 노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql), [노트 계층·AI SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql), [휴지통 SQL](../supabase/migrations/20261004104045_workspace_trash_guard.sql), [작품 휴지통·게시 철회 SQL](../supabase/migrations/20261007081500_work_trash_unpublish.sql), [템플릿 보호 SQL](../supabase/migrations/20261007124540_workspace_templates_guard.sql), [서재 순서 SQL](../supabase/migrations/20261007150655_library_order.sql)을 순서대로 실행한다. 6개 앱 테이블·private-assets 버킷·preserve_document_navigation·preserve_ai_preferences·preserve_personal_notes·preserve_note_details·preserve_workspace_trash·preserve_workspace_templates 트리거를 확인한다. 기존 프로젝트에는 미적용 번호만 추가하고 001을 다시 실행하지 않는다.
+4. 이어 [002_document_navigation_guard.sql](../supabase/migrations/002_document_navigation_guard.sql), [003_ai_preferences_guard.sql](../supabase/migrations/003_ai_preferences_guard.sql), [개인 노트 보호 SQL](../supabase/migrations/20261004063340_independent_notes_guard.sql), [노트 계층·AI SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql), [휴지통 SQL](../supabase/migrations/20261004104045_workspace_trash_guard.sql), [작품 휴지통·게시 철회 SQL](../supabase/migrations/20261007081500_work_trash_unpublish.sql), [템플릿 보호 SQL](../supabase/migrations/20261007124540_workspace_templates_guard.sql), [서재 순서 SQL](../supabase/migrations/20261007150655_library_order.sql), [빈 제목 휴지통 SQL](../supabase/migrations/20261008055311_untitled_trash_documents.sql)을 순서대로 실행한다. 6개 앱 테이블·private-assets 버킷·preserve_document_navigation·preserve_ai_preferences·preserve_personal_notes·preserve_note_details·preserve_workspace_trash·preserve_workspace_templates 트리거를 확인한다. 기존 프로젝트에는 미적용 번호만 추가하고 001을 다시 실행하지 않는다.
 5. Data API를 꺼두었다면 Integrations의 Data API 설정에서 활성화하고 필요한 public 테이블·함수를 노출한다. 노출과 읽기·쓰기 권한은 별개다. SQL의 RLS·GRANT를 유지한다.
 6. Realtime publication에 `workspaces`가 포함되었는지 확인한다.
 
