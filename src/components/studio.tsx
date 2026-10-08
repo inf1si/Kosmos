@@ -2,7 +2,7 @@
 
 import { documentSchema, documentTitle } from '@/lib/model';
 import { trashRows } from '@/lib/workspace-trash';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Files, Globe2, HardDrive, House, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
@@ -35,6 +35,7 @@ import { cloudConfigured, cloud } from '@/lib/cloud';
 import { db } from '@/lib/database';
 import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences';
 import { openingDocument, readStudioPosition, rememberStudioPosition } from '@/lib/studio-position';
+import { workShelves } from '@/lib/work-shelves';
 
 const HOME='home';
 
@@ -262,7 +263,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={true}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={false} onClick={()=>openNotes(selectedNote)}><StickyNote size={14}/>노트</button></div>
       <div className="work-switcher" ref={workMenuRef}>
         <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 원고 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span><span className="work-tag" aria-hidden="true">ORB-{String(s.state.works.indexOf(work)+1).padStart(2,'0')}</span></button>
-        {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(work.id);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
+        {workMenu&&<div id="work-menu" className="popover-menu work-menu">{workShelves(s.state).map(shelf=><Fragment key={shelf.id}><div className="work-menu-shelf">{shelf.title}</div>{shelf.workIds.map(id=>s.state!.works.find(w=>w.id===id)).filter((w):w is Work=>!!w).map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}</Fragment>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(work.id);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
       </div>
       <nav className="studio-tools" aria-label="작업 도구">
         <button type="button" className="nav-item" aria-pressed={onHome} onClick={()=>go(HOME)}><House size={16}/><span>집필실 홈</span></button>
@@ -311,7 +312,7 @@ return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon 
         <button type="button" className="primary publish-button" onClick={()=>modal('publish')}><Send size={14}/>게시 준비</button>
       </div>
       {s.error&&<button type="button" className="studio-error" title="닫기" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {onHome?<StudioHome state={s.state} resume={{work,doc:active}} currentWorkId={work.id} readonly={readonly} onOpen={(workId,docId)=>workId===work.id?openDoc(docId):switchWork(workId,docId)} onOpenWork={id=>id===work.id?go(active.id):switchWork(id)} onNewWork={()=>modal('new-work')} onEditWork={setWorkSettings} onConfirmWork={setWorkConfirm}/>
+      {onHome?<StudioHome state={s.state} resume={{work,doc:active}} currentWorkId={work.id} readonly={readonly} onOpen={(workId,docId)=>workId===work.id?openDoc(docId):switchWork(workId,docId)} onOpenWork={id=>id===work.id?go(active.id):switchWork(id)} onNewWork={shelfId=>modal(shelfId?`new-work:${shelfId}`:'new-work')} onEditWork={setWorkSettings} onConfirmWork={setWorkConfirm}/>
       :onGraph?<DocumentGraph key={work.id} documents={docs} initialDocumentId={active.id} onOpen={id=>openDoc(id)}/>
       :onBoard?<PlotBoard documents={docs} onOpen={id=>openDoc(id)} onCreate={chapter=>createDoc('scene',chapter,false)}/>
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--split-percent':`${splitWidth}%`} as React.CSSProperties}>

@@ -2,7 +2,7 @@
 
 모델의 기준은 [model.ts](../src/lib/model.ts)와 [001_studio.sql](../supabase/migrations/001_studio.sql)이다. JSON 형식 버전은 현재 **1**이다.
 
-새 빈 작품은 `Work.navigation`에 **본문** 폴더와 그 아래 첫 장면을 명시하며, 새 문서의 `chapter` 기본값은 빈 문자열이다. 폴더 전체 삭제는 기존 문서/노트 휴지통 사본들을 한 번에 추가한다. 폴더 자체는 별도 항목이 아니며 계층은 선택 필드 `folder.nodes`와 기기 `Revision`에 보관한다. JSON 버전·RPC·SQL 형식을 변경하지 않는다.
+새 빈 작품은 `Work.navigation`에 **본문** 폴더와 그 아래 첫 문서을 명시하며, 새 문서의 `chapter` 기본값은 빈 문자열이다. 폴더 전체 삭제는 기존 문서/노트 휴지통 사본들을 한 번에 추가한다. 폴더 자체는 별도 항목이 아니며 계층은 선택 필드 `folder.nodes`와 기기 `Revision`에 보관한다. JSON 버전·RPC·SQL 형식을 변경하지 않는다.
 
 ## 작업 공간 JSON
 
@@ -14,6 +14,7 @@ Workspace
 ├─ noteNavigation?: version: 1, 노트/폴더 ID·부모·형제 순서
 ├─ trash?: 노트/문서/작품 사본·시각·원래 위치·AI 기록 (최대 5,000개)
 ├─ templates?: 계정의 work/notes 템플릿 사본·탐색 구조·첨부 소속 (최대 100개)
+├─ workShelves?: 책장 ID·이름·작품 ID 순서 (최대 40개)
 ├─ works[]
 │  ├─ id, title, subtitle, description, form
 │  ├─ documents[]: scene | wiki | memo, customProperties? (최대 40개)
@@ -169,3 +170,9 @@ AI 질문 요청의 작품 `documentRange`·노트 `noteRange`(선택/문단, �
 두 조회/저장 RPC는 SECURITY DEFINER·빈 search_path, `auth.uid()`와 authors 등록 검사, owner 조건을 사용한다. PUBLIC·anon 실행은 취소하고 authenticated만 허용한다. 저장은 작업 공간·활성 판본 행 잠금 후 현재 판본 ID 전체와 입력 배열이 정확히 같은지 검사한다(중복·타인·누락·구판본 거절, 최대 100개). 기존 활성 슬롯을 재배치해 철회한 작품의 자리는 유지하며 공개 payload·게시일·판본 ID·원고를 수정하지 않는다. anon/authenticated에는 기존 활성 판본 RLS 아래 새 열의 SELECT만 추가한다. 다른 테이블 권한·RLS·Auth·Storage 정책은 그대로다.
 
 공개 조회는 DB 열을 `Publication.libraryPosition`으로 합쳐 읽는다. 기기 미리보기는 같은 선택 필드를 판본 사본에 저장하며 Workspace 최상위 필드·formatVersion·ZIP 버전 변경은 없다. 운영 순서는 작업 공간 복원으로 변경되지 않는다. [사용법과 동시 저장 범위](library-order.md).
+
+## 집필실 책장
+
+선택적 `Workspace.workShelves[]`는 `id`(`default` 또는 UUID), `title`(trim 후 1~80자), `workIds[]`(UUID, 최대 5,100개)를 갖는다. 전체 40개 한도이며 비어 있지 않으면 기본 책장 ID `default`가 있어야 한다. 책장 ID·작품 배치 중복과 활성 작품/작품 휴지통에 없는 ID를 거절한다. 배열 순서가 책장 순서, `workIds` 순서가 해당 책장의 작품 순서다. 제목 중복은 편집 동작에서 거절한다.
+
+필드가 없거나 빈 배열이면 기본 책장을 보여주며, 배치가 없는 활성/휴지통 작품은 기본 책장에 보충한다. 작품 이동은 이 메타데이터만 바꾼다. `works` 순서·Work 본문/AI/첨부·Publication·공개 서재 순위는 유지한다. 휴지통 작품 ID도 남겨 복원 위치를 기억하고 영구 삭제 시 정리한다. 책장 삭제는 모든 참조를 기본 책장으로 이동한다. 기기 접힘 설정은 namespace별 localStorage에 따로 두며 Workspace에 넣지 않는다. 형식 버전 1·테이블·RPC·SQL은 그대로다. [사용법](work-shelves.md).

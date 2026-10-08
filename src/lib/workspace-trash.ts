@@ -6,6 +6,7 @@ import { noteTitle, removeNote } from './personal-notes';
 import { applyNoteNavigation, noteTreeWork, resolveNoteNavigation } from './note-navigation';
 import { removeDocument } from './document-deletion';
 import { applyNavigation, descendantsOf, resolveNavigation } from './document-navigation';
+import { preserveWorkShelves } from './work-shelves';
 
 export function trashTitle(item:TrashItem){return item.type==='note'?noteTitle(item.note):item.type==='work'?item.work.title:documentTitle(item.document);}
 
@@ -40,7 +41,7 @@ function heldAssets(item:TrashItem,state:Workspace){
 
 export function materializeTrash(state:Workspace):Workspace{return {...state,trash:state.trash||[]};}
 
-function checked(state:Workspace):Workspace{const result=workspaceSchema.safeParse(state);
+function checked(state:Workspace):Workspace{const result=workspaceSchema.safeParse(preserveWorkShelves(state,state));
 
 if(!result.success)throw new Error(result.error.issues[0].message);
 

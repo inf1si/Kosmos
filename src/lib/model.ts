@@ -227,6 +227,10 @@ if(p.parentId===item.id||p.beforeId===item.id||p.childIds.includes(item.id)||new
 
 export type TrashItem=z.infer<typeof trashItemSchema>;
 
+export const workShelfSchema=z.object({id:z.union([z.literal('default'),z.uuid()]),title:z.string().trim().min(1).max(80),workIds:z.array(z.uuid()).max(5100)});
+
+export type WorkShelf=z.infer<typeof workShelfSchema>;
+
 export const workspaceSchema = z.object({
   formatVersion:z.literal(1),id:z.uuid(),works:z.array(workSchema).min(1).max(100),assets:z.array(assetSchema).max(2000),updatedAt:z.string(),
   aiPreferences:aiPreferencesSchema.optional(),
@@ -234,6 +238,7 @@ export const workspaceSchema = z.object({
   noteNavigation:noteNavigationSchema.optional(),
   trash:z.array(trashItemSchema).max(5000).optional(),
   templates:z.array(workspaceTemplateSchema).max(100).optional(),
+  workShelves:z.array(workShelfSchema).max(40).optional(),
 }).superRefine((data,ctx)=>{
   const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...(data.trash||[]).map(t=>t.id)];
 
@@ -244,6 +249,16 @@ export const workspaceSchema = z.object({
   if((data.notes||[]).filter(n=>n.aiMessages?.length).length>200)ctx.addIssue({code:'custom',message:'노트 대화는 최대 200개까지 보관할 수 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
   const workIds=new Set(data.works.map(w=>w.id));
+
+  if(data.workShelves){
+    const shelves=data.workShelves,assigned=shelves.flatMap(s=>s.workIds),retained=new Set([...workIds,...(data.trash||[]).filter(t=>t.type==='work').map(t=>t.id)]);
+
+    if(new Set(shelves.map(s=>s.id)).size!==shelves.length||new Set(assigned).size!==assigned.length)ctx.addIssue({code:'custom',message:'책장이나 작품의 위치가 중복됩니다.',path:['workShelves']});
+
+    if(shelves.length&&!shelves.some(s=>s.id==='default'))ctx.addIssue({code:'custom',message:'기본 책장을 찾지 못했습니다.',path:['workShelves']});
+
+    if(assigned.some(id=>!retained.has(id)))ctx.addIssue({code:'custom',message:'책장의 작품을 찾지 못했습니다.',path:['workShelves']});
+  }
 
   const templateIds=new Set((data.templates||[]).map(t=>t.id));
 
