@@ -235,8 +235,36 @@ try{
   // The deployed guard accepts the folder field on document and note items, so folder restore needs no migration.
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261007081500_work_trash_unpublish.sql',import.meta.url),'utf8').match(/create or replace function public.guard_workspace_trash[\s\S]*?end \$\$;/)![0]);
   await pg.exec(readFileSync(new URL('../supabase/migrations/20261007124540_workspace_templates_guard.sql',import.meta.url),'utf8'));
-  const tree=folderTree();tree.state.works=tree.state.works.map(w=>applyNavigation(w,resolveNavigation(w)));await pg.query('insert into workspaces values (2,$1)',[JSON.stringify(tree.state)]);
+  await pg.exec(readFileSync(new URL('../supabase/migrations/20261008055311_untitled_trash_documents.sql',import.meta.url),'utf8'));
+  // A valid untitled manuscript, setting or memo must also save after entering the trash.
+
+  for(const kind of ['scene','wiki','memo'] as const){
+    const blank=structuredClone(state),work=blank.works[0],document=work.documents.find(d=>d.kind===kind)!;
+    document.title='';workspaceSchema.parse(blank);await pg.query('insert into workspaces values (3,$1)',[JSON.stringify(blank)]);
+    const removed=trashDocument(blank,work.id,document.id);workspaceSchema.parse(removed);
+    await pg.query('update workspaces set payload=$1 where id=3',[JSON.stringify(removed)]);
+    assert.deepEqual((await pg.query<{payload:typeof blank}>('select payload from workspaces where id=3')).rows[0].payload,removed);
+
+    for(const value of [undefined,null,301,'x'.repeat(301)]){
+      const payload={...removed,trash:removed.trash!.map(t=>t.type==='document'&&t.id===document.id?{...t,document:{...t.document,title:value}}:t)};
+      assert(!workspaceSchema.safeParse(payload).success);
+      await assert.rejects(()=>pg.query('update workspaces set payload=$1 where id=3',[JSON.stringify(payload)]),/휴지통 본문/);
+    }
+
+    for(const damage of [{workTitle:''},{document:{...document,kind:'invalid'}}]){
+      const payload={...removed,trash:removed.trash!.map(t=>t.type==='document'&&t.id===document.id?{...t,...damage}:t)};
+      assert(!workspaceSchema.safeParse(payload).success);
+      await assert.rejects(()=>pg.query('update workspaces set payload=$1 where id=3',[JSON.stringify(payload)]),/휴지통 문서/);
+    }
+
+    const restored=restoreTrash(removed,document.id);await pg.query('update workspaces set payload=$1 where id=3',[JSON.stringify(restored)]);
+    assert.deepEqual(restored.works[0].documents.find(d=>d.id===document.id),document);
+    await pg.query('delete from workspaces where id=3');
+  }
+
+  const tree=folderTree();tree.a.title='';tree.state.works=tree.state.works.map(w=>applyNavigation(w,resolveNavigation(w)));await pg.query('insert into workspaces values (2,$1)',[JSON.stringify(tree.state)]);
   const folders=trashDocumentFolder(tree.state,tree.work.id,tree.folder);await pg.query('update workspaces set payload=$1 where id=2',[JSON.stringify(folders)]);
-  await pg.query('update workspaces set payload=$1 where id=2',[JSON.stringify(restoreTrash(folders,tree.folder))]);
+  const folderRestored=restoreTrash(folders,tree.folder);await pg.query('update workspaces set payload=$1 where id=2',[JSON.stringify(folderRestored)]);
+  assert.deepEqual(folderRestored.works[0].documents.find(d=>d.id===tree.a.id),tree.a);
  }finally{await pg.close();}
 });
