@@ -6,6 +6,9 @@
 - 최종 타입·최적화 빌드·Anti Slop **185개 파일/19개 규칙/0건**을 확인했다. 데이터/SQL 코드와 Node 검사는 바꾸지 않아 로컬 전체 Node를 반복하지 않았으며 기준 main의 **194개 검사/실패 0**은 위 책장 기능 기록과 구분한다.
 - 최적화 합성 Chromium의 기존 생성/이동/삭제·연속 메뉴/초점·저장 503/재전송·새로고침과 여섯 테마 × 1280/768/360px **144개 화면**이 다시 통과했다. 긴 작품의 이동 버튼을 실제 hover하면 짧은 툴팁이 뜨고 모든 폭에서 화면 안에 있다. 원본 작품/판본/순서 보존·예상 밖 쓰기/페이지 오류 0. 증거는 Git 제외 `test-results/work-shelf-tooltips-final/`이다. 실제 계정/다중 기기/실제 모바일은 미확인이고 PR/main CI·운영은 후속 기록으로 구분한다.
 
+- 후속 배포: [PR #45](https://github.com/inf1si/Kosmos/pull/45)를 main `d46862c560323c607e4407aee50fa2393e5b53cc`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37800636251)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37801099062)가 전체 **194개 검사/실패 0**·타입·빌드·문서·age 왕복·Anti Slop **185개 파일/19개 규칙/0건**을 통과했다. 미리보기 READY(`dpl_27csFfkCvfmBXS8rHDrUeeF7F1hj`)·운영 READY(`dpl_Ck7PcKMEgNaou3jeXihN2S8vHdR1`), 정확한 SHA/프로젝트/production과 새·이전 도메인 별칭을 확인했다.
+- 운영 `https://www.orbiter.ink`에서도 툴팁 hover/화면 안 배치와 기존 책장 조작·저장 재시도/새로고침·원본/판본/순서 보존의 합성 **144개 화면**이 통과했다. 페이지 오류·예상 밖 쓰기 0이며 실제 작가 인증·원고는 사용하지 않았다. 운영 데스크톱의 짧은 툴팁을 직접 봤다. Git 제외 `test-results/work-shelf-tooltips-production/`에 증거를 보관한다. 이 후속 기록 커밋은 기능 배포와 구분한다. 열린 집필실은 새로고침한다.
+
 ## 2026-10-08 — 작품을 묶는 집필실 책장
 
 - 시작 기준 main `0a55c6f1330c781a902193e23f36e1f25dd3ef45`를 fetch하고 작품 홈·전환·휴지통·저장/백업 계약을 확인했다. 사용자 답변에 따라 작품별 문서 아이스박스 대신 **작품 책장**을 구현했다. 게시 직전 main `4992e26918685392e1aa984c6eb913dda5b12938`의 Claude PR #42를 통합해 **원고 N** 표시·분할 도구 높이·빈 원고의 게시 기본 선택·보조 줄 줄바꿈을 보존했다. 변경 전 운영 앱에 새 브라우저 검사를 실행하면 **새 책장** 버튼에서 실패했다(합성 쓰기 0).
