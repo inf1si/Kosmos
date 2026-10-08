@@ -8,6 +8,9 @@
 - 여섯 테마 × 1280/360px에서 홈·게시 준비·서재 **36개 화면**의 용어·가로 넘침 0을 확인했다. 서재는 서버의 실제 공개 자료를 익명으로 읽었다. 데스크톱 홈·모바일 게시 화면을 직접 봤다. 증거는 Git 제외 `test-results/document-terms/`에 보관한다. 브라우저 검사 초기에는 빈 제목 동작·시작 버튼의 설명 포함 접근성 이름·클릭 후 이동 대기와 맞지 않은 기대를 고쳤다. 로컬 SSR의 외부 요청은 실행 프록시를 적용해 정상 응답을 받은 뒤 재검사했다.
 - 실제 모바일 기기·다른 브라우저·실제 AI 응답·사용 중이지 않은 별도 AIReview 컴포넌트의 브라우저 동작은 미확인이다. PR/main CI·운영은 후속 기록으로 구분한다. [문서 안내](docs/document-navigation.md)·[용어 결정](docs/decisions.md#d03-집필-단위는-문서).
 
+- 후속 배포: [PR #40](https://github.com/inf1si/Kosmos/pull/40)을 main `9815718b9d25a582d96acc5009ad968e10a9c1ee`로 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37730220004)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/37730426726)가 타입·전체 **186개 검사·실패 0**·빌드·문서·실제 age 왕복·Anti Slop **179개 파일/19개 규칙/0건**을 통과했다. Vercel 미리보기 READY(`dpl_9jj5xcogpdeYFVWtxEbrYviVDvgr`)·운영 READY(`dpl_2Rh9YZHhuHSb3V8L8pUpXTb1tgWx`), 정확한 main SHA와 `kosmos-ashy.vercel.app` 별칭을 확인했다.
+- 운영 앱에서도 같은 Chromium 검사를 실행해 새 작품/빈 제목/플롯보드 추가·속성/AI 요약 질문·게시/저장/새로고침·기존 제목 보존과 여섯 테마 × 두 폭의 **36개 화면**을 통과했다. 실제 운영 서재는 익명으로 읽고 모든 작가 저장/게시는 합성 응답에만 수행했다. 페이지 오류·가로 넘침 0, AI 전송 0이다. 운영 데스크톱 홈·모바일 게시 화면을 직접 봤다. 증거는 Git 제외 `test-results/document-terms-production/`에 보관한다. 열린 집필실·서재는 새로고침한다.
+
 ## 2026-10-08 — 서재 순서 드래그 이동
 
 - 기준 main `c1afe065739723303115e81a38a11aff9aaa368b`를 fetch하고 기존 순서 편집·저장 RPC·문서 트리의 포인터 이동을 확인했다. 변경 전 최적화 브라우저에서 이동 손잡이가 없어 새 조작 검사가 실패했다. 손잡이·앞/뒤 표시·트리 ghost를 재사용하며 추가 의존성·SQL·JSON 변경은 없다.
