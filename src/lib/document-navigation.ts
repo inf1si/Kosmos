@@ -132,7 +132,7 @@ export function insertDocument(work:Work,doc:NovelDocument,to?:DocumentDestinati
 type CreatedDocument={work:Work;document:NovelDocument};
 
 export function createNavigationDocument(work:Work,kind:NovelDocument['kind'],to:DocumentDestination):CreatedDocument{
-  const doc=newDocument(kind,kind==='scene'?'새 장면':kind==='wiki'?'새 설정':'새 메모');
+  const doc=newDocument(kind,kind==='scene'?'새 문서':kind==='wiki'?'새 설정':'새 메모');
 
   return {work:insertDocument(work,doc,to),document:doc};
 }

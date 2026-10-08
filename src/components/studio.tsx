@@ -232,7 +232,7 @@ if(narrow())setSidebar(false);}
 
   // A part is set only when the user explicitly adds a scene to that part in the plot board.
   function createDoc(kind:NovelDocument['kind'],chapter?:string,open=true){
-    const d=newDocument(kind,kind==='scene'?'새 장면':kind==='wiki'?'새 설정':'새 메모');
+    const d=newDocument(kind,kind==='scene'?'새 문서':kind==='wiki'?'새 설정':'새 메모');
 
 if(kind==='scene')d.chapter=chapter??'';
     organizeWork(w=>{const nav=resolveNavigation(w),neighbor=chapter!==undefined?w.documents.findLast(item=>item.kind===kind&&item.chapter===chapter):w.documents.find(item=>item.id===active.id&&item.kind===kind)||w.documents.findLast(item=>item.kind===kind),node=nav.nodes.find(n=>n.id===neighbor?.id);
@@ -261,7 +261,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={true}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={false} onClick={()=>openNotes(selectedNote)}><StickyNote size={14}/>노트</button></div>
       <div className="work-switcher" ref={workMenuRef}>
-        <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 장면 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span><span className="work-tag" aria-hidden="true">ORB-{String(s.state.works.indexOf(work)+1).padStart(2,'0')}</span></button>
+        <button type="button" className="work-card" title="작품 전환" aria-expanded={workMenu} aria-controls="work-menu" onClick={()=>setWorkMenu(v=>!v)}><span className="work-cover" aria-hidden="true">◌</span><span><strong>{work.title}</strong><small>{work.form} · 문서 {scenes.length} · {total.toLocaleString()}자</small></span><ChevronsUpDown size={15}/><span className="work-side" aria-hidden="true">SIDE {String.fromCharCode(65+s.state.works.indexOf(work)%26)}<CassetteTape size={14}/></span><span className="work-tag" aria-hidden="true">ORB-{String(s.state.works.indexOf(work)+1).padStart(2,'0')}</span></button>
         {workMenu&&<div id="work-menu" className="popover-menu work-menu">{s.state.works.map(w=><button type="button" key={w.id} aria-current={w.id===work.id||undefined} onClick={()=>switchWork(w.id)}><span>{w.title}</span><small>{w.form}</small></button>)}<span className="menu-divider"/><button type="button" onClick={()=>{setWorkMenu(false);modal('new-work');}}><Plus size={15}/>새 작품</button><button type="button" onClick={()=>{setWorkMenu(false);setWorkSettings(work.id);}}><Settings2 size={15}/>작품 정보 편집</button></div>}
       </div>
       <nav className="studio-tools" aria-label="작업 도구">
@@ -371,7 +371,7 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
       <label>부 · 장 (발행 구분)<input value={doc.chapter} disabled={readonly} placeholder="선택 사항" onChange={e=>onPatch({chapter:e.target.value})}/></label>
       <EditableCombobox label="시점 인물" value={doc.pov} options={wiki.filter(w=>w.category.trim()==='인물').map(w=>w.title)} disabled={readonly} onChange={pov=>onPatch({pov})}/>
       <label>작중 시간<input value={doc.storyTime} disabled={readonly} placeholder="예: 귀환일 · 08:40" onChange={e=>onPatch({storyTime:e.target.value})}/></label>
-      <label className="wide">장면 요약<textarea rows={3} value={doc.summary} disabled={readonly} onChange={e=>onPatch({summary:e.target.value})}/></label>
+      <label className="wide">문서 요약<textarea rows={3} value={doc.summary} disabled={readonly} onChange={e=>onPatch({summary:e.target.value})}/></label>
       <p className="field-help wide">부·장은 독서 화면의 구분입니다. 집필실 폴더와 별도로 관리합니다.</p>
     </>:doc.kind==='wiki'?<>
       <EditableCombobox label="분류" value={doc.category} options={wiki.map(w=>w.category)} disabled={readonly} onChange={category=>onPatch({category})}/>

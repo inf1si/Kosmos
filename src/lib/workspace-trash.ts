@@ -106,7 +106,7 @@ export function trashDocumentFolder(state:Workspace,workId:string,folderId:strin
 
   const remaining=work.documents.filter(d=>!removed.has(d.id)),nodes=nav.nodes.filter(n=>!removed.has(n.id));
 
-  if(!remaining.length){const document=newDocument('scene','새 장면');remaining.push(document);nodes.push({id:document.id,type:'document',parentId:null,sectionId:nav.sections.find(s=>s.defaultKind==='scene')?.id||nav.sections[0].id});}
+  if(!remaining.length){const document=newDocument('scene','새 문서');remaining.push(document);nodes.push({id:document.id,type:'document',parentId:null,sectionId:nav.sections.find(s=>s.defaultKind==='scene')?.id||nav.sections[0].id});}
 
   const next=applyNavigation({...work,documents:remaining,...work.aiConversations&&{aiConversations:work.aiConversations.filter(c=>!removed.has(c.docId))}},{...nav,nodes});
 

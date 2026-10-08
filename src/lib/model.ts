@@ -319,7 +319,7 @@ export function makePublication(work:Work,sceneIds:string[]):Publication {
   const selected=new Set(sceneIds);
   const scenes=work.documents.filter(d=>d.kind==='scene'&&selected.has(d.id));
 
-  if(!scenes.length) throw new Error('공개할 장면을 하나 이상 선택하세요.');
+  if(!scenes.length) throw new Error('공개할 문서를 하나 이상 선택하세요.');
 
   return publicationSchema.parse({id:uid(),workId:work.id,title:work.title,subtitle:work.subtitle,description:work.description,publishedAt:new Date().toISOString(),
     scenes:scenes.map(d=>({id:d.id,title:d.title,chapter:d.chapter,content:structuredClone(d.content)})),
