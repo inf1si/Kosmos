@@ -22,6 +22,17 @@ export function sortPublications<T extends LibraryItem>(items:T[],sort:LibrarySo
   return [...items].sort((a,b)=>(sort==='titleAsc'?collator.compare(a.title,b.title):sort==='titleDesc'?collator.compare(b.title,a.title):sort==='newest'?date(b)-date(a):sort==='oldest'?date(a)-date(b):0)||fallback(a,b));
 }
 
+/** Move a publication before/after another without changing its edition or saved rank. */
+export function moveLibraryItem<T extends LibraryItem>(items:T[],id:string,targetId:string,edge:'before'|'after'):T[]{
+  const item=items.find(p=>p.id===id);
+
+  if(!item||id===targetId||!items.some(p=>p.id===targetId))return items;
+  const next=items.filter(p=>p.id!==id),index=next.findIndex(p=>p.id===targetId)+(edge==='after'?1:0);
+  next.splice(index,0,item);
+
+  return next;
+}
+
 export function previewPublications(state:Workspace):Publication[]{return sortPublications(state.works.flatMap(w=>w.publications.filter(p=>p.id===w.activePublicationId)));}
 
 /** Materialize legacy preview editions once, including withdrawn works' reserved positions. */

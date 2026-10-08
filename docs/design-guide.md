@@ -15,7 +15,7 @@
 | 원고 상태 | `.status-dot` + `statuses` 이름 | 트리, 플롯 카드, 그래프 |
 | 공간의 첫 화면·작품 | Lucide 아이콘: 집필실 홈·노트 홈 House, 작품 Book, 작품 열기 BookOpen, 게시 철회 GlobeOff(공개 서재 Globe2의 반대) | 사이드바 맨 위, 홈 탭, 집필실 홈 작품 카드·우클릭 메뉴 |
 | AI 동작 | Lucide 아이콘: AI 질문 Sparkles, 요약 ListCollapse, 문장 다듬기 PenLine, 아이디어 확장 Lightbulb, 질문하기 MessageCircleQuestionMark, 내 스킬 WandSparkles | `/` 메뉴, 선택 글 우클릭 |
-| 정리·공개 순서 도구 | Lucide 아이콘: 템플릿 Files, 서재 순서 편집 ListOrdered | 사이드바 **템플릿**, 집필실 홈 board-bar |
+| 정리·공개 순서 도구 | Lucide 아이콘: 템플릿 Files, 서재 순서 편집 ListOrdered, 순서 이동 GripVertical | 사이드바 **템플릿**, 집필실 홈 board-bar, 트리·서재 순서 손잡이 |
 | 앱 설정·작품 설정 | Lucide 아이콘: 앱 전체 **설정** Settings(톱니), 작품 정보·AI 설정·스킬 관리 Settings2(조절 톱니). 설정 창 구역은 화면 Palette, 원고 표시 Type, 집필 도구 LayoutGrid, 노트 StickyNote, AI Sparkles, 저장 · 백업 Archive, 단축키 Keyboard | 사이드바 **설정**, 설정 창 구역 목록 |
 | 오른쪽 정보 영역 | 참고 패널 규격: 폭 300px, `--side` 바탕, 안쪽 20px 18px, 소제목 12px 600 `--muted` | 참고 패널, 그래프 정보 |
 | 카드 묶음 | `board-column` + `plot-card` | 플롯보드 |
@@ -285,7 +285,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 **템플릿.** 사이드바 Files `nav-item`에서 넓은 `Modal`을 연다. 위쪽 `segmented`로 템플릿 사용/새 템플릿 저장을 나누고, 저장 목록은 `transfer-export-row` 체크 목록이다. 작품 템플릿 목록은 섹션마다 참고 패널 소제목 규격(12px 600 `--muted`)의 제목을 둔다. 저장·만들기는 `.button.primary`, 삭제 확인은 겹친 `Modal`과 `.button.danger`다. 저장 결과는 성공 문구 대신 **템플릿 사용**으로 바뀐 화면과 선택된 새 템플릿으로 보여준다. [기능 안내](workspace-templates.md).
 
-**서재 순서 편집.** 집필실 홈 board-bar의 ListOrdered `.button`에서 넓은 `Modal`을 연다. 기존 label/select/button/reference-card와 ArrowUp/ArrowDown `IconButton`을 사용한다. 자동 정렬은 편집 목록에만 적용하고 **저장된 순서로**·**서재 순서 저장**(`.button.primary`)은 modal-actions에 둔다. 목록은 최대 360px 안에서 세로 스크롤하며 긴 제목은 한 줄 말줄임으로 표시한다. 첫/마지막 이동 버튼은 비활성이고 게시 작품 없음·불러오는 중·저장 오류를 표시한다. 저장하면 두 동작 버튼이 비활성으로 바뀌어 결과를 보여준다. Esc/닫기는 홈의 호출 버튼에 초점을 돌린다. [사용 안내](library-order.md).
+**서재 순서 편집.** 집필실 홈 board-bar의 ListOrdered `.button`에서 넓은 `Modal`을 연다. 기존 label/select/button/reference-card와 ArrowUp/ArrowDown `IconButton`을 사용한다. 행 왼쪽에 트리와 같은 GripVertical 손잡이를 둔다(`.icon-button`, 마우스·터치·↑↓ 키). 드래그 중 원래 행은 흐리게 표시하고 놓을 위치는 트리와 같은 `--link` 2px 선으로 표시한다. 떠 있는 제목은 트리의 ghost 스타일을 재사용하며 긴 이름은 앞 24자로 줄여 화면 안에 둔다. 손잡이 안내는 짧은 native title로 드래그 중 긴 툴팁을 피한다. 자동 정렬은 편집 목록에만 적용하고 **저장된 순서로**·**서재 순서 저장**(`.button.primary`)은 modal-actions에 둔다. 목록은 최대 360px 안에서 세로 스크롤하며 가장자리 드래그는 지속 스크롤한다. 긴 제목은 한 줄 말줄임으로 표시한다. 첫/마지막 이동 버튼은 비활성이고 게시 작품 없음·불러오는 중·저장 오류를 표시한다. 이동 결과는 화면 낭독용 status로 알린다. 저장하면 두 동작 버튼이 비활성으로 바뀌어 결과를 보여준다. 드래그 중 Esc는 이동만 취소하며 평소 Esc/닫기는 홈의 호출 버튼에 초점을 돌린다. 새 색·모서리 토큰은 없다. [사용 안내](library-order.md).
 
 ## 9. 카세트 퓨처리즘 테마
 
