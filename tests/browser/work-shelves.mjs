@@ -19,7 +19,7 @@ await mkdir(output, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: process.env.KOSMOS_CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 
-const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, hasTouch: true });
 
 let data = seedWorkspace(), version = 1, failSave = false;
 
@@ -81,6 +81,8 @@ if (context.routeWebSocket) await context.routeWebSocket('**/realtime/**', ws =>
 
 const page = await context.newPage();
 
+const cdp = await context.newCDPSession(page);
+
 page.setDefaultTimeout(15000);
 
 page.on('pageerror', error => errors.push(error.message));
@@ -124,11 +126,160 @@ const stored = () => page.evaluate(namespace => new Promise((resolve, reject) =>
     request.onerror = () => reject(request.error);
 }), `author:${profile.id}`);
 
+const shelfById = id => home().locator(`[data-work-shelf="${id}"]`);
+
+const order = () => home().locator('[data-work-shelf]').evaluateAll(nodes => nodes.map(n => n.dataset.workShelf));
+
+const workOrder = id => shelfById(id).locator('[data-work-id]').evaluateAll(nodes => nodes.map(n => n.dataset.workId));
+
+async function cleanSave() {
+    const expected = await home().locator('[data-work-shelf]').evaluateAll(nodes => nodes.map(n => ({ id: n.dataset.workShelf, workIds: n.querySelector('[aria-expanded="false"]') ? null : [...n.querySelectorAll('[data-work-id]')].map(w => w.dataset.workId) })));
+    const deadline = Date.now() + 15000;
+
+    while (Date.now() < deadline) {
+        const row = await stored(), shelves = row?.data.workShelves;
+
+        if (row?.dirty === false && shelves?.length === expected.length && shelves.every((s, i) => s.id === expected[i].id && (!expected[i].workIds || JSON.stringify(s.workIds) === JSON.stringify(expected[i].workIds))) && JSON.stringify(shelves) === JSON.stringify(data.workShelves)) return;
+        await page.waitForTimeout(50);
+    }
+
+    assert.fail('현재 화면의 배치가 IndexedDB와 합성 저장 응답에 함께 반영되어야 합니다.');
+}
+
+async function beginDrag(kind, id, target, edge, touch = false) {
+    const handle = (kind === 'shelf' ? shelfById(id) : card(id)).locator(`.work-${kind}-grip`);
+    await handle.scrollIntoViewIfNeeded();
+    const from = await handle.boundingBox(), to = await target.boundingBox();
+    const x = from.x + from.width / 2, y = from.y + from.height / 2;
+    const horizontal = kind === 'work' && !await target.getAttribute('data-work-shelf') && await target.evaluate(n => [...n.parentElement.children].some(s => s !== n && Math.abs(s.getBoundingClientRect().top - n.getBoundingClientRect().top) < 4));
+    const point = { x: horizontal ? edge === 'before' ? to.x + 4 : to.x + to.width - 4 : to.x + to.width / 2, y: edge === 'inside' ? to.y + Math.min(12, to.height / 2) : horizontal ? to.y + to.height / 2 : edge === 'before' ? to.y + 4 : to.y + to.height - 4 };
+
+    if (touch) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point] });
+    } else {
+        await page.mouse.move(x, y);await page.mouse.down();await page.mouse.move(point.x, point.y, { steps: 8 });
+    }
+
+    await page.waitForFunction(({ selector, edge }) => document.querySelector(selector)?.dataset.dropEdge === edge, { selector: await target.evaluate(n => n.dataset.workShelf ? `[data-work-shelf="${n.dataset.workShelf}"]` : `[data-work-id="${n.dataset.workId}"]`), edge });
+}
+
+async function endDrag(touch = false) {
+    if (touch) await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    else await page.mouse.up();
+    await page.locator('.work-shelf-ghost').waitFor({ state: 'hidden' });
+}
+
+async function checkDrag() {
+    const [a, b, c] = original.works.map(w => w.id);
+
+    for (let i = 0; i < 2; i++) {
+        await button('새 책장').click();
+        assert(await button('책장 만들기').isEnabled());await button('책장 만들기').click();
+        await page.waitForFunction(count => document.querySelectorAll('[data-work-shelf]').length === count, i + 2);
+    }
+
+    const [defaultId, blankA, blankB] = await order();
+    assert.equal(await shelf('이름 없는 책장').count(), 2);
+    await beginDrag('shelf', blankB, shelfById(defaultId), 'before');await endDrag();
+    assert.deepEqual(await order(), [blankB, defaultId, blankA]);
+    await shelfById(blankB).locator('.work-shelf-grip').press('ArrowDown');
+    assert.deepEqual(await order(), [defaultId, blankB, blankA]);
+    await beginDrag('shelf', blankB, shelfById(blankA), 'after', true);await endDrag(true);
+    assert.deepEqual(await order(), [defaultId, blankA, blankB]);
+    await beginDrag('work', c, card(a), 'before');await endDrag();
+    assert.deepEqual(await workOrder(defaultId), [c, a, b]);
+    await card(c).locator('.work-work-grip').press('ArrowDown');
+    assert.deepEqual(await workOrder(defaultId), [a, c, b]);
+    await shelfById(blankA).getByRole('button', { name: '이름 없는 책장 접기', exact: true }).click();
+    await beginDrag('work', a, shelfById(blankA), 'inside');await endDrag();
+    assert.deepEqual(await workOrder(blankA), [a]);
+    assert.equal(await shelfById(blankA).getByRole('button', { name: '이름 없는 책장 접기', exact: true }).getAttribute('aria-expanded'), 'true');
+    await page.waitForFunction(id => document.activeElement?.closest('[data-work-id]')?.getAttribute('data-work-id') === id, a);
+    await beginDrag('work', b, card(a), 'before', true);await endDrag(true);
+    assert.deepEqual(await workOrder(blankA), [b, a]);
+    await card(a).locator('.work-work-grip').press('Alt+ArrowDown');
+    assert.deepEqual(await workOrder(blankB), [a]);
+    await cleanSave();
+    const saved = await stored();
+    const snapshot = structuredClone(saved.data.workShelves), requests = saveRequests.length;
+    await beginDrag('work', b, shelfById(defaultId), 'inside');
+    await page.keyboard.press('Escape');await endDrag();
+    assert.deepEqual(await workOrder(blankA), [b]);assert.equal((await stored()).dirty, false);
+    await beginDrag('work', b, shelfById(defaultId), 'inside', true);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    await page.locator('.work-shelf-ghost').waitFor({ state: 'hidden' });
+    assert.deepEqual(data.workShelves, snapshot);assert.equal(saveRequests.length, requests);
+    await beginDrag('work', b, shelfById(defaultId), 'inside');
+    await page.mouse.move(2, 2);await endDrag();assert.deepEqual(await workOrder(blankA), [b]);
+    await shelfById(blankA).locator('[data-shelf-menu]').click();
+    await page.getByRole('menuitem', { name: '이름 변경', exact: true }).click();
+    assert.equal(await page.getByLabel('책장 이름', { exact: true }).inputValue(), '');
+    await page.getByLabel('책장 이름', { exact: true }).fill('임시 이름');await button('이름 저장').click();
+    await menu('임시 이름', '이름 변경');await page.getByLabel('책장 이름', { exact: true }).fill('');await button('이름 저장').click();
+    await button(`${original.works[1].title} 책장 이동`).click();
+    const options = await page.getByLabel('옮길 책장', { exact: true }).locator('option').allTextContents();
+    assert.deepEqual(options, ['기본 책장', '이름 없는 책장', '이름 없는 책장']);
+    await page.getByLabel('옮길 책장', { exact: true }).selectOption(blankB);
+    await button('옮기기').click();assert.deepEqual(await workOrder(blankB), [a, b]);
+    await card(b).locator('.reference-card').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: '작품 정보 편집', exact: true }).click();
+    const blankInfo = page.getByRole('dialog', { name: '작품 정보', exact: true });
+    assert.deepEqual(await blankInfo.getByLabel('책장', { exact: true }).locator('option').allTextContents(), options);
+    await blankInfo.getByLabel('책장', { exact: true }).selectOption(blankA);
+    await blankInfo.getByRole('button', { name: '닫기', exact: true }).click();
+    assert.deepEqual(await workOrder(blankA), [b]);
+    await shelfById(blankA).getByRole('button', { name: '이름 없는 책장 새 작품', exact: true }).click();
+    const blankNew = page.getByRole('dialog', { name: '새 작품', exact: true });
+    assert.equal(await blankNew.getByLabel('책장', { exact: true }).inputValue(), blankA);
+    assert.deepEqual(await blankNew.getByLabel('책장', { exact: true }).locator('option').allTextContents(), options);
+    await page.keyboard.press('Escape');await cleanSave();
+    await page.locator('.work-card').click();
+    assert.deepEqual(await page.locator('.work-menu-shelf').allTextContents(), options);
+    await page.locator('.work-card').click();
+    await page.reload({ waitUntil: 'domcontentloaded' });await home().waitFor();
+    assert.deepEqual(await workOrder(blankA), [b]);assert.deepEqual(await workOrder(blankB), [a]);
+    assert.deepEqual(data.workShelves.filter(s => s.id !== defaultId).map(s => s.title), ['', '']);
+
+    for (const id of [blankA, blankB]) {
+        await shelfById(id).locator('[data-shelf-menu]').click();
+        await page.getByRole('menuitem', { name: '책장 삭제', exact: true }).click();
+        await page.getByRole('dialog', { name: '책장 삭제', exact: true }).getByRole('button', { name: '책장 삭제', exact: true }).click();
+    }
+
+    // Restore the original default order through the actual drag control.
+    await beginDrag('work', a, card(c), 'before');await endDrag();
+    await beginDrag('work', b, card(c), 'before');await endDrag();
+    assert.deepEqual(await workOrder(defaultId), [a, b, c]);
+
+    for (let i = 0; i < 10; i++) await createShelf(`스크롤 책장 ${i}`);
+    await page.setViewportSize({ width: 360, height: 740 });
+    await shelfById(defaultId).locator('.work-shelf-grip').scrollIntoViewIfNeeded();
+    const handle = await shelfById(defaultId).locator('.work-shelf-grip').boundingBox(), bounds = await home().locator('.notes-home-body').boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);await page.mouse.down();
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height - 8);
+    const before = await home().locator('.notes-home-body').evaluate(n => n.scrollTop);
+    await page.waitForFunction(before => document.querySelector('.studio-home .notes-home-body').scrollTop > before + 80, before);
+    await page.keyboard.press('Escape');await endDrag();
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    for (let i = 0; i < 10; i++) {
+        await menu(`스크롤 책장 ${i}`, '책장 삭제');
+        await page.getByRole('dialog', { name: '책장 삭제', exact: true }).getByRole('button', { name: '책장 삭제', exact: true }).click();
+    }
+
+    await cleanSave();
+
+    if (!await page.locator('.work-card').count()) await page.locator('#sidebar-toggle').click();
+    console.log('PASS drag: mouse/touch, keyboard, empty/collapsed targets, cancellation, scrolling, duplicate blank names and reload');
+}
+
 try {
     await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
     await home().waitFor();
     await button('새 책장').waitFor({ timeout: 4000 });
     assert.equal(await shelf('기본 책장').locator('[data-work-id]').count(), 3);
+    await checkDrag();
     await createShelf('보관');
     await button('새 책장').click();
     await page.getByLabel('책장 이름', { exact: true }).fill('보관');
@@ -161,14 +312,7 @@ try {
     await page.locator('.studio-tools').getByRole('button', { name: '집필실 홈', exact: true }).click();
     await button('보관 접기').click();
     assert.equal(await shelf('보관').locator('[data-work-id]').count(), 0);
-    await page.waitForFunction(namespace => new Promise(resolve => {
-        const request = indexedDB.open('orbit-novel-studio-v1');
-        request.onsuccess = () => {
-            const db = request.result, tx = db.transaction('workspaces', 'readonly'), get = tx.objectStore('workspaces').get(namespace);
-            get.onsuccess = () => resolve(get.result?.dirty === false && document.body.textContent.includes('클라우드 동기화됨'));
-            tx.oncomplete = () => db.close();
-        };
-    }), `author:${profile.id}`);
+    await cleanSave();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await button('보관 펼치기').waitFor();
     await menu('보관', '이름 변경');
@@ -211,7 +355,7 @@ try {
     assert(pending.data.workShelves.find(s => s.title === '구상').workIds.includes(original.works[2].id));
     failSave = false;
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await page.waitForFunction(() => document.body.textContent.includes('클라우드 동기화됨'));
+    await cleanSave();
     assert.equal(saveRequests.at(-1).p_request_id, pending.pendingRequest.id);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await shelf('구상').locator(`[data-work-id="${original.works[2].id}"]`).waitFor();
@@ -256,6 +400,14 @@ try {
         await page.getByRole('tooltip', { name: '책장 이동', exact: true }).waitFor();
         const tooltip = await page.locator('.tooltip').boundingBox();
         assert(tooltip.x >= 0 && tooltip.x + tooltip.width <= width + 1);
+        await beginDrag('work', original.works[2].id, card(original.works[1].id), 'after');
+        const ghost = await page.locator('.work-shelf-ghost').boundingBox();
+        assert(ghost.x >= 0 && ghost.y >= 0 && ghost.x + ghost.width <= width + 1 && ghost.y + ghost.height <= (width === 360 ? 740 : 900) + 1);
+        assert.equal(await card(original.works[2].id).locator('.work-work-grip').evaluate(n => getComputedStyle(n).touchAction), 'none');
+        const indicator = await card(original.works[1].id).evaluate(n => ({ height: getComputedStyle(n, '::after').height, color: getComputedStyle(n, '::after').backgroundColor }));
+        assert.equal(indicator.height, '2px');assert.notEqual(indicator.color, 'rgba(0, 0, 0, 0)');
+        await page.screenshot({ path: resolve(output, `drag-${palette}-${theme}-${width}.png`) });
+        await page.keyboard.press('Escape');await endDrag();
         await page.screenshot({ path: resolve(output, `home-${palette}-${theme}-${width}.png`) });
         await button('새 책장').click();
         await page.getByLabel('책장 이름', { exact: true }).waitFor();
@@ -296,13 +448,13 @@ try {
         await page.locator('.work-card').click();
 
         if (width <= 900) await button('작품 탐색 닫기').click();
-        layouts.push({ width, palette, theme, screens: 8, typography });
+        layouts.push({ width, palette, theme, screens: 9, typography });
     }
 
     assert.deepEqual(unexpectedWrites, []);
     assert.deepEqual(errors, []);
-    await writeFile(resolve(output, 'report.json'), JSON.stringify({ passed: true, layouts, saveRequests: saveRequests.length, sourceWorksPreserved: true, originalWorkOrderPreserved: true, pageErrors: errors, unexpectedWrites }, null, 2));
-    console.log(`PASS work shelves: create/rename/reorder/collapse/move/new work/delete, save retry/reload, ${layouts.length * 8} layouts, originals preserved`);
+    await writeFile(resolve(output, 'report.json'), JSON.stringify({ passed: true, dragAndUnnamed: true, layouts, saveRequests: saveRequests.length, sourceWorksPreserved: true, originalWorkOrderPreserved: true, pageErrors: errors, unexpectedWrites }, null, 2));
+    console.log(`PASS work shelves: create/rename/reorder/collapse/move/new work/delete, save retry/reload, ${layouts.length * 9} layouts, originals preserved`);
 } catch (error) {
     await page.screenshot({ path: resolve(output, 'failure.png') });
     console.error(JSON.stringify({ errors, layouts: layouts.length, saves: saveRequests.length }));

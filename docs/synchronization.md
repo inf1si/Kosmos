@@ -116,6 +116,6 @@ Realtime은 변경 알림이며 문장별 병합 기능이 아니다.
 
 ## 집필실 책장 저장
 
-`Workspace.workShelves`의 책장 이름·순서·작품 위치는 같은 IndexedDB 기록·cloud dirty·pendingRequest·전체 workspace 버전 계약을 따른다. 저장 실패는 기기 사본을 보존하며 같은 요청 ID로 재전송한다. 접힘은 `kosmos-work-shelf-collapse:<namespace>` 기기 보기 설정이다. 책장 이동/삭제는 공개 게시·서재 순서 RPC를 호출하지 않는다.
+`Workspace.workShelves`의 책장 이름·순서·작품 위치는 같은 IndexedDB 기록·cloud dirty·pendingRequest·전체 workspace 버전 계약을 따른다. 저장 실패는 기기 사본을 보존하며 같은 요청 ID로 재전송한다. 접힘은 `kosmos-work-shelf-collapse:<namespace>` 기기 보기 설정이다. 책장 이동/삭제는 공개 게시·서재 순서 RPC를 호출하지 않는다. 드래그 중에는 저장하지 않고 놓는 순간 `workShelves`/`workIds` 순서를 갱신한다. 취소는 dirty/요청을 만들지 않는다. 빈 책장 이름도 빈 문자열로 같은 저장 계약을 따른다.
 
 이전 백업/복구 지점에서 필드가 빠졌으면 현재 책장과 복원본에 남은 작품의 배치를 보존한다. 명시적 배열은 교체하며 빈 배열은 기본 책장으로 초기화한다. 새로 가져온 작품은 기본 책장으로 보충한다. 기존 탭은 새로고침한다. 책장 필드 손실을 거절하는 별도 서버 보호 SQL은 없으므로 새 필드를 모르는 이전 클라이언트까지 보존을 보장하지 않는다. [사용 안내](work-shelves.md).
