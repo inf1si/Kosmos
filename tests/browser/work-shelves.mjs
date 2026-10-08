@@ -19,7 +19,9 @@ await mkdir(output, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: process.env.KOSMOS_CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
 
-const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, hasTouch: true });
+const visibilityOnly = process.env.KOSMOS_SHELF_VISIBILITY_ONLY === '1';
+
+const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, hasTouch: !visibilityOnly });
 
 let data = seedWorkspace(), version = 1, failSave = false;
 
@@ -34,6 +36,8 @@ document.content = fromText('다른 책장으로 옮겨도 보존할 합성 원�
 data.works.push({ id: uid(), title: '긴 제목의 작품 '.repeat(10), subtitle: '', description: '', form: '단편', documents: [document], publications: [], activePublicationId: null });
 
 data.works = data.works.map(work => applyNavigation(work, resolveNavigation(work)));
+
+if (visibilityOnly) data.workShelves = [{ id: 'default', title: '기본 책장', workIds: data.works.map(w => w.id) }, { id: uid(), title: '다른 책장', workIds: [] }];
 
 const original = structuredClone(data), errors = [], layouts = [], saveRequests = [], unexpectedWrites = [];
 
@@ -281,10 +285,66 @@ async function checkDrag() {
     console.log('PASS drag: mouse/touch, keyboard, empty/collapsed targets, cancellation, scrolling, duplicate blank names and reload');
 }
 
+async function checkGripVisibility() {
+    await page.evaluate(async () => { await document.fonts.ready; });
+    const shelfGrip = shelfById('default').locator('.work-shelf-grip'), workGrip = card(original.works[0].id).locator('.work-work-grip');
+    const idle = async () => { await button('새 작품').focus();await page.mouse.move(2, 2); };
+
+    const opacity = target => target.evaluate(n => Number(getComputedStyle(n).opacity));
+    const hidden = async () => assert.deepEqual(await home().locator('.work-drag-grip').evaluateAll(nodes => nodes.map(n => Number(getComputedStyle(n).opacity))), Array(original.works.length + 2).fill(0));
+
+    for (const width of [1280, 360]) for (const palette of ['violet', 'cassette', 'cyber']) for (const theme of ['light', 'dark']) {
+        await page.setViewportSize({ width, height: width === 360 ? 740 : 900 });
+        await page.evaluate(({ palette, theme }) => { document.documentElement.dataset.palette = palette;document.documentElement.dataset.theme = theme; }, { palette, theme });
+        assert(await page.evaluate(() => matchMedia('(hover:hover)').matches));
+        await idle();await hidden();
+        const before = await workGrip.boundingBox();
+        await page.screenshot({ path: resolve(output, `idle-${palette}-${theme}-${width}.png`) });
+        await shelfById('default').locator('.work-shelf-heading').hover();
+        assert.equal(await opacity(shelfGrip), 1);assert.equal(await opacity(workGrip), 0);
+        assert.equal(await opacity(shelf('다른 책장').locator('.work-shelf-grip')), 0);
+        await idle();await hidden();
+        await card(original.works[0].id).hover();assert.equal(await opacity(workGrip), 1);assert.equal(await opacity(shelfGrip), 0);
+        assert.equal(await opacity(card(original.works[1].id).locator('.work-work-grip')), 0);
+        assert.deepEqual(await workGrip.boundingBox(), before, '손잡이 표시가 카드 배치를 바꾸면 안 됩니다.');
+        await page.screenshot({ path: resolve(output, `hover-${palette}-${theme}-${width}.png`) });
+        await idle();await hidden();
+        await card(original.works[0].id).locator('.reference-card').focus();await page.keyboard.press('Shift+Tab');
+        assert(await workGrip.evaluate(n => document.activeElement === n));assert.equal(await opacity(workGrip), 1);
+        await idle();await hidden();
+        await shelfById('default').getByRole('button', { name: '기본 책장 접기', exact: true }).focus();await page.keyboard.press('Shift+Tab');
+        assert(await shelfGrip.evaluate(n => document.activeElement === n));assert.equal(await opacity(shelfGrip), 1);
+        await idle();await hidden();
+        await beginDrag('work', original.works[1].id, card(original.works[0].id), 'before');
+        assert.equal(await opacity(card(original.works[1].id).locator('.work-work-grip')), 1);
+        await page.keyboard.press('Escape');await endDrag();await idle();await hidden();
+        layouts.push({ width, palette, theme, idle: 0, hover: 1, keyboard: 1 });
+    }
+
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+    assert(await page.evaluate(() => matchMedia('(hover:none)').matches));
+
+    for (const palette of ['violet', 'cassette', 'cyber']) for (const theme of ['light', 'dark']) {
+        await page.evaluate(({ palette, theme }) => { document.documentElement.dataset.palette = palette;document.documentElement.dataset.theme = theme; }, { palette, theme });
+        await idle();
+        const opacities = await home().locator('.work-drag-grip').evaluateAll(nodes => nodes.map(n => Number(getComputedStyle(n).opacity)));
+        assert(opacities.every(value => value > 0), '호버 없는 터치 기기의 손잡이는 보여야 합니다.');
+        await page.screenshot({ path: resolve(output, `touch-${palette}-${theme}-360.png`) });
+    }
+
+    assert.equal(saveRequests.length, 0);assert.deepEqual(errors, []);assert.deepEqual(unexpectedWrites, []);
+    await writeFile(resolve(output, 'report.json'), JSON.stringify({ passed: true, visibility: true, layouts, touchThemes: 6, saveRequests: 0, pageErrors: errors }, null, 2));
+    console.log('PASS grip visibility: hidden at rest, only hovered row, keyboard focus, active drag, no layout shift; 12 desktop layouts and 6 touch themes, no saves');
+}
+
 try {
     await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
     await home().waitFor();
     await button('새 책장').waitFor({ timeout: 4000 });
+
+    if (visibilityOnly) {
+        await checkGripVisibility();
+    } else {
     assert.equal(await shelf('기본 책장').locator('[data-work-id]').count(), 3);
     await checkDrag();
     await createShelf('보관');
@@ -462,6 +522,7 @@ try {
     assert.deepEqual(errors, []);
     await writeFile(resolve(output, 'report.json'), JSON.stringify({ passed: true, dragAndUnnamed: true, layouts, saveRequests: saveRequests.length, sourceWorksPreserved: true, originalWorkOrderPreserved: true, pageErrors: errors, unexpectedWrites }, null, 2));
     console.log(`PASS work shelves: create/rename/reorder/collapse/move/new work/delete, save retry/reload, ${layouts.length * 9} layouts, originals preserved`);
+    }
 } catch (error) {
     await page.screenshot({ path: resolve(output, 'failure.png') });
     console.error(JSON.stringify({ errors, layouts: layouts.length, saves: saveRequests.length }));
