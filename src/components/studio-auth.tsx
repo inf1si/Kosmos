@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { cloud,cloudConfigured } from '@/lib/cloud';
 import { startGoogleAuth,googleAuthClient } from '@/lib/google-auth';
 import { useStudio } from './studio-provider';
@@ -45,7 +45,7 @@ try{await action();}catch(e){setError(e instanceof Error?e.message:'로그인하
 }
 
 export function GoogleAccountControl(){
-  const s=useStudio();const [open,setOpen]=useState(false);const [linked,setLinked]=useState<boolean|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
+  const s=useStudio();const [open,setOpen]=useState(false);const [linked,setLinked]=useState<boolean|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState<'link'|'logout'|null>(null);
   useEffect(()=>{
     if(!open)return;let disposed=false;setError('');setLinked(null);
     void cloud().auth.getUser().then(({data,error})=>{if(disposed)return;
@@ -57,13 +57,18 @@ if(error)setError('계정 정보를 확인하지 못했습니다.');else setLink
 
   if(!cloudConfigured||!s.user)return null;
 
-  async function connect(){setBusy(true);setError('');
+  async function connect(){setBusy('link');setError('');
 
-try{await s.flush();await s.syncNow();await redirectToGoogle('link');}catch(e){setError(e instanceof Error?e.message:'계정을 연결하지 못했습니다.');setBusy(false);}}
+try{await s.flush();await s.syncNow();await redirectToGoogle('link');}catch(e){setError(e instanceof Error?e.message:'계정을 연결하지 못했습니다.');setBusy(null);}}
+
+  async function logout(){setBusy('logout');setError('');
+
+try{await s.logout();}catch(e){setError(e instanceof Error?e.message:'로그아웃하지 못했습니다. 다시 시도하세요.');setBusy(null);}}
 
   return <Popover open={open} onOpenChange={setOpen} title="로그인 계정" width={300} align="end" trigger={<IconButton label="로그인 계정"><User size={16}/></IconButton>}>
     <div className="account-login"><p>{linked===null?'연결 상태 확인 중':linked?'Google 계정이 연결되어 있습니다.':'Google 계정을 연결하면 다음부터 Google로 로그인할 수 있습니다.'}</p>
-      {linked===false&&<><p className="muted">기존 원고와 작가 권한을 그대로 사용합니다.</p><button type="button" className="button" disabled={busy||!!s.conflict} onClick={()=>void connect()}>{busy?'연결 중…':'Google 계정 연결'}</button></>}
+      {linked===false&&<><p className="muted">기존 원고와 작가 권한을 그대로 사용합니다.</p><button type="button" className="button" disabled={!!busy||!!s.conflict} onClick={()=>void connect()}>{busy==='link'?'연결 중…':'Google 계정 연결'}</button></>}
+      <button type="button" className="button" disabled={!!busy} onClick={()=>void logout()}><LogOut size={15}/>{busy==='logout'?'로그아웃 중…':'로그아웃'}</button>
       {error&&<p className="error-message" role="alert">{error}</p>}
     </div>
   </Popover>;
