@@ -51,7 +51,7 @@ export function StudioHome({state,resume,currentWorkId,readonly,onOpen,onOpenWor
   const [deleting,setDeleting]=useState<string|null>(null);
   const collapseKey=`kosmos-work-shelf-collapse:${s.namespace}`;
   const [closed,setClosed]=useState(()=>collapsedShelves(collapseKey));
-  const root=useRef<HTMLDivElement>(null),anchor=useRef<HTMLElement|null>(null),returnFocus=useRef<HTMLElement|null>(null),focusWork=useRef<string|null>(null),newShelfTrigger=useRef<HTMLButtonElement>(null);
+  const root=useRef<HTMLDivElement>(null),anchor=useRef<HTMLElement|null>(null),returnFocus=useRef<HTMLElement|null>(null),focusWork=useRef<string|null>(null),newShelfTrigger=useRef<HTMLButtonElement>(null),keepMenuFocus=useRef(false);
   const moveTarget=form?.type==='move'?works.get(form.id):undefined,deleteTarget=shelves.find(shelf=>shelf.id===deleting),deleteCount=deleteTarget?.workIds.filter(id=>works.has(id)).length||0;
 
   function apply(fn:(latest:Workspace)=>Workspace){
@@ -66,6 +66,8 @@ return false;}
 
   function openForm(next:ShelfForm,at:HTMLElement|null){
     // Finish the previous popover's outside-click dismissal before opening the next form.
+    // A menu that opens a form must also skip its own focus return (keepMenuFocus): it runs on a timer too, and
+    // when it lands after the form opened, focus jumps to the menu button and the form closes as focus outside.
     window.setTimeout(()=>{
       anchor.current=at;returnFocus.current=at;focusWork.current=next.type==='move'?next.id:null;setError('');
       setName(next.type==='rename'?shelves.find(shelf=>shelf.id===next.id)?.title||'':'');
@@ -113,8 +115,8 @@ return false;}
         return <section key={shelf.id} aria-label={`${title} 책장`} data-work-shelf={shelf.id} {...dragging.shelfProps(shelf.id)}>
           <div className="work-shelf-heading">{dragging.grip('shelf',shelf.id,title)}<h3><button type="button" aria-label={`${title} ${collapsed?'펼치기':'접기'}`} aria-expanded={!collapsed} onClick={()=>toggle(shelf.id)}>{collapsed?<ChevronRight size={13}/>:<ChevronDown size={13}/>}<LibraryBig size={14} className="work-shelf-icon"/><span>{title}</span><small>{items.length}개</small></button></h3>
             <IconButton label="새 작품" aria-label={`${title} 새 작품`} disabled={readonly} onClick={()=>onNewWork(shelf.id)}><Plus size={15}/></IconButton>
-            <DropdownMenu.Root modal={false}><DropdownMenu.Trigger asChild><IconButton label="책장 메뉴" aria-label={`${title} 책장 메뉴`} data-shelf-menu><MoreHorizontal size={15}/></IconButton></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="menu" align="end" collisionPadding={12}>
-              <DropdownMenu.Item className="menu-item" disabled={readonly} onSelect={()=>{const at=root.current?.querySelector<HTMLElement>(`[data-work-shelf="${shelf.id}"] [data-shelf-menu]`)||null;openForm({type:'rename',id:shelf.id},at);}}><Pencil size={15}/>이름 변경</DropdownMenu.Item>
+            <DropdownMenu.Root modal={false}><DropdownMenu.Trigger asChild><IconButton label="책장 메뉴" aria-label={`${title} 책장 메뉴`} data-shelf-menu><MoreHorizontal size={15}/></IconButton></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="menu" align="end" collisionPadding={12} onCloseAutoFocus={e=>{if(keepMenuFocus.current){e.preventDefault();keepMenuFocus.current=false;}}}>
+              <DropdownMenu.Item className="menu-item" disabled={readonly} onSelect={()=>{keepMenuFocus.current=true;const at=root.current?.querySelector<HTMLElement>(`[data-work-shelf="${shelf.id}"] [data-shelf-menu]`)||null;openForm({type:'rename',id:shelf.id},at);}}><Pencil size={15}/>이름 변경</DropdownMenu.Item>
               <DropdownMenu.Item className="menu-item" disabled={readonly||index===0} onSelect={()=>apply(latest=>moveWorkShelf(latest,shelf.id,-1))}><ArrowUp size={15}/>책장 위로</DropdownMenu.Item>
               <DropdownMenu.Item className="menu-item" disabled={readonly||index===shelves.length-1} onSelect={()=>apply(latest=>moveWorkShelf(latest,shelf.id,1))}><ArrowDown size={15}/>책장 아래로</DropdownMenu.Item>
               <DropdownMenu.Separator className="menu-separator"/>

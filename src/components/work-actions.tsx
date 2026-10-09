@@ -30,17 +30,19 @@ return at?new Date(at).toLocaleDateString('ko-KR'):'';};
 
 /** Right-click (long press on touch, Shift+F10 on a keyboard) on a work card: the same actions as the work settings. */
 export function WorkContextMenu({work,canTrash,readonly,onOpen,onEdit,onConfirm,onMove,children}:{work:Work;canTrash:boolean;readonly:boolean;onOpen:()=>void;onEdit:()=>void;onConfirm:(confirm:WorkConfirm)=>void;onMove?:()=>void;children:ReactNode}){
-  const s=useStudio(),returnFavoriteFocus=useRef(false);
+  const s=useStudio(),returnFavoriteFocus=useRef(false),keepMenuFocus=useRef(false);
 
   return <ContextMenu.Root modal={false}>
     <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
     <ContextMenu.Portal><ContextMenu.Content className="menu work-context-menu" collisionPadding={12} aria-label={`${work.title} 작품 메뉴`} onCloseAutoFocus={e=>{
       if(returnFavoriteFocus.current){e.preventDefault();returnFavoriteFocus.current=false;const target=document.querySelector<HTMLButtonElement>(`.studio-home [data-work-id="${work.id}"] .reference-card`)||document.querySelector<HTMLButtonElement>('.studio-home .board-bar button');target?.focus();}
+      // 책장 이동 opens a popover; returning focus after it opened would close it as focus outside.
+      else if(keepMenuFocus.current){e.preventDefault();keepMenuFocus.current=false;}
     }}>
       <ContextMenu.Item className="menu-item" onSelect={onOpen}><BookOpen size={15}/>열기</ContextMenu.Item>
       <ContextMenu.Item className="menu-item" onSelect={onEdit}><Settings2 size={15}/>작품 정보 편집</ContextMenu.Item>
       <ContextMenu.Item className="menu-item" disabled={readonly} onSelect={()=>{returnFavoriteFocus.current=!!work.favorite;s.update(state=>toggleWorkFavorite(state,work.id));}}><Star size={15} fill={work.favorite?'currentColor':'none'}/>{work.favorite?'즐겨찾기 해제':'즐겨찾기 추가'}</ContextMenu.Item>
-      {onMove&&<ContextMenu.Item className="menu-item" disabled={readonly} onSelect={onMove}><LibraryBig size={15}/>책장 이동</ContextMenu.Item>}
+      {onMove&&<ContextMenu.Item className="menu-item" disabled={readonly} onSelect={()=>{keepMenuFocus.current=true;onMove();}}><LibraryBig size={15}/>책장 이동</ContextMenu.Item>}
       {work.activePublicationId&&<ContextMenu.Item className="menu-item" disabled={readonly} onSelect={()=>onConfirm({type:'unpublish',workId:work.id})}><GlobeOff size={15}/>게시 철회</ContextMenu.Item>}
       <ContextMenu.Separator className="menu-separator"/>
       <ContextMenu.Item className="menu-item" disabled={readonly||!canTrash} title={canTrash?undefined:lastWork} onSelect={()=>onConfirm({type:'trash',workId:work.id})}><Trash2 size={15}/>휴지통으로 이동</ContextMenu.Item>

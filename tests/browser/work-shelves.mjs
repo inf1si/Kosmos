@@ -52,6 +52,16 @@ await context.addInitScript(({ profile, token, key }) => {
     localStorage.setItem('kosmos-app-preferences', JSON.stringify({ studioStart: 'home' }));
 }, { profile, token, key: process.env.KOSMOS_TEST_AUTH_STORAGE_KEY || 'sb-krakjollsufgnwealroh-auth-token' });
 
+// A user reported 이름 변경 closing at once: the menu returns focus to its button on a timer, and on slower timing
+// that landed after the form opened. Delaying Radix's focus return (matched by its development-build name) replays that order.
+await context.addInitScript(() => {
+    const later = window.setTimeout;
+    window.__lateMenuFocus = { on: false, delayed: 0 };
+    window.setTimeout = (fn, ms, ...rest) => (window.__lateMenuFocus.on && fn instanceof Function && /AUTOFOCUS_ON_UNMOUNT/.test(String(fn))
+        ? later(() => { window.__lateMenuFocus.delayed++;fn(...rest); }, 60)
+        : later(fn, ms, ...rest));
+});
+
 await context.route('**/*.supabase.co/**', async route => {
     const request = route.request(), path = new URL(request.url()).pathname;
     let value = {};
@@ -104,6 +114,26 @@ async function createShelf(name) {
     await page.getByLabel('책장 이름', { exact: true }).fill(name);
     await button('책장 만들기').click();
     await shelf(name).waitFor();
+}
+
+async function checkLateMenuFocus() {
+    await page.evaluate(() => Object.assign(window.__lateMenuFocus, { on: true, delayed: 0 }));
+    const name = page.getByLabel('책장 이름', { exact: true }), target = page.getByLabel('옮길 책장', { exact: true });
+    await menu('구상', '이름 변경');
+    await page.waitForTimeout(300);
+    assert(await name.isVisible(), '메뉴의 늦은 초점 복귀가 이름 칸을 닫으면 안 됩니다.');
+    assert.equal(await name.evaluate(input => input === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '구상 책장 메뉴');
+    await card(original.works[1].id).locator('.reference-card').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: '책장 이동', exact: true }).click();
+    await page.waitForTimeout(300);
+    assert(await target.isVisible(), '메뉴의 늦은 초점 복귀가 책장 이동 칸을 닫으면 안 됩니다.');
+    await page.keyboard.press('Escape');
+
+    const delayed = await page.evaluate(() => Object.assign(window.__lateMenuFocus, { on: false }).delayed);
+
+    assert(delayed >= 2, `메뉴 초점 복귀를 늦추지 못했습니다(${delayed}회). 개발 서버에서 실행하세요.`);
 }
 
 async function moveWork(work, title) {
@@ -355,6 +385,7 @@ try {
     await page.getByLabel('책장 이름', { exact: true }).fill('구상');
     await button('책장 만들기').click();
     await shelf('구상').waitFor();
+    await checkLateMenuFocus();
     // Opening the next control with one click must keep its own focus and form.
     await button('새 책장').click();
     await button(`${original.works[1].title} 책장 이동`).click();
