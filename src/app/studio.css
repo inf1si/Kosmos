@@ -87,3 +87,5 @@ html:has(.studio){background:var(--ground)}
 
 .work-shelf-heading:hover>.work-shelf-grip,.work-shelf-heading:focus-within>.work-shelf-grip,.work-shelf-card:hover>.work-work-grip,.work-shelf-card:focus-within>.work-work-grip,.studio-home [data-dragging=true]>.work-work-grip,.studio-home [data-dragging=true]>.work-shelf-heading>.work-shelf-grip{opacity:1}
 @media(hover:none){.work-drag-grip{opacity:.7}}
+.work-favorite{opacity:0;flex-shrink:0;color:var(--muted)}.work-shelf-card:hover>.work-favorite,.work-shelf-card:focus-within>.work-favorite,.work-favorite[aria-pressed=true]{opacity:1}.work-favorite[aria-pressed=true]{color:var(--brand)}
+@media(hover:none){.work-favorite{opacity:.7}.work-favorite[aria-pressed=true]{opacity:1}}

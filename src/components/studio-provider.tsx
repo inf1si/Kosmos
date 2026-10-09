@@ -20,6 +20,7 @@ import { isRejectedLegacyTrashSave,recoverLegacyTrash } from '@/lib/sync-recover
 import { prepareTemplate, prepareTemplateApplication, preserveTemplateData, removeTemplate, type TemplateSource, type TemplateTarget } from '@/lib/workspace-templates';
 import { useAppPreferences } from './use-app-preferences';
 import { preserveWorkShelves } from '@/lib/work-shelves';
+import { preserveWorkFavorites } from '@/lib/work-favorites';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
 
@@ -163,7 +164,7 @@ return;}
     // Materialize legacy folders before editing properties, so the first chapter edit does not rename them.
     const base=materializeTrash(materializeNoteNavigation({...dataRef.current,works:dataRef.current.works.map(w=>w.navigation?w:applyNavigation(w,resolveNavigation(w)))}));
     const withTemplates=preserveTemplateData(preserveTrash(preserveNoteDetails(preserveNotes(preserveAIPreferences(fn(structuredClone(base)),base),base),base),base),base);
-    const edited=preserveWorkShelves(withTemplates,base);
+    const edited=preserveWorkFavorites(preserveWorkShelves(withTemplates,base),base);
     const data={...edited,works:edited.works.map(w=>applyNavigation(w,resolveNavigation(w))),updatedAt:new Date().toISOString()};setCurrent(data);setStatus('기기에 저장 중');pending.current++;
     const targetNamespace=namespaceRef.current;
     saveQueue.current=saveQueue.current.then(async()=>{
