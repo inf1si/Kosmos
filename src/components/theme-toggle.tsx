@@ -69,11 +69,18 @@ export function useSitePalette():[SitePalette,(palette:SitePalette)=>void]{
   return [palette,next=>{document.documentElement.setAttribute('data-palette',next);save(PALETTE_KEY,next);}];
 }
 
-export function ThemeControls(){
-  const [theme,setTheme]=useSiteTheme();const [palette,setPalette]=useSitePalette();
+/** Light/dark switch alone; the studio sidebars use it and leave the colour family to Settings. */
+export function ThemeToggle(){
+  const [theme,setTheme]=useSiteTheme();
   const label=theme==='dark'?'라이트 모드로 전환':'다크 모드로 전환';
+
+  return <button type="button" className="theme-toggle" aria-label={label} title={label} onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?<Sun size={16}/>:<Moon size={16}/>}</button>;
+}
+
+export function ThemeControls(){
+  const [palette,setPalette]=useSitePalette();
 
   return <div className="theme-controls"><div className="palette-picker" role="group" aria-label="테마">
     {paletteOptions.map(({id,name})=><button type="button" key={id} aria-pressed={palette===id} aria-label={`${name} 테마`} title={`${name} 테마`} onClick={()=>setPalette(id)}>{id==='violet'?<span className="palette-swatch" aria-hidden="true"/>:id==='cassette'?<CassetteTape size={15}/>:<Cpu size={15}/>}</button>)}
-  </div><button type="button" className="theme-toggle" aria-label={label} title={label} onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?<Sun size={16}/>:<Moon size={16}/>}</button></div>;
+  </div><ThemeToggle/></div>;
 }

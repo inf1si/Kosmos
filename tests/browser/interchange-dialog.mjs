@@ -92,8 +92,14 @@ try {
                 await page.setViewportSize({ width, height: 860 });
                 await page.evaluate(([palette, theme]) => { document.documentElement.dataset.palette = palette; document.documentElement.dataset.theme = theme; }, [palette, theme]);
 
-                if (!await page.getByRole('button', { name: '가져오기 · 내보내기' }).isVisible()) await button('사이드바 열기').click();
-                await page.getByRole('button', { name: '가져오기 · 내보내기' }).click();
+                // 가져오기 · 내보내기 opens from 설정 → 저장 · 백업.
+                const settingsButton = page.locator('.studio-tools').getByRole('button', { name: '설정', exact: true });
+
+                if (!await settingsButton.isVisible()) await button('사이드바 열기').click();
+
+                await settingsButton.click();
+                await page.getByRole('dialog', { name: '설정', exact: true }).getByRole('button', { name: '저장 · 백업', exact: true }).click();
+                await page.getByRole('dialog', { name: '설정', exact: true }).getByRole('button', { name: '가져오기 · 내보내기', exact: true }).click();
                 await page.getByRole('tab', { name: '내보내기' }).click();
 
                 const rows = await page.locator('.transfer-export-row').evaluateAll(list => list.map(row => { const [box, title, kind] = [row.querySelector('input'), row.querySelector('span'), row.querySelector('small')].map(el => el.getBoundingClientRect());

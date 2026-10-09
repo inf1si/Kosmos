@@ -100,6 +100,15 @@ page.on('pageerror', error => errors.push(error.message));
 
 const button = name => page.getByRole('button', { name, exact: true });
 
+// 노트 가져오기 lives in 설정 → 저장 · 백업 rather than the notes sidebar.
+const openNoteImport = async () => {
+    await page.locator('.notes-tools').getByRole('button', { name: '설정', exact: true }).click();
+    const settings = page.getByRole('dialog', { name: '설정', exact: true });
+    await settings.getByRole('button', { name: '저장 · 백업', exact: true }).click();
+    await settings.getByRole('button', { name: '노트 가져오기', exact: true }).click();
+    await settings.waitFor({ state: 'detached' });
+};
+
 const body = page.locator('.notes-workspace .manuscript');
 
 const until = async (check, label) => { for (let i = 0; i < 150; i++) { if (check()) return; await page.waitForTimeout(100); }
@@ -154,7 +163,7 @@ try {
     await panel.getByRole('button', { name: /엔딩 아이디어/ }).waitFor();
     await page.screenshot({ path: resolve(output, 'backlink.png') });
     // Evernote ENEX becomes inbox notes in a new folder, keeping tags, dates, checkboxes and images.
-    await button('노트 가져오기').click();
+    await openNoteImport();
     await page.getByLabel('가져올 노트 파일').setInputFiles({ name: 'ideas.enex', mimeType: 'application/xml', buffer: Buffer.from(enex) });
     await page.getByText('노트 2개 · 첨부 1개').waitFor();
     await button('노트 2개 가져오기').click();

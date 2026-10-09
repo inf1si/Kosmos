@@ -215,8 +215,9 @@ try {
         await card(second.id).hover();
         assert.equal(await opacity(star(second.id)), 1);
         assert.deepEqual(await star(second.id).boundingBox(), before, 'hover never shifts the card');
+        // The star sits after the move button in the card's corner group.
         await card(second.id).getByRole('button', { name: `${second.title} 책장 이동`, exact: true }).focus();
-        await page.keyboard.press('Shift+Tab');
+        await page.keyboard.press('Tab');
         assert.equal(await star(second.id).evaluate(n => n === document.activeElement), true);
         await page.keyboard.press('Space');
         assert.equal(await star(second.id).getAttribute('aria-pressed'), 'true');

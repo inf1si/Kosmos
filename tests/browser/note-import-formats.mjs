@@ -98,6 +98,15 @@ page.on('pageerror', error => errors.push(error.message));
 
 const button = name => page.getByRole('button', { name, exact: true });
 
+// 노트 가져오기 lives in 설정 → 저장 · 백업 rather than the notes sidebar.
+const openNoteImport = async () => {
+    await page.locator('.notes-tools').getByRole('button', { name: '설정', exact: true }).click();
+    const settings = page.getByRole('dialog', { name: '설정', exact: true });
+    await settings.getByRole('button', { name: '저장 · 백업', exact: true }).click();
+    await settings.getByRole('button', { name: '노트 가져오기', exact: true }).click();
+    await settings.waitFor({ state: 'detached' });
+};
+
 const body = page.locator('.notes-workspace .manuscript');
 
 const until = async (check, label) => { for (let i = 0; i < 150; i++) { if (check()) return; await page.waitForTimeout(100); }
@@ -107,7 +116,7 @@ const until = async (check, label) => { for (let i = 0; i < 150; i++) { if (chec
 try {
     await page.goto(`${base}/studio#notes`, { waitUntil: 'domcontentloaded' });
     await page.locator('.notes-home').waitFor();
-    await button('노트 가져오기').click();
+    await openNoteImport();
     // The folder picker sends every file with its path inside the chosen folder; hidden folders are skipped.
     await page.getByLabel('가져올 노트 폴더').setInputFiles(vault);
     await page.getByText('노트 4개 · 첨부 2개').waitFor();
@@ -159,7 +168,7 @@ try {
     await mkdir(resolve(singleVault, 'Characters'), { recursive: true });
     await writeFile(resolve(singleVault, 'Characters/A.md'), '# 인물 A\n인물 A 본문');
     await writeFile(resolve(singleVault, 'Characters/B.md'), '# 인물 B\n인물 B 본문');
-    await button('노트 가져오기').click();
+    await openNoteImport();
     await page.getByLabel('가져올 노트 폴더').setInputFiles(singleVault);
     await page.getByText('노트 2개 · 첨부 0개').waitFor();
     await button('노트 2개 가져오기').click();
@@ -174,7 +183,7 @@ try {
     // Import, open and reload a table whose middle row is entirely covered by a vertical merge.
     const merged = new JSZip();
     merged.file('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>위 병합</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc></w:tr><w:tr><w:tc><w:p><w:r><w:t>마지막 칸</w:t></w:r></w:p></w:tc></w:tr></w:tbl></w:body></w:document>');
-    await button('노트 가져오기').click();
+    await openNoteImport();
     await page.getByLabel('가져올 노트 파일').setInputFiles({ name: 'merged.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: await merged.generateAsync({ type: 'nodebuffer' }) });
     await page.getByText('노트 1개 · 첨부 0개').waitFor();
     await button('노트 1개 가져오기').click();
@@ -202,7 +211,7 @@ try {
     const project = new JSZip();
     project.file('Novel.scrivx', '<ScrivenerProject><Binder><BinderItem UUID="S1" Type="Text"><Title>합성 장면</Title></BinderItem></Binder></ScrivenerProject>');
     project.file('Files/Data/S1/content.rtf', '{\\rtf1 Scene body}');
-    await button('노트 가져오기').click();
+    await openNoteImport();
     await page.getByLabel('가져올 노트 파일').setInputFiles([
         { name: 'Novel.zip', mimeType: 'application/zip', buffer: await project.generateAsync({ type: 'nodebuffer' }) },
         { name: 'Other.md', mimeType: 'text/markdown', buffer: Buffer.from('# 별도 문서\n함께 선택한 본문') },

@@ -81,9 +81,10 @@ const until = async (check, label) => { for (let i = 0; i < 100; i++) { if (chec
 
 const home=()=>page.locator('.studio-home');
 
-const card=name=>home().getByRole('region',{name:'작품'}).getByRole('button',{name:new RegExp(`^${name}`)});
+// Work cards live in bookshelves; their corner buttons share the title prefix, so match the card itself.
+const card=name=>home().locator('[data-work-shelf] .reference-card').filter({hasText:name});
 
-const cards=()=>home().getByRole('region',{name:'작품'}).getByRole('button');
+const cards=()=>home().locator('[data-work-shelf] .reference-card');
 
 const menu=()=>page.locator('.menu[role=menu]');
 
@@ -104,11 +105,11 @@ try{
 
   // 1. Right-click opens the work menu; Escape closes it and leaves focus on the card.
   await openMenu(first.title);
-  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','게시 철회','휴지통으로 이동']);
+  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','즐겨찾기 추가','책장 이동','게시 철회','휴지통으로 이동']);
   await page.screenshot({path:resolve(output,'menu-violet-light-1280.png')});
   await page.keyboard.press('Escape');await menu().waitFor({state:'detached'});
   await openMenu(second.title);
-  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','휴지통으로 이동'],'no withdraw for an unpublished work');
+  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','즐겨찾기 추가','책장 이동','휴지통으로 이동'],'no withdraw for an unpublished work');
   await page.keyboard.press('Escape');
   // Keyboard: Shift+F10 on a focused card opens the same menu; arrows and Enter pick an item.
   await card(second.title).focus();await page.keyboard.press('Shift+F10');await menu().waitFor();
@@ -177,9 +178,9 @@ try{
   assert.deepEqual(data.works.map(w=>w.id),[first.id,second.id]);await page.keyboard.press('Escape');
   assert.equal(await cards().count(),2);assert.doesNotMatch(await card(first.title).innerText(),/게시 중/,'restored work is not republished');
 
-  // 7. From the editor: sidebar 작품 정보 -> 휴지통으로 이동 leaves the editor on the remaining work.
+  // 7. From the editor: work menu 작품 정보 편집 -> 휴지통으로 이동 leaves the editor on the remaining work.
   await card(second.title).click();await page.locator('.editor-panes > .editor-shell .manuscript').waitFor();
-  await page.locator('.sidebar-footer').getByRole('button',{name:'작품 정보'}).click();await info.waitFor();
+  await page.locator('.work-switcher .work-card').click();await page.locator('#work-menu').getByRole('button',{name:'작품 정보 편집'}).click();await info.waitFor();
   await info.getByRole('button',{name:'휴지통으로 이동'}).click();await trash.waitFor();await trash.getByRole('button',{name:'휴지통으로 이동'}).click();
   await trash.waitFor({state:'detached'});await info.waitFor({state:'detached'});
   await saved(()=>data.works.length===1,'editor trash saved');
