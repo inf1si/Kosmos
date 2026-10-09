@@ -203,7 +203,7 @@ try {
     await dialog().getByRole('alert').waitFor();
     assert.equal(profileWrites, 0);assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), draft.bio);
     failPublish = false;await publish().click();
-    await dialog().getByText('공개된 내용과 같습니다.', { exact: true }).waitFor();
+    await dialog().getByText(/^공개된 내용과 같습니다 · \d{4}\. \d{1,2}\. \d{1,2}\. 공개$/).waitFor();
     assert.equal(profileWrites, 1);
     assert.equal(await dialog().getByRole('button', { name: '공개 내용 갱신', exact: true }).isDisabled(), true);
     await publicPage.reload({ waitUntil: 'domcontentloaded' });
@@ -219,16 +219,45 @@ try {
 
     const changed = draft.bio + '\n\n아직 공개하지 않은 수정.';
     await dialog().getByLabel('소개', { exact: true }).fill(changed);
-    await dialog().getByText('공개된 소개와 다른 초안입니다.', { exact: true }).waitFor();
+    await dialog().getByText(/^공개된 소개와 다른 초안입니다 · \d{4}\. \d{1,2}\. \d{1,2}\. 공개$/).waitFor();
     await publicPage.reload({ waitUntil: 'domcontentloaded' });
     await publicPage.getByRole('heading', { name: draft.name, exact: true }).waitFor();
     assert.equal((await publicPage.locator('main').innerText()).includes('아직 공개하지 않은 수정.'), false);
     await dialog().getByRole('button', { name: '공개 내용 갱신', exact: true }).click();
-    await dialog().getByText('공개된 내용과 같습니다.', { exact: true }).waitFor();
+    await dialog().getByText(/^공개된 내용과 같습니다 · \d{4}\. \d{1,2}\. \d{1,2}\. 공개$/).waitFor();
     await publicPage.reload({ waitUntil: 'domcontentloaded' });
     await publicPage.getByText('아직 공개하지 않은 수정.', { exact: false }).waitFor();
+    const confirmBox = () => dialog().getByRole('group', { name: '공개 취소 확인' });
     await dialog().getByRole('button', { name: '공개 취소', exact: true }).click();
+    await confirmBox().getByText('초안은 남아 다시 공개할 수 있습니다.', { exact: false }).waitFor();
+    assert.equal(await confirmBox().getByRole('button', { name: '그대로 두기' }).evaluate(n => n === document.activeElement), true, 'keep focused by default');
+    await confirmBox().getByRole('button', { name: '그대로 두기' }).click();
+    assert.equal(await confirmBox().count(), 0);
+    await dialog().getByText(/^공개된 내용과 같습니다 · /).waitFor();
+    await publicPage.reload({ waitUntil: 'domcontentloaded' });
+    await publicPage.getByText('아직 공개하지 않은 수정.', { exact: false }).waitFor();
+    await dialog().getByLabel('소개', { exact: true }).fill(changed + ' 더 고친 초안');
+
+    for (const width of [1280, 360]) {
+        // Open the confirmation at each width so the pane scrolls as it would for a reader of that width.
+        await page.setViewportSize({ width, height: 900 });
+
+        if (await confirmBox().count()) await confirmBox().getByRole('button', { name: '그대로 두기' }).click();
+        await dialog().evaluate(node => { node.querySelector('.settings-body').scrollTop = 0; });
+        await dialog().getByRole('button', { name: '공개 취소', exact: true }).click();
+        await confirmBox().getByText('지금 공개된 글은 되살릴 수 없습니다.', { exact: false }).waitFor();
+        await until(async () => confirmBox().evaluate(box => { const clip = box.closest('.modal').getBoundingClientRect(), pane = box.closest('.settings-body').getBoundingClientRect(), b = box.getBoundingClientRect();
+
+ return b.bottom <= Math.min(clip.bottom, pane.bottom) + 1 && b.top >= Math.max(clip.top, pane.top) - 1; }), `confirmation scrolled into view at ${width}`);
+
+        for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) await capture(page, 'withdraw-confirm', palette, mode, width);
+    }
+
+    await dialog().getByLabel('소개', { exact: true }).fill(changed);
+    await confirmBox().getByText('초안은 남아 다시 공개할 수 있습니다.', { exact: false }).waitFor();
+    await confirmBox().getByRole('button', { name: '공개 취소', exact: true }).click();
     await dialog().getByText('공개된 자기소개가 없습니다.', { exact: true }).waitFor();
+    assert.equal(await confirmBox().count(), 0);
     assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), changed);
     await publicPage.reload({ waitUntil: 'domcontentloaded' });
     await publicPage.getByText('아직 자기소개를 등록하지 않았습니다.', { exact: true }).waitFor();
