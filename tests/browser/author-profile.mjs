@@ -254,11 +254,11 @@ try {
     for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) await capture(page, 'notes-settings', palette, mode, width);
     await page.keyboard.press('Escape');
     await publicPage.goto(base, { waitUntil: 'domcontentloaded' });
-    const link = publicPage.locator('footer').getByRole('link', { name: '자기소개', exact: true });
+    const link = publicPage.locator('footer').getByRole('link', { name: 'About Me', exact: true });
     assert.equal(await link.getAttribute('href'), '/about');
 
     for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) await capture(publicPage, 'home-link', palette, mode, width);
-    await link.click();await publicPage.getByRole('heading', { name: '자기소개', exact: true }).waitFor();
+    await link.click();await publicPage.getByRole('heading', { name: 'Who I Am', exact: true }).waitFor();
     assert.deepEqual(errors, []);assert.deepEqual(unexpectedWrites, []);
     await writeFile(`${output}/report.json`, JSON.stringify({ passed: true, layouts, profileWrites, workspaceSaves: saveRequests.length, pageErrors: errors, unexpectedWrites }, null, 2));
     console.log(`PASS about: private draft, reload, failed publish/retry, publish/update/withdraw, anonymous page, escaped text, footer link; ${layouts.length} layouts, actual local SQL RLS`);
