@@ -81,9 +81,10 @@ const until = async (check, label) => { for (let i = 0; i < 100; i++) { if (chec
 
 const home=()=>page.locator('.studio-home');
 
-const card=name=>home().getByRole('region',{name:'작품'}).getByRole('button',{name:new RegExp(`^${name}`)});
+// Work cards live in bookshelves; their corner buttons share the title prefix, so match the card itself.
+const card=name=>home().locator('[data-work-shelf] .reference-card').filter({hasText:name});
 
-const cards=()=>home().getByRole('region',{name:'작품'}).getByRole('button');
+const cards=()=>home().locator('[data-work-shelf] .reference-card');
 
 const menu=()=>page.locator('.menu[role=menu]');
 
@@ -104,11 +105,11 @@ try{
 
   // 1. Right-click opens the work menu; Escape closes it and leaves focus on the card.
   await openMenu(first.title);
-  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','게시 철회','휴지통으로 이동']);
+  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','즐겨찾기 추가','책장 이동','게시 철회','휴지통으로 이동']);
   await page.screenshot({path:resolve(output,'menu-violet-light-1280.png')});
   await page.keyboard.press('Escape');await menu().waitFor({state:'detached'});
   await openMenu(second.title);
-  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','휴지통으로 이동'],'no withdraw for an unpublished work');
+  assert.deepEqual(await menu().getByRole('menuitem').allInnerTexts(),['열기','작품 정보 편집','즐겨찾기 추가','책장 이동','휴지통으로 이동'],'no withdraw for an unpublished work');
   await page.keyboard.press('Escape');
   // Keyboard: Shift+F10 on a focused card opens the same menu; arrows and Enter pick an item.
   await card(second.title).focus();await page.keyboard.press('Shift+F10');await menu().waitFor();
