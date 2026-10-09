@@ -43,7 +43,7 @@ return;}
     finally{setBusy(false);}
   }
 
-  return <div className="author-profile-form"><div className="settings-head"><p>초안은 계정에 자동 저장합니다. 공개된 소개는 누구나 볼 수 있습니다.</p></div>
+  return <div className="author-profile-form"><div className="settings-head"><p>초안은 계정에 자동 저장합니다. 공개된 소개는 누구나 볼 수 있습니다. 소개는 마크다운으로 굵게·링크·목록을 쓸 수 있고 HTML은 글자 그대로 보입니다.</p></div>
     <div className="author-profile-field"><label htmlFor={`${id}-name`}>이름 · 필명</label><input id={`${id}-name`} value={draft.name} maxLength={80} disabled={readonly} onChange={e=>{const name=e.target.value;s.update(state=>({...state,authorProfile:{...(state.authorProfile||emptyAuthorProfile),name}}));}}/></div>
     <div className="author-profile-field"><label htmlFor={`${id}-bio`}>소개</label><textarea id={`${id}-bio`} rows={10} value={draft.bio} maxLength={10000} disabled={readonly} onChange={e=>{const bio=e.target.value;s.update(state=>({...state,authorProfile:{...(state.authorProfile||emptyAuthorProfile),bio}}));}}/></div>
     {error&&<p className="error-message" role="alert">{error}</p>}

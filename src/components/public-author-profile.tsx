@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { PublishedProfile } from '@/lib/author-profile';
+import { renderProfileMarkdown } from '@/lib/profile-markdown';
 import { cloudConfigured, publicAuthorProfile } from '@/lib/cloud';
 import styles from '@/app/public-info.module.css';
 
@@ -15,5 +16,5 @@ export function PublicAuthorProfile({initial,error:initialError}:{initial:Publis
     return()=>{active=false;};
   },[]);
 
-  return <>{error?<p className={styles.documentLead} role="alert">{error}</p>:profile?<section aria-label="개인 소개">{profile.name&&<h2>{profile.name}</h2>}{profile.bio.split(/\n\s*\n/).map((paragraph,index)=><p className={styles.bio} key={index}>{paragraph}</p>)}</section>:<p className={styles.documentLead}>아직 자기소개를 등록하지 않았습니다.</p>}</>;
+  return <>{error?<p className={styles.documentLead} role="alert">{error}</p>:profile?<section aria-label="개인 소개">{profile.name&&<h2>{profile.name}</h2>}<div className={styles.bio} dangerouslySetInnerHTML={{__html:renderProfileMarkdown(profile.bio)}}/></section>:<p className={styles.documentLead}>아직 자기소개를 등록하지 않았습니다.</p>}</>;
 }
