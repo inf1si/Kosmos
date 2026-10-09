@@ -199,6 +199,56 @@ try {
     assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), draft.bio);
 
     for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) await capture(page, 'draft', palette, mode, width);
+
+    // The settings pane scrolls, so it clips anything outside its box: the focus ring must fit inside it.
+    for (const width of [1280, 360]) for (const label of ['이름 · 필명', '소개']) {
+        await page.setViewportSize({ width, height: 900 });
+        const field = dialog().getByLabel(label, { exact: true });
+
+        await field.focus();
+
+        const ring = await field.evaluate(node => {
+            const style = getComputedStyle(node), pane = node.closest('.settings-body'), box = node.getBoundingClientRect(), clip = pane.getBoundingClientRect();
+            const reach = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+
+            return { style: style.outlineStyle, left: box.left - reach - clip.left, right: clip.left + pane.clientWidth - (box.right + reach) };
+        });
+
+        assert.equal(ring.style, 'solid', `${label} focus ring at ${width}`);
+        assert(ring.left >= 0 && ring.right >= 0, `${label} focus ring clipped at ${width}: ${JSON.stringify(ring)}`);
+
+        if (label === '소개') for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) await capture(page, 'focus', palette, mode, width);
+    }
+
+    // Every settings section shares the same scrolling pane; check each field's ring there too, then come back.
+    for (const width of [1280, 360]) {
+        await page.setViewportSize({ width, height: 900 });
+        const sections = dialog().locator('.settings-nav .nav-item');
+
+        for (let index = 0; index < await sections.count(); index++) {
+            await sections.nth(index).click();
+            const fields = dialog().locator('.settings-body').locator('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), textarea, select');
+
+            for (let field = 0; field < await fields.count(); field++) {
+                const target = fields.nth(field);
+
+                if (!await target.isVisible() || await target.isDisabled()) continue;
+                await target.focus();
+
+                const ring = await target.evaluate(node => {
+                    const style = getComputedStyle(node), pane = node.closest('.settings-body'), box = node.getBoundingClientRect(), clip = pane.getBoundingClientRect();
+                    const reach = style.outlineStyle === 'none' ? 0 : parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+
+                    return { left: box.left - reach - clip.left, right: clip.left + pane.clientWidth - (box.right + reach), name: node.getAttribute('aria-label') || node.id || node.tagName };
+                });
+
+                assert(ring.left >= 0 && ring.right >= 0, `focus ring clipped in section ${index} at ${width}: ${JSON.stringify(ring)}`);
+            }
+        }
+
+        await dialog().getByRole('button', { name: '자기소개', exact: true }).click();
+    }
+
     failPublish = true;await publish().click();
     await dialog().getByRole('alert').waitFor();
     assert.equal(profileWrites, 0);assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), draft.bio);
