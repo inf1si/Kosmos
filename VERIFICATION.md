@@ -7,6 +7,10 @@
 - 운영 DB: Supabase 프로젝트 `krakjollsufgnwealroh`에 `author_profile` 마이그레이션을 적용했다. 실제 authenticated/anon 역할의 합성 삽입·갱신·읽기·삭제는 트랜잭션 롤백했고 행 수 0을 확인했다. 익명 HTTP 공개 필드 조회 200/빈 결과, owner_id 조회 401을 확인했다. 새 테이블의 보안 advisor 지적 0이며 기존 프로젝트 지적은 별도다. 실제 소개/원고/사용자 정보는 변경하지 않았다.
 - 내용이 채워진 textarea도 같은 이름으로 찾도록 명시적 label/ID를 연결했다. 실제 운영 `to_jsonb(now())`의 `+00:00` 시각 형식을 확인하고 공개 스키마가 오프셋을 받도록 보완했다. 새 Node 3개는 보완 뒤 다시 통과했고 브라우저 SQL 응답도 같은 시각 형식을 사용한다. 타입 포함 최적화 빌드와 Anti Slop 195개 파일/19개 규칙/진단 0, 문서 검사가 통과했다. 기존 설정 창 검사도 84개 화면/연속 조작/노트 소비 화면/초점 복귀를 통과했다. 자기소개 최적화 Chromium도 초안 저장/새로고침·503 공개 실패/재시도·공개/갱신/취소·익명 읽기·HTML 이스케이프·메인 링크·노트 설정 공유/초점 복귀를 통과했다. 여섯 테마 × 1280/360px의 초안·공개 설정·공개 페이지·노트 설정·홈 링크 60개 화면, 페이지 오류/예상 밖 쓰기/가로 넘침 0이며 원래 작품은 그대로다. 스크린샷/보고서는 Git 제외 `test-results/author-profile-local/`에 있다. 보라 데스크톱 홈·사이버 다크 360px 공개 페이지·카세트 라이트 360px 설정을 직접 읽고 기존 부품과 비교했다. React 점검은 컴포넌트 밖 정의·함수형 최신 상태 편집·Effect 해제·명시적 라벨/ID·공개 권한·처리 중 잠금·기존 토큰 재사용을 확인했다. CI/배포는 후속 증거로 기록한다. 실제 사용자 소개 작성/인증·여러 기기 동기화·실물 모바일은 확인하지 않았다.
 
+
+- 배포: [PR #50](https://github.com/inf1si/Kosmos/pull/50) head `7215012`의 [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37931126712)와 preview `dpl_3meUJEty114GmvW8iTchtrGrLgG1` READY를 확인했다. main `f3b9fd323bbdfb0c095ee6623133f47d766b2e8a`에 병합했고 PR head와 소스/시험/SQL이 동일하다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37931409486)도 문서·타입·전체 Node 204개/실패 0·최적화 빌드·age 왕복·Anti Slop 195개 파일/19개 규칙/진단 0으로 통과했다.
+- 운영: 팀 `kosmos42`·프로젝트 `prj_XjQBITHbOLfAATIZjwAgqSCju5S8`의 production `dpl_97xs7YprSQ9B9Y9no8fUmBRGKkJ2` READY, 정확한 main SHA와 www/루트/기존 Vercel 별칭을 확인했다. 실제 익명 HTTP `/about` 200/등록 전 안내/서버 오류 없음과 홈 `/about` 링크를 확인했다. 운영 앱 `https://www.orbiter.ink`에서도 합성 Auth/작업 공간 + 실제 로컬 SQL로 같은 초안 저장/새로고침·503 공개 실패/재시도·공개/갱신/취소·익명 읽기·이스케이프·노트 설정/초점 복귀·홈 링크 및 여섯 테마/두 폭 60개 화면을 통과했다. 페이지 오류·예상 밖 쓰기·가로 넘침 0, 원래 작품 보존을 확인했으며 실제 운영 소개/원고는 변경하지 않았다. 보라 데스크톱 공개 화면·사이버 다크 360px 노트 설정을 직접 읽었다. 보고서/화면은 Git 제외 `test-results/author-profile-production/`에 있다. Preview UI·실제 사용자 인증/소개 작성·다중 기기·실물 모바일은 미확인이다. 이 후속 기록은 기능 배포와 구분하며 소스/시험/SQL을 바꾸지 않는다.
+
 ## 2026-10-09 — 작품 즐겨찾기
 
 - 기준: 최신 main `b56caab`(Claude PR #48)을 fetch해 책장 놓기 선/높이/삭제 문구/빈 전환 메뉴 수정을 보존했다.
