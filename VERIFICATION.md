@@ -8,7 +8,9 @@
 - 로컬 최적화 Chromium(`tests/browser/work-favorites.mjs`): 별표/우클릭/작품 정보의 연속 추가·해제, 즐겨찾기에서 작품 열기, 목록 제거 후 초점, 책장 이동 팝오버의 앵커, 계정 저장/새로고침, 503 저장 실패의 기기 사본·pendingRequest 유지/새로고침/online 재전송이 통과했다. 여섯 테마 × 1280/360px 기본/호버 24개 화면 + hover:none 실제 터치 이벤트의 여섯 테마 6개 화면을 확인했다. 가로 넘침·페이지 오류·예상 밖 쓰기 0이며 원고·판본·작품 순서는 보존됐다. 합성 Supabase Auth/저장 응답만 사용하며 실제 계정 자료를 변경하지 않는다.
 - 기존 `work-shelves.mjs` 전체 책장/마우스·터치/키보드/빈·접힌 대상/취소/스크롤/빈 이름/저장·새로고침/162개 화면도 통과했다. `KOSMOS_SHELF_VISIBILITY_ONLY=1`의 12개 포인터 레이아웃 + 여섯 터치 테마/30개 화면도 통과해 기본 숨김·해당 행 표시·키보드·드래그·배치 유지/저장 없음 회귀를 확인했다.
 - 직접 보라 라이트 1280px·사이버 다크 360px 화면을 읽고 기존 카드/소제목/버튼과 비교했다. React 체크: 공유 카드는 컴포넌트 밖 정의, 최신 상태 함수 업데이트, 파생 목록을 Effect 없이 계산, 안정 ID·aria-pressed·disabled·초점 복귀와 기존 토큰/컴포넌트를 사용한다.
-- CI·배포는 아직 진행 전이다. 실제 작가 인증·여러 기기 동기화·실물 터치/다른 브라우저·구버전 클라이언트의 필드 누락 보호는 확인하지 않았다. 자기소개 링크는 연결 주소 답변 대기다.
+- 배포: [PR #49](https://github.com/inf1si/Kosmos/pull/49) head `1ada5de`의 [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37927058130)·preview `dpl_9MHYCbhRNEQ71LhmrecgjzZRw6PJ` READY를 확인했다. main `06b5be0`에 squash 병합했고 소스/시험 파일이 PR head와 동일하다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37927295362)도 Node 201개/실패 0·타입·빌드·문서·Anti Slop 189개 파일/19개 규칙/진단 0으로 통과했다.
+- 운영: 팀 `kosmos42`·프로젝트 `prj_XjQBITHbOLfAATIZjwAgqSCju5S8`의 정확한 main SHA `06b5be03b453d990916a04e95bf2514e1e416249`·production `dpl_GCMsTDkxmMZC6osU1rqBSwBbxL4R` READY와 www/루트/기존 Vercel 별칭을 확인했다. `https://www.orbiter.ink`에서도 같은 합성 Auth/저장 응답으로 즐겨찾기 연속 조작·열기·제거 후 초점·이동 팝오버·저장/새로고침/503 재전송과 여섯 테마/두 폭/터치 30개 화면을 통과했다. 실제 카세트 라이트 360px·보라 다크 1280px 화면도 직접 읽었다. 페이지 오류·예상 밖 쓰기·가로 넘침 0이다. Preview UI는 시험하지 않았다.
+- 실제 작가 인증·여러 기기 동기화·실물 터치/다른 브라우저·구버전 클라이언트의 필드 누락 보호는 확인하지 않았다. 자기소개 링크는 연결 주소 답변 대기다.
 
 ## 2026-10-09 — 책장 리뷰 보완 (Claude 리뷰)
 
