@@ -6,6 +6,7 @@ import { authorProfileSchema, publishedProfileSchema, sameProfile } from '../src
 import { seedWorkspace } from '../src/lib/seed';
 import { createBackup, readBackup } from '../src/lib/backup';
 import { uid } from '../src/lib/model';
+import { renderProfileMarkdown } from '../src/lib/profile-markdown';
 
 test('개인 소개는 빈 초안을 허용하고 공개에는 본문이 필요하며 길이·문자열을 검사한다',()=>{
   assert.deepEqual(authorProfileSchema.parse({name:'',bio:''}),{name:'',bio:''});
@@ -57,4 +58,12 @@ test('공개 SQL은 작성자만 게시·갱신·삭제하고 익명은 공개 �
     await as(owner);await pg.query('delete from author_profile where id=true');
     await as(null,'anon');assert.deepEqual((await pg.query('select name,bio from author_profile')).rows,[]);
   }finally{await pg.close();}
+});
+
+test('공개 소개는 마크다운을 서식으로 보여주되 HTML·위험한 링크·이미지·제목은 막는다',()=>{
+  const html=renderProfileMarkdown('**굵게** _기울임_ ~~지움~~\n다음 줄\n\n- 하나\n- 둘\n\n> 인용\n\n[홈](https://example.com) [나쁨](javascript:alert(1)) https://example.org\n\n<script>alert(1)</script><b>태그</b>\n\n![사진](https://example.com/a.png)\n\n# 제목\n\n| a | b |\n|---|---|\n| 1 | 2 |');
+
+  for(const part of ['<strong>굵게</strong>','<em>기울임</em>','<s>지움</s>','다음 줄','<br>','<ul>','<li>하나</li>','<blockquote>','<a href="https://example.com" rel="nofollow noopener noreferrer">홈</a>','<a href="https://example.org" rel="nofollow noopener noreferrer">https://example.org</a>','&lt;script&gt;','&lt;b&gt;태그&lt;/b&gt;'])assert(html.includes(part),part);
+
+  for(const part of ['<script','<b>','javascript:alert(1)"','<img','<h1','<table'])assert(!html.includes(part),part);
 });

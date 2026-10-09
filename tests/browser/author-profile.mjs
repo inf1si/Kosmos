@@ -184,7 +184,7 @@ try {
     await settings();
     const publish = () => dialog().getByRole('button', { name: '자기소개 공개', exact: true });
     assert.equal(await publish().isDisabled(), true);
-    const draft = { name: '합성 필명', bio: '개인 소개의 첫 문단.\n같은 문단의 다음 줄.\n\n둘째 문단입니다. <script>window.profileInjected=true</script>\n' + '긴글'.repeat(150) };
+    const draft = { name: '합성 필명', bio: '개인 소개의 **첫 문단**.\n같은 문단의 다음 줄.\n\n둘째 문단입니다. <script>window.profileInjected=true</script>\n' + '긴글'.repeat(150) + '\n\n- 첫 목록\n- [둘째 링크](https://example.com/profile)\n\n> 인용한 문장\n\n[나쁜 링크](javascript:window.profileInjected=true)' };
     await dialog().getByLabel('이름 · 필명', { exact: true }).fill(draft.name);
     await dialog().getByLabel('소개', { exact: true }).fill(draft.bio);
     await until(async () => { const record = await localDraft();
@@ -210,7 +210,16 @@ try {
     await publicPage.getByRole('heading', { name: draft.name, exact: true }).waitFor();
     assert.equal(await publicPage.evaluate(() => window.profileInjected), undefined);
     assert.match(await publicPage.getByRole('region', { name: '개인 소개' }).innerText(), /<script>/);
-    assert.equal(await publicPage.locator('p').filter({ hasText: '둘째 문단' }).evaluate(n => getComputedStyle(n).whiteSpace), 'pre-line');
+    const bio = publicPage.getByRole('region', { name: '개인 소개' });
+
+    assert.equal(await bio.locator('strong').innerText(), '첫 문단');
+    assert.equal(await bio.locator('p').first().locator('br').count(), 1, 'single line break kept');
+    assert.deepEqual(await bio.locator('ul > li').allInnerTexts(), ['첫 목록', '둘째 링크']);
+    assert.equal(await bio.getByRole('link', { name: '둘째 링크' }).getAttribute('rel'), 'nofollow noopener noreferrer');
+    assert.equal(await bio.locator('blockquote').innerText(), '인용한 문장');
+    assert.equal(await bio.locator('ul').evaluate(n => getComputedStyle(n).listStyleType), 'disc', 'list markers visible');
+    assert.equal(await bio.locator('a[href^="javascript"], script').count(), 0);
+    assert.match(await bio.innerText(), /\[나쁜 링크\]\(javascript:/);
 
     for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
         await capture(page, 'published-settings', palette, mode, width);

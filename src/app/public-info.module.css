@@ -152,7 +152,36 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
-.document section p.bio { white-space: pre-line; }
+.bio ul, .bio ol {
+  font-size: 14px;
+  line-height: 2;
+  color: var(--pub-text);
+  margin: 0 0 13px;
+  padding-left: 1.4em;
+}
+.bio ul { list-style-type: disc; }
+.bio ul ul { list-style-type: circle; }
+.bio ol { list-style-type: decimal; }
+.bio ul ul, .bio ol ol, .bio ul ol, .bio ol ul { margin-bottom: 0; }
+.bio blockquote {
+  margin: 0 0 13px;
+  padding-left: 14px;
+  border-left: 2px solid var(--pub-line);
+}
+.bio blockquote p { color: var(--pub-muted); }
+.bio hr {
+  border: 0;
+  border-top: 1px solid var(--pub-line);
+  margin: 26px 0;
+}
+.bio pre {
+  margin: 0 0 13px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: var(--pub-tint);
+  border-radius: 3px;
+}
+.bio pre code { padding: 0; background: none; }
 .document section a {
   color: var(--pub-link);
   text-decoration: underline;
@@ -209,7 +238,7 @@
   .document {
     padding: 48px 24px 60px;
   }
-  .document section p {
+  .document section p, .bio ul, .bio ol {
     font-size: 13px;
   }
   .documentLead {
