@@ -178,9 +178,9 @@ try{
   assert.deepEqual(data.works.map(w=>w.id),[first.id,second.id]);await page.keyboard.press('Escape');
   assert.equal(await cards().count(),2);assert.doesNotMatch(await card(first.title).innerText(),/게시 중/,'restored work is not republished');
 
-  // 7. From the editor: sidebar 작품 정보 -> 휴지통으로 이동 leaves the editor on the remaining work.
+  // 7. From the editor: work menu 작품 정보 편집 -> 휴지통으로 이동 leaves the editor on the remaining work.
   await card(second.title).click();await page.locator('.editor-panes > .editor-shell .manuscript').waitFor();
-  await page.locator('.sidebar-footer').getByRole('button',{name:'작품 정보'}).click();await info.waitFor();
+  await page.locator('.work-switcher .work-card').click();await page.locator('#work-menu').getByRole('button',{name:'작품 정보 편집'}).click();await info.waitFor();
   await info.getByRole('button',{name:'휴지통으로 이동'}).click();await trash.waitFor();await trash.getByRole('button',{name:'휴지통으로 이동'}).click();
   await trash.waitFor({state:'detached'});await info.waitFor({state:'detached'});
   await saved(()=>data.works.length===1,'editor trash saved');

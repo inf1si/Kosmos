@@ -178,6 +178,23 @@ try{
   await openSettings();await section('저장 · 백업').click();
   await dialog().getByRole('combobox',{name:'자동 복구 지점 간격'}).selectOption('5');assert.equal((await prefs()).checkpointMinutes,5);
   await dialog().getByRole('button',{name:'백업과 복구'}).click();await page.getByRole('dialog',{name:'백업과 복구'}).waitFor();assert.equal(await dialog().count(),0);await page.keyboard.press('Escape');
+
+  // Templates, backup, interchange and note import live only here; the sidebars keep 휴지통 and the light/dark switch.
+  for(const name of ['템플릿','백업과 복구','가져오기 · 내보내기'])assert.equal(await page.locator('.studio-tools').getByRole('button',{name,exact:true}).count(),0,`${name} moved to settings`);
+  assert.equal(await page.locator('.studio-tools').getByRole('button',{name:/휴지통/}).count(),1);
+  assert.equal(await page.locator('.sidebar-footer .palette-picker').count(),0);assert.equal(await page.locator('.sidebar-footer').getByRole('button',{name:'작품 정보'}).count(),0);
+  assert.equal(await page.locator('.sidebar-footer .theme-toggle').count(),1);
+  await openSettings();await section('저장 · 백업').click();await dialog().getByRole('button',{name:'템플릿',exact:true}).click();
+  await page.getByRole('dialog',{name:'템플릿'}).waitFor();assert.equal(await dialog().count(),0,'settings closes under templates');await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'템플릿'}).waitFor({state:'detached'});
+  await openSettings();await section('저장 · 백업').click();await dialog().getByRole('button',{name:'노트 가져오기',exact:true}).click();
+  await page.getByRole('dialog',{name:'노트 가져오기'}).waitFor();await page.locator('.notes-workspace').waitFor();assert.equal(await dialog().count(),0);
+
+  for(const name of ['노트 가져오기','템플릿','백업과 복구'])assert.equal(await page.locator('.notes-tools').getByRole('button',{name,exact:true}).count(),0,`${name} moved out of the notes sidebar`);
+  await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'노트 가져오기'}).waitFor({state:'detached'});
+  await page.locator('.notes-tools').getByRole('button',{name:'설정',exact:true}).click();await section('저장 · 백업').click();await dialog().getByRole('button',{name:'템플릿',exact:true}).click();
+  await page.getByRole('dialog',{name:'템플릿'}).getByRole('button',{name:'새 템플릿 저장'}).click();
+  assert.match(await page.getByRole('dialog',{name:'템플릿'}).innerText(),/노트 \d+개/,'notes space opens note templates');await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'템플릿'}).waitFor({state:'detached'});
+  await page.locator('.notes-mode').getByRole('button',{name:'집필실'}).click();await page.locator('.studio-tools').waitFor();
   await openSettings();await section('단축키').click();assert.equal(await dialog().locator('.settings-keys > div').count(),8);
   // Reset brings back the old fixed layout for that section only.
   await section('원고 표시').click();await dialog().getByRole('button',{name:'기본값으로'}).click();

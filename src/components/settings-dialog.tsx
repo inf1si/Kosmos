@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Archive, ArrowLeftRight, Keyboard, LayoutGrid, Palette, RotateCcw, Sparkles, StickyNote, Trash2, Type, User } from 'lucide-react';
+import { Archive, ArrowLeftRight, Files, FileUp, Keyboard, LayoutGrid, Palette, RotateCcw, Sparkles, StickyNote, Trash2, Type, User } from 'lucide-react';
 import { AuthorProfilePanel } from './author-profile-panel';
 import { Modal } from './primitives';
+import { useStudio } from './studio-provider';
 import { AISettingsPanel } from './ai-settings-dialog';
 import { useAIConnection } from './use-ai-connection';
 import { useAppPreferences, useStoredChoice } from './use-app-preferences';
@@ -109,14 +110,14 @@ function AISection(){
 }
 
 function DataSection(){
-  const [app,update,reset]=useAppPreferences();
+  const [app,update,reset]=useAppPreferences();const readonly=!!useStudio().conflict;
 
   return <><Head storage={DEVICE} onReset={()=>reset(['checkpointMinutes'])}/>
     <Row label="자동 복구 지점" hint={`기본 ${defaultAppPreferences.checkpointMinutes}분마다 · 백업과 복구에서 되돌림`}><select aria-label="자동 복구 지점 간격" value={app.checkpointMinutes} onChange={e=>{const minutes=checkpointIntervals.find(n=>n===Number(e.target.value));
 
 if(minutes)update({checkpointMinutes:minutes});}}>{checkpointIntervals.map(n=><option key={n} value={n}>{n}분마다</option>)}</select></Row>
     <Row label="저장 대기 · 다른 기기 확인" hint="충돌을 막기 위해 고정합니다"><span className="settings-fixed">1.5초 · 12초</span></Row>
-    <div className="settings-links"><button type="button" className="button" onClick={()=>modal('backup')}><Archive size={14}/>백업과 복구</button><button type="button" className="button" onClick={()=>modal('interchange')}><ArrowLeftRight size={14}/>가져오기 · 내보내기</button><button type="button" className="button" onClick={()=>modal('trash')}><Trash2 size={14}/>휴지통</button></div>
+    <div className="settings-links"><button type="button" className="button" onClick={()=>modal('backup')}><Archive size={14}/>백업과 복구</button><button type="button" className="button" onClick={()=>modal('interchange')}><ArrowLeftRight size={14}/>가져오기 · 내보내기</button><button type="button" className="button" disabled={readonly} onClick={()=>modal('note-import')}><FileUp size={14}/>노트 가져오기</button><button type="button" className="button" disabled={readonly} onClick={()=>modal('template')}><Files size={14}/>템플릿</button><button type="button" className="button" onClick={()=>modal('trash')}><Trash2 size={14}/>휴지통</button></div>
   </>;
 }
 

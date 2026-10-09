@@ -4,7 +4,7 @@ import { documentSchema, documentTitle } from '@/lib/model';
 import { trashRows } from '@/lib/workspace-trash';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Archive, ArrowDown, ArrowLeftRight, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Files, Globe2, HardDrive, House, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, HardDrive, House, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
@@ -22,7 +22,7 @@ import { DocumentTree } from './document-tree';
 import { WorkspaceTemplates, type TemplateDialogRequest } from './workspace-templates';
 import { CustomPropertiesForm, CustomPropertyChips } from './custom-properties';
 import { DocIcon, WikiIcon } from './studio-icons';
-import { ThemeControls } from './theme-toggle';
+import { ThemeToggle } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
 import { Login,GoogleAccountControl } from './studio-auth';
 import { AIChat } from './ai-chat';
@@ -102,7 +102,17 @@ return()=>window.removeEventListener('keydown',key);},[createNote,notesOpen,s.ca
   const [workId,setWorkId]=useState(entry.workId);const [current,setCurrent]=useState(entry.home?HOME:entry.docId);const [lastDoc,setLastDoc]=useState(entry.docId);const [tabs,setTabs]=useState<string[]>(entry.home?[HOME]:[]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
-  const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);
+  const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);const [noteImport,setNoteImport]=useState(false);
+  // Settings opens templates and note import; the notes space answers templates itself while it is shown.
+  useEffect(()=>{const listener=(event:Event)=>{if(!(event instanceof CustomEvent))return;
+
+if(event.detail==='template'&&!notesOpen)setTemplateRequest({});
+
+if(event.detail==='note-import'){setNoteImport(true);openNotes(selectedNote);}};
+
+window.addEventListener('studio-modal',listener);
+
+return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openNotes,selectedNote]);
   const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
   const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const referenceRef=useRef<HTMLElement>(null);
@@ -152,7 +162,7 @@ if(!works)return;const w=works.find(item=>item.id===workId)||works[0];rememberSt
 
 if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(docId?[docId]:[]);setBack([]);setForward([]);setSplitId(null);setReference(null);}}
 
-  if(notesOpen)return <TooltipProvider><PersonalNotes activeId={selectedNote} captureId={captureId} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs workId={work.id}/></TooltipProvider>;
+  if(notesOpen)return <TooltipProvider><PersonalNotes activeId={selectedNote} captureId={captureId} importRequested={noteImport} onImportOpened={()=>setNoteImport(false)} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs workId={work.id}/></TooltipProvider>;
   const onHome=current===HOME,onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onHome||onBoard||onGraph;
   const active=openingDocument(docs,onOverview?lastDoc:current,lastDoc);
   const view=onHome?HOME:onGraph?GRAPH:onBoard?BOARD:active.id;
@@ -272,16 +282,13 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
         <button type="button" className="nav-item" aria-pressed={onGraph} onClick={()=>go(GRAPH)}><Network size={16}/><span>문서 그래프</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('trash')}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state!.trash).length}</small></button>
-        <button type="button" className="nav-item" disabled={readonly} onClick={()=>setTemplateRequest({})}><Files size={16}/><span>템플릿</span></button>
-        <button type="button" className="nav-item" onClick={()=>modal('backup')}><Archive size={16}/><span>백업과 복구</span></button>
-        <button type="button" className="nav-item" onClick={()=>modal('interchange')}><ArrowLeftRight size={16}/><span>가져오기 · 내보내기</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('settings')}><Settings size={16}/><span>설정</span></button>
       </nav>
       <div className="sidebar-scroll">
         <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument} onTrashFolder={trashFolder} onTemplate={setTemplateRequest}/>
         {query.trim()&&<WorkspaceNoteResults query={query} onOpen={id=>openNotes(id)}/>}
       </div>
-      <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><IconButton label="작품 정보" onClick={()=>setWorkSettings(work.id)}><Settings2 size={16}/></IconButton></div><ThemeControls/></footer>
+      <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
     <main className="studio-panel">
       <div className="panel-tabs">
