@@ -17,6 +17,20 @@
 - 검사 수정: `work-favorites.mjs`는 별표가 책장 이동 다음 순서가 된 것에 맞춰 Tab 방향을 바꿨다. `work-actions.mjs`는 책장 기능(PR #44) 뒤로 없는 `작품` 영역과 예전 메뉴 항목을 찾아 main에서도 실패하고 있었다. 책장 카드와 현재 메뉴(즐겨찾기·책장 이동 포함)로 고쳐 통과를 확인했다.
 - 미실행: 로컬 최적화 빌드(Google Fonts 차단), CI·미리보기·운영, 실제 계정·실제 터치 기기.
 
+## 2026-10-09 — 자기소개 공개 날짜·취소 확인
+
+- 기준: 최신 main `0d61142`를 fetch했다. 설정 → 자기소개 화면만 바꾸고 저장·SQL·공개 페이지는 그대로다.
+- 로컬: `pnpm dev` + 합성 Supabase Auth/작업 공간 + PGlite 실제 SQL로 `tests/browser/author-profile.mjs`가 통과했다. 새로 확인한 것: 상태 줄의 공개 날짜, **공개 취소** → 확인 상자(기본 초점 **그대로 두기**) → **그대로 두기**로 닫으면 공개 유지, 초안을 고치면 "되살릴 수 없습니다" 안내로 바뀜, 상자의 **공개 취소**로 실제 취소. 1280·360px 각각에서 상자를 열었을 때 설정 내용 칸 안에 다 보이는지 검사한다(스크롤 처리 없이 돌리면 1280에서 실패하는 것을 확인함). 여섯 테마 × 두 폭 72개 화면 가로 넘침·페이지 오류 0, 확인 상자 12개 화면을 직접 봤다. Node `tests/author-profile.test.ts` 3개 통과. 최적화 빌드는 이 환경에서 Google Fonts 차단으로 돌리지 못했다(CI·Vercel 미리보기로 확인). 운영 확인은 하지 않았다.
+
+## 2026-10-09 — About Me / Who I Am
+
+- 기준: 최신 main `40f9428`을 fetch했다. 메인 링크·공개 페이지 h1·탭 제목의 표시 이름만 바꾸고 기존 브라우저 검사 선택자를 맞췄다. 사용자가 지정한 영문 이름을 디자인 가이드에 기록했다.
+- 로컬: 타입 포함 최적화 빌드·문서 검사·Anti Slop 195개 파일/19개 규칙/진단 0을 확인했다. 최적화 Chromium의 홈 하단 **About Me** 클릭 → `/about` → **Who I Am** h1·탭 제목과 여섯 테마 × 1280/360px 두 화면 24개 배치를 확인했다. 페이지 오류/가로 넘침/쓰기 0이며 보라 360px 홈·사이버 다크 360px 소개 화면을 직접 읽었다. 보고서는 Git 제외 `test-results/about-naming-local/`에 둔다. 글자/문구 변경으로 저장·공개 조작과 전체 Node는 로컬에서 반복하지 않았다. CI·운영은 후속 증거로 구분한다.
+
+
+- 배포: [PR #51](https://github.com/inf1si/Kosmos/pull/51) head `7aeccd6`의 [PR CI](https://github.com/inf1si/Kosmos/actions/runs/37932396548)와 preview `dpl_GUjMzmwfBjJPfpK9odHoqzrLRT37` READY를 확인했다. main `da67ffe926f0a347071a829674f43f202a667e03`에 병합했고 소스/브라우저 검사 파일이 PR head와 같다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/37932653317)도 문서·타입·전체 Node 204개/실패 0·최적화 빌드·age 왕복·Anti Slop 195개 파일/19개 규칙/진단 0으로 통과했다.
+- 운영: 팀 `kosmos42`·프로젝트 `prj_XjQBITHbOLfAATIZjwAgqSCju5S8`의 production `dpl_8np6hLYZ7jfGhSKL2sVWkWtaPv6z` READY·정확한 main SHA·www/루트/기존 Vercel 별칭을 확인했다. www 실제 익명 HTTP의 **About Me** 링크·**Who I Am** h1/탭 제목과 운영 Chromium의 같은 링크 이동/24개 화면을 확인했다. 페이지 오류/가로 넘침/쓰기 0, Git 제외 `test-results/about-naming-production/`에 증거를 둔다. 카세트 다크 360px 홈·보라 라이트 1280px 소개 화면을 직접 읽었다. 브라우저 검사는 공개 소개 GET만 합성 빈 응답으로 대체해 개인 내용을 캡처하지 않는다. Preview UI·저장/공개 조작·실물 모바일/다른 브라우저는 이번에 반복하지 않았다. 이 후속 기록은 소스와 시험을 바꾸지 않는다.
+
 ## 2026-10-09 — 개인 자기소개
 
 - 기준: 최신 main `1430730`을 fetch하고 기존 즐겨찾기·Claude 책장 수정을 보존했다. 범위는 내부 개인 소개 페이지, 메인 링크, 설정 작성/초안 저장, 명시적 공개/갱신/취소다. 계정 개인정보를 자동 복사하지 않는다.
