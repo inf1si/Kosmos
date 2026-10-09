@@ -152,6 +152,7 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
+.document section p.bio { white-space: pre-line; }
 .document section a {
   color: var(--pub-link);
   text-decoration: underline;

@@ -7,6 +7,7 @@ import { aiPreferencesSchema } from './ai-prompt-presets';
 import { cellSpan, formatNumber, inlineFontSize, validListStyle } from './manuscript-format';
 import { jsonValueSchema, type JsonValue } from './json-value';
 import { customPropertiesSchema } from './custom-properties';
+import { authorProfileSchema } from './author-profile';
 
 export type RichAttributes = { [key: string]: JsonValue | undefined };
 
@@ -240,6 +241,7 @@ export const workspaceSchema = z.object({
   trash:z.array(trashItemSchema).max(5000).optional(),
   templates:z.array(workspaceTemplateSchema).max(100).optional(),
   workShelves:z.array(workShelfSchema).max(40).optional(),
+  authorProfile:authorProfileSchema.optional(),
 }).superRefine((data,ctx)=>{
   const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...(data.trash||[]).map(t=>t.id)];
 

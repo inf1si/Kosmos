@@ -165,7 +165,7 @@ return;}
     const base=materializeTrash(materializeNoteNavigation({...dataRef.current,works:dataRef.current.works.map(w=>w.navigation?w:applyNavigation(w,resolveNavigation(w)))}));
     const withTemplates=preserveTemplateData(preserveTrash(preserveNoteDetails(preserveNotes(preserveAIPreferences(fn(structuredClone(base)),base),base),base),base),base);
     const edited=preserveWorkFavorites(preserveWorkShelves(withTemplates,base),base);
-    const data={...edited,works:edited.works.map(w=>applyNavigation(w,resolveNavigation(w))),updatedAt:new Date().toISOString()};setCurrent(data);setStatus('기기에 저장 중');pending.current++;
+    const data={...edited,authorProfile:edited.authorProfile??base.authorProfile,works:edited.works.map(w=>applyNavigation(w,resolveNavigation(w))),updatedAt:new Date().toISOString()};setCurrent(data);setStatus('기기에 저장 중');pending.current++;
     const targetNamespace=namespaceRef.current;
     saveQueue.current=saveQueue.current.then(async()=>{
       if(conflictRef.current){pending.current--;
