@@ -35,7 +35,7 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <span>Orbis Tertius</span>
-        <div><Link href="/about">자기소개</Link></div>
+        <div><Link href="/about">About Me</Link></div>
       </footer>
     </div>
   );
