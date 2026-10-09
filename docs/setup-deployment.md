@@ -1,5 +1,9 @@
 # 로컬 실행·계정 연결·배포
 
+## 개인 자기소개 배포 (2026-10-09)
+
+앱 배포 전에 [20261009121112_author_profile.sql](../supabase/migrations/20261009121112_author_profile.sql)을 한 번 적용한다. 공개 스냅샷 테이블·RLS·공개 열 SELECT 권한·작성자 쓰기 권한을 만들며 작업 공간/인증 제공자/환경 변수는 바꾸지 않는다. 기존 프로젝트에는 `author_profile`로 적용했고 익명 공개 필드 200/소유자 ID 열 401 및 실제 역할의 롤백 쓰기 검사를 완료했다. 새 프로젝트에서는 `authors`와 `auth.uid()`가 있는 초기 스키마 뒤에 적용한다. [기능](author-profile.md)·[검증](../VERIFICATION.md).
+
 ## 개인 노트 배포
 
 앱 배포와 함께 [개인 노트 보호 마이그레이션](../supabase/migrations/20261004063340_independent_notes_guard.sql)을 설치한다. 테이블·Auth·RLS·Storage 정책은 바꾸지 않는다. 버전 1 JSON에 선택적 notes 배열과 첨부 noteId 소속을 추가하며 이전 자료를 계속 읽는다. 기존 notes를 누락하는 오래된 탭은 저장을 멈추고 새로고침을 안내한다. 이어 [노트 계층·AI 보호 SQL](../supabase/migrations/20261004074609_note_hierarchy_ai_guard.sql)을 설치해 noteNavigation·aiMessages 누락을 막는다. [휴지통 보호 SQL](../supabase/migrations/20261004104045_workspace_trash_guard.sql)도 적용해 기존 trash 누락·사본/첨부 구조를 보호한다. 운영 설치·배포 확인은 [검증 기록](../VERIFICATION.md)을 따른다.

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Archive, ArrowLeftRight, Keyboard, LayoutGrid, Palette, RotateCcw, Sparkles, StickyNote, Trash2, Type } from 'lucide-react';
+import { Archive, ArrowLeftRight, Keyboard, LayoutGrid, Palette, RotateCcw, Sparkles, StickyNote, Trash2, Type, User } from 'lucide-react';
+import { AuthorProfilePanel } from './author-profile-panel';
 import { Modal } from './primitives';
 import { AISettingsPanel } from './ai-settings-dialog';
 import { useAIConnection } from './use-ai-connection';
@@ -13,7 +14,7 @@ import { checkpointIntervals, defaultAppPreferences, lineHeights, manuscriptLayo
 import { defaultEditorPreferences, fontSizes, manuscriptFonts } from '@/lib/editor-preferences';
 import { countMetrics } from '@/lib/text-statistics';
 
-export type SettingsSection='display'|'manuscript'|'tools'|'notes'|'ai'|'data'|'keys';
+export type SettingsSection='display'|'manuscript'|'tools'|'notes'|'ai'|'data'|'keys'|'profile';
 
 export const sections:{id:SettingsSection;label:string;icon:typeof Palette}[]=[
   {id:'display',label:'화면',icon:Palette},
@@ -23,6 +24,7 @@ export const sections:{id:SettingsSection;label:string;icon:typeof Palette}[]=[
   {id:'ai',label:'AI',icon:Sparkles},
   {id:'data',label:'저장 · 백업',icon:Archive},
   {id:'keys',label:'단축키',icon:Keyboard},
+  {id:'profile',label:'자기소개',icon:User},
 ];
 
 const DEVICE='이 기기에만 저장합니다.';
@@ -144,7 +146,7 @@ function SettingsBody({initial}:{initial:SettingsSection}){
   const [section,setSection]=useState<SettingsSection>(initial);const nav=useRef<HTMLElement>(null);
   // The narrow layout scrolls the section list sideways; keep the chosen one in view.
   useEffect(()=>{nav.current?.querySelector('[aria-pressed=true]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[section]);
-  const body={display:<DisplaySection/>,manuscript:<ManuscriptSection/>,tools:<ToolsSection/>,notes:<NotesSection/>,ai:<AISection/>,data:<DataSection/>,keys:<KeysSection/>}[section];
+  const body={display:<DisplaySection/>,manuscript:<ManuscriptSection/>,tools:<ToolsSection/>,notes:<NotesSection/>,ai:<AISection/>,data:<DataSection/>,keys:<KeysSection/>,profile:<AuthorProfilePanel/>}[section];
 
   return <div className="settings-layout">
     <nav className="settings-nav" aria-label="설정 구역" ref={nav}>{sections.map(({id,label,icon:Icon})=><button type="button" key={id} className="nav-item" aria-pressed={section===id} onClick={()=>setSection(id)}><Icon size={16}/><span>{label}</span></button>)}</nav>

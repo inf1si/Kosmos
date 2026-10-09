@@ -1,5 +1,9 @@
 # 데이터 모델과 권한
 
+## 개인 자기소개 (2026-10-09)
+
+선택 필드 `Workspace.authorProfile`은 `{name: string(최대 80자), bio: string(최대 10,000자)}`다. 빈 초안을 허용하며 JSON 버전 1을 유지한다. 작품·판본과 독립이다. 공개 내용은 `public.author_profile`의 단일 행(`id=true`, `owner_id=auth.uid()` 기본값, `name`, 비어 있지 않은 `bio`, `published_at`)에 따로 둔다. RLS는 익명 읽기·허용 작가 최초 작성·작성자 수정/삭제를 허용한다. 열 권한으로 익명/인증 클라이언트에게 `owner_id` 읽기/쓰기를 허용하지 않는다. [전체 계약](author-profile.md).
+
 모델의 기준은 [model.ts](../src/lib/model.ts)와 [001_studio.sql](../supabase/migrations/001_studio.sql)이다. JSON 형식 버전은 현재 **1**이다.
 
 새 빈 작품은 `Work.navigation`에 **본문** 폴더와 그 아래 첫 문서를 명시하며, 새 문서의 `chapter` 기본값은 빈 문자열이다. 폴더 전체 삭제는 기존 문서/노트 휴지통 사본들을 한 번에 추가한다. 폴더 자체는 별도 항목이 아니며 계층은 선택 필드 `folder.nodes`와 기기 `Revision`에 보관한다. JSON 버전·RPC·SQL 형식을 변경하지 않는다.

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Workspace, workspaceSchema, Publication, publicationSchema } from './model';
 import { libraryItemSchema, type LibraryItem } from './library-order';
 import { applyNavigation, resolveNavigation } from './document-navigation';
+import { publishedProfileSchema, type AuthorProfile } from './author-profile';
 
 let client:SupabaseClient|null=null;
 
@@ -12,6 +13,29 @@ export function cloud(){
   if(!cloudConfigured)throw new Error('클라우드가 연결되지 않았습니다.');
 
   return client??=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{auth:{flowType:'pkce'}});
+}
+
+export async function publicAuthorProfile(){
+  const {data,error}=await cloud().from('author_profile').select('name,bio,published_at').eq('id',true).maybeSingle();
+
+  if(error)throw new Error('자기소개를 불러오지 못했습니다.');
+
+  return data?publishedProfileSchema.parse(data):null;
+}
+
+export async function publishAuthorProfile(profile:AuthorProfile){
+  const parsed=publishedProfileSchema.parse({...profile,published_at:new Date().toISOString()});
+  const {data,error}=await cloud().from('author_profile').upsert({id:true,...parsed}).select('name,bio,published_at').single();
+
+  if(error)throw new Error('자기소개를 공개하지 못했습니다. 다시 시도하세요.');
+
+  return publishedProfileSchema.parse(data);
+}
+
+export async function unpublishAuthorProfile(){
+  const {error}=await cloud().from('author_profile').delete().eq('id',true);
+
+  if(error||await publicAuthorProfile())throw new Error('자기소개 공개를 취소하지 못했습니다. 다시 시도하세요.');
 }
 
 export async function fetchCloud(){
