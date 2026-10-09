@@ -147,6 +147,7 @@ export const workSchema = z.object({
   publications:z.array(publicationSchema).max(100),activePublicationId:z.uuid().nullable(),
   aiConversations:z.array(conversationSchema).max(200).optional(),
   navigation:navigationSchema.optional(),
+  favorite:z.boolean().optional(),
 }).superRefine((work,ctx)=>{
   if(work.navigation)for(const message of navigationIssues(work.navigation,work.documents.map(d=>d.id)))ctx.addIssue({code:'custom',message,path:['navigation']});
 });

@@ -16,6 +16,7 @@
 | 공간의 첫 화면·작품 | Lucide 아이콘: 집필실 홈·노트 홈 House, 작품 Book, 집필실 책장 LibraryBig, 작품 열기 BookOpen, 게시 철회 GlobeOff(공개 서재 Globe2의 반대) | 사이드바 맨 위, 홈 탭, 집필실 홈 작품 카드·우클릭 메뉴 |
 | AI 동작 | Lucide 아이콘: AI 질문 Sparkles, 요약 ListCollapse, 문장 다듬기 PenLine, 아이디어 확장 Lightbulb, 질문하기 MessageCircleQuestionMark, 내 스킬 WandSparkles | `/` 메뉴, 선택 글 우클릭 |
 | 정리·공개 순서 도구 | Lucide 아이콘: 템플릿 Files, 서재 순서 편집 ListOrdered, 순서 이동 GripVertical | 사이드바 **템플릿**, 집필실 홈 board-bar, 트리·서재 순서 손잡이 |
+| 작품 즐겨찾기 | Lucide Star, 기존 `IconButton`·`.menu-item`·`.button`, 선택 시 별 채움 | 집필실 홈 작품 카드·즐겨찾기 목록, 카드 우클릭·작품 정보 |
 | 앱 설정·작품 설정 | Lucide 아이콘: 앱 전체 **설정** Settings(톱니), 작품 정보·AI 설정·스킬 관리 Settings2(조절 톱니). 설정 창 구역은 화면 Palette, 원고 표시 Type, 집필 도구 LayoutGrid, 노트 StickyNote, AI Sparkles, 저장 · 백업 Archive, 단축키 Keyboard | 사이드바 **설정**, 설정 창 구역 목록 |
 | 로그인 계정·로그아웃 | Lucide 아이콘: 계정 User, 로그아웃 LogOut | 집필실·노트 상단 **로그인 계정** Popover |
 | 오른쪽 정보 영역 | 참고 패널 규격: 폭 300px, `--side` 바탕, 안쪽 20px 18px, 소제목 12px 600 `--muted` | 참고 패널, 그래프 정보 |
@@ -288,6 +289,8 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 
 **집필실 책장.** 책장 제목·작품 카드 왼쪽에 기존 GripVertical `.icon-button` 손잡이를 둔다. 손잡이는 평소 숨기고 해당 책장 제목/작품 카드의 hover·focus-within 또는 드래그 중에만 표시한다. 책장 전체에 hover를 걸어 하위 작품의 손잡이를 한꺼번에 드러내지 않는다. `hover:none`에서는 트리와 같은 .7 투명도로 항상 보이며 표시 전후 너비는 유지한다. 마우스·터치·↑↓, 작품의 Alt+↑↓로 정리한다. 원본은 흐리게, 책장/카드 앞뒤는 `--link` 2px 선(같은 줄에 카드가 나란하면 카드 사이 세로선, 한 열이면 가로선), 책장 안 놓기는 같은 토큰 테두리로 표시한다. 같은 줄의 작품 카드는 높이를 맞추고 손잡이·책장 이동 버튼은 세로 가운데에 둔다. 빈 책장 안내는 손잡이 폭만큼 들여 카드와 왼쪽을 맞춘다. 트리 ghost를 재사용해 제목 앞 24자와 놓을 위치를 화면 안에 표시한다. 목록 가장자리 자동 스크롤과 Esc/포인터 취소를 지원한다. 이름을 비우면 화면에서만 **이름 없는 책장**을 표시한다. 홈 board-bar에 LibraryBig **새 책장** `.button`을 둔다. 각 책장은 기존 12px 600 `--muted` 소제목에 접기 화살표·LibraryBig·이름·작품 개수를 두고 오른쪽 `+`·`…` IconButton을 붙인다. 제목은 긴 경우 한 줄 말줄임, 작품은 기존 `reference-card`와 오른쪽 LibraryBig **책장 이동** IconButton을 쓴다. 생성·이름 변경·이동은 300px 공용 `Popover`의 label/input/select/`.button.primary`, `…`의 이름/위/아래/삭제는 공용 `.menu`다. 책장 삭제는 짧은 확인 `Modal`로 작품의 기본 책장 이동을 알린다. 이동 후 카드가 재배치되면 그 카드로 초점을 돌리고 목적 책장은 펼친다. 접힘은 기기 설정, 이름·배치는 계정 데이터다. 사이드바 전환 메뉴의 `.work-menu-shelf`도 기존 소제목 규격을 쓰며 긴 이름을 말줄임하고, 작품이 없는 책장은 넣지 않는다. 360px 홈 board-bar와 긴 제목/팝오버/새 작품·정보 select, 메뉴를 여섯 테마에서 확인한다. 아이콘 툴팁은 **새 작품/책장 메뉴/책장 이동**처럼 짧게 표시하고, 접근성 이름에는 대상 책장·작품명을 넣어 구분한다. 새 색·모서리 토큰은 없다. [책장 안내](work-shelves.md).
+
+**작품 즐겨찾기.** 집필실 홈의 이어 쓰기 아래에 기존 소제목·`reference-card` 격자로 선택한 작품을 모은다. 별표 `IconButton`은 선택하지 않았으면 해당 카드 hover/focus-within에서만 보이고, 선택 시 채운 Star·`--brand`·`aria-pressed`로 상태를 남긴다. `hover:none`에서는 항상 보인다. 손잡이와 별표 모두 너비를 유지해 레이아웃을 움직이지 않는다. 즐겨찾기 카드에는 별표와 열기만 두며 별도 드래그를 넣지 않는다. 카드 우클릭·작품 정보는 같은 동작을 `.menu`/`.button`으로 제공한다. 새로운 토큰·바탕·글자 규칙은 없다.
 
 **서재 순서 편집.** 집필실 홈 board-bar의 ListOrdered `.button`에서 넓은 `Modal`을 연다. 기존 label/select/button/reference-card와 ArrowUp/ArrowDown `IconButton`을 사용한다. 행 왼쪽에 트리와 같은 GripVertical 손잡이를 둔다(`.icon-button`, 마우스·터치·↑↓ 키). 드래그 중 원래 행은 흐리게 표시하고 놓을 위치는 트리와 같은 `--link` 2px 선으로 표시한다. 떠 있는 제목은 트리의 ghost 스타일을 재사용하며 긴 이름은 앞 24자로 줄여 화면 안에 둔다. 손잡이 안내는 짧은 native title로 드래그 중 긴 툴팁을 피한다. 자동 정렬은 편집 목록에만 적용하고 **저장된 순서로**·**서재 순서 저장**(`.button.primary`)은 modal-actions에 둔다. 목록은 최대 360px 안에서 세로 스크롤하며 가장자리 드래그는 지속 스크롤한다. 긴 제목은 한 줄 말줄임으로 표시한다. 첫/마지막 이동 버튼은 비활성이고 게시 작품 없음·불러오는 중·저장 오류를 표시한다. 이동 결과는 화면 낭독용 status로 알린다. 저장하면 두 동작 버튼이 비활성으로 바뀌어 결과를 보여준다. 드래그 중 Esc는 이동만 취소하며 평소 Esc/닫기는 홈의 호출 버튼에 초점을 돌린다. 새 색·모서리 토큰은 없다. [사용 안내](library-order.md).
 

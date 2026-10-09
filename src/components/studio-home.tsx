@@ -8,7 +8,7 @@ import { useRef, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { LibraryOrder } from './library-order';
 import { DocIcon } from './studio-icons';
-import { WorkContextMenu, type WorkConfirm } from './work-actions';
+import { WorkContextMenu, WorkFavoriteButton, type WorkConfirm } from './work-actions';
 import { countChars } from '@/lib/outline';
 import { noteDate } from '@/lib/personal-notes';
 import { recentDocuments, workUpdatedAt } from '@/lib/studio-position';
@@ -26,6 +26,12 @@ const place=(doc:NovelDocument)=>doc.kind==='scene'?doc.chapter.trim()||'부 미
 
 type ShelfForm={type:'create'}|{type:'rename';id:string}|{type:'move';id:string};
 
+function HomeWorkCard({work,current,readonly,canTrash,onOpen,onEdit,onConfirm,onMove}:{work:Work;current:boolean;readonly:boolean;canTrash:boolean;onOpen:()=>void;onEdit:()=>void;onConfirm:(confirm:WorkConfirm)=>void;onMove?:(at:HTMLElement|null)=>void}){
+  const updated=noteDate(workUpdatedAt(work)),card=useRef<HTMLButtonElement>(null);
+
+  return <><WorkContextMenu work={work} canTrash={canTrash} readonly={readonly} onOpen={onOpen} onEdit={onEdit} onConfirm={onConfirm} onMove={onMove?()=>onMove(card.current):undefined}><button ref={card} type="button" className="reference-card" aria-current={current||undefined} onClick={onOpen}><Book size={16}/><span><strong>{work.title}</strong><small>{work.form} · 원고 {work.documents.filter(d=>d.kind==='scene').length} · {workChars(work).toLocaleString()}자{work.activePublicationId&&' · 게시 중'}{updated&&` · ${updated} 수정`}</small></span></button></WorkContextMenu><WorkFavoriteButton work={work} readonly={readonly}/>{onMove&&<IconButton label="책장 이동" aria-label={`${work.title} 책장 이동`} disabled={readonly} onClick={e=>onMove(e.currentTarget)}><LibraryBig size={15}/></IconButton>}</>;
+}
+
 function collapsedShelves(key:string):Set<string>{
   try{const value=z.array(workShelfSchema.shape.id).max(40).safeParse(JSON.parse(localStorage.getItem(key)||'[]'));
 
@@ -38,6 +44,7 @@ export function StudioHome({state,resume,currentWorkId,readonly,onOpen,onOpenWor
   const s=useStudio(),shelves=workShelves(state),works=new Map(state.works.map(w=>[w.id,w]));
   const scenes=state.works.reduce((n,w)=>n+w.documents.filter(d=>d.kind==='scene').length,0);
   const recent=recentDocuments(state);
+  const favorites=shelves.flatMap(shelf=>shelf.workIds.map(id=>works.get(id)).filter((work):work is Work=>!!work?.favorite));
   const [orderOpen,setOrderOpen]=useState(false);
   const orderTrigger=useRef<HTMLButtonElement>(null);
   const [form,setForm]=useState<ShelfForm|null>(null),[name,setName]=useState(''),[destination,setDestination]=useState(DEFAULT_WORK_SHELF),[error,setError]=useState('');
@@ -100,6 +107,7 @@ return false;}
       <section aria-label="이어 쓰기"><h3>이어 쓰기</h3><div className="notes-home-grid">
         <button type="button" className="reference-card" onClick={()=>onOpen(resume.work.id,resume.doc.id)}><DocIcon doc={resume.doc} size={16}/><span><strong>{documentTitle(resume.doc)}</strong><small>{resume.work.title} · {place(resume.doc)} · {noteDate(resume.doc.updatedAt)} 수정</small></span></button>
       </div></section>
+      {favorites.length>0&&<section aria-label="즐겨찾기"><h3>즐겨찾기 · {favorites.length}개</h3><div className="notes-home-grid">{favorites.map(work=><div className="work-shelf-card" key={work.id} data-favorite-work={work.id}><HomeWorkCard work={work} current={work.id===currentWorkId} readonly={readonly} canTrash={state.works.length>1} onOpen={()=>onOpenWork(work.id)} onEdit={()=>onEditWork(work.id)} onConfirm={onConfirmWork}/></div>)}</div></section>}
       {shelves.map((shelf,index)=>{const items=shelf.workIds.map(id=>works.get(id)).filter((work):work is Work=>!!work),collapsed=closed.has(shelf.id),title=workShelfTitle(shelf);
 
         return <section key={shelf.id} aria-label={`${title} 책장`} data-work-shelf={shelf.id} {...dragging.shelfProps(shelf.id)}>
@@ -113,9 +121,9 @@ return false;}
               <DropdownMenu.Item className="menu-item" disabled={readonly||shelf.id===DEFAULT_WORK_SHELF} onSelect={()=>{setError('');returnFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;focusWork.current=null;setDeleting(shelf.id);}}><Trash2 size={15}/>책장 삭제</DropdownMenu.Item>
             </DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root>
           </div>
-          {!collapsed&&(items.length?<div className="notes-home-grid">{items.map(work=>{const updated=noteDate(workUpdatedAt(work)),move=(at:HTMLElement|null)=>openForm({type:'move',id:work.id},at);
+          {!collapsed&&(items.length?<div className="notes-home-grid">{items.map(work=>{const move=(at:HTMLElement|null)=>openForm({type:'move',id:work.id},at);
 
-            return <div className="work-shelf-card" key={work.id} data-work-id={work.id} {...dragging.workProps(work.id)}>{dragging.grip('work',work.id,work.title)}<WorkContextMenu work={work} canTrash={state.works.length>1} readonly={readonly} onOpen={()=>onOpenWork(work.id)} onEdit={()=>onEditWork(work.id)} onConfirm={onConfirmWork} onMove={()=>{const at=root.current?.querySelector<HTMLElement>(`[data-work-id="${work.id}"] .reference-card`)||null;move(at);}}><button type="button" className="reference-card" aria-current={work.id===currentWorkId||undefined} onClick={()=>onOpenWork(work.id)}><Book size={16}/><span><strong>{work.title}</strong><small>{work.form} · 원고 {work.documents.filter(d=>d.kind==='scene').length} · {workChars(work).toLocaleString()}자{work.activePublicationId&&' · 게시 중'}{updated&&` · ${updated} 수정`}</small></span></button></WorkContextMenu><IconButton label="책장 이동" aria-label={`${work.title} 책장 이동`} disabled={readonly} onClick={e=>move(e.currentTarget)}><LibraryBig size={15}/></IconButton></div>;
+            return <div className="work-shelf-card" key={work.id} data-work-id={work.id} {...dragging.workProps(work.id)}>{dragging.grip('work',work.id,work.title)}<HomeWorkCard work={work} current={work.id===currentWorkId} readonly={readonly} canTrash={state.works.length>1} onOpen={()=>onOpenWork(work.id)} onEdit={()=>onEditWork(work.id)} onConfirm={onConfirmWork} onMove={move}/></div>;
           })}</div>:<p className="field-help">아직 작품이 없습니다.</p>)}
         </section>;
       })}
