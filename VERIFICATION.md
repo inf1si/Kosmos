@@ -2,7 +2,7 @@
 
 ## 2026-10-10 — 복구 창에서 계정(서버) 이력으로도 복원
 
-- 로컬: 새 브라우저 검사 [`server-revisions.mjs`](tests/browser/server-revisions.mjs)가 합성 Supabase의 `workspace_revisions` 응답으로 1280/360px에서 **계정** 목록 2개·수동 지점 버튼 없음·가로 넘침 없음을 보고, 1280px에서 첫 항목을 복원해 `save_workspace`에 그 작업 공간이 저장되고 **이 브라우저** 목록에 **복원 전 원고**가 생기는지 확인한다. 목록 요청은 `id,created_at`만 읽고 `workspace_id`로 거른다. 여섯 테마 × 1280/360px 스크린샷도 확인했다.
+- 로컬: 새 브라우저 검사 [`server-revisions.mjs`](tests/browser/server-revisions.mjs)가 합성 Supabase의 `workspace_revisions` 응답으로 1280/360px에서 한 목록에 **서버 자동 저장** 2개와 브라우저 **처음 시작**이 함께 보이고 탭·설명 문단이 없으며 가로 넘침이 없는지 보고, 1280px에서 서버 항목을 복원해 `save_workspace`에 그 작업 공간이 저장되고 같은 목록에 **복원 전 원고**가 생기는지 확인한다. 목록 요청은 `id,created_at`만 읽고 `workspace_id`로 거른다. 여섯 테마 × 1280/360px 스크린샷도 확인했다.
 - 미확인: 운영 Supabase에서 실제 RLS로 목록·내용을 읽는지, 큰 작업 공간 이력의 내려받기 시간, 실제 다른 기기에서의 복원. 001 마이그레이션의 `revision_owner_read` 정책과 `grant select`에 기대며 DB 변경은 없다.
 
 ## 2026-10-10 — 빈 노트 목록·공개 서재 빈 화면 정리

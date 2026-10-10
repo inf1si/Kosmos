@@ -89,14 +89,18 @@ try {
 
         await dialog.waitFor();
 
-        const tabs = dialog.getByRole('group', { name: '복구 이력 위치' });
+        const serverRows = dialog.locator('.revision-list button').filter({ hasText: '서버 자동 저장' });
 
-        await tabs.getByRole('button', { name: /^계정/ }).click();
-        await dialog.getByText('다른 기기와 브라우저에서도 복원할 수 있습니다.', { exact: false }).waitFor();
-        assert.equal(await dialog.locator('.revision-list button').count(), 2, `${width}px: two server revisions`);
-        assert.equal(await dialog.getByRole('button', { name: '지금 복구 지점 만들기' }).count(), 0, `${width}px: manual snapshot stays on the browser tab`);
+        // One list: browser checkpoints and server revisions together, newest first, no extra help text.
+        await serverRows.nth(1).waitFor();
+        assert.equal(await serverRows.count(), 2, `${width}px: two server revisions`);
+        assert.equal(await dialog.locator('.revision-list button').filter({ hasText: '처음 시작' }).count(), 1, `${width}px: browser checkpoint in the same list`);
+        assert.equal(await dialog.locator('.backup-columns section').first().locator('.field-help, .segmented').count(), 0, `${width}px: no tabs or help paragraph`);
+        const times = await dialog.locator('.revision-list small').allInnerTexts();
 
-        await dialog.locator('.revision-list button').first().click();
+        assert.equal(times.length, 3);
+
+        await serverRows.first().click();
         await dialog.locator('.restore-choice').scrollIntoViewIfNeeded();
 
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
@@ -111,7 +115,6 @@ try {
             assert.equal(saved?.works[0].title, '서버 이력의 작품', 'restored payload reaches the cloud save');
 
             // The pre-restore state is kept as a local checkpoint.
-            await tabs.getByRole('button', { name: /^이 브라우저/ }).click();
             await dialog.locator('.revision-list').getByText('복원 전 원고').first().waitFor();
             await page.screenshot({ path: resolve(output, `after-restore-${width}.png`) });
             data = structuredClone(current);
