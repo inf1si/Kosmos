@@ -186,22 +186,22 @@ try {
     assert.equal(await publish().isDisabled(), true);
     const draft = { name: '합성 필명', bio: '개인 소개의 **첫 문단**.\n같은 문단의 다음 줄.\n\n둘째 문단입니다. <script>window.profileInjected=true</script>\n' + '긴글'.repeat(150) + '\n\n- 첫 목록\n- [둘째 링크](https://example.com/profile)\n\n> 인용한 문장\n\n[나쁜 링크](javascript:window.profileInjected=true)' };
     await dialog().getByLabel('이름 · 필명', { exact: true }).fill(draft.name);
-    await dialog().getByLabel('소개', { exact: true }).fill(draft.bio);
+    await dialog().getByLabel('소개 · 마크다운', { exact: true }).fill(draft.bio);
     await until(async () => { const record = await localDraft();
 
  return record && !record.dirty && record.data.authorProfile?.bio === draft.bio; }, 'private draft synced');
     assert.deepEqual(data.authorProfile, draft);
     await publicPage.goto(`${base}/about`, { waitUntil: 'domcontentloaded' });
-    await publicPage.getByText('아직 자기소개를 등록하지 않았습니다.', { exact: true }).waitFor();
+    await publicPage.getByText('자기소개를 등록하지 않았습니다.', { exact: true }).waitFor();
     assert.equal(profileWrites, 0, 'typing never publishes');
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.locator('.studio-home').waitFor();await settings();
-    assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), draft.bio);
+    assert.equal(await dialog().getByLabel('소개 · 마크다운', { exact: true }).inputValue(), draft.bio);
 
     for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) await capture(page, 'draft', palette, mode, width);
 
     // The settings pane scrolls, so it clips anything outside its box: the focus ring must fit inside it.
-    for (const width of [1280, 360]) for (const label of ['이름 · 필명', '소개']) {
+    for (const width of [1280, 360]) for (const label of ['이름 · 필명', '소개 · 마크다운']) {
         await page.setViewportSize({ width, height: 900 });
         const field = dialog().getByLabel(label, { exact: true });
 
@@ -251,7 +251,7 @@ try {
 
     failPublish = true;await publish().click();
     await dialog().getByRole('alert').waitFor();
-    assert.equal(profileWrites, 0);assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), draft.bio);
+    assert.equal(profileWrites, 0);assert.equal(await dialog().getByLabel('소개 · 마크다운', { exact: true }).inputValue(), draft.bio);
     failPublish = false;await publish().click();
     await dialog().getByText(/^공개된 내용과 같습니다 · \d{4}\. \d{1,2}\. \d{1,2}\. 공개$/).waitFor();
     assert.equal(profileWrites, 1);
@@ -277,7 +277,7 @@ try {
     }
 
     const changed = draft.bio + '\n\n아직 공개하지 않은 수정.';
-    await dialog().getByLabel('소개', { exact: true }).fill(changed);
+    await dialog().getByLabel('소개 · 마크다운', { exact: true }).fill(changed);
     await dialog().getByText(/^공개된 소개와 다른 초안입니다 · \d{4}\. \d{1,2}\. \d{1,2}\. 공개$/).waitFor();
     await publicPage.reload({ waitUntil: 'domcontentloaded' });
     await publicPage.getByRole('heading', { name: draft.name, exact: true }).waitFor();
@@ -288,14 +288,14 @@ try {
     await publicPage.getByText('아직 공개하지 않은 수정.', { exact: false }).waitFor();
     const confirmBox = () => dialog().getByRole('group', { name: '공개 취소 확인' });
     await dialog().getByRole('button', { name: '공개 취소', exact: true }).click();
-    await confirmBox().getByText('초안은 남아 다시 공개할 수 있습니다.', { exact: false }).waitFor();
+    await confirmBox().getByText('초안은 남습니다.', { exact: false }).waitFor();
     assert.equal(await confirmBox().getByRole('button', { name: '그대로 두기' }).evaluate(n => n === document.activeElement), true, 'keep focused by default');
     await confirmBox().getByRole('button', { name: '그대로 두기' }).click();
     assert.equal(await confirmBox().count(), 0);
     await dialog().getByText(/^공개된 내용과 같습니다 · /).waitFor();
     await publicPage.reload({ waitUntil: 'domcontentloaded' });
     await publicPage.getByText('아직 공개하지 않은 수정.', { exact: false }).waitFor();
-    await dialog().getByLabel('소개', { exact: true }).fill(changed + ' 더 고친 초안');
+    await dialog().getByLabel('소개 · 마크다운', { exact: true }).fill(changed + ' 더 고친 초안');
 
     for (const width of [1280, 360]) {
         // Open the confirmation at each width so the pane scrolls as it would for a reader of that width.
@@ -304,7 +304,7 @@ try {
         if (await confirmBox().count()) await confirmBox().getByRole('button', { name: '그대로 두기' }).click();
         await dialog().evaluate(node => { node.querySelector('.settings-body').scrollTop = 0; });
         await dialog().getByRole('button', { name: '공개 취소', exact: true }).click();
-        await confirmBox().getByText('지금 공개된 글은 되살릴 수 없습니다.', { exact: false }).waitFor();
+        await confirmBox().getByText('현재 공개본은 복구할 수 없습니다.', { exact: false }).waitFor();
         await until(async () => confirmBox().evaluate(box => { const clip = box.closest('.modal').getBoundingClientRect(), pane = box.closest('.settings-body').getBoundingClientRect(), b = box.getBoundingClientRect();
 
  return b.bottom <= Math.min(clip.bottom, pane.bottom) + 1 && b.top >= Math.max(clip.top, pane.top) - 1; }), `confirmation scrolled into view at ${width}`);
@@ -312,14 +312,14 @@ try {
         for (const palette of ['violet', 'cassette', 'cyber']) for (const mode of ['light', 'dark']) await capture(page, 'withdraw-confirm', palette, mode, width);
     }
 
-    await dialog().getByLabel('소개', { exact: true }).fill(changed);
-    await confirmBox().getByText('초안은 남아 다시 공개할 수 있습니다.', { exact: false }).waitFor();
+    await dialog().getByLabel('소개 · 마크다운', { exact: true }).fill(changed);
+    await confirmBox().getByText('초안은 남습니다.', { exact: false }).waitFor();
     await confirmBox().getByRole('button', { name: '공개 취소', exact: true }).click();
     await dialog().getByText('공개된 자기소개가 없습니다.', { exact: true }).waitFor();
     assert.equal(await confirmBox().count(), 0);
-    assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), changed);
+    assert.equal(await dialog().getByLabel('소개 · 마크다운', { exact: true }).inputValue(), changed);
     await publicPage.reload({ waitUntil: 'domcontentloaded' });
-    await publicPage.getByText('아직 자기소개를 등록하지 않았습니다.', { exact: true }).waitFor();
+    await publicPage.getByText('자기소개를 등록하지 않았습니다.', { exact: true }).waitFor();
     await page.keyboard.press('Escape');
     await until(async () => { const record = await localDraft();
 
@@ -333,8 +333,9 @@ try {
     const notesSettings = page.locator('.notes-tools').getByRole('button', { name: '설정', exact: true });
     await notesSettings.click();
     await dialog().locator('.settings-nav').getByRole('button', { name: '자기소개', exact: true }).click();
-    assert.equal(await dialog().getByLabel('소개', { exact: true }).inputValue(), changed);
+    assert.equal(await dialog().getByLabel('소개 · 마크다운', { exact: true }).inputValue(), changed);
     await page.keyboard.press('Escape');
+    await page.waitForFunction(el => el === document.activeElement, await notesSettings.elementHandle());
     assert.equal(await notesSettings.evaluate(el => el === document.activeElement), true);
     await notesSettings.click();
     await dialog().locator('.settings-nav').getByRole('button', { name: '자기소개', exact: true }).click();

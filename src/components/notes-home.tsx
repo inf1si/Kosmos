@@ -25,7 +25,7 @@ export function NotesHome({state,readonly,onOpen,onNew,onTemplate,onMove,onFolde
     {view==='board'?<NotesBoard state={state} readonly={readonly} onOpen={onOpen} onNew={onNew} onMove={onMove} onFolderWork={onFolderWork}/>
     :<div className="notes-home-body">
       {pinned.length>0&&<section aria-label="고정한 노트"><h3>고정한 노트 {pinned.length}</h3><div className="notes-home-grid">{pinned.map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
-      <section aria-label="최근 수정"><h3>최근 수정</h3>{recent.length?<div className="notes-home-grid">{recent.slice(0,12).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div>:<p className="muted">아직 노트가 없습니다.</p>}</section>
+      <section aria-label="최근 수정"><h3>최근 수정</h3>{recent.length?<div className="notes-home-grid">{recent.slice(0,12).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div>:<p className="muted">노트가 없습니다.</p>}</section>
       {inbox.length>0&&<section aria-label="수집함"><h3>수집함 {inbox.length} · 정리하거나 아이스박스로 옮길 노트</h3><div className="notes-home-grid">{inbox.slice(0,6).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
       <section aria-label="템플릿"><h3>템플릿으로 시작</h3><div className="notes-home-grid">{noteTemplates.map(t=>{const Icon=templateIcons[t.id];
 

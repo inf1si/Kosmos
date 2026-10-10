@@ -16,5 +16,5 @@ export function PublicAuthorProfile({initial,error:initialError}:{initial:Publis
     return()=>{active=false;};
   },[]);
 
-  return <>{error?<p className={styles.documentLead} role="alert">{error}</p>:profile?<section aria-label="개인 소개">{profile.name&&<h2>{profile.name}</h2>}<div className={styles.bio} dangerouslySetInnerHTML={{__html:renderProfileMarkdown(profile.bio)}}/></section>:<p className={styles.documentLead}>아직 자기소개를 등록하지 않았습니다.</p>}</>;
+  return <>{error?<p className={styles.documentLead} role="alert">{error}</p>:profile?<section aria-label="개인 소개">{profile.name&&<h2>{profile.name}</h2>}<div className={styles.bio} dangerouslySetInnerHTML={{__html:renderProfileMarkdown(profile.bio)}}/></section>:<p className={styles.documentLead}>자기소개를 등록하지 않았습니다.</p>}</>;
 }

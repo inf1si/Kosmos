@@ -380,12 +380,12 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
       <EditableCombobox label="시점 인물" value={doc.pov} options={wiki.filter(w=>w.category.trim()==='인물').map(w=>w.title)} disabled={readonly} onChange={pov=>onPatch({pov})}/>
       <label>작중 시간<input value={doc.storyTime} disabled={readonly} placeholder="예: 귀환일 · 08:40" onChange={e=>onPatch({storyTime:e.target.value})}/></label>
       <label className="wide">문서 요약<textarea rows={3} value={doc.summary} disabled={readonly} onChange={e=>onPatch({summary:e.target.value})}/></label>
-      <p className="field-help wide">부·장은 독서 화면의 구분입니다. 집필실 폴더와 별도로 관리합니다.</p>
+      <p className="field-help wide">독서 화면의 구분 · 폴더와 별도</p>
     </>:doc.kind==='wiki'?<>
       <EditableCombobox label="분류" value={doc.category} options={wiki.map(w=>w.category)} disabled={readonly} onChange={category=>onPatch({category})}/>
       <label className="check-label"><input type="checkbox" checked={doc.isPublic} disabled={readonly} onChange={e=>onPatch({isPublic:e.target.checked})}/>독자용 설명 공개</label>
       <label className="wide">독자용 설명<textarea rows={4} value={doc.publicSummary} disabled={readonly} onChange={e=>onPatch({publicSummary:e.target.value})}/></label>
-      <p className="field-help wide">집필용 본문과 별도로 게시됩니다. 설명이 비어 있으면 공개하지 않습니다.</p>
+      <p className="field-help wide">이 설명만 공개합니다. 빈 설명은 공개하지 않습니다.</p>
     </>:null}<CustomPropertiesForm properties={doc.customProperties} disabled={readonly} onChange={customProperties=>onPatch({customProperties})}/></div>}
     {doc.kind==='scene'&&!open&&doc.summary.trim()&&<p className="doc-summary">요약 · {doc.summary}</p>}
     <div className="doc-divider"/>
