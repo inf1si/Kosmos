@@ -34,7 +34,7 @@ if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRel
   const attached=bundle?bundle.assets.filter(a=>bundle.pages.some(p=>p.assetKeys.includes(a.key))).length:0;
 
   return <Modal open={open} onClose={close} title="노트 가져오기" description="수집함의 새 폴더에 추가합니다." wide>
-    <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p className="muted">100MB · 노트 500개까지 · 이미지 PNG/JPEG/WebP 10MB 이하</p></div>
+    <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion은 내보내기에서 Markdown &amp; CSV 또는 HTML, 하위 페이지 포함으로 받은 ZIP을 그대로 넣습니다. 맥의 스크리브너 프로젝트는 ZIP으로 압축합니다.</p><p className="muted">100MB · 노트 500개까지 · 이미지 PNG/JPEG/WebP 10MB 이하</p></div>
     <div className="transfer-pick">
       <label className="backup-upload">파일 선택<input type="file" aria-label="가져올 노트 파일" multiple accept={noteFileTypes} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
       <label className="backup-upload">폴더 선택<input type="file" aria-label="가져올 노트 폴더" multiple {...folderPicker} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
