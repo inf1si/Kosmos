@@ -6,7 +6,9 @@
 - 로컬: 타입 검사·Anti Slop·문서 검사와 최적화 빌드 통과. 합성 Chromium의 문서 생성·AI 시작 버튼(호출 없이 질문 채움)·질문 전송/답변·새 대화 취소/비우기·노트 작품 연결과 여섯 테마 × 1280/360px의 AI/휴지통/템플릿/백업/노트 AI 60개 화면에서 삭제 문구 부재·가로 넘침/페이지 오류 0을 확인했다. `test-results/concise-copy/manual/evidence.json`은 합성 자료만 포함한다.
 - 기존 조작 검사: `app-settings.mjs`(84개 화면: 값 변경/새로고침·기본값·집필실/노트 공유·초점), `author-profile.mjs`(72개 화면: 초안 저장/새로고침·공개 실패/재시도·갱신/취소·실제 로컬 SQL 권한·마크다운), `interchange-dialog.mjs`(12개 조합: 가져오기·내보내기 24개 화면), `ai-skills.mjs`(12개 조합: 저장·본문/노트 실행·선택 범위·복원) 통과. 문구에 의존하던 레이블/질문을 맞추고 Radix 닫기 초점 복귀·화면 폭 변경의 비동기 완료를 기다리도록 기존 검사만 조정했다. 첫 병렬 실행의 초기 로딩 제한 시간, 즉시 초점 단언, 폭 변경 중 사이드바 단언 실패는 수정한 검사에서 재확인했다.
 - 추가 로컬 조작: 문서 생성 → 템플릿 저장/적용 → 새 문서 휴지통 이동 → 영구 삭제 확인 취소 → 복원, 수동 복구 지점 선택 → 전체 복원 범위 표시 → ZIP 생성/파일 저장 링크, 게시 준비의 공개 범위를 확인했다. 합성 저장 4회·템플릿 1개·페이지 오류 0.
-- CI·main·운영 반영은 확인 후 기록한다. 실제 개인 원고·소개·API 키는 사용하지 않았고 기존 개인정보 안내·저장·전송·백업 계약은 유지한다.
+- 반영: [PR #57](https://github.com/inf1si/Kosmos/pull/57) head `e4e3db8`을 main `55f42f51a4dd09f3bf047f40478fe58b0d320507`에 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/38054303750)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/38054434197)는 문서 변경 규칙·타입·Node 205개/실패 0·최적화 빌드·실제 age 왕복·Anti Slop 196개 파일/19개 규칙/0건으로 성공했다. 미리보기 `dpl_3BqVcqZjgcDpDd1fNiLcymfMT4Pr` READY와 해당 head SHA를 확인했다.
+- 운영: `kosmos42`/`prj_XjQBITHbOLfAATIZjwAgqSCju5S8`의 production `dpl_CZTmmhaEHRj8784pv1D8J8NwXFH6`이 정확한 main SHA로 READY이며 www/root/기존 vercel.app 별칭을 확인했다. `https://www.orbiter.ink/studio` HTTP 200, 실제 운영 앱 + 합성 Auth/작업 공간/AI 응답으로 같은 60개 테마/폭 화면과 질문 전송·새 대화 취소/비우기·노트 연결을 확인했다(페이지 오류/가로 넘침 0). 운영 앱에서도 문서 생성·템플릿 저장/적용·휴지통 이동/영구 삭제 취소/복원·복구 지점 선택/전체 복원 범위·ZIP 생성/파일 링크·게시 준비 범위가 통과했다. 화면 폭 변경 직후의 검사 클릭이 제거되는 서랍에 걸린 첫 시도는 resize 완료를 기다린 뒤 다시 확인했다. 증거는 `test-results/concise-copy/production/`과 `production-actions/`이다.
+- 실제 개인 원고·소개·API 키와 유료 AI 호출은 사용하지 않았다. 실제 계정·다중 기기·터치·다른 브라우저의 동작은 이번 문구 작업에서 재검사하지 않았다. 개인정보 안내·저장·전송·백업 계약은 유지한다.
 
 
 ## 2026-10-09 — 책장 이름 변경 칸이 바로 닫히던 문제
