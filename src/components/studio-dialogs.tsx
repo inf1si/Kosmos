@@ -13,7 +13,7 @@ import { useStudio } from './studio-provider';
 import { Modal } from './primitives';
 import { Revision, Work, PersonalNote, newDocument, uid, plainText } from '@/lib/model';
 import { readBackup } from '@/lib/backup';
-import { cloudConfigured } from '@/lib/cloud';
+import { cloudConfigured, type ServerRevision } from '@/lib/cloud';
 import { InterchangeDialog } from './interchange-dialog';
 import { DownloadLink } from './download-link';
 import type { TransferDownload } from '@/lib/interchange';
@@ -25,6 +25,7 @@ import { DEFAULT_WORK_SHELF, moveWorkToShelf, shelfForWork, workShelves, workShe
 export function StudioDialogs({workId}:{workId:string}){
   const trashFocus=useRef<HTMLElement|null>(null);const s=useStudio();const [open,setOpen]=useState<string|null>(null);const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');const [error,setError]=useState('');
   const [history,setHistory]=useState<Revision[]>([]);const [restoreId,setRestoreId]=useState<string|null>(null);
+  const [serverHistory,setServerHistory]=useState<ServerRevision[]>([]);
   const [file,setFile]=useState<File|null>(null);const [importInfo,setImportInfo]=useState('');const [selected,setSelected]=useState<string[]>([]);const [published,setPublished]=useState(false);
   const [title,setTitle]=useState('');const [form,setForm]=useState<Work['form']>('장편');
   const [newShelf,setNewShelf]=useState(DEFAULT_WORK_SHELF);
@@ -32,13 +33,18 @@ export function StudioDialogs({workId}:{workId:string}){
   const [emergencyDownload,setEmergencyDownload]=useState<TransferDownload|null>(null);
   useEffect(()=>{setEmergencyDownload(null);},[s.conflict]);
   const work=s.state?.works.find(w=>w.id===workId);
+  // Browser checkpoints and the account's server revisions read as one timeline.
+  const points=[...history.map(r=>({key:`b:${r.id}`,label:r.label,createdAt:r.createdAt,local:r,serverId:undefined})),...serverHistory.map(r=>({key:`s:${r.id}`,label:'서버 자동 저장',createdAt:r.createdAt,local:undefined,serverId:r.id}))].sort((x,y)=>y.createdAt.localeCompare(x.createdAt));
+  const chosen=points.find(r=>r.key===restoreId);
   useEffect(()=>{const listener=(event:Event)=>{if(!(event instanceof CustomEvent))return;const parsed=z.string().safeParse(event.detail);
 
 if(!parsed.success)return;const value=parsed.data;
 
 if(value==='trash'||String(value).startsWith('settings'))trashFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setOpen(value);setMessage('');setError('');setPublished(false);setFile(null);setImportInfo('');setRestoreId(null);
 
-if(value==='backup')void s.revisions().then(setHistory);
+if(value==='backup'){setServerHistory([]);void s.revisions().then(setHistory);
+
+if(cloudConfigured)void s.serverRevisions().then(setServerHistory).catch(()=>setServerHistory([]));}
 
 // An empty draft (a new or replacement document) stays unchecked so it is not published by default.
 if(value==='publish')setSelected(work?.documents.filter(d=>d.kind==='scene'&&plainText(d.content).trim()).map(d=>d.id)||[]);
@@ -58,10 +64,10 @@ try{await fn();}catch(e){setError(e instanceof Error?e.message:'작업을 완료
   return <><InterchangeDialog workId={workId}/><SettingsDialog open={!!open?.startsWith('settings')} section={sections.find(section=>section.id===open?.split(':')[1])?.id} onClose={()=>setOpen(null)} onReturnFocus={()=>trashFocus.current?.isConnected&&trashFocus.current.focus()}/><TrashDialog open={open==='trash'} onClose={()=>setOpen(null)} onReturnFocus={()=>trashFocus.current?.isConnected&&trashFocus.current.focus()}/>
     <Modal open={open==='backup'} onClose={()=>{if(!busy)setOpen(null);}} title="백업과 복구" wide>
       <div className="backup-overview"><Archive size={25}/><div><strong>작업 공간 전체 ZIP 백업</strong><p>마지막 파일 생성: {s.lastExportAt?new Date(s.lastExportAt).toLocaleString('ko-KR'):'아직 없음'}</p></div><button className="primary" disabled={busy} onClick={()=>void run(async()=>{setDownload(null);setDownload(await s.exportBackup());setMessage('백업 파일을 만들었습니다.');})}><Download size={16}/>백업 내려받기</button></div><DownloadLink file={open==='backup'?download:null}/>
-      <div className="backup-columns"><section><h3><History size={17}/>복구 이력</h3><button className="button" disabled={busy} onClick={()=>void run(async()=>{await s.snapshot('수동 복구 지점');setHistory(await s.revisions());setMessage('현재 원고를 보관했습니다.');})}>지금 복구 지점 만들기</button><div className="revision-list">{history.map(r=><button key={r.id} className={restoreId===r.id?'selected':''} onClick={()=>setRestoreId(r.id)}><span>{r.label}</span><small>{new Date(r.createdAt).toLocaleString('ko-KR')}</small></button>)}</div>{restoreId&&<div className="restore-choice"><p>작업 공간 전체를 선택한 시점으로 되돌립니다.</p><button className="button" disabled={busy} onClick={()=>void run(async()=>{await s.restore(history.find(r=>r.id===restoreId)!.data);setHistory(await s.revisions());setRestoreId(null);setMessage('이전 원고를 새 작업본으로 복원했습니다.');})}>선택한 원고 복원</button></div>}</section>
+      <div className="backup-columns"><section><h3><History size={17}/>복구 이력</h3><button className="button" disabled={busy} onClick={()=>void run(async()=>{await s.snapshot('수동 복구 지점');setHistory(await s.revisions());setMessage('현재 원고를 보관했습니다.');})}>지금 복구 지점 만들기</button><div className="revision-list">{points.map(r=><button key={r.key} className={restoreId===r.key?'selected':''} onClick={()=>setRestoreId(r.key)}><span>{r.label}</span><small>{new Date(r.createdAt).toLocaleString('ko-KR')}</small></button>)}</div>{chosen&&<div className="restore-choice"><p>현재 상태를 이력에 남기고 이 시점으로 되돌립니다.</p><button className="button" disabled={busy} onClick={()=>void run(async()=>{await (chosen.local?s.restore(chosen.local.data):s.restoreServerRevision(chosen.serverId!));setHistory(await s.revisions());setServerHistory(await s.serverRevisions());setRestoreId(null);setMessage('이전 원고를 새 작업본으로 복원했습니다.');})}>선택한 원고 복원</button></div>}</section>
         <section><h3><Upload size={17}/>백업 파일 복원</h3><label className="backup-upload">ZIP 파일 선택<input aria-label="백업 ZIP 파일" type="file" accept=".zip,application/zip" disabled={busy} onChange={e=>{const chosen=e.target.files?.[0];
 
-if(!chosen)return;void run(async()=>{const parsed=await readBackup(chosen);setFile(chosen);setImportInfo(`${parsed.data.works.length}개 작품 · ${parsed.data.works.reduce((n,w)=>n+w.documents.length,0)}개 문서 · ${parsed.data.notes?.length||0}개 개인 노트 · ${parsed.assets.length}개 첨부`);setMessage('파일의 무결성을 확인했습니다.');});}}/></label>{file&&<div className="restore-choice"><strong>{file.name}</strong><p>{importInfo}</p><p>작업 공간 전체를 이 백업으로 바꿉니다.</p><button className="primary" disabled={busy} onClick={()=>void run(async()=>{await s.importBackup(file);setFile(null);setHistory(await s.revisions());setMessage('원고와 첨부를 복원했습니다.');})}>백업 복원</button></div>}</section></div>
+if(!chosen)return;void run(async()=>{const parsed=await readBackup(chosen);setFile(chosen);setImportInfo(`${parsed.data.works.length}개 작품 · ${parsed.data.works.reduce((n,w)=>n+w.documents.length,0)}개 문서 · ${parsed.data.notes?.length||0}개 개인 노트 · ${parsed.assets.length}개 첨부`);setMessage('파일의 무결성을 확인했습니다.');});}}/></label>{file&&<div className="restore-choice"><strong>{file.name}</strong><p>{importInfo}</p><p>현재 상태를 복구 이력에 남긴 뒤 작업 공간 전체를 이 백업으로 바꿉니다.</p><button className="primary" disabled={busy} onClick={()=>void run(async()=>{await s.importBackup(file);setFile(null);setHistory(await s.revisions());setMessage('원고와 첨부를 복원했습니다.');})}>백업 복원</button></div>}</section></div>
       <OffsiteBackupPanel open={open==='backup'}/>{message&&<p className="success-message" role="status"><Check size={15}/>{message}</p>}{error&&<p className="error-message" role="alert">{error}</p>}
     </Modal>
     <Modal open={open==='publish'} onClose={()=>{if(!busy)setOpen(null);}} title="공개 판본 만들기" description="선택한 원고와 각주를 공개합니다. 이후 수정은 다시 게시해야 반영됩니다." wide>
