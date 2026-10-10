@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Workspace, LocalRecord, uid, Revision, Publication, makePublication, withdrawPublication, AssetMeta } from '@/lib/model';
 import { seedWorkspace } from '@/lib/seed';
 import { db, writeLocal, checkpoint, LocalConflict, listRevisions } from '@/lib/database';
-import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud, unpublishCloud, authorLibrary, reorderLibrary } from '@/lib/cloud';
+import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud, unpublishCloud, authorLibrary, reorderLibrary, cloudRevisions, cloudRevision, type ServerRevision } from '@/lib/cloud';
 import { previewPositions, previewPublicationPosition, previewPublications, reorderPreviewLibrary, type LibraryItem } from '@/lib/library-order';
 import { createBackup, readBackup } from '@/lib/backup';
 import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
@@ -29,6 +29,7 @@ type StudioContextValue={
   user:string|null;canUse:boolean;epoch:number;lastExportAt:string|null;
   update:(fn:(state:Workspace)=>Workspace)=>void;
   snapshot:(label:string)=>Promise<void>;revisions:()=>Promise<Revision[]>;restore:(data:Workspace)=>Promise<void>;
+  serverRevisions:()=>Promise<ServerRevision[]>;restoreServerRevision:(id:string)=>Promise<void>;
   exportBackup:()=>Promise<TransferDownload>;importBackup:(file:File)=>Promise<void>;
   importDocuments:(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']})=>Promise<string>;
   exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
@@ -288,6 +289,13 @@ if(subscription)void cloud().removeChannel(subscription);};
   },[!!state,namespace,checkpointMinutes]);
 
   async function restore(data:Workspace){await flush();await checkpoint(namespace,dataRef.current!,'복원 전 원고');update(()=>structuredClone(data));await flush();setEpoch(x=>x+1);}
+
+  async function serverRevisions(){return cloudConfigured&&cloudId.current?cloudRevisions(cloudId.current):[];}
+
+  async function restoreServerRevision(id:string){
+    if(!cloudConfigured||!cloudId.current)throw new Error('서버 이력은 로그인한 집필실에서 사용할 수 있습니다.');
+    await restore(await cloudRevision(cloudId.current,id));
+  }
 
   async function exportBackup(){
     // A recovery export must remain available when local saving or conflict resolution fails.
@@ -632,7 +640,7 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
   }
 
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,serverRevisions,restoreServerRevision,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
     libraryPublications,setLibraryOrder,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});
 

@@ -46,6 +46,25 @@ export async function fetchCloud(){
   return data?{id:z.string().parse(data.id),data:workspaceSchema.parse(data.payload),version:Number(data.version)}:null;
 }
 
+export type ServerRevision={id:string;createdAt:string};
+
+// save_workspace keeps the previous payload about every 10 minutes (latest 50); RLS limits reads to the owner.
+export async function cloudRevisions(workspaceId:string):Promise<ServerRevision[]>{
+  const {data,error}=await cloud().from('workspace_revisions').select('id,created_at').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(50);
+
+  if(error)throw new Error('서버 이력을 불러오지 못했습니다.');
+
+  return z.array(z.object({id:z.string(),created_at:z.string()})).parse(data||[]).map(r=>({id:r.id,createdAt:r.created_at}));
+}
+
+export async function cloudRevision(workspaceId:string,id:string){
+  const {data,error}=await cloud().from('workspace_revisions').select('payload').eq('workspace_id',workspaceId).eq('id',id).single();
+
+  if(error||!data)throw new Error('서버 이력을 불러오지 못했습니다.');
+
+  return workspaceSchema.parse(data.payload);
+}
+
 export async function initializeCloud(data:Workspace){
   const {data:result,error}=await cloud().rpc('initialize_workspace',{p_payload:data});
 
