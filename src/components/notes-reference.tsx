@@ -39,8 +39,8 @@ export function NotesReference({workId,readonly,onOpenNote}:{workId:string;reado
     <h3>빠른 메모</h3>
     <QuickNoteForm disabled={readonly} rows={3} onOpenNote={onOpenNote}/>
     <div className="sidebar-search notes-reference-search"><Search size={15}/><input aria-label="노트 검색" placeholder="노트 제목 · 본문 · 태그" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<IconButton label="노트 검색 지우기" onClick={()=>setQuery('')}><X size={14}/></IconButton>}</div>
-    {!search.trim()&&<><h3>이 작품에 연결된 노트</h3>{linked.length?linked.map(note=><NoteCard key={note.id} note={note} onOpen={setPreviewId}/>):<p className="muted">노트에서 이 작품을 연결하면 여기에 표시됩니다.</p>}</>}
+    {!search.trim()&&<><h3>이 작품에 연결된 노트</h3>{linked.length?linked.map(note=><NoteCard key={note.id} note={note} onOpen={setPreviewId}/>):<p className="muted">연결된 노트가 없습니다.</p>}</>}
     <h3>{search.trim()?`검색 결과 ${found.length}개`:'최근 노트'}</h3>
-    {found.length?found.map(note=><NoteCard key={note.id} note={note} onOpen={setPreviewId}/>):<p className="muted">{search.trim()?'일치하는 노트가 없습니다.':'아직 노트가 없습니다.'}</p>}
+    {found.length?found.map(note=><NoteCard key={note.id} note={note} onOpen={setPreviewId}/>):<p className="muted">{search.trim()?'일치하는 노트가 없습니다.':'노트가 없습니다.'}</p>}
   </div>;
 }

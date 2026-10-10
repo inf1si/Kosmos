@@ -174,7 +174,7 @@ try{
   await page.locator('.chat-context summary').waitFor();assert.match(await page.locator('.chat-context summary').innerText(),/원고 제외 · 참고 0개/);
   await page.getByRole('button',{name:'AI 대화',exact:true}).click();
 
-  // Data: the checkpoint interval is stored; fixed sync timings are only shown.
+  // Data: the checkpoint interval is stored; sync timings remain internal.
   await openSettings();await section('저장 · 백업').click();
   await dialog().getByRole('combobox',{name:'자동 복구 지점 간격'}).selectOption('5');assert.equal((await prefs()).checkpointMinutes,5);
   await dialog().getByRole('button',{name:'백업과 복구'}).click();await page.getByRole('dialog',{name:'백업과 복구'}).waitFor();assert.equal(await dialog().count(),0);await page.keyboard.press('Escape');
@@ -212,13 +212,14 @@ try{
   assert.equal(await section('노트').getAttribute('aria-pressed'),'true','opens at the notes section from notes');
   assert.equal(await dialog().getByRole('group',{name:'노트 홈 보기'}).getByRole('button',{name:'최근'}).getAttribute('aria-pressed'),'true');
   await close();
+  await page.waitForFunction(el=>el===document.activeElement,await page.locator('.notes-tools').getByRole('button',{name:'설정',exact:true}).elementHandle());
   const active=await page.evaluate(()=>document.activeElement?.outerHTML.slice(0,120));assert.equal(await page.locator('.notes-tools').getByRole('button',{name:'설정',exact:true}).evaluate(el=>el===document.activeElement),true,'focus returns to the opener: '+active);
 
   // Layout: six palettes x two widths, no horizontal overflow, dialog inside the viewport.
   await page.goto(`${base}/studio`);await editor().waitFor();
 
   for(const width of [1280,360])for(const palette of ['violet','cassette','cyber'])for(const theme of ['light','dark']){
-    await page.setViewportSize({width,height:width===360?740:900});
+    await page.setViewportSize({width,height:width===360?740:900});await page.waitForTimeout(100); // Let the resize handler settle the sidebar drawer before opening settings.
     await page.evaluate(({palette,theme})=>{localStorage.setItem('orbis-palette',palette);localStorage.setItem('orbis-theme',theme);document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=theme;},{palette,theme});
 
     if(width===360&&!(await page.locator('.studio-sidebar').isVisible()))await page.getByRole('button',{name:'사이드바 열기'}).click();

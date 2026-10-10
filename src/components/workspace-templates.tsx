@@ -60,13 +60,13 @@ try{await operation();}catch(e){setError(e instanceof Error?e.message:'템플릿
         return <Fragment key={node.id}>{heading}<label className="transfer-export-row" style={{paddingInlineStart:12+Math.min(depth,3)*12}} title={path}><input type="checkbox" aria-label={`${label(node)} 템플릿에 포함`} checked={covered.has(node.id)} disabled={readonly||inherited} onChange={e=>setSelected(ids=>e.target.checked?[...ids,node.id]:ids.filter(id=>id!==node.id))}/>{node.type==='folder'?<Folder size={15}/>:<DocIcon doc={work.documents.find(d=>d.id===node.id)!}/>}<span>{label(node)}</span></label></Fragment>;
       })}</div>
       <p className="field-help">{noun} {count}개 · 폴더 {nav.nodes.filter(n=>n.type==='folder'&&covered.has(n.id)).length}개</p>
-      <p className="field-help">본문·속성·첨부·내부 연결을 복사합니다. 묶음 밖 문서 연결·AI 대화·공개 상태·작품 연결은 복사하지 않습니다.</p>
+      <p className="field-help">본문·속성·첨부·내부 연결 포함 · 외부 연결·작품 연결·AI 대화·공개 상태 제외</p>
       <div className="modal-actions"><button type="button" className="button primary" disabled={readonly||!count||!name.trim()} onClick={()=>void run(save)}>{busy?'저장 중':'템플릿 저장'}</button></div>
     </>:templates.length?<>
       <div className="form-grid"><label>저장한 템플릿<select aria-label="저장한 템플릿" disabled={readonly} value={templateId} onChange={e=>{setId(e.target.value);}}>{templates.map(t=><option key={t.id} value={t.id}>{t.name} · {t.scope==='work'?t.documents.length:t.notes.length}개</option>)}</select></label><label>넣을 위치<select aria-label="템플릿을 넣을 위치" disabled={readonly} value={destination} onChange={e=>setLocation(e.target.value)}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label></div>
-      <p className="field-help"><Files size={14}/> {template?.scope==='work'?template.documents.length:template?.notes.length}개를 새 {noun}로 만듭니다. 원본과 템플릿은 유지됩니다.</p>
+      <p className="field-help"><Files size={14}/> {template?.scope==='work'?template.documents.length:template?.notes.length}개 {noun} 추가</p>
       <div className="modal-actions"><button type="button" className="button" disabled={readonly} onClick={()=>setConfirmDelete(true)}><Trash2 size={14}/>템플릿 삭제</button><button type="button" className="button primary" disabled={readonly} onClick={()=>void run(apply)}>{busy?'만드는 중':'템플릿으로 만들기'}</button></div>
-    </>:<p className="muted">저장한 템플릿이 없습니다. 새 템플릿 저장에서 항목을 선택하세요.</p>}
+    </>:<p className="muted">저장한 템플릿이 없습니다.</p>}
     {error&&<p className="error-message" role="alert">{error}</p>}
     <Modal open={confirmDelete} onClose={()=>{if(!busy)setConfirmDelete(false);}} title="템플릿 삭제"><p>‘{template?.name}’ 템플릿을 삭제할까요?</p><p className="field-help">이미 만든 문서는 유지됩니다.</p><div className="modal-actions"><button type="button" className="button" disabled={busy} onClick={()=>setConfirmDelete(false)}>취소</button><button type="button" className="button danger" disabled={readonly} onClick={()=>void run(async()=>{await s.deleteTemplate(templateId);setConfirmDelete(false);})}>삭제</button></div>{error&&<p className="error-message" role="alert">{error}</p>}</Modal>
   </Modal>;

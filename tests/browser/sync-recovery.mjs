@@ -137,7 +137,7 @@ request.onerror=()=>reject(request.error);}),newer);
     }
 
     if(scenario==='nonempty'||scenario==='version'||scenario==='tab'){
-      await page.getByRole('dialog',{name:'두 원고를 확인하세요',exact:true}).waitFor();assert.equal(attempts.length,1);assert.equal(attempts[0].p_request_id,row.pendingRequest.id);assert.equal((await stored()).dirty,true);assert.equal((await stored()).pendingRequest.id,row.pendingRequest.id);assert.equal(remote.trash.length,scenario==='nonempty'?1:0);
+      await page.getByRole('dialog',{name:'저장 충돌',exact:true}).waitFor();assert.equal(attempts.length,1);assert.equal(attempts[0].p_request_id,row.pendingRequest.id);assert.equal((await stored()).dirty,true);assert.equal((await stored()).pendingRequest.id,row.pendingRequest.id);assert.equal(remote.trash.length,scenario==='nonempty'?1:0);
 
 if(scenario==='tab')assert.equal((await stored()).data.works[0].documents[0].title,'다른 창의 최신 제목');
     }else{

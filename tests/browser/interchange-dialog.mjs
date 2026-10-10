@@ -90,6 +90,7 @@ try {
         for (const palette of ['violet', 'cassette', 'cyber'])
             for (const theme of ['light', 'dark']) {
                 await page.setViewportSize({ width, height: 860 });
+                await page.waitForTimeout(100); // Let the resize handler switch to the sidebar drawer before opening it.
                 await page.evaluate(([palette, theme]) => { document.documentElement.dataset.palette = palette; document.documentElement.dataset.theme = theme; }, [palette, theme]);
 
                 // 가져오기 · 내보내기 opens from 설정 → 저장 · 백업.

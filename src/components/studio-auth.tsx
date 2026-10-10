@@ -38,7 +38,7 @@ try{await action();}catch(e){setError(e instanceof Error?e.message:'로그인하
 
   return <div className="login-screen"><span className="login-mark" aria-hidden="true">◌</span><h1>Orbis Tertius 집필실</h1>{cloudConfigured?<>
     <button type="button" className="button login-google" disabled={busy} onClick={()=>void run(()=>redirectToGoogle('login'))}>Google로 로그인</button>
-    <p className="login-help">처음 연결할 때는 기존 이메일로 로그인한 뒤 계정 메뉴에서 Google 계정을 연결하세요.</p>
+    <p className="login-help">Google 첫 연결은 이메일 로그인 후 계정 메뉴에서 합니다.</p>
     <form onSubmit={e=>{e.preventDefault();void run(async()=>{await s.login(email,password);setBusy(false);});}}><label>이메일<input type="email" autoComplete="username" required disabled={busy} value={email} onChange={e=>setEmail(e.target.value)}/></label><label>비밀번호<input type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={e=>setPassword(e.target.value)}/></label><button className="primary" disabled={busy}>집필실 열기</button></form>
     {(error||s.error)&&<p className="error-message login-help" role="alert">{error||s.error}</p>}
   </>:<p>작가용 클라우드 연결을 설정한 뒤 이용할 수 있습니다.</p>}<Link href="/library">공개 서재</Link></div>;
@@ -66,8 +66,8 @@ try{await s.flush();await s.syncNow();await redirectToGoogle('link');}catch(e){s
 try{await s.logout();}catch(e){setError(e instanceof Error?e.message:'로그아웃하지 못했습니다. 다시 시도하세요.');setBusy(null);}}
 
   return <Popover open={open} onOpenChange={setOpen} title="로그인 계정" width={300} align="end" trigger={<IconButton label="로그인 계정"><User size={16}/></IconButton>}>
-    <div className="account-login"><p>{linked===null?'연결 상태 확인 중':linked?'Google 계정이 연결되어 있습니다.':'Google 계정을 연결하면 다음부터 Google로 로그인할 수 있습니다.'}</p>
-      {linked===false&&<><p className="muted">기존 원고와 작가 권한을 그대로 사용합니다.</p><button type="button" className="button" disabled={!!busy||!!s.conflict} onClick={()=>void connect()}>{busy==='link'?'연결 중…':'Google 계정 연결'}</button></>}
+    <div className="account-login"><p>{linked===null?'연결 상태 확인 중':linked?'Google 연결됨':'Google 미연결'}</p>
+      {linked===false&&<><button type="button" className="button" disabled={!!busy||!!s.conflict} onClick={()=>void connect()}>{busy==='link'?'연결 중…':'Google 계정 연결'}</button></>}
       <button type="button" className="button" disabled={!!busy} onClick={()=>void logout()}><LogOut size={15}/>{busy==='logout'?'로그아웃 중…':'로그아웃'}</button>
       {error&&<p className="error-message" role="alert">{error}</p>}
     </div>

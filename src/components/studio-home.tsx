@@ -126,7 +126,7 @@ return false;}
           {!collapsed&&(items.length?<div className="notes-home-grid">{items.map(work=>{const move=(at:HTMLElement|null)=>openForm({type:'move',id:work.id},at);
 
             return <div className="work-shelf-card" key={work.id} data-work-id={work.id} {...dragging.workProps(work.id)}>{dragging.grip('work',work.id,work.title)}<HomeWorkCard work={work} current={work.id===currentWorkId} readonly={readonly} canTrash={state.works.length>1} onOpen={()=>onOpenWork(work.id)} onEdit={()=>onEditWork(work.id)} onConfirm={onConfirmWork} onMove={move}/></div>;
-          })}</div>:<p className="field-help">아직 작품이 없습니다.</p>)}
+          })}</div>:<p className="field-help">작품이 없습니다.</p>)}
         </section>;
       })}
       {!form&&!deleting&&error&&<p className="error-message" role="alert">{error}</p>}

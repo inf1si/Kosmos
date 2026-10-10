@@ -47,22 +47,21 @@ return {...state,aiPreferences:next};});
   async function remove(){
     if(readonly||!selected)return;setBusy(true);setError('');
 
-    try{await studio.snapshot('AI 스킬 삭제 전');studio.update(state=>({...state,aiPreferences:deleteSkill(state.aiPreferences,selectedId,baseline.current.updatedAt)}));baseline.current=blank;setSelectedId('new');setTitle('');setDescription('');setPrompt('');setDeleteOpen(false);setNotice('스킬을 삭제했습니다. 삭제 전 설정은 복구 이력에 있습니다.');}
+    try{await studio.snapshot('AI 스킬 삭제 전');studio.update(state=>({...state,aiPreferences:deleteSkill(state.aiPreferences,selectedId,baseline.current.updatedAt)}));baseline.current=blank;setSelectedId('new');setTitle('');setDescription('');setPrompt('');setDeleteOpen(false);setNotice('스킬을 삭제했습니다.');}
     catch(e){setError(e instanceof Error?e.message:'삭제하지 못했습니다.');}finally{setBusy(false);}
   }
 
   return <section ref={section} aria-labelledby="ai-skill-title" className="ai-prompt-editor"><h3 id="ai-skill-title">내 스킬</h3>
-    <p className="ai-settings-help">자주 하는 요청을 저장해 두고 노트·집필실 본문의 <strong>/</strong> 메뉴, 선택한 글 우클릭, AI 질문 창에서 부릅니다. 선택한 글(없으면 커서가 있는 문단)과 현재 프리셋이 함께 전송되며, 전송은 직접 합니다.</p>
     <div className="ai-preset-picker"><label>편집할 스킬<select ref={picker} aria-label="편집할 스킬" value={selectedId} disabled={readonly} onChange={e=>{if(dirty){setPending(e.target.value);setDeleteOpen(false);}else load(e.target.value);}}>{skills.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}{selectedId!=='new'&&!selected&&<option value={selectedId}>삭제된 스킬의 편집본</option>}<option value="new">새 스킬 작성</option></select></label></div>
-    {pending&&<div className="ai-prompt-confirm" role="status"><p>저장하지 않은 편집이 있습니다. 저장하거나 편집 내용을 버리고 전환하세요.</p><button type="button" onClick={()=>load(pending)} disabled={readonly}>편집을 버리고 전환</button><button type="button" onClick={()=>setPending(null)}>계속 편집</button></div>}
-    {remoteChanged&&<div className="ai-prompt-confirm" role="status"><p>다른 창에서 이 스킬이 바뀌었거나 삭제되었습니다. 최신 내용을 불러오세요.</p><button type="button" onClick={()=>load(selected?selected.id:'new')}>최신 내용 불러오기</button></div>}
+    {pending&&<div className="ai-prompt-confirm" role="status"><p>저장하지 않은 변경이 있습니다.</p><button type="button" onClick={()=>load(pending)} disabled={readonly}>편집을 버리고 전환</button><button type="button" onClick={()=>setPending(null)}>계속 편집</button></div>}
+    {remoteChanged&&<div className="ai-prompt-confirm" role="status"><p>다른 창에서 스킬이 바뀌었거나 삭제되었습니다.</p><button type="button" onClick={()=>load(selected?selected.id:'new')}>최신 내용 불러오기</button></div>}
     <label>스킬 이름<input aria-label="스킬 이름" maxLength={40} value={title} disabled={readonly} placeholder="예: 존댓말로 바꾸기" onChange={e=>setTitle(e.target.value)}/></label>
-    <label>설명 (선택)<input aria-label="스킬 설명" maxLength={120} value={description} disabled={readonly} placeholder="/ 메뉴에서 이 단어로도 찾을 수 있습니다" onChange={e=>setDescription(e.target.value)}/></label>
+    <label>설명 (선택)<input aria-label="스킬 설명" maxLength={120} value={description} disabled={readonly} placeholder="검색에 사용할 설명" onChange={e=>setDescription(e.target.value)}/></label>
     <label htmlFor="ai-skill-prompt">요청</label>
     <textarea id="ai-skill-prompt" aria-label="스킬 요청" rows={6} maxLength={2000} value={prompt} disabled={readonly} placeholder="예: 보낸 글을 인물의 존댓말 말투로 바꿔 줘. 설명 없이 바꾼 글만 답해 줘." onChange={e=>setPrompt(e.target.value)}/>
-    <p className="ai-settings-help">{prompt.length.toLocaleString()} / 2,000자 · 스킬 {skills.length} / {MAX_SKILLS}개. 요청에서 함께 보낸 글은 ‘보낸 글’이라고 부르면 됩니다. 저장·삭제는 AI를 호출하지 않으며 원고와 함께 동기화·백업됩니다.</p>
+    <p className="ai-settings-help">{prompt.length.toLocaleString()} / 2,000자 · 스킬 {skills.length} / {MAX_SKILLS}개</p>
     <div className="ai-settings-actions">{selected&&<button type="button" disabled={readonly||remoteChanged} onClick={()=>setDeleteOpen(v=>!v)}>스킬 삭제</button>}<button type="button" disabled={readonly||remoteChanged||!title.trim()||!prompt.trim()||(!dirty&&selectedId!=='new')} onClick={save}>{selectedId==='new'?'새 스킬 저장':'스킬 저장'}</button></div>
-    {deleteOpen&&<div className="ai-prompt-confirm"><p>삭제 전 설정을 복구 이력에 보관합니다.</p><button type="button" disabled={readonly} onClick={()=>void remove()}>삭제</button><button type="button" onClick={()=>setDeleteOpen(false)}>취소</button></div>}
+    {deleteOpen&&<div className="ai-prompt-confirm"><p>이 스킬을 삭제할까요?</p><button type="button" disabled={readonly} onClick={()=>void remove()}>삭제</button><button type="button" onClick={()=>setDeleteOpen(false)}>취소</button></div>}
     {error&&<p role="alert" className="ai-settings-error">{error}</p>}{notice&&<p role="status" className="ai-settings-notice">{notice}</p>}
   </section>;
 }
