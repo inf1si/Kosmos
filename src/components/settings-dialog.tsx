@@ -114,7 +114,7 @@ function DataSection(){
     <Row label="자동 복구 지점" hint={`기본 ${defaultAppPreferences.checkpointMinutes}분마다 · 백업과 복구에서 되돌림`}><select aria-label="자동 복구 지점 간격" value={app.checkpointMinutes} onChange={e=>{const minutes=checkpointIntervals.find(n=>n===Number(e.target.value));
 
 if(minutes)update({checkpointMinutes:minutes});}}>{checkpointIntervals.map(n=><option key={n} value={n}>{n}분마다</option>)}</select></Row>
-    <div className="settings-links"><button type="button" className="button" onClick={()=>modal('backup')}><Archive size={14}/>백업과 복구</button><button type="button" className="button" onClick={()=>modal('interchange')}><ArrowLeftRight size={14}/>가져오기 · 내보내기</button><button type="button" className="button" disabled={readonly} onClick={()=>modal('note-import')}><FileUp size={14}/>노트 가져오기</button><button type="button" className="button" disabled={readonly} onClick={()=>modal('template')}><Files size={14}/>템플릿</button><button type="button" className="button" onClick={()=>modal('trash')}><Trash2 size={14}/>휴지통</button></div>
+    <div className="settings-links"><button type="button" className="button" data-settings-child="backup" onClick={()=>modal('backup')}><Archive size={14}/>백업과 복구</button><button type="button" className="button" data-settings-child="interchange" onClick={()=>modal('interchange')}><ArrowLeftRight size={14}/>가져오기 · 내보내기</button><button type="button" className="button" disabled={readonly} data-settings-child="note-import" onClick={()=>modal('note-import')}><FileUp size={14}/>노트 가져오기</button><button type="button" className="button" disabled={readonly} data-settings-child="template" onClick={()=>modal('template')}><Files size={14}/>템플릿</button><button type="button" className="button" data-settings-child="trash" onClick={()=>modal('trash')}><Trash2 size={14}/>휴지통</button></div>
   </>;
 }
 
@@ -136,14 +136,15 @@ function KeysSection(){
 }
 
 /** App-wide settings in one place. The body mounts only while open, so the AI section asks for providers only when shown. */
-export function SettingsDialog({open,section='display',onClose,onReturnFocus}:{open:boolean;section?:SettingsSection;onClose:()=>void;onReturnFocus?:()=>void}){
-  return <Modal open={open} onClose={onClose} onReturnFocus={onReturnFocus} title="설정" wide className="settings-modal"><SettingsBody initial={section}/></Modal>;
+export function SettingsDialog({open,section='display',onClose,onReturnFocus,returnTo}:{open:boolean;section?:SettingsSection;onClose:()=>void;onReturnFocus?:()=>void;returnTo?:string}){
+  return <Modal open={open} onClose={onClose} onReturnFocus={onReturnFocus} title="설정" wide className="settings-modal"><SettingsBody initial={section} returnTo={returnTo}/></Modal>;
 }
 
-function SettingsBody({initial}:{initial:SettingsSection}){
+function SettingsBody({initial,returnTo}:{initial:SettingsSection;returnTo?:string}){
   const [section,setSection]=useState<SettingsSection>(initial);const nav=useRef<HTMLElement>(null);
   // The narrow layout scrolls the section list sideways; keep the chosen one in view.
   useEffect(()=>{nav.current?.querySelector('[aria-pressed=true]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[section]);
+  useEffect(()=>{if(returnTo)nav.current?.parentElement?.querySelectorAll<HTMLButtonElement>('.settings-links button').forEach(button=>{if(button.dataset.settingsChild===returnTo)button.focus();});},[returnTo]);
   const body={display:<DisplaySection/>,manuscript:<ManuscriptSection/>,tools:<ToolsSection/>,notes:<NotesSection/>,ai:<AISection/>,data:<DataSection/>,keys:<KeysSection/>,profile:<AuthorProfilePanel/>}[section];
 
   return <div className="settings-layout">

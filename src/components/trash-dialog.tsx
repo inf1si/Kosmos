@@ -7,7 +7,7 @@ import { trashRows, type TrashRow } from '@/lib/workspace-trash';
 import { useStudio } from './studio-provider';
 import { IconButton, Modal } from './primitives';
 
-export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:()=>void;onReturnFocus:()=>void}){
+export function TrashDialog({open,onClose,onReturnFocus,onBack}:{open:boolean;onClose:()=>void;onReturnFocus:()=>void;onBack?:()=>void}){
   const s=useStudio(),search=useRef<HTMLInputElement>(null),confirmFocus=useRef<HTMLElement|null>(null);
   const [query,setQuery]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [confirm,setConfirm]=useState<{ids:string[];title?:string}|null>(null);
@@ -37,7 +37,7 @@ export function TrashDialog({open,onClose,onReturnFocus}:{open:boolean;onClose:(
   }
 
   return <>
-    <Modal open={open} onClose={()=>{if(!busy&&!confirm)onClose();}} title="휴지통" wide onReturnFocus={onReturnFocus}>
+    <Modal open={open} onClose={()=>{if(!busy&&!confirm)onClose();}} onBack={onBack?()=>{if(!busy&&!confirm)onBack();}:undefined} backDisabled={busy||!!confirm} title="휴지통" wide onReturnFocus={onReturnFocus}>
       <div className="trash-tools"><div className="sidebar-search"><Search size={15}/><input ref={search} autoFocus aria-label="휴지통 검색" placeholder="제목 · 작품 검색" value={query} onChange={e=>setQuery(e.target.value)}/></div><span className="field-help">{rows.length}개</span><button type="button" className="button" disabled={readonly||!items.length} onClick={e=>requestPurge(items.map(item=>item.id),e.currentTarget)}>비우기</button></div>
       <div className="trash-list" aria-label="휴지통 목록">
         {visible.map(row=><div className="reference-card trash-row" key={row.id} data-trash-id={row.id}>

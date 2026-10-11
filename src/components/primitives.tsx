@@ -3,7 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import { useId,useRef, type ReactNode, type ButtonHTMLAttributes, type CSSProperties, type RefObject } from 'react';
 
 export function IconButton({label,children,...props}:ButtonHTMLAttributes<HTMLButtonElement>&{label:string;children:ReactNode}){
@@ -12,11 +12,16 @@ export function IconButton({label,children,...props}:ButtonHTMLAttributes<HTMLBu
 
 export function TooltipProvider({children}:{children:ReactNode}){return <Tooltip.Provider delayDuration={350}>{children}</Tooltip.Provider>;}
 
-export function Modal({open,onClose,title,description,children,wide=false,onReturnFocus,className=''}:{open:boolean;onClose:()=>void;title:string;description?:string;children:ReactNode;wide?:boolean;onReturnFocus?:()=>void;className?:string}){
-  const descriptionId=useId();
+export function Modal({open,onClose,title,description,children,wide=false,onReturnFocus,onBack,backDisabled=false,className=''}:{open:boolean;onClose:()=>void;title:string;description?:string;children:ReactNode;wide?:boolean;onReturnFocus?:()=>void;onBack?:()=>void;backDisabled?:boolean;className?:string}){
+  const descriptionId=useId(),goingBack=useRef(false);
+  // Consume the flag on close: autofocus inputs can skip Radix's open-autofocus event.
 
-  return <Dialog.Root open={open} onOpenChange={value=>{if(!value)onClose();}}><Dialog.Portal><Dialog.Overlay className="modal-overlay"/><Dialog.Content className={`modal ${wide?'modal-wide':''} ${className}`} aria-describedby={description?descriptionId:undefined} onCloseAutoFocus={onReturnFocus?e=>{e.preventDefault();onReturnFocus();}:undefined}>
-    <div className="modal-heading"><Dialog.Title>{title}</Dialog.Title><Dialog.Close className="icon-button" aria-label="닫기"><X size={18}/></Dialog.Close></div>
+  return <Dialog.Root open={open} onOpenChange={value=>{if(!value)onClose();}}><Dialog.Portal><Dialog.Overlay className="modal-overlay"/><Dialog.Content className={`modal ${wide?'modal-wide':''} ${className}`} aria-describedby={description?descriptionId:undefined} onCloseAutoFocus={e=>{if(goingBack.current){goingBack.current=false;e.preventDefault();
+
+return;}
+
+if(onReturnFocus){e.preventDefault();onReturnFocus();}}}>
+    <div className="modal-heading"><div className="modal-title">{onBack&&<button type="button" className="icon-button" aria-label="설정으로 돌아가기" title="설정으로 돌아가기" disabled={backDisabled} onClick={()=>{goingBack.current=true;onBack();}}><ArrowLeft size={18}/></button>}<Dialog.Title>{title}</Dialog.Title></div><Dialog.Close className="icon-button" aria-label="닫기"><X size={18}/></Dialog.Close></div>
     {description&&<Dialog.Description id={descriptionId} className="muted">{description}</Dialog.Description>}{children}
   </Dialog.Content></Dialog.Portal></Dialog.Root>;
 }
