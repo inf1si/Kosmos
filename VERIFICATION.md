@@ -7,7 +7,9 @@
 - 변경: 설정에서 연 다섯 관리 창에 돌아가기와 호출 버튼 초점 복귀를 넣고 집필실/노트 전환에서도 공용 창의 상태를 유지한다. 기존 직접 진입·닫기/Esc·처리 중 잠금을 유지하며 DB·원고·권한 변경은 없다.
 - 로컬: `pnpm typecheck`, `pnpm lint`, `pnpm docs:check`, `pnpm test`(205개 통과), 최적화 빌드 성공. 최적화 빌드의 `settings-navigation.mjs`에서 집필실/노트의 다섯 창 연속 복귀·구역/설정값/문서 선택/초점 유지·직접 진입의 화살표 없음·X/Esc·영구 삭제 확인 취소·파일 읽기 지연 중 잠금·실제 합성 가져오기와 `save_workspace` 응답을 확인했다. 여섯 테마 × 1280/360px 60개 화면에서 제목/버튼 겹침·제목 줄의 가로 넘침·페이지 오류가 없었다. 증거: `test-results/settings-navigation/optimized/`.
 - 회귀: 기존 `app-settings.mjs`의 84개 화면·설정 즉시 적용/유지/초점 복귀와 `server-revisions.mjs`의 브라우저/서버 통합 목록·선택 복원/저장(2개 폭, 여섯 테마)이 통과했다. 초점이 자동으로 잡히는 입력칸에서는 Radix의 열기 초점 이벤트가 생략될 수 있어 복귀 플래그는 닫기 이벤트에서 소모한다. 제목 왼쪽 화살표는 닫기(X)와 같은 native title로 초기 초점의 툴팁이 Esc를 가로채지 않게 한다.
-- 미확인: CI·Vercel 미리보기·운영은 병합 전에 아직 확인하지 않았다. 실제 계정 자료·유료 AI 호출은 사용하지 않았고 실제 다중 기기·터치·Safari는 재검사하지 않았다.
+- 배포: [PR #59](https://github.com/inf1si/Kosmos/pull/59)의 `de7c055` 미리보기 `dpl_7MMLaNHVjgH4SFkKgFR2k1yTKq6i`가 READY였고 [PR CI](https://github.com/inf1si/Kosmos/actions/runs/38109837354)가 성공했다. main `dfccad90eea80a900371c545f6268bc0b34e52db`로 병합했고 [main CI](https://github.com/inf1si/Kosmos/actions/runs/38109952055)의 205개 검사·빌드·문서 변경 범위·실제 age 왕복·Anti Slop 199개 파일/19개 규칙/0건이 통과했다.
+- 운영: 같은 main SHA의 `dpl_BXMV4xfyXXka4BzwYmB6feoymXRw`가 production READY이며 프로젝트 ID와 www/루트/기존 vercel.app 별칭을 확인했다. www `/studio` HTTP 200·루트 `/studio`의 www 308 이동을 확인했고, 실제 www 앱에서 같은 합성 `settings-navigation.mjs`의 양쪽 공간 연속 이동·초점·닫기·확인 취소·처리 중 잠금·가져오기와 저장 응답·여섯 테마 × 1280/360px 60개 화면이 통과했다(합성 저장 1회·페이지 오류 0). 증거: `test-results/settings-navigation/production/`.
+- 실제 계정 자료·유료 AI 호출은 사용하지 않았고 실제 다중 기기·터치·Safari는 재검사하지 않았다. 기존 열린 집필실은 새로고침한다.
 
 ## 2026-10-10 — 복구 창에서 계정(서버) 이력으로도 복원
 
