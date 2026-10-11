@@ -15,7 +15,7 @@ const noteFileTypes='.enex,.zip,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.h
 const folderPicker={webkitdirectory:'',directory:''};
 
 /** 여러 앱의 내보내기 파일·폴더를 새 최상위 폴더의 수집함 노트로 가져온다. 원본 폴더 구조·태그·날짜·노트 간 링크를 유지한다. */
-export function NotesImportDialog({open,onClose,onImported}:{open:boolean;onClose:()=>void;onImported:(folderId:string)=>void}){
+export function NotesImportDialog({open,onClose,onImported,onBack,onReturnFocus}:{open:boolean;onClose:()=>void;onImported:(folderId:string)=>void;onBack:()=>void;onReturnFocus?:()=>void}){
   const s=useStudio(),[bundle,setBundle]=useState<ImportBundle|null>(null),[folder,setFolder]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const operation=useRef(0);
 
@@ -33,7 +33,7 @@ if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRel
 
   const attached=bundle?bundle.assets.filter(a=>bundle.pages.some(p=>p.assetKeys.includes(a.key))).length:0;
 
-  return <Modal open={open} onClose={close} title="노트 가져오기" description="수집함의 새 폴더에 추가합니다." wide>
+  return <Modal open={open} onClose={close} onBack={()=>{if(!busy){close();onBack();}}} backDisabled={busy} onReturnFocus={onReturnFocus} title="노트 가져오기" description="수집함의 새 폴더에 추가합니다." wide>
     <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion은 내보내기에서 Markdown &amp; CSV 또는 HTML, 하위 페이지 포함으로 받은 ZIP을 그대로 넣습니다. 맥의 스크리브너 프로젝트는 ZIP으로 압축합니다.</p><p className="muted">100MB · 노트 500개까지 · 이미지 PNG/JPEG/WebP 10MB 이하</p></div>
     <div className="transfer-pick">
       <label className="backup-upload">파일 선택<input type="file" aria-label="가져올 노트 파일" multiple accept={noteFileTypes} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>

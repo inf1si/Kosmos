@@ -20,7 +20,7 @@ const transferFileTypes='.zip,.enex,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rt
 // Browsers expose folder picking only through this non-standard attribute.
 const folderPicker={webkitdirectory:'',directory:''};
 
-export function InterchangeDialog({workId}:{workId:string}){
+export function InterchangeDialog({workId,onBack,onReturnFocus}:{workId:string;onBack?:()=>void;onReturnFocus?:()=>void}){
   const s=useStudio();const [open,setOpen]=useState(false),[mode,setMode]=useState<'import'|'export'>('import');
   const [bundle,setBundle]=useState<ImportBundle|null>(null),[choices,setChoices]=useState<ImportChoice[]>([]),[target,setTarget]=useState('new'),[title,setTitle]=useState('');
   const [ids,setIds]=useState<string[]>([]),[format,setFormat]=useState<ExportFormat>('markdown'),[download,setDownload]=useState<TransferDownload|null>(null);
@@ -46,7 +46,9 @@ if(operation.current!==op)return;setBundle(parsed);setChoices(parsed.pages.map(p
 
   const selectedKeys=new Set(choices.map(c=>c.key));
 
-  return <Modal open={open} onClose={()=>{if(!busy){operation.current++;setOpen(false);setDownload(null);}}} title="문서 가져오기 · 내보내기" description="가져온 문서는 비공개로 추가됩니다." wide>
+  function close(){if(busy)return;operation.current++;setOpen(false);setDownload(null);}
+
+  return <Modal open={open} onClose={close} onBack={onBack?()=>{if(!busy){close();onBack();}}:undefined} backDisabled={busy} onReturnFocus={onReturnFocus} title="문서 가져오기 · 내보내기" description="가져온 문서는 비공개로 추가됩니다." wide>
     <div className="transfer-tabs" role="tablist" aria-label="문서 이동"><button role="tab" aria-selected={mode==='import'} disabled={busy} onClick={()=>{setMode('import');setError('');setMessage('');setDownload(null);}}><Upload size={16}/>가져오기</button><button role="tab" aria-selected={mode==='export'} disabled={busy} onClick={()=>{setMode('export');setError('');setMessage('');}}><Download size={16}/>내보내기</button></div>
     {mode==='import'?<>
       <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion은 내보내기에서 Markdown &amp; CSV 또는 HTML, 하위 페이지 포함으로 받은 ZIP을 그대로 넣습니다. 맥의 스크리브너 프로젝트는 ZIP으로 압축합니다.</p><p className="muted">100MB · 문서 500개까지 · 이미지 PNG/JPEG/WebP 10MB 이하</p></div>

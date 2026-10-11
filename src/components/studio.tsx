@@ -103,12 +103,13 @@ return()=>window.removeEventListener('keydown',key);},[createNote,notesOpen,s.ca
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
   const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);const [noteImport,setNoteImport]=useState(false);
+  const importFromStudio=useRef(false);
   // Settings opens templates and note import; the notes space answers templates itself while it is shown.
   useEffect(()=>{const listener=(event:Event)=>{if(!(event instanceof CustomEvent))return;
 
-if(event.detail==='template'&&!notesOpen)setTemplateRequest({});
+if(event.detail==='template'&&!notesOpen)setTemplateRequest({fromSettings:true});
 
-if(event.detail==='note-import'){setNoteImport(true);openNotes(selectedNote);}};
+if(event.detail==='note-import'){importFromStudio.current=!notesOpen;setNoteImport(true);openNotes(selectedNote);}};
 
 window.addEventListener('studio-modal',listener);
 
@@ -162,7 +163,7 @@ if(!works)return;const w=works.find(item=>item.id===workId)||works[0];rememberSt
 
 if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(docId?[docId]:[]);setBack([]);setForward([]);setSplitId(null);setReference(null);}}
 
-  if(notesOpen)return <TooltipProvider><PersonalNotes activeId={selectedNote} captureId={captureId} importRequested={noteImport} onImportOpened={()=>setNoteImport(false)} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs workId={work.id}/></TooltipProvider>;
+  if(notesOpen)return <TooltipProvider><PersonalNotes activeId={selectedNote} captureId={captureId} importRequested={noteImport} onImportOpened={()=>setNoteImport(false)} onImportBack={()=>{if(importFromStudio.current)returnToWork();modal('settings-return:note-import');}} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs key="studio-dialogs" workId={work.id}/></TooltipProvider>;
   const onHome=current===HOME,onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onHome||onBoard||onGraph;
   const active=openingDocument(docs,onOverview?lastDoc:current,lastDoc);
   const view=onHome?HOME:onGraph?GRAPH:onBoard?BOARD:active.id;
@@ -282,7 +283,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
         <button type="button" className="nav-item" aria-pressed={onGraph} onClick={()=>go(GRAPH)}><Network size={16}/><span>문서 그래프</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('trash')}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state!.trash).length}</small></button>
-        <button type="button" className="nav-item" onClick={()=>modal('settings')}><Settings size={16}/><span>설정</span></button>
+        <button type="button" className="nav-item" data-settings-opener onClick={()=>modal('settings')}><Settings size={16}/><span>설정</span></button>
       </nav>
       <div className="sidebar-scroll">
         <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument} onTrashFolder={trashFolder} onTemplate={setTemplateRequest}/>
@@ -340,9 +341,9 @@ if(file)void s.addAsset(work.id,active.id,file).catch(error=>alert(error.message
       </div></aside></>}
       </div>}
     </main>
-    {templateRequest&&<WorkspaceTemplates key={work.id} source={{scope:'work',workId:work.id}} request={templateRequest} onClose={()=>setTemplateRequest(null)} onCreated={id=>openDoc(id)}/>}
-    <StudioDialogs workId={work.id}/><WorkDialogs state={s.state} settingsId={workSettings} confirm={workConfirm} readonly={readonly} onSettings={setWorkSettings} onConfirm={setWorkConfirm} onTrashed={leaveWork}/>
-  </div></TooltipProvider>;
+    {templateRequest&&<WorkspaceTemplates key={work.id} source={{scope:'work',workId:work.id}} request={templateRequest} onClose={()=>setTemplateRequest(null)} onBack={templateRequest.fromSettings?()=>{setTemplateRequest(null);modal('settings-return:template');}:undefined} onReturnFocus={templateRequest.fromSettings?()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus():undefined} onCreated={id=>openDoc(id)}/>}
+    <WorkDialogs state={s.state} settingsId={workSettings} confirm={workConfirm} readonly={readonly} onSettings={setWorkSettings} onConfirm={setWorkConfirm} onTrashed={leaveWork}/>
+  </div><StudioDialogs key="studio-dialogs" workId={work.id}/></TooltipProvider>;
 }
 
 /** Empty titles are stored as-is; Enter moves into the manuscript. */

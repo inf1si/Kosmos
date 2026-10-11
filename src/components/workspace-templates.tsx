@@ -10,9 +10,9 @@ import { useStudio } from './studio-provider';
 import { DocIcon } from './studio-icons';
 import { Modal } from './primitives';
 
-export type TemplateDialogRequest={selected?:string[];destination?:DocumentDestination};
+export type TemplateDialogRequest={selected?:string[];destination?:DocumentDestination;fromSettings?:boolean};
 
-export function WorkspaceTemplates({source,request,onClose,onCreated}:{source:TemplateSource;request:TemplateDialogRequest;onClose:()=>void;onCreated:(id:string)=>void}){
+export function WorkspaceTemplates({source,request,onClose,onCreated,onBack,onReturnFocus}:{source:TemplateSource;request:TemplateDialogRequest;onClose:()=>void;onCreated:(id:string)=>void;onBack?:()=>void;onReturnFocus?:()=>void}){
   const s=useStudio(),[mode,setMode]=useState(request.selected?'save':'apply'),[selected,setSelected]=useState(request.selected||[]);
   const work=templateTree(s.state!,source),nav=resolveNavigation(work),noun=source.scope==='notes'?'노트':'문서';
   const label=(node:NavigationNode)=>node.type==='folder'?node.title:source.scope==='notes'?noteTitle(s.state!.notes!.find(n=>n.id===node.id)!):documentTitle(work.documents.find(d=>d.id===node.id)!);
@@ -48,7 +48,7 @@ try{await operation();}catch(e){setError(e instanceof Error?e.message:'템플릿
     onClose();onCreated(ids[0]);
   }
 
-  return <Modal open onClose={()=>{if(!busy)onClose();}} title="템플릿" wide>
+  return <Modal open onClose={()=>{if(!busy)onClose();}} onBack={onBack?()=>{if(!busy&&!confirmDelete)onBack();}:undefined} backDisabled={busy||confirmDelete} onReturnFocus={onReturnFocus} title="템플릿" wide>
     <div className="template-controls segmented" role="group" aria-label="템플릿 작업"><button type="button" aria-pressed={mode==='apply'} disabled={busy} onClick={()=>{setMode('apply');setError('');}}>템플릿 사용</button><button type="button" aria-pressed={mode==='save'} disabled={busy} onClick={()=>{setMode('save');setError('');}}>새 템플릿 저장</button></div>
     {mode==='save'?<>
       <label>템플릿 이름<input aria-label="템플릿 이름" maxLength={200} value={name} disabled={readonly} onChange={e=>setName(e.target.value)}/></label>
