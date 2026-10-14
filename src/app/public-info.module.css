@@ -317,3 +317,24 @@
 :global([data-palette=ink]) .header {
   border-bottom: 3px double var(--pub-rule);
 }
+:global([data-palette=columbia]) .header {
+  border-bottom: 3px double var(--pub-gilt);
+}
+:global([data-palette=nasapunk]) .header {
+  border-bottom: 3px solid var(--pub-rule);
+}
+:global([data-palette=nasapunk]) .brand {
+  font-family: var(--pub-sans);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+:global([data-palette=nasapunk]) .intro h1 {
+  font-family: var(--pub-sans);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+:global([data-palette=nasapunk]) .primaryLink {
+  border-radius: 0;
+}

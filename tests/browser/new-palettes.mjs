@@ -10,7 +10,7 @@ const { chromium } = require(process.env.KOSMOS_PLAYWRIGHT_MODULE || 'playwright
 
 const base = process.env.KOSMOS_TEST_BASE_URL || 'http://localhost:3210';
 
-const output = resolve(process.env.KOSMOS_BROWSER_OUTPUT || 'test-results/ink-palette');
+const output = resolve(process.env.KOSMOS_BROWSER_OUTPUT || 'test-results/new-palettes');
 
 await mkdir(output, { recursive: true });
 
@@ -31,7 +31,7 @@ try {
         await page.goto(`${base}/library`, { waitUntil: 'domcontentloaded' });
         await page.locator('.book-list').waitFor();
         const picker = page.getByRole('group', { name: '테마' });
-        assert.deepEqual(await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label'))), ['보라 테마', '카세트 테마', '사이버 테마', '잉크 테마']);
+        assert.deepEqual(await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label'))), ['보라 테마', '카세트 테마', '사이버 테마', '잉크 테마', '컬럼비아 테마', '나사펑크 테마']);
         await picker.getByRole('button', { name: '잉크 테마' }).click();
         assert.equal(await page.evaluate(() => document.documentElement.dataset.palette), 'ink');
         assert.equal(await picker.getByRole('button', { name: '잉크 테마' }).getAttribute('aria-pressed'), 'true');
@@ -57,13 +57,14 @@ try {
         await context.close();
     }
 
-    // 2. Light and dark at 1280px and 360px: no sideways scroll, screenshots of every surface.
-    for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
+    // 2. Each new palette in light and dark at 1280px and 360px: no sideways scroll, screenshots of every surface.
+    const paper = { ink: { light: 'rgb(247, 243, 234)', dark: 'rgb(20, 22, 28)' }, columbia: { light: 'rgb(245, 239, 226)', dark: 'rgb(18, 26, 44)' }, nasapunk: { light: 'rgb(244, 244, 241)', dark: 'rgb(8, 9, 11)' } };
+    for (const palette of ['ink', 'columbia', 'nasapunk']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
         const context = await browser.newContext({ viewport: { width, height: width === 360 ? 780 : 900 }, colorScheme: mode });
-        await context.addInitScript(mode => { localStorage.setItem('orbis-palette', 'ink'); localStorage.setItem('orbis-theme', mode); }, mode);
+        await context.addInitScript(([palette, mode]) => { localStorage.setItem('orbis-palette', palette); localStorage.setItem('orbis-theme', mode); }, [palette, mode]);
         const page = await context.newPage();
         page.on('pageerror', error => errors.push(error.message));
-        const shot = async name => { assert.ok(await overflow(page) <= 0, `${name} ${mode} ${width}: no sideways scroll`); await page.screenshot({ path: `${output}/${name}-${mode}-${width}.png` }); };
+        const shot = async name => { assert.ok(await overflow(page) <= 0, `${palette} ${name} ${mode} ${width}: no sideways scroll`); await page.screenshot({ path: `${output}/${palette}-${name}-${mode}-${width}.png` }); };
 
         await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
         await page.getByRole('group', { name: '테마' }).waitFor();
@@ -71,6 +72,7 @@ try {
 
         await page.goto(`${base}/library`, { waitUntil: 'domcontentloaded' });
         await page.locator('.book-list').waitFor();
+        assert.equal(await style(page, '.public-site', 'backgroundColor'), paper[palette][mode]);
         const href = await page.locator('.book-read').first().getAttribute('href');
         const wiki = await page.locator('.book-wiki').first().getAttribute('href');
         await shot('library');
@@ -86,13 +88,16 @@ try {
         await shot('studio-home');
         await page.locator('.studio-home .reference-card').filter({ hasText: /./ }).nth(0).click();
         await page.locator('.editor-panes > .editor-shell .manuscript').waitFor();
-        assert.equal(await style(page, '.doc-divider', 'borderTopStyle'), 'double');
+        if (palette === 'ink') {
+            assert.equal(await page.locator('.doc-divider').first().evaluate(el => getComputedStyle(el, '::after').content), '"\u2042"');
+            assert.match(await style(page, '.manuscript p', 'backgroundImage'), /linear-gradient/, 'manuscript paper grid');
+        }
         await shot('studio-editor');
         await context.close();
     }
 
     assert.deepEqual(errors, []);
-    console.log(`ink palette checks passed; screenshots in ${output}`);
+    console.log(`new palette checks passed; screenshots in ${output}`);
 } finally {
     await browser.close();
 }
