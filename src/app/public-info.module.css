@@ -314,3 +314,6 @@
   box-shadow: var(--pub-glow);
   clip-path: var(--pub-cut-sm);
 }
+:global([data-palette=ink]) .header {
+  border-bottom: 3px double var(--pub-rule);
+}

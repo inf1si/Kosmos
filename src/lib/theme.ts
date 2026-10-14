@@ -1,9 +1,9 @@
 export type SiteTheme='light'|'dark';
 
-export type SitePalette='violet'|'cassette'|'cyber';
+export type SitePalette='violet'|'cassette'|'cyber'|'ink';
 
 /** Every colour family, the default first. */
-export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber'];
+export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber','ink'];
 
 export const THEME_KEY='orbis-theme';
 
