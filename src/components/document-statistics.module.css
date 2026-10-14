@@ -13,3 +13,4 @@
 .help{margin:14px 0 0;color:var(--muted);font-size:12px;line-height:1.7;overflow-wrap:anywhere}
 .rules{margin-top:12px;font-size:12px;color:var(--muted)}.rules summary{cursor:pointer;width:max-content}.rules summary:hover{color:var(--ink)}.rules .help{margin-top:8px}ul.help{padding-left:18px}ul.help li+li{margin-top:6px}
 @media(max-width:700px){.root th,.root td{padding:9px 3px}.root th:first-child{width:35%}.root{font-size:12px}}
+.paper{margin-top:12px}

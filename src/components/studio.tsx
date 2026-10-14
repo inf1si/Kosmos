@@ -4,11 +4,12 @@ import { documentSchema, documentTitle } from '@/lib/model';
 import { trashRows } from '@/lib/workspace-trash';
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, HardDrive, House, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, Grid3x3, HardDrive, House, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
 import { DocumentStatistics } from './document-statistics';
+import { ManuscriptPaper } from './manuscript-paper';
 import type { NoteDestination } from '@/lib/note-navigation';
 import { PersonalNotes } from './personal-notes';
 import { QuickNote } from './quick-note';
@@ -115,7 +116,7 @@ window.addEventListener('studio-modal',listener);
 
 return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openNotes,selectedNote]);
   const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
-  const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
+  const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [paperId,setPaperId]=useState<string|null>(null);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const referenceRef=useRef<HTMLElement>(null);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
   useDrawerFocus(!notesOpen&&compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
@@ -309,6 +310,7 @@ return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon 
         <div className="menu-anchor" ref={moreMenuRef}><IconButton label="더 보기" aria-expanded={moreMenu} aria-controls="more-menu" onClick={()=>setMoreMenu(v=>!v)}><MoreHorizontal size={16}/></IconButton>
           {moreMenu&&<div id="more-menu" className="popover-menu more-menu">
             <button type="button" aria-pressed={focus} onClick={()=>{setMoreMenu(false);setFocus(v=>!v);}}><Maximize2 size={15}/>{focus?'집중 모드 끝내기':'집중 모드'}</button>
+            <button type="button" disabled={onOverview} onClick={()=>{setMoreMenu(false);setPaperId(active.id);}}><Grid3x3 size={15}/>원고지 보기</button>
             <button type="button" disabled={readonly||onOverview||position<=0} onClick={()=>moveDoc(-1)}><ArrowUp size={15}/>문서 위로 옮기기</button>
             <button type="button" disabled={readonly||onOverview||position>=siblings.length-1} onClick={()=>moveDoc(1)}><ArrowDown size={15}/>문서 아래로 옮기기</button>
             <button type="button" onClick={()=>{setMoreMenu(false);void s.snapshot(`${documentTitle(active)} · 수동 저장`).catch(e=>alert(e.message));}}><Save size={15}/>복구 지점 만들기</button>
@@ -326,10 +328,10 @@ return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon 
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
         <RichEditor key={`${active.id}-${s.epoch}`} doc={active} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:active.id},onContinue:()=>{setFocus(false);setReference('ai');}}} appearances={appearances}
           heading={<DocHead doc={active} wiki={wiki} linked={linked.length} backlinks={backlinks.length} attachments={active.assetIds.length} readonly={readonly} open={properties} onToggle={()=>setProperties(v=>!v)} onPatch={patch=>patchDoc(active.id,patch)} onOpenBeside={id=>openDoc(id,true)} onReference={setReference}/>}
-          renderToolbarEnd={selection=><><DocumentStatistics doc={active} work={work} selection={selection}/>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 대화</button></>}/>
+          renderToolbarEnd={selection=><><DocumentStatistics doc={active} work={work} selection={selection} onPaper={()=>setPaperId(active.id)}/>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 대화</button></>}/>
         {split&&<><div className="split-divider resize-handle" role="separator" aria-label="분할 편집 폭" aria-orientation="vertical" aria-valuenow={splitWidth} aria-valuemin={30} aria-valuemax={70} tabIndex={0} onPointerDown={e=>e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={e=>{if(e.buttons){const rect=e.currentTarget.parentElement!.getBoundingClientRect();setSplitWidth(Math.max(30,Math.min(70,(e.clientX-rect.left)/rect.width*100)));}}} onKeyDown={e=>{if(e.key==='ArrowLeft')setSplitWidth(v=>Math.max(30,v-2));
 
-if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="split-pane"><div className="split-heading"><span>참고 · {documentTitle(split)}</span><IconButton label="분할 닫기" onClick={()=>setSplitId(null)}><X size={15}/></IconButton></div><RichEditor key={`${split.id}-${s.epoch}`} doc={split} onChange={content=>patchDoc(split.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:split.id},onContinue:()=>{openDoc(split.id);setSplitId(active.id);setFocus(false);setReference('ai');}}} renderToolbarEnd={selection=><DocumentStatistics doc={split} work={work} selection={selection}/>} appearances={appearances}/></div></>}
+if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="split-pane"><div className="split-heading"><span>참고 · {documentTitle(split)}</span><IconButton label="분할 닫기" onClick={()=>setSplitId(null)}><X size={15}/></IconButton></div><RichEditor key={`${split.id}-${s.epoch}`} doc={split} onChange={content=>patchDoc(split.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:split.id},onContinue:()=>{openDoc(split.id);setSplitId(active.id);setFocus(false);setReference('ai');}}} renderToolbarEnd={selection=><DocumentStatistics doc={split} work={work} selection={selection} onPaper={()=>setPaperId(split.id)}/>} appearances={appearances}/></div></>}
       </div>
       {reference&&!focus&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeReference}/><aside ref={referenceRef} className={`reference-panel ${reference==='ai'?'is-chat':''}`} aria-label="참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="참고 자료">{(['links','files','notes','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={reference===p} onClick={()=>setReference(p)}>{p==='links'?'연결':p==='files'?'첨부':p==='notes'?'노트':'AI 대화'}</button>)}<IconButton label="참고 패널 닫기" data-drawer-close onClick={closeReference}><X size={15}/></IconButton></div><div className="reference-content">
         {reference==='links'?<><h3>연결된 설정</h3>{linked.length?linked.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id,true)}><WikiIcon category={d.category}/><span><strong>{documentTitle(d)}</strong><small>{d.category||'설정'} · 옆에서 열기</small></span></button>):<p className="muted">본문에 연결한 설정이 없습니다.</p>}<h3>이 문서를 참조하는 문서</h3>{backlinks.length?backlinks.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id)}><DocIcon doc={d}/><span><strong>{documentTitle(d)}</strong><small>{kinds[d.kind]}</small></span></button>):<p className="muted">아직 참조가 없습니다.</p>}</>
@@ -342,6 +344,7 @@ if(file)void s.addAsset(work.id,active.id,file).catch(error=>alert(error.message
       </div>}
     </main>
     {templateRequest&&<WorkspaceTemplates key={work.id} source={{scope:'work',workId:work.id}} request={templateRequest} onClose={()=>setTemplateRequest(null)} onBack={templateRequest.fromSettings?()=>{setTemplateRequest(null);modal('settings-return:template');}:undefined} onReturnFocus={templateRequest.fromSettings?()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus():undefined} onCreated={id=>openDoc(id)}/>}
+    <ManuscriptPaper doc={docs.find(d=>d.id===paperId)||null} onClose={()=>setPaperId(null)}/>
     <WorkDialogs state={s.state} settingsId={workSettings} confirm={workConfirm} readonly={readonly} onSettings={setWorkSettings} onConfirm={setWorkConfirm} onTrashed={leaveWork}/>
   </div><StudioDialogs key="studio-dialogs" workId={work.id}/></TooltipProvider>;
 }

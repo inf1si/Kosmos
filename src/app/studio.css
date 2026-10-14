@@ -97,3 +97,11 @@ html:has(.studio){background:var(--ground)}
 @media(hover:none){.work-drag-grip{opacity:.7}.work-shelf-card[data-work-id] .work-card-icon,.work-shelf-icon{opacity:0}}
 .work-favorite,.work-shelf-move{opacity:0;flex-shrink:0;color:var(--muted)}.work-shelf-card:hover .work-favorite,.work-shelf-card:focus-within .work-favorite,.work-favorite[aria-pressed=true],.work-shelf-card:hover .work-shelf-move,.work-shelf-card:focus-within .work-shelf-move{opacity:1}.work-favorite[aria-pressed=true]{color:var(--brand)}
 @media(hover:none){.work-favorite,.work-shelf-move{opacity:.7}.work-favorite[aria-pressed=true]{opacity:1}}
+/* 원고지 보기: 200자 원고지(20칸 × 10줄)를 매마다 한 장으로. 칸은 창 폭에 맞추고 글자는 칸 가운데, 마침표·쉼표는 칸 왼쪽 아래. */
+.paper-modal.modal-wide{width:min(720px,calc(100vw - 28px))}.paper-meta{margin:-8px 0 16px;font-size:12px;color:var(--muted)}
+.paper-sheets{--cell:min(30px,calc((100vw - 68px) / 20.6));--paper-line:color-mix(in srgb,var(--brand) 42%,var(--panel));display:grid;justify-content:center;gap:20px}[data-palette=ink] .paper-sheets{--paper-line:color-mix(in srgb,var(--pub-kicker) 45%,var(--panel))}
+.paper-sheet{position:relative;padding:calc(var(--cell) * .6) calc(var(--cell) * .3);border:1px solid var(--paper-line);font-family:var(--paper-font);font-size:calc(var(--cell) * .64);line-height:1;color:var(--manuscript)}
+.paper-row{display:grid;grid-template-columns:repeat(20,var(--cell));border:1px solid var(--paper-line);border-right:0}.paper-row+.paper-row{margin-top:calc(var(--cell) * .3)}
+.paper-row>span{display:grid;place-items:center;height:var(--cell);border-right:1px solid var(--paper-line);white-space:nowrap;overflow:hidden}.paper-row>.low{place-items:end start;padding:0 0 .2em .25em}
+.paper-number{position:absolute;right:calc(var(--cell) * .3);bottom:calc(var(--cell) * .12);font:11px/1 var(--sans);color:var(--muted)}
+@media(max-width:700px){.paper-modal.modal-wide{padding:20px 14px}}
