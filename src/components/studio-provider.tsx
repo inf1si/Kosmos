@@ -7,7 +7,7 @@ import { seedWorkspace } from '@/lib/seed';
 import { db, writeLocal, checkpoint, LocalConflict, listRevisions } from '@/lib/database';
 import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud, unpublishCloud, authorLibrary, reorderLibrary, cloudRevisions, cloudRevision, type ServerRevision } from '@/lib/cloud';
 import { previewPositions, previewPublicationPosition, previewPublications, reorderPreviewLibrary, type LibraryItem } from '@/lib/library-order';
-import { createBackup, readBackup } from '@/lib/backup';
+import { createBackupArchive, readBackup } from '@/lib/backup';
 import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
 import type { Work } from '@/lib/model';
 import { applyNavigation, resolveNavigation } from '@/lib/document-navigation';
@@ -30,7 +30,7 @@ type StudioContextValue={
   update:(fn:(state:Workspace)=>Workspace)=>void;
   snapshot:(label:string)=>Promise<void>;revisions:()=>Promise<Revision[]>;restore:(data:Workspace)=>Promise<void>;
   serverRevisions:()=>Promise<ServerRevision[]>;restoreServerRevision:(id:string)=>Promise<void>;
-  exportBackup:()=>Promise<TransferDownload>;importBackup:(file:File)=>Promise<void>;
+  exportBackup:()=>Promise<TransferDownload&{revisions:number;omitted:number}>;importBackup:(file:File)=>Promise<void>;
   importDocuments:(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']})=>Promise<string>;
   exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;unpublish:(workId:string)=>Promise<void>;
@@ -314,7 +314,9 @@ if(error||!blob)throw new Error(`첨부를 내려받지 못했습니다: ${meta.
     }}
 
     const assets=await db.assets.where('namespace').equals(namespace).toArray();
-    const blob=await createBackup(current,history,assets);
+    const {blob,revisions}=await createBackupArchive(current,history,assets);
+
+    if(conflictRef.current&&!revisions)throw new Error('다른 원고까지 담으면 백업 용량이 100MB를 넘습니다.');
     const date=new Date().toISOString();
 
 try{await db.transaction('rw',db.workspaces,async()=>{const row=await db.workspaces.get(namespace);
@@ -323,7 +325,7 @@ if(row)await db.workspaces.put({...row,lastExportAt:date});});}catch{/* The arch
 
 setLastExportAt(date);
 
-    return{blob,name:`Orbis-Tertius-전체백업-${new Date().toISOString().slice(0,10)}.zip`};
+    return{blob,name:`Orbis-Tertius-전체백업-${new Date().toISOString().slice(0,10)}.zip`,revisions,omitted:history.length-revisions};
   }
 
   async function importDocuments(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']}){

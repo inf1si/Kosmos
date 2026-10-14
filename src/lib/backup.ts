@@ -17,23 +17,34 @@ async function digest(data:Uint8Array){return [...new Uint8Array(await crypto.su
 
 const encode=(text:string)=>new TextEncoder().encode(text);
 
-export async function createBackup(data:Workspace,revisions:Revision[],assets:BackupAsset[]):Promise<Blob>{
+export type BackupArchive={blob:Blob;revisions:number};
+
+/** Kept for callers that only need the file; see createBackupArchive for the trimmed history count. */
+export async function createBackup(data:Workspace,revisions:Revision[],assets:BackupAsset[]):Promise<Blob>{return (await createBackupArchive(data,revisions,assets)).blob;}
+
+/**
+ * The current workspace must fit the cap; recovery history fills what is left, newest first.
+ * Each history entry is a full workspace copy, so 50 of them can exceed the cap long before the manuscript does.
+ */
+export async function createBackupArchive(data:Workspace,revisions:Revision[],assets:BackupAsset[]):Promise<BackupArchive>{
   workspaceSchema.parse(data);
   const zip=new JSZip();const manifest:Manifest={format:'orbit-novel-backup',version:1,createdAt:new Date().toISOString(),workspaceId:data.id,files:[]};
+  const assetMap=new Map(assets.map(a=>[a.id,a.blob]));const added=new Set<string>();
   let bytes=0;
 
   async function add(path:string,content:Uint8Array){bytes+=content.length;
 
-if(bytes>MAX_BYTES)throw new Error('백업 용량이 100MB를 넘습니다.');zip.file(path,content);manifest.files.push({path,bytes:content.length,sha256:await digest(content)});}
+if(bytes>MAX_BYTES)throw new Error('현재 원고와 첨부만으로 백업 용량이 100MB를 넘습니다.');zip.file(path,content);manifest.files.push({path,bytes:content.length,sha256:await digest(content)});}
 
-  await add('workspace.json',encode(JSON.stringify(data,null,2)));
-  await add('revisions.json',encode(JSON.stringify(revisions.map(({id,createdAt,label,data})=>({id,createdAt,label,data})),null,2)));
-  const assetMap=new Map(assets.map(a=>[a.id,a.blob]));
-  const allMeta=new Map([...data.assets,...revisions.flatMap(r=>r.data.assets)].map(a=>[a.id,a]));
+  async function assetBytes(meta:Workspace['assets'][number]){const blob=assetMap.get(meta.id);
 
-  for(const meta of allMeta.values()){const blob=assetMap.get(meta.id);
+if(!blob||blob.size!==meta.size)throw new Error(`첨부가 누락되었거나 손상되었습니다: ${meta.name}`);
 
-if(!blob||blob.size!==meta.size)throw new Error(`첨부가 누락되었거나 손상되었습니다: ${meta.name}`);await add(`assets/${meta.id}`,new Uint8Array(await blob.arrayBuffer()));}
+return new Uint8Array(await blob.arrayBuffer());}
+
+  await add('workspace.json',encode(JSON.stringify(data)));
+
+  for(const meta of data.assets)if(!added.has(meta.id)){added.add(meta.id);await add(`assets/${meta.id}`,await assetBytes(meta));}
 
   for(const work of data.works)for(const d of work.documents)await add(`text/${work.id}/${d.id}.md`,encode(`# ${d.title}\n\n${plainText(d.content)}\n`));
 
@@ -41,9 +52,27 @@ if(!blob||blob.size!==meta.size)throw new Error(`첨부가 누락되었거나 �
 
   for(const item of data.trash||[])await add(`text/trash/${item.id}.md`,encode(`# ${trashTitle(item)}\n\n${item.type==='work'?item.work.documents.map(d=>`## ${d.title}\n\n${plainText(d.content)}\n`).join('\n'):`${plainText(item.type==='note'?item.note.content:item.document.content)}\n`}`));
   await add('README.txt',encode('workspace.json이 원고·설정·독립 노트·휴지통·각주·관계·공개 판본의 복원 원본입니다. assets/에는 실제 첨부, revisions.json에는 복구 이력이 있습니다. text/는 읽기 쉬운 별도 사본입니다. 이 파일에는 비공개 원고와 노트가 포함됩니다.\n'));
+
+  // Callers pass history newest first; stop at the first entry that no longer fits so the kept ones stay contiguous.
+  const kept:string[]=[];const extra:{path:string;content:Uint8Array}[]=[];let budget=MAX_BYTES-bytes-2;
+
+  for(const r of revisions){
+    const text=JSON.stringify({id:r.id,createdAt:r.createdAt,label:r.label,data:r.data});const own=new Map<string,Uint8Array>();let size=encode(text).length+1;
+
+    for(const meta of r.data.assets)if(!added.has(meta.id)&&!own.has(meta.id)){const content=await assetBytes(meta);own.set(meta.id,content);size+=content.length;}
+
+    if(size>budget)break;
+    budget-=size;kept.push(text);
+
+    for(const [id,content] of own){added.add(id);extra.push({path:`assets/${id}`,content});}
+  }
+
+  await add('revisions.json',encode(`[${kept.join(',')}]`));
+
+  for(const file of extra)await add(file.path,file.content);
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
 
-  return zip.generateAsync({type:'blob',compression:'DEFLATE'});
+  return {blob:await zip.generateAsync({type:'blob',compression:'DEFLATE'}),revisions:kept.length};
 }
 
 export async function readBackup(file:Blob):Promise<{data:Workspace;revisions:Omit<Revision,'namespace'>[];assets:BackupAsset[]}>{

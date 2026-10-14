@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
-import { createBackup, readBackup } from './backup';
+import { createBackupArchive, readBackup } from './backup';
 import { workspaceSchema, uid, type Workspace, type Revision } from './model';
 
 export const backupReportSchema=z.object({completedAt:z.iso.datetime(),version:z.number().int().nonnegative(),bytes:z.number().int().positive(),documents:z.number().int().nonnegative(),revisions:z.number().int().nonnegative(),assets:z.number().int().nonnegative(),verified:z.literal(true),archiveKey:z.string().max(300).optional(),sha256:z.string().regex(/^[a-f0-9]{64}$/).optional()});
@@ -58,12 +58,12 @@ if(total>100*1024*1024)throw new Error('백업 첨부 크기가 100MB를 넘습�
 if(i>=metas.length)return;const meta=metas[i],blob=await downloadAsset(meta.id);
 
 if(blob.size!==meta.size)throw new Error('첨부 크기가 일치하지 않습니다.');assets.push({id:meta.id,blob});}}));
-  const archive=await createBackup(snapshot.data,snapshot.revisions,assets);await readBackup(archive);const bytes=new Uint8Array(await archive.arrayBuffer());
+  const {blob:archive,revisions}=await createBackupArchive(snapshot.data,snapshot.revisions,assets);await readBackup(archive);const bytes=new Uint8Array(await archive.arrayBuffer());
   const sha=(v:Uint8Array)=>createHash('sha256').update(v).digest('hex');
   await storage.write(key,bytes,'application/zip');const restored=await storage.read(key,100*1024*1024);
 
   if(!restored||sha(restored)!==sha(bytes))throw new Error('외부 저장소의 백업 파일 검증에 실패했습니다.');await readBackup(new Blob([Uint8Array.from(restored).buffer]));
-  const report:BackupReport={completedAt:new Date().toISOString(),version:snapshot.version,bytes:bytes.length,documents:snapshot.data.works.reduce((n,w)=>n+w.documents.length,0),revisions:snapshot.revisions.length,assets:assets.length,verified:true,archiveKey:key,sha256:sha(bytes)};
+  const report:BackupReport={completedAt:new Date().toISOString(),version:snapshot.version,bytes:bytes.length,documents:snapshot.data.works.reduce((n,w)=>n+w.documents.length,0),revisions,assets:assets.length,verified:true,archiveKey:key,sha256:sha(bytes)};
   // Update the success marker only after downloading and verifying the stored archive.
   await storage.write(`${prefix}/${ownerId}/latest.json`,new TextEncoder().encode(JSON.stringify(report)),'application/json');
 
