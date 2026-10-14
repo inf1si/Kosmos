@@ -92,7 +92,18 @@ try {
 
         if (palette === 'ink') {
             assert.equal(await page.locator('.doc-divider').first().evaluate(el => getComputedStyle(el, '::after').content), '"\u2042"');
-            assert.match(await style(page, '.manuscript p', 'backgroundImage'), /linear-gradient/, 'manuscript paper grid');
+
+            const sheet = await page.locator('.manuscript p').first().evaluate(el => {
+                const cs = getComputedStyle(el);
+
+                return { image: cs.backgroundImage, margin: cs.marginBottom, padding: Number.parseFloat(cs.paddingBottom), line: Number.parseFloat(cs.lineHeight) };
+            });
+
+            assert.match(sheet.image, /linear-gradient/, 'manuscript paper lines');
+            // Manuscript fonts have uneven glyph widths, so vertical cells would cut through letters.
+            assert.doesNotMatch(sheet.image, /90deg/, 'no vertical cell lines');
+            assert.equal(sheet.margin, '0px', 'paragraph gap is padding so lines continue');
+            assert.equal(sheet.padding % sheet.line, 0, 'paragraph gap is whole rows');
         }
 
         await shot('studio-editor');
