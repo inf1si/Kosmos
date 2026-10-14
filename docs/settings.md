@@ -30,7 +30,7 @@
 | 원고 표시 | 문단 첫 줄 들여쓰기 | 없음·1글자·2글자 | 1글자 | 기기 `kosmos-app-preferences` |
 | 원고 표시 | 문단 간격 | 없음·0.6줄·1.2줄·1.8줄 | 1.2줄 | 기기 `kosmos-app-preferences` |
 | 원고 표시 | 본문 폭 | 560·680·800·960px | 680px | 기기 `kosmos-app-preferences` |
-| 집필 도구 | 글자 수 기준 | 공백 포함·공백 제외·어절·문단·200자 원고지 | 공백 포함 | 기기 `orbis-editor-preferences` |
+| 집필 도구 | 글자 수 기준 | 공백 포함·공백 제외·어절·문단·200자 원고지·A4 매수 | 공백 포함 | 기기 `orbis-editor-preferences` |
 | 집필 도구 | 집필실 첫 화면 | 집필실 홈·마지막 문서 | 집필실 홈 | 기기 `kosmos-app-preferences` |
 | 집필 도구 | 플롯보드 첫 보기 | 부와 장·진행 상태·작중 시간 | 부와 장 | 기기 `kosmos-app-preferences` |
 | 집필 도구 | 문서 그래프 첫 범위 | 전체·주변 연결 | 전체 | 기기 `kosmos-app-preferences` |

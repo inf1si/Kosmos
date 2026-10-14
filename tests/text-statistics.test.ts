@@ -65,3 +65,22 @@ test('작품·플롯보드 기본 글자 수는 공백을 포함하고 줄바꿈
   const scene=newDocument('scene','원고');scene.content=document(paragraph('가 나 🙂'),{type:'paragraph',content:[{type:'text',text:'둘째'},{type:'footnote',attrs:{noteId:'note',text:'본문 집계 제외'}}]});
   assert.equal(countChars(scene),7);
 });
+
+test('A4 매수는 10pt 160% 기본 쪽에 한 줄 42자(한글), 41줄로 어림한다',()=>{
+  // 42 Hangul fill one line; 84 half-width letters also fill one; one more letter opens a second line.
+  assert.equal(textStatistics(document(paragraph('가'.repeat(42)))).a4Lines,1);
+  assert.equal(textStatistics(document(paragraph('a'.repeat(84)))).a4Lines,1);
+  assert.equal(textStatistics(document(paragraph('가'.repeat(43)))).a4Lines,2);
+  // 41 one-line paragraphs make one page; the 42nd starts the next.
+  assert.equal(textStatistics(document(...Array.from({length:41},()=>paragraph('가')))).a4,1);
+  assert.equal(textStatistics(document(...Array.from({length:42},()=>paragraph('가')))).a4,1.1);
+  assert.equal(textStatistics(document(paragraph(''))).a4,0);
+  const withNote={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'본문'},{type:'footnote',attrs:{},content:[paragraph('각주')]}]}]};
+  const stats=textStatistics(withNote);
+
+  assert.equal(stats.a4Lines,1);assert.equal(stats.footnotes,1);
+  const a=newDocument('scene','첫 원고'),b=newDocument('scene','둘째 원고');
+
+  a.content=document(...Array.from({length:30},()=>paragraph('가')));b.content=document(...Array.from({length:30},()=>paragraph('나')));
+  assert.equal(manuscriptStatistics([a,b]).a4,1.5,'whole manuscript adds lines, not rounded pages');
+});

@@ -86,7 +86,35 @@ try {
         await context.close();
     }
 
-    // 2. The more menu opens the same view; at 360px the sheet fits without sideways scrolling.
+    // 2. The statistics table shows A4 pages, the toolbar can show them, and the choice survives a reload.
+    for (const width of [1280, 360]) {
+        const { context, page } = await openDocument(width, 'ink');
+        const trigger = page.locator('.editor-panes > .editor-shell button[aria-label*="문서 통계 열기"]');
+
+        await trigger.scrollIntoViewIfNeeded();
+        await trigger.click();
+        const row = page.getByRole('row', { name: /A4 · 10pt/u });
+
+        await row.waitFor();
+        const pages = await row.locator('td').first().textContent();
+
+        assert.match(pages, /^\d+(\.\d)?$/u, 'A4 pages with one decimal');
+        assert.ok(Number(pages) > 0);
+        assert.equal(await page.locator('.popover').evaluate(el => el.scrollWidth - el.clientWidth), 0, 'popover fits');
+        await page.screenshot({ path: resolve(output, `a4-statistics-${width}.png`) });
+        await page.getByRole('combobox', { name: '통계 표시 기준' }).selectOption('a4');
+        await page.keyboard.press('Escape');
+        assert.match(await trigger.getAttribute('aria-label'), new RegExp(`^${pages.replace('.', '\\.')}매 · A4 · 문서 통계 열기$`, 'u'));
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.locator('.studio-home, .editor-panes > .editor-shell .manuscript').first().waitFor();
+
+        if (await page.locator('.studio-home').isVisible()) await page.locator('.studio-home .reference-card').filter({ hasText: /./u }).nth(0).click();
+        await page.locator('.editor-panes > .editor-shell .manuscript').waitFor();
+        assert.match(await page.locator('.editor-panes > .editor-shell button[aria-label*="문서 통계 열기"]').getAttribute('aria-label'), /매 · A4/u, 'choice kept after reload');
+        await context.close();
+    }
+
+    // 3. The more menu opens the same view; at 360px the sheet fits without sideways scrolling.
     for (const palette of ['violet', 'nasapunk']) {
         const { context, page } = await openDocument(360, palette);
 
