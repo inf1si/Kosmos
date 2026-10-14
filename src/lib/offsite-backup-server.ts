@@ -52,7 +52,8 @@ if(history.error)throw new Error('서버 복구 이력을 불러오지 못했습
 
 if(revision.error||!revision.data)throw new Error('백업 도중 서버 복구 이력이 바뀌었습니다. 다시 시도하세요.');jsonBytes+=new TextEncoder().encode(JSON.stringify(revision.data.payload)).length;
 
-if(jsonBytes>100*1024*1024)throw new Error('백업 JSON 용량이 100MB를 넘습니다.');revisions.push({id:row.id,namespace:'server',createdAt:row.created_at,label:'클라우드 복구 지점',data:workspaceSchema.parse(revision.data.payload)});}
+// Older history that cannot fit is left out; the archive keeps the newest entries within its cap.
+if(jsonBytes>100*1024*1024)break;revisions.push({id:row.id,namespace:'server',createdAt:row.created_at,label:'클라우드 복구 지점',data:workspaceSchema.parse(revision.data.payload)});}
 
   return createOffsiteBackup({ownerId:config.authorId,prefix:config.prefix,storage,snapshot:{data:workspaceSchema.parse(workspace.data.payload),version:workspace.data.version,revisions},downloadAsset:async(id)=>{const result=await client.storage.from('private-assets').download(`${config.authorId}/${id}`);
 

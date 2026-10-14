@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import JSZip from 'jszip';
-import { createBackup,readBackup } from '../src/lib/backup';
+import { createBackup,createBackupArchive,readBackup } from '../src/lib/backup';
 import { seedWorkspace } from '../src/lib/seed';
 import { makePublication,uid,fromText,plainText } from '../src/lib/model';
 import { applySuggestion } from '../src/lib/ai';
@@ -33,4 +33,25 @@ test('AI 제안은 각주와 설정 링크를 보존하며 중복 인용은 자�
  const content=seedWorkspace().works[0].documents[0].content;const edited=applySuggestion(content,'숫자는 아무 감정도 없이 정확했다.','숫자는 정확했다.');
  assert(plainText(edited).includes('숫자는 정확했다.'));assert(JSON.stringify(edited).includes('footnote'));assert(JSON.stringify(edited).includes('wikiLink'));
  assert.throws(()=>applySuggestion(fromText('같은 말. 같은 말.'),'같은 말.','새 말.'),/하나의 위치/);assert(plainText(content).includes('숫자는 아무 감정도 없이 정확했다.'));
+});
+
+test('복구 이력이 100MB를 넘기면 오래된 이력부터 빼고 최근 이력과 현재 원고를 담는다',async()=>{
+ const state=seedWorkspace();
+
+ state.works[0].documents[0].content=fromText(Array(16).fill('별빛 아래 항구는 조용했다. '.repeat(5000)).join('\n\n'));
+ const revisions=Array.from({length:50},(_,i)=>({id:uid(),namespace:'test',createdAt:new Date(Date.now()-i*60000).toISOString(),label:`이력 ${i}`,data:structuredClone(state)}));
+ const {blob,revisions:kept}=await createBackupArchive(state,revisions,[]);
+
+ assert(kept>0&&kept<50);
+ const restored=await readBackup(blob);
+
+ assert.deepEqual(restored.data,state);
+ assert.deepEqual(restored.revisions.map(r=>r.label),revisions.slice(0,kept).map(r=>r.label));
+});
+
+test('현재 원고만으로 100MB를 넘으면 백업을 만들지 않는다',async()=>{
+ const state=seedWorkspace();
+
+ state.works[0].documents[0].content=fromText(Array(600).fill('별빛 아래 항구는 조용했다. '.repeat(5000)).join('\n\n'));
+ await assert.rejects(()=>createBackupArchive(state,[],[]),/현재 원고와 첨부만으로/);
 });
