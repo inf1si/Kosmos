@@ -59,6 +59,7 @@ try {
 
     // 2. Each new palette in light and dark at 1280px and 360px: no sideways scroll, screenshots of every surface.
     const paper = { ink: { light: 'rgb(247, 243, 234)', dark: 'rgb(20, 22, 28)' }, columbia: { light: 'rgb(245, 239, 226)', dark: 'rgb(18, 26, 44)' }, nasapunk: { light: 'rgb(244, 244, 241)', dark: 'rgb(8, 9, 11)' } };
+
     for (const palette of ['ink', 'columbia', 'nasapunk']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
         const context = await browser.newContext({ viewport: { width, height: width === 360 ? 780 : 900 }, colorScheme: mode });
         await context.addInitScript(([palette, mode]) => { localStorage.setItem('orbis-palette', palette); localStorage.setItem('orbis-theme', mode); }, [palette, mode]);
@@ -88,10 +89,12 @@ try {
         await shot('studio-home');
         await page.locator('.studio-home .reference-card').filter({ hasText: /./ }).nth(0).click();
         await page.locator('.editor-panes > .editor-shell .manuscript').waitFor();
+
         if (palette === 'ink') {
             assert.equal(await page.locator('.doc-divider').first().evaluate(el => getComputedStyle(el, '::after').content), '"\u2042"');
             assert.match(await style(page, '.manuscript p', 'backgroundImage'), /linear-gradient/, 'manuscript paper grid');
         }
+
         await shot('studio-editor');
         await context.close();
     }
