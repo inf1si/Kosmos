@@ -89,14 +89,43 @@ try {
         assert.equal(await sidebarWidth(page), 364, 'notes sidebar uses the same width');
         await drag(page, -64);
         assert.equal(await sidebarWidth(page), 300);
+        await drag(page, -200);
+        await page.locator('.notes-workspace .studio-sidebar').waitFor({ state: 'detached', timeout: 3000 });
+        assert.equal(await saved(page), 300);
+        await page.locator('#sidebar-toggle').click();
+        await page.locator('.notes-workspace .studio-sidebar').waitFor();
+        assert.equal(await sidebarWidth(page), 300);
         await page.getByRole('group', { name: '작업 공간' }).getByRole('button', { name: '집필실' }).click();
         await page.locator('.studio-home').waitFor();
         assert.equal(await sidebarWidth(page), 300, 'studio follows the width set in notes');
 
         await drag(page, 600);
         assert.equal(await sidebarWidth(page), 480, 'max 480px');
-        await drag(page, -600);
-        assert.equal(await sidebarWidth(page), 200, 'min 200px');
+        await drag(page, -300);
+        assert.equal(await sidebarWidth(page), 200, 'min 200px without closing');
+
+        // Dragging well past the minimum (below 120px) dims the sidebar, and releasing there closes it; the saved width comes back on reopen.
+        {
+            const box = await handle.boundingBox();
+            const x = box.x + box.width / 2, y = box.y + box.height / 2;
+            await page.mouse.move(x, y);
+            await page.mouse.down();
+            await page.mouse.move(x - 100, y, { steps: 8 });
+            assert.equal(await page.locator('.studio-sidebar').getAttribute('data-collapsing'), '', 'dimmed while past the threshold');
+            assert.equal(await page.locator('.studio-sidebar').evaluate(el => getComputedStyle(el).opacity), '0.45');
+            assert.equal(await sidebarWidth(page), 200, 'width stays at the minimum while dimmed');
+            await page.mouse.move(x - 60, y, { steps: 4 });
+            assert.equal(await page.locator('.studio-sidebar').getAttribute('data-collapsing'), null, 'dragging back cancels');
+            await page.mouse.move(x - 100, y, { steps: 4 });
+            await page.mouse.up();
+            await page.locator('.studio-sidebar').waitFor({ state: 'detached', timeout: 3000 });
+            assert.equal(await page.locator('#sidebar-toggle').getAttribute('aria-pressed'), 'false');
+            assert.equal(await saved(page), 200, 'closing keeps the saved width');
+            await page.locator('#sidebar-toggle').click();
+            await page.locator('.studio-sidebar').waitFor();
+            assert.equal(await sidebarWidth(page), 200, 'reopens at the saved width');
+            assert.equal(await page.locator('.studio-sidebar').getAttribute('data-collapsing'), null);
+        }
 
         await handle.focus();
         await page.keyboard.press('ArrowRight');

@@ -293,7 +293,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
-    {showSidebar&&!compact&&<SidebarResizer target={sidebarRef}/>}
+    {showSidebar&&!compact&&<SidebarResizer target={sidebarRef} onCollapse={closeSidebar}/>}
     <main className="studio-panel">
       <div className="panel-tabs">
         <IconButton id="sidebar-toggle" label={showSidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={showSidebar} onClick={()=>{if(compact)setReference(null);
