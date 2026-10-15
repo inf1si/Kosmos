@@ -1,13 +1,14 @@
 'use client';
 
-import { useLayoutEffect, useSyncExternalStore, type ReactNode } from 'react';
-import { CassetteTape, Cpu, Feather, Landmark, Moon, Rocket, Sun } from 'lucide-react';
+import { useLayoutEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { CassetteTape, Clapperboard, Cpu, Feather, Fuel, Landmark, Moon, Rocket, Sun } from 'lucide-react';
+import { Popover } from './primitives';
 import { PALETTE_KEY, THEME_KEY, preferredPalette, preferredTheme, type SitePalette, type SiteTheme } from '@/lib/theme';
 
 /** Names and buttons of the colour families, in picker order. */
-export const paletteOptions:{id:SitePalette;name:string}[]=[{id:'violet',name:'보라'},{id:'cassette',name:'카세트'},{id:'cyber',name:'사이버'},{id:'ink',name:'잉크'},{id:'columbia',name:'컬럼비아'},{id:'nasapunk',name:'나사펑크'}];
+export const paletteOptions:{id:SitePalette;name:string}[]=[{id:'violet',name:'보라'},{id:'cassette',name:'카세트'},{id:'cyber',name:'사이버'},{id:'ink',name:'잉크'},{id:'columbia',name:'컬럼비아'},{id:'nasapunk',name:'나사펑크'},{id:'diesel',name:'디젤'},{id:'noir',name:'누아르'}];
 
-const paletteIcons:Record<SitePalette,ReactNode>={violet:<span className="palette-swatch" aria-hidden="true"/>,cassette:<CassetteTape size={15}/>,cyber:<Cpu size={15}/>,ink:<Feather size={15}/>,columbia:<Landmark size={15}/>,nasapunk:<Rocket size={15}/>};
+const paletteIcons:Record<SitePalette,ReactNode>={violet:<span className="palette-swatch" aria-hidden="true"/>,cassette:<CassetteTape size={15}/>,cyber:<Cpu size={15}/>,ink:<Feather size={15}/>,columbia:<Landmark size={15}/>,nasapunk:<Rocket size={15}/>,diesel:<Fuel size={15}/>,noir:<Clapperboard size={15}/>};
 
 function attribute(name:string){return document.documentElement.getAttribute(name);}
 
@@ -79,10 +80,14 @@ export function ThemeToggle(){
   return <button type="button" className="theme-toggle" aria-label={label} title={label} onClick={()=>setTheme(theme==='dark'?'light':'dark')}>{theme==='dark'?<Sun size={16}/>:<Moon size={16}/>}</button>;
 }
 
+/** Colour family picker for the public header: one button showing the current family, the list in a popover. */
 export function ThemeControls(){
-  const [palette,setPalette]=useSitePalette();
+  const [palette,setPalette]=useSitePalette();const [open,setOpen]=useState(false);
+  const current=paletteOptions.find(p=>p.id===palette)??paletteOptions[0];
 
-  return <div className="theme-controls"><div className="palette-picker" role="group" aria-label="테마">
-    {paletteOptions.map(({id,name})=><button type="button" key={id} aria-pressed={palette===id} aria-label={`${name} 테마`} title={`${name} 테마`} onClick={()=>setPalette(id)}>{paletteIcons[id]}</button>)}
-  </div><ThemeToggle/></div>;
+  return <div className="theme-controls"><Popover open={open} onOpenChange={setOpen} align="end" width={260} title="테마" className="palette-popover" trigger={<button type="button" className="theme-toggle palette-trigger" aria-label={`테마 · ${current.name}`} title={`테마 · ${current.name}`}>{paletteIcons[current.id]}</button>}>
+    <div className="palette-picker" role="group" aria-label="테마">
+      {paletteOptions.map(({id,name})=><button type="button" key={id} aria-pressed={palette===id} aria-label={`${name} 테마`} onClick={()=>setPalette(id)}>{paletteIcons[id]}<span>{name}</span></button>)}
+    </div>
+  </Popover><ThemeToggle/></div>;
 }

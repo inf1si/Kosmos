@@ -30,9 +30,14 @@ try {
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(`${base}/library`, { waitUntil: 'domcontentloaded' });
         await page.locator('.book-list').waitFor();
+        // The header shows one button for the current family; the list opens in a popover.
+        const trigger = page.getByRole('button', { name: /^테마 · / });
+        assert.equal(await trigger.getAttribute('aria-label'), '테마 · 보라');
+        await trigger.click();
         const picker = page.getByRole('group', { name: '테마' });
-        assert.deepEqual(await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label'))), ['보라 테마', '카세트 테마', '사이버 테마', '잉크 테마', '컬럼비아 테마', '나사펑크 테마']);
+        assert.deepEqual(await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label'))), ['보라 테마', '카세트 테마', '사이버 테마', '잉크 테마', '컬럼비아 테마', '나사펑크 테마', '디젤 테마', '누아르 테마']);
         await picker.getByRole('button', { name: '잉크 테마' }).click();
+        assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 잉크', 'trigger follows the choice');
         assert.equal(await page.evaluate(() => document.documentElement.dataset.palette), 'ink');
         assert.equal(await picker.getByRole('button', { name: '잉크 테마' }).getAttribute('aria-pressed'), 'true');
         assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), 'ink');
@@ -58,9 +63,9 @@ try {
     }
 
     // 2. Each new palette in light and dark at 1280px and 360px: no sideways scroll, screenshots of every surface.
-    const paper = { ink: { light: 'rgb(247, 243, 234)', dark: 'rgb(20, 22, 28)' }, columbia: { light: 'rgb(245, 239, 226)', dark: 'rgb(18, 26, 44)' }, nasapunk: { light: 'rgb(244, 244, 241)', dark: 'rgb(8, 9, 11)' } };
+    const paper = { ink: { light: 'rgb(247, 243, 234)', dark: 'rgb(20, 22, 28)' }, columbia: { light: 'rgb(245, 239, 226)', dark: 'rgb(18, 26, 44)' }, nasapunk: { light: 'rgb(244, 244, 241)', dark: 'rgb(8, 9, 11)' }, diesel: { light: 'rgb(233, 232, 227)', dark: 'rgb(18, 20, 22)' }, noir: { light: 'rgb(241, 236, 226)', dark: 'rgb(13, 13, 13)' } };
 
-    for (const palette of ['ink', 'columbia', 'nasapunk']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
+    for (const palette of ['ink', 'columbia', 'nasapunk', 'diesel', 'noir']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
         const context = await browser.newContext({ viewport: { width, height: width === 360 ? 780 : 900 }, colorScheme: mode });
         await context.addInitScript(([palette, mode]) => { localStorage.setItem('orbis-palette', palette); localStorage.setItem('orbis-theme', mode); }, [palette, mode]);
         const page = await context.newPage();
@@ -68,7 +73,7 @@ try {
         const shot = async name => { assert.ok(await overflow(page) <= 0, `${palette} ${name} ${mode} ${width}: no sideways scroll`); await page.screenshot({ path: `${output}/${palette}-${name}-${mode}-${width}.png` }); };
 
         await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
-        await page.getByRole('group', { name: '테마' }).waitFor();
+        await page.getByRole('button', { name: /^테마 · / }).waitFor();
         await shot('home');
 
         await page.goto(`${base}/library`, { waitUntil: 'domcontentloaded' });
@@ -76,10 +81,22 @@ try {
         assert.equal(await style(page, '.public-site', 'backgroundColor'), paper[palette][mode]);
         const href = await page.locator('.book-read').first().getAttribute('href');
         const wiki = await page.locator('.book-wiki').first().getAttribute('href');
+
+        if (palette === 'diesel' || palette === 'noir') {
+            // Machine-age details: header band, stepped cover, stencil plate, switch button.
+            const pseudo = (selector, which, property) => page.locator(selector).first().evaluate((el, [which, property]) => getComputedStyle(el, which)[property], [which, property]);
+            assert.match(await pseudo('.public-header', '::after', 'backgroundImage'), palette === 'diesel' ? /repeating-linear-gradient/ : /linear-gradient/, 'band under the header');
+            assert.match(await style(page, '.book-cover', 'clipPath'), /polygon/, 'stepped cover top');
+            assert.match(await style(page, '.book-category', 'borderLeftStyle'), /solid/, 'stencil plate');
+            assert.equal(await style(page, '.book-read', 'backgroundColor'), palette === 'diesel' ? (mode === 'light' ? 'rgb(224, 165, 38)' : 'rgb(242, 181, 46)') : (mode === 'light' ? 'rgb(163, 24, 43)' : 'rgb(224, 66, 86)'));
+        }
+
         await shot('library');
 
         await page.goto(`${base}${href}`, { waitUntil: 'domcontentloaded' });
         await page.locator('.reading-body').first().waitFor();
+
+        if (palette === 'diesel' || palette === 'noir') assert.match(await page.locator('.reading-scene-title h2').first().evaluate(el => getComputedStyle(el, '::before').content), /counter\(scene/, 'instrument scene number');
         await shot('reader');
 
         if (wiki) { await page.goto(`${base}${wiki}`, { waitUntil: 'domcontentloaded' }); await page.locator('.wiki-page').waitFor(); await shot('wiki'); }
@@ -91,7 +108,7 @@ try {
         await page.locator('.editor-panes > .editor-shell .manuscript').waitFor();
 
         if (palette === 'ink') {
-            assert.equal(await page.locator('.doc-divider').first().evaluate(el => getComputedStyle(el, '::after').content), '"\u2042"');
+            assert.equal(await page.locator('.doc-divider').first().evaluate(el => getComputedStyle(el, '::after').content), '"\u2042"', `ink divider ${mode} ${width}`);
 
             const sheet = await page.locator('.manuscript p').first().evaluate(el => {
                 const cs = getComputedStyle(el);
