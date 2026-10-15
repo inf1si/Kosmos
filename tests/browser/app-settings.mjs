@@ -155,7 +155,7 @@ try{
   await openSettings();await section('집필 도구').click();
   await dialog().getByRole('combobox',{name:'글자 수 기준'}).selectOption('words');
   await choose('플롯보드 첫 보기','진행 상태');await choose('문서 그래프 첫 범위','주변 연결');await choose('주변 연결 단계','2단계');await choose('시점 인물 연결선','끔');
-  assert.deepEqual(await prefs(),{lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:800,plotBoardMode:'status',graphScope:'local',graphDepth:2,graphIncludePov:false,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'last'});
+  assert.deepEqual(await prefs(),{lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:800,plotBoardMode:'status',graphScope:'local',graphDepth:2,graphIncludePov:false,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'last',sidebarWidth:null});
   await close();
   assert.match(await page.locator('.editor-panes > .editor-shell .editor-toolbar').innerText(),/단어/);
   await page.locator('.studio-tools').getByRole('button',{name:'플롯보드',exact:true}).click();

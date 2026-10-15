@@ -26,6 +26,7 @@ import { ThemeToggle } from './theme-toggle';
 import { useStoredChoice } from './use-app-preferences';
 import { NOTES_LIST_VIEW_KEY, notesListViews } from '@/lib/app-preferences';
 import { useDrawerFocus } from './use-drawer-focus';
+import { SidebarResizer, useSidebarStyle } from './sidebar-resizer';
 import { filterNotes, noteBacklinks, noteDocument, noteTitle, patchNote } from '@/lib/personal-notes';
 import { plainText, wikiReferences, type NovelDocument, type PersonalNote } from '@/lib/model';
 import { cloud, cloudConfigured } from '@/lib/cloud';
@@ -45,6 +46,7 @@ export function PersonalNotes({activeId,captureId,importRequested,onImportOpened
   const [sidebar,setSidebar]=useState(false),[compact,setCompact]=useState(true),[side,setSide]=useState<'links'|'ai'|null>(null);
   const [listView,chooseList]=useStoredChoice(NOTES_LIST_VIEW_KEY,notesListViews,'tree'),[importOpen,setImportOpen]=useState(false),[folderWork,setFolderWork]=useState<{id:string;anchor:HTMLElement|null}|null>(null);
   const [query,setQuery]=useState(''),[filterOpen,setFilterOpen]=useState(false),[box,setBox]=useState<'all'|'inbox'|'icebox'>('all'),[tag,setTag]=useState(''),[workId,setWorkId]=useState('');
+  const sidebarStyle=useSidebarStyle();
   const sidebarRef=useRef<HTMLElement>(null),closeSidebar=useCallback(()=>setSidebar(false),[]);
   // Settings asks for note import (the studio switches here first) and for this space's templates.
   useEffect(()=>{if(importRequested){setImportOpen(true);onImportOpened();}},[importRequested,onImportOpened]);
@@ -113,7 +115,7 @@ if(compact)setSidebar(false);}
 
   return <TooltipProvider><div className="studio notes-workspace">
     {sidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={closeSidebar}/>}
-    {sidebar&&<aside className="studio-sidebar" ref={sidebarRef} aria-label="노트 탐색" role={compact?'dialog':undefined} aria-modal={compact||undefined}>
+    {sidebar&&<aside className="studio-sidebar" ref={sidebarRef} aria-label="노트 탐색" style={sidebarStyle} role={compact?'dialog':undefined} aria-modal={compact||undefined}>
       <div className="sidebar-close"><IconButton label="노트 탐색 닫기" data-drawer-close onClick={closeSidebar}><X size={17}/></IconButton></div>
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={false} onClick={onReturn}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={true}><StickyNote size={14}/>노트</button></div>
@@ -133,6 +135,7 @@ if(compact)setSidebar(false);}
       <div className="sidebar-scroll notes-list" aria-label="노트 목록"><div className="notes-list-view segmented" role="group" aria-label="노트 목록 보기"><button type="button" aria-pressed={listView==='tree'} onClick={()=>chooseList('tree')}>폴더</button><button type="button" aria-pressed={listView==='list'} onClick={()=>chooseList('list')}>최근 수정순</button></div>{listView==='tree'?<DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'노트가 없습니다.'}</p>}{listView==='tree'&&!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">노트가 없습니다.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
+    {sidebar&&!compact&&<SidebarResizer target={sidebarRef}/>}
     <main className="studio-panel">
       <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}

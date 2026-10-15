@@ -22,13 +22,18 @@ export const manuscriptWidths=[560,680,800,960] as const;
 
 export const checkpointIntervals=[5,10,20,30] as const;
 
+/** Dragged sidebar width bounds; `null` keeps the CSS default (264px, 280px from 1600px). */
+export const sidebarWidthRange={min:200,max:480} as const;
+
+const defaultSidebarWidth:number|null=null;
+
 export type PlotBoardMode='part'|'status'|'time';
 
 export type GraphScope='all'|'local';
 
 export type StudioStart='home'|'last';
 
-export const defaultAppPreferences={lineHeight:2,paragraphIndent:1,paragraphGap:1.2,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home'} as const;
+export const defaultAppPreferences={lineHeight:2,paragraphIndent:1,paragraphGap:1.2,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home',sidebarWidth:defaultSidebarWidth} as const;
 
 const d=defaultAppPreferences;
 
@@ -48,6 +53,8 @@ const appPreferencesSchema=z.object({
   checkpointMinutes:z.literal(checkpointIntervals).catch(d.checkpointMinutes),
   /** What /studio opens on: the studio home, or straight into the last document on this device. */
   studioStart:z.enum(['home','last']).catch(d.studioStart),
+  /** Studio and notes sidebar width set by dragging its edge. */
+  sidebarWidth:z.number().int().min(sidebarWidthRange.min).max(sidebarWidthRange.max).nullable().catch(d.sidebarWidth),
 }).catch({...defaultAppPreferences});
 
 export type AppPreferences=z.infer<typeof appPreferencesSchema>;
@@ -55,6 +62,9 @@ export type AppPreferences=z.infer<typeof appPreferencesSchema>;
 export function parseAppPreferences(raw:string|null):AppPreferences{
   try{return appPreferencesSchema.parse(JSON.parse(raw||'null'));}catch{return appPreferencesSchema.parse(null);}
 }
+
+/** CSS variable read by `.studio-sidebar` in studio.css. */
+export function sidebarWidthStyle(p:AppPreferences){return p.sidebarWidth===null?{}:{'--sidebar-width':`${p.sidebarWidth}px`};}
 
 /** CSS variables read by `.manuscript` rules in studio.css. */
 export function manuscriptLayoutStyle(p:AppPreferences){return {'--manuscript-line':String(p.lineHeight),'--manuscript-indent':`${p.paragraphIndent}em`,'--manuscript-gap':`${p.paragraphGap}em`,'--manuscript-width':`${p.manuscriptWidth}px`};}
