@@ -318,7 +318,33 @@
   border-bottom: 3px double var(--pub-rule);
 }
 :global([data-palette=columbia]) .header {
-  border-bottom: 3px double var(--pub-gilt);
+  position: relative;
+  margin-bottom: 12px;
+  border-bottom: 3px solid var(--pub-gilt);
+}
+/* Pennant bunting, same as the library header. */
+:global([data-palette=columbia]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 12px;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, var(--pub-kicker) 0 22px, var(--pub-brass) 22px 44px, var(--pub-sky) 44px 66px);
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 0 0/22px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 0 0/22px 100%;
+}
+:global([data-palette=columbia]) .intro h1 {
+  font-weight: 700;
+  text-shadow: 2px 2px 0 color-mix(in srgb, var(--pub-kicker) 45%, transparent);
+}
+:global([data-palette=columbia]) .primaryLink {
+  background-image: var(--rivet), var(--rivet), var(--rivet), var(--rivet);
+  background-position: 3px 3px, calc(100% - 3px) 3px, 3px calc(100% - 3px), calc(100% - 3px) calc(100% - 3px);
+  background-size: 8px 8px;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--pub-gilt);
 }
 :global([data-palette=nasapunk]) .header {
   border-bottom: 3px solid var(--pub-rule);

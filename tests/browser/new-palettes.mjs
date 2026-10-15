@@ -74,6 +74,8 @@ try {
 
         await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
         await page.getByRole('button', { name: /^테마 · / }).waitFor();
+
+        if (palette === 'columbia') assert.match(await page.locator('header').first().evaluate(el => getComputedStyle(el, '::after').maskImage), /conic-gradient/, 'pennant bunting on the home header');
         await shot('home');
 
         await page.goto(`${base}/library`, { waitUntil: 'domcontentloaded' });
@@ -81,6 +83,17 @@ try {
         assert.equal(await style(page, '.public-site', 'backgroundColor'), paper[palette][mode]);
         const href = await page.locator('.book-read').first().getAttribute('href');
         const wiki = await page.locator('.book-wiki').first().getAttribute('href');
+
+        if (palette === 'columbia') {
+            // Fair-poster structure with brass materials: pennants, halo, ribbon kicker, poster title, rivets.
+            const pseudo = (selector, which, property) => page.locator(selector).first().evaluate((el, [which, property]) => getComputedStyle(el, which)[property], [which, property]);
+            assert.match(await pseudo('.public-header', '::after', 'maskImage'), /conic-gradient/, 'pennant bunting under the header');
+            assert.match(await pseudo('.book-entry', '::before', 'backgroundImage'), /repeating-conic-gradient/, 'sunburst halo behind the cover');
+            assert.match(await pseudo('.book-cover', '::after', 'maskImage'), /svg/, 'gear on the cover arch');
+            assert.match(await style(page, '.book-category', 'clipPath'), /polygon/, 'ribbon kicker');
+            assert.equal(await style(page, '.book-info h2', 'fontWeight'), '700');
+            assert.equal((await style(page, '.book-read', 'backgroundImage')).match(/radial-gradient/g)?.length, 4, 'four rivets');
+        }
 
         if (palette === 'diesel' || palette === 'noir') {
             // Machine-age details: header band, stepped cover, stencil plate, switch button.
@@ -97,6 +110,12 @@ try {
         await page.locator('.reading-body').first().waitFor();
 
         if (palette === 'diesel' || palette === 'noir') assert.match(await page.locator('.reading-scene-title h2').first().evaluate(el => getComputedStyle(el, '::before').content), /counter\(scene/, 'instrument scene number');
+
+        if (palette === 'columbia') {
+            assert.match(await page.locator('.reading-title').evaluate(el => getComputedStyle(el, '::after').maskImage), /svg/, 'gear divider under the title');
+            assert.match(await page.locator('.reading-scene-title h2').first().evaluate(el => getComputedStyle(el, '::before').content), /counter\(scene/, 'gauge scene number');
+        }
+
         await shot('reader');
 
         if (wiki) { await page.goto(`${base}${wiki}`, { waitUntil: 'domcontentloaded' }); await page.locator('.wiki-page').waitFor(); await shot('wiki'); }
@@ -121,6 +140,14 @@ try {
             assert.doesNotMatch(sheet.image, /90deg/, 'no vertical cell lines');
             assert.equal(sheet.margin, '0px', 'paragraph gap is padding so lines continue');
             assert.equal(sheet.padding % sheet.line, 0, 'paragraph gap is whole rows');
+        }
+
+        if (palette === 'columbia') {
+            assert.match(await style(page, '.doc-kicker', 'clipPath'), /polygon/, 'ribbon kicker in the studio');
+            assert.match(await page.locator('.doc-divider').first().evaluate(el => getComputedStyle(el).maskImage), /svg/, 'gear divider in the studio');
+            assert.equal((await style(page, '.publish-button', 'backgroundImage')).match(/radial-gradient/g)?.length, 4, 'rivets on the primary button');
+            await page.locator('.publish-button').hover();
+            assert.equal((await style(page, '.publish-button', 'backgroundImage')).match(/radial-gradient/g)?.length, 4, 'rivets stay on hover');
         }
 
         await shot('studio-editor');
