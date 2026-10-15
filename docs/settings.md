@@ -22,7 +22,7 @@
 
 | 구역 | 항목 | 고를 수 있는 값 | 기본값 | 저장 위치 |
 |---|---|---|---|---|
-| 화면 | 색 계열 | 보라·카세트·사이버 | 보라 | 기기 `orbis-palette` |
+| 화면 | 색 계열 | 보라·카세트·사이버·잉크·컬럼비아·나사펑크 | 보라 | 기기 `orbis-palette` |
 | 화면 | 밝기 | 기기 설정·라이트·다크 | 기기 설정 | 기기 `orbis-theme`(기기 설정이면 값을 지움) |
 | 원고 표시 | 글꼴 | 서식 도구와 같은 목록([원고 편집 도구](editor-tools.md)) | 고운바탕 | 기기 `orbis-editor-preferences` |
 | 원고 표시 | 글자 크기 | 10~72px 목록(서식 도구에서 직접 넣은 값도 표시) | 18px | 기기 `orbis-editor-preferences` |
@@ -30,7 +30,7 @@
 | 원고 표시 | 문단 첫 줄 들여쓰기 | 없음·1글자·2글자 | 1글자 | 기기 `kosmos-app-preferences` |
 | 원고 표시 | 문단 간격 | 없음·0.6줄·1.2줄·1.8줄 | 1.2줄 | 기기 `kosmos-app-preferences` |
 | 원고 표시 | 본문 폭 | 560·680·800·960px | 680px | 기기 `kosmos-app-preferences` |
-| 집필 도구 | 글자 수 기준 | 공백 포함·공백 제외·어절·문단·200자 원고지 | 공백 포함 | 기기 `orbis-editor-preferences` |
+| 집필 도구 | 글자 수 기준 | 공백 포함·공백 제외·어절·문단·200자 원고지·A4 매수 | 공백 포함 | 기기 `orbis-editor-preferences` |
 | 집필 도구 | 집필실 첫 화면 | 집필실 홈·마지막 문서 | 집필실 홈 | 기기 `kosmos-app-preferences` |
 | 집필 도구 | 플롯보드 첫 보기 | 부와 장·진행 상태·작중 시간 | 부와 장 | 기기 `kosmos-app-preferences` |
 | 집필 도구 | 문서 그래프 첫 범위 | 전체·주변 연결 | 전체 | 기기 `kosmos-app-preferences` |
