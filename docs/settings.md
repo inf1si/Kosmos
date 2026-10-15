@@ -22,7 +22,7 @@
 
 | 구역 | 항목 | 고를 수 있는 값 | 기본값 | 저장 위치 |
 |---|---|---|---|---|
-| 화면 | 색 계열 | 보라·카세트·사이버·잉크·컬럼비아·나사펑크 | 보라 | 기기 `orbis-palette` |
+| 화면 | 색 계열 | 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르 | 보라 | 기기 `orbis-palette` |
 | 화면 | 밝기 | 기기 설정·라이트·다크 | 기기 설정 | 기기 `orbis-theme`(기기 설정이면 값을 지움) |
 | 원고 표시 | 글꼴 | 서식 도구와 같은 목록([원고 편집 도구](editor-tools.md)) | 고운바탕 | 기기 `orbis-editor-preferences` |
 | 원고 표시 | 글자 크기 | 10~72px 목록(서식 도구에서 직접 넣은 값도 표시) | 18px | 기기 `orbis-editor-preferences` |
@@ -49,6 +49,7 @@
 - **플롯보드·문서 그래프**는 다음에 열 때 고른 값으로 시작한다. 연 뒤에 화면 안에서 바꾼 보기는 저장하지 않는다. 문서 그래프 필터의 **필터 초기화**는 고른 시점 인물 연결선 값으로 돌아간다.
 - **노트 보기**는 노트 화면의 `segmented`와 같은 값이다. 어느 쪽에서 바꿔도 다른 쪽에 바로 반영된다.
 - **AI 보낼 자료**는 새로 여는 AI 대화의 처음 상태다. 대화창의 **보낼 자료**에서 그 대화만 다시 바꿀 수 있다.
+- **사이드바 폭**은 설정 창 구역이 아니라 집필실·노트 사이드바 오른쪽 가장자리를 끌어 바꾼다(200~480px, 창 폭의 40%까지). 기본은 비어 있음(`null`)이며 이때 CSS 기본 폭 264px(1600px 이상 280px)을 쓴다. 가장자리 두 번 누르기로 기본값으로 돌아간다. 120px 아래까지 끌어 놓으면 사이드바 닫기 버튼과 같이 닫히고 저장된 폭은 그대로라 다시 열면 직전 폭이다. 값은 같은 기기 `kosmos-app-preferences`의 `sidebarWidth`이고 900px 이하 겹쳐 뜨는 사이드바에는 적용하지 않는다.
 - **저장 대기 1.5초와 다른 기기 확인 12초**는 내부 고정값이며 설정 창에는 표시하지 않는다. [동기화](synchronization.md).
 - **저장 · 백업** 구역의 버튼은 백업과 복구·가져오기 · 내보내기·노트 가져오기·템플릿·휴지통 창을 연다. 2026-10-09부터 휴지통을 뺀 네 창은 사이드바 도구 줄에 없고 여기서만 연다(템플릿은 문서/폴더 메뉴의 **템플릿으로 저장/만들기**도 있음). 노트 가져오기를 집필실에서 누르면 노트 공간으로 바꾼 뒤 연다. 템플릿은 지금 공간(집필실 문서 / 노트)의 템플릿 창을 연다.
 - 색 계열은 **화면** 구역에서만 고른다. 사이드바 맨 아래에는 라이트·다크 버튼만 남겼고, 바닥의 작품 정보 아이콘은 작품 메뉴·더 보기 메뉴와 겹쳐 뺐다.
@@ -66,6 +67,7 @@
 - 저장값: `src/lib/app-preferences.ts`, 훅 `src/components/use-app-preferences.ts`(`useAppPreferences`, 기존 키를 쓰는 `useStoredChoice`).
 - 창: `src/components/settings-dialog.tsx`, 배치 CSS `src/app/settings.css`. `studio-modal` 이벤트의 `settings` 또는 `settings:<구역>`으로 연다(`StudioDialogs`).
 - 원고 표시는 `RichEditor`가 `--manuscript-line`·`--manuscript-indent`·`--manuscript-gap`·`--manuscript-width` 변수를 편집기 바깥 요소에 넣고 `studio.css`의 `.manuscript` 규칙이 읽는다(기본값을 함께 적어 변수가 없어도 이전과 같다).
+- 사이드바 폭은 `SidebarResizer`(`src/components/sidebar-resizer.tsx`)가 끄는 동안 사이드바의 `--sidebar-width`만 바꾸고 손을 뗄 때 한 번 저장한다. `studio.css`의 `.studio-sidebar`가 `min(var(--sidebar-width,264px),40vw)`로 읽는다.
 - 밝기 **기기 설정**은 `orbis-theme`을 지우고 기기 설정을 적용한다. 저장한 밝기가 없으면 열린 화면도 기기 설정 변경을 따라간다(`theme-toggle.tsx`의 `useThemeMode`).
 - AI 구역은 AI 설정 창과 같은 `AISettingsPanel`을 쓴다. 설정 창은 열려 있을 때만 내용을 그리므로 AI 연결 상태는 AI 구역을 열 때만 조회한다.
 

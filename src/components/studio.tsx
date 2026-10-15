@@ -29,6 +29,7 @@ import { Login,GoogleAccountControl } from './studio-auth';
 import { AIChat } from './ai-chat';
 import { EditableCombobox } from './editable-combobox';
 import { useDrawerFocus } from './use-drawer-focus';
+import { SidebarResizer, useSidebarStyle } from './sidebar-resizer';
 import { NovelDocument, Work, newDocument, statuses, wikiReferences } from '@/lib/model';
 import { countChars } from '@/lib/outline';
 import { descendantsOf, childrenOf, insertDocument, moveNavigation, resolveNavigation, siblingDestination } from '@/lib/document-navigation';
@@ -117,7 +118,7 @@ window.addEventListener('studio-modal',listener);
 return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openNotes,selectedNote]);
   const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
   const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [paperId,setPaperId]=useState<string|null>(null);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
-  const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const referenceRef=useRef<HTMLElement>(null);
+  const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const sidebarStyle=useSidebarStyle();const referenceRef=useRef<HTMLElement>(null);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
   useDrawerFocus(!notesOpen&&compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
   useDrawerFocus(!notesOpen&&compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,'reference-toggle');
@@ -269,7 +270,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
 
   return <TooltipProvider><div className={`studio ${focus?'focus-mode':''}`}>
     {showSidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={()=>setSidebar(false)}/>}
-    {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색" ref={sidebarRef} role={compact?'dialog':undefined} aria-modal={compact||undefined}>
+    {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색" ref={sidebarRef} style={sidebarStyle} role={compact?'dialog':undefined} aria-modal={compact||undefined}>
       <div className="sidebar-close"><IconButton label="작품 탐색 닫기" data-drawer-close onClick={closeSidebar}><X size={17}/></IconButton></div>
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={true}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={false} onClick={()=>openNotes(selectedNote)}><StickyNote size={14}/>노트</button></div>
@@ -292,6 +293,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
+    {showSidebar&&!compact&&<SidebarResizer target={sidebarRef} onCollapse={closeSidebar}/>}
     <main className="studio-panel">
       <div className="panel-tabs">
         <IconButton id="sidebar-toggle" label={showSidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={showSidebar} onClick={()=>{if(compact)setReference(null);
