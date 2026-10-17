@@ -404,3 +404,96 @@
 :global(:is([data-palette=diesel], [data-palette=noir])) .primaryLink:hover {
   background: var(--pub-accent-strong);
 }
+/* Babel: honeycomb band under the header, same as the library header. */
+:global([data-palette=babel]) .header {
+  position: relative;
+  margin-bottom: 18px;
+}
+:global([data-palette=babel]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 18px;
+  pointer-events: none;
+  background: var(--pub-band);
+  -webkit-mask: var(--babel-tile) 50% 0/13.856px 24px repeat-x;
+  mask: var(--babel-tile) 50% 0/13.856px 24px repeat-x;
+}
+:global([data-palette=babel]) .primaryLink {
+  border-radius: 0;
+  padding-inline: 26px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
+}
+:global([data-palette=babel]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+}
+:global([data-palette=babel]) .primaryLink:focus-visible {
+  clip-path: none;
+}
+/* Aleph: iridescent hairline with one ring in the middle. */
+:global([data-palette=aleph]) .header {
+  position: relative;
+  border-bottom-color: transparent;
+}
+:global([data-palette=aleph]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1.5px;
+  pointer-events: none;
+  background: var(--pub-iris);
+}
+:global([data-palette=aleph]) .header::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 18px;
+  height: 18px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--pub-iris-conic);
+  -webkit-mask: var(--aleph-point);
+  mask: var(--aleph-point);
+}
+:global([data-palette=aleph]) .primaryLink {
+  border-radius: 999px;
+}
+/* Mirror: lines that converge under the header, echoed primary link. */
+:global([data-palette=mirror]) .header {
+  position: relative;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--pub-rule);
+}
+:global([data-palette=mirror]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 16px;
+  pointer-events: none;
+  background: var(--mirror-lines);
+}
+:global([data-palette=mirror]) .brand {
+  font-family: var(--pub-mono);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+:global([data-palette=mirror]) .intro h1 {
+  font-family: var(--pub-sans);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+:global([data-palette=mirror]) .primaryLink {
+  border-radius: 0;
+  box-shadow: 5px 5px 0 -1px var(--pub-paper), 5px 5px 0 0 var(--pub-brand), 10px 10px 0 -1px var(--pub-paper), 10px 10px 0 0 var(--pub-echo);
+}
