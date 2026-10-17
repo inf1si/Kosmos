@@ -1,14 +1,14 @@
 'use client';
 
 import { useLayoutEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { CassetteTape, Clapperboard, Cpu, Feather, Fuel, Landmark, Moon, Rocket, Sun } from 'lucide-react';
+import { CassetteTape, CircleDot, Clapperboard, Cpu, Feather, Fuel, Hexagon, Infinity as InfinityIcon, Landmark, Moon, Rocket, Sun } from 'lucide-react';
 import { Popover } from './primitives';
 import { PALETTE_KEY, THEME_KEY, preferredPalette, preferredTheme, type SitePalette, type SiteTheme } from '@/lib/theme';
 
 /** Names and buttons of the colour families, in picker order. */
-export const paletteOptions:{id:SitePalette;name:string}[]=[{id:'violet',name:'보라'},{id:'cassette',name:'카세트'},{id:'cyber',name:'사이버'},{id:'ink',name:'잉크'},{id:'columbia',name:'컬럼비아'},{id:'nasapunk',name:'나사펑크'},{id:'diesel',name:'디젤'},{id:'noir',name:'누아르'}];
+export const paletteOptions:{id:SitePalette;name:string}[]=[{id:'violet',name:'보라'},{id:'cassette',name:'카세트'},{id:'cyber',name:'사이버'},{id:'ink',name:'잉크'},{id:'columbia',name:'컬럼비아'},{id:'nasapunk',name:'나사펑크'},{id:'diesel',name:'디젤'},{id:'noir',name:'누아르'},{id:'babel',name:'바벨'},{id:'aleph',name:'알레프'},{id:'mirror',name:'거울'}];
 
-const paletteIcons:Record<SitePalette,ReactNode>={violet:<span className="palette-swatch" aria-hidden="true"/>,cassette:<CassetteTape size={15}/>,cyber:<Cpu size={15}/>,ink:<Feather size={15}/>,columbia:<Landmark size={15}/>,nasapunk:<Rocket size={15}/>,diesel:<Fuel size={15}/>,noir:<Clapperboard size={15}/>};
+const paletteIcons:Record<SitePalette,ReactNode>={violet:<span className="palette-swatch" aria-hidden="true"/>,cassette:<CassetteTape size={15}/>,cyber:<Cpu size={15}/>,ink:<Feather size={15}/>,columbia:<Landmark size={15}/>,nasapunk:<Rocket size={15}/>,diesel:<Fuel size={15}/>,noir:<Clapperboard size={15}/>,babel:<Hexagon size={15}/>,aleph:<CircleDot size={15}/>,mirror:<InfinityIcon size={15}/>};
 
 function attribute(name:string){return document.documentElement.getAttribute(name);}
 

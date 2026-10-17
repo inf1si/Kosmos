@@ -22,7 +22,7 @@ test('저장한 밝기를 먼저 쓰고 없으면 기기 설정을 따르며 머
 });
 
 test('색 계열은 저장한 카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르만 인정하고 나머지는 보라로 시작한다',()=>{
-  for(const palette of ['cassette','cyber','ink','columbia','nasapunk','diesel','noir','violet',null,'orange','Cyber','Ink','nasa','Noir'])assert.equal(runScript({palette},false)['data-palette'],preferredPalette(palette));
-  assert.equal(preferredPalette('cassette'),'cassette');assert.equal(preferredPalette('cyber'),'cyber');assert.equal(preferredPalette('ink'),'ink');assert.equal(preferredPalette('columbia'),'columbia');assert.equal(preferredPalette('nasapunk'),'nasapunk');assert.equal(preferredPalette('diesel'),'diesel');assert.equal(preferredPalette('noir'),'noir');assert.equal(preferredPalette('Noir'),'violet');assert.equal(preferredPalette('orange'),'violet');assert.equal(preferredPalette('Cyber'),'violet');assert.equal(preferredPalette(null),'violet');
+  for(const palette of ['cassette','cyber','ink','columbia','nasapunk','diesel','noir','babel','aleph','mirror','violet',null,'orange','Cyber','Ink','nasa','Noir','Babel','infinity'])assert.equal(runScript({palette},false)['data-palette'],preferredPalette(palette));
+  assert.equal(preferredPalette('cassette'),'cassette');assert.equal(preferredPalette('cyber'),'cyber');assert.equal(preferredPalette('ink'),'ink');assert.equal(preferredPalette('columbia'),'columbia');assert.equal(preferredPalette('nasapunk'),'nasapunk');assert.equal(preferredPalette('diesel'),'diesel');assert.equal(preferredPalette('noir'),'noir');assert.equal(preferredPalette('babel'),'babel');assert.equal(preferredPalette('aleph'),'aleph');assert.equal(preferredPalette('mirror'),'mirror');assert.equal(preferredPalette('Noir'),'violet');assert.equal(preferredPalette('orange'),'violet');assert.equal(preferredPalette('Cyber'),'violet');assert.equal(preferredPalette(null),'violet');
   assert.deepEqual(runScript({theme:'light',palette:'cassette'},true),{'data-theme':'light','data-palette':'cassette'});
 });
