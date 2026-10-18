@@ -1,9 +1,9 @@
 export type SiteTheme='light'|'dark';
 
-export type SitePalette='violet'|'cassette'|'cyber'|'ink'|'columbia'|'nasapunk'|'diesel'|'noir'|'babel'|'aleph'|'mirror';
+export type SitePalette='violet'|'cassette'|'cyber'|'ink'|'columbia'|'nasapunk'|'diesel'|'noir'|'babel'|'infinity';
 
 /** Every colour family, the default first. */
-export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber','ink','columbia','nasapunk','diesel','noir','babel','aleph','mirror'];
+export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber','ink','columbia','nasapunk','diesel','noir','babel','infinity'];
 
 export const THEME_KEY='orbis-theme';
 

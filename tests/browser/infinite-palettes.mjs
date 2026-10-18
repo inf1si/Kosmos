@@ -23,7 +23,7 @@ const overflow = page => page.evaluate(() => document.documentElement.scrollWidt
 const style = (page, selector, property, pseudo = null) => page.locator(selector).first().evaluate((el, [property, pseudo]) => getComputedStyle(el, pseudo)[property], [property, pseudo]);
 
 try {
-    // 1. The header picker lists the three infinity families and the studio settings follow the choice.
+    // 1. The header picker lists the two infinity families and the studio settings follow the choice.
     {
         const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'light' });
         const page = await context.newPage();
@@ -32,27 +32,27 @@ try {
         await page.locator('.book-list').waitFor();
         await page.getByRole('button', { name: /^테마 · / }).click();
         const picker = page.getByRole('group', { name: '테마' });
-        assert.deepEqual((await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')))).slice(-3), ['바벨 테마', '알레프 테마', '거울 테마']);
-        await picker.getByRole('button', { name: '거울 테마' }).click();
-        assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 거울');
-        assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), 'mirror');
+        assert.deepEqual((await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')))).slice(-2), ['바벨 테마', '무한 테마']);
+        await picker.getByRole('button', { name: '무한 테마' }).click();
+        assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 무한');
+        assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), 'infinity');
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.locator('.book-list').waitFor();
-        assert.equal(await page.evaluate(() => document.documentElement.dataset.palette), 'mirror', 'head script keeps mirror before paint');
+        assert.equal(await page.evaluate(() => document.documentElement.dataset.palette), 'infinity', 'head script keeps infinity before paint');
         await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
         await page.locator('.studio-home').waitFor();
         await page.locator('.studio-tools').getByRole('button', { name: '설정', exact: true }).click();
         const choice = page.getByRole('dialog', { name: '설정' }).getByRole('group', { name: '색 계열', exact: true });
-        assert.equal(await choice.getByRole('button', { name: '거울', exact: true }).getAttribute('aria-pressed'), 'true');
+        assert.equal(await choice.getByRole('button', { name: '무한', exact: true }).getAttribute('aria-pressed'), 'true');
         await choice.getByRole('button', { name: '바벨', exact: true }).click();
         assert.equal(await page.evaluate(() => document.documentElement.dataset.palette), 'babel');
         await context.close();
     }
 
     // 2. Each family in light and dark at 1280px and 360px: no sideways scroll, its decorations, screenshots.
-    const paper = { babel: { light: 'rgb(233, 230, 220)', dark: 'rgb(15, 19, 18)' }, aleph: { light: 'rgb(245, 244, 241)', dark: 'rgb(9, 9, 13)' }, mirror: { light: 'rgb(243, 243, 241)', dark: 'rgb(14, 15, 17)' } };
+    const paper = { babel: { light: 'rgb(233, 230, 220)', dark: 'rgb(15, 19, 18)' }, infinity: { light: 'rgb(245, 244, 241)', dark: 'rgb(9, 9, 13)' } };
 
-    for (const palette of ['babel', 'aleph', 'mirror']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
+    for (const palette of ['babel', 'infinity']) for (const mode of ['light', 'dark']) for (const width of [1280, 360]) {
         const context = await browser.newContext({ viewport: { width, height: width === 360 ? 780 : 900 }, colorScheme: mode });
         await context.addInitScript(([palette, mode]) => { localStorage.setItem('orbis-palette', palette); localStorage.setItem('orbis-theme', mode); }, [palette, mode]);
         const page = await context.newPage();
@@ -76,17 +76,13 @@ try {
             assert.match(await style(page, '.book-read', 'clipPath'), /polygon/, 'hexagon button');
         }
 
-        if (palette === 'aleph') {
-            assert.match(await style(page, '.public-header', 'backgroundImage', '::after'), /linear-gradient/, 'iridescent hairline');
-            assert.match(await style(page, '.book-cover', 'backgroundImage', '::after'), /conic-gradient/, 'iridescent ring on the cover');
+        if (palette === 'infinity') {
+            assert.match(await style(page, '.public-header', 'maskImage', '::after'), /svg/, 'ticks converging under the header');
+            assert.match(await style(page, '.public-header', 'backgroundImage', '::before'), /conic-gradient/, 'iridescent point where the ticks meet');
+            assert.match(await style(page, '.public-brand-mark', 'maskImage'), /svg/, 'infinity mark before the site name');
+            assert.match(await style(page, '.book-cover', 'backgroundImage', '::after'), /conic-gradient/, 'iridescent point on the cover');
             assert.match(await style(page, '.book-category', 'backgroundImage', '::before'), /conic-gradient/, 'ring before the kicker');
             assert.equal(await style(page, '.book-read', 'borderTopLeftRadius'), '999px');
-        }
-
-        if (palette === 'mirror') {
-            assert.equal((await style(page, '.public-header', 'backgroundImage', '::after')).match(/linear-gradient/g)?.length, 5, 'five converging lines');
-            assert.equal(await style(page, '.book-category', 'outlineStyle'), 'solid', 'double frame kicker');
-            assert.equal((await style(page, '.book-read', 'boxShadow')).split('px, ').length > 1, true, 'echo outlines on the button');
         }
 
         await shot('library');

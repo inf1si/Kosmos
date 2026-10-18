@@ -434,66 +434,44 @@
 :global([data-palette=babel]) .primaryLink:focus-visible {
   clip-path: none;
 }
-/* Aleph: iridescent hairline with one ring in the middle. */
-:global([data-palette=aleph]) .header {
+/* Infinity: ticks that converge on one iridescent point under the header. */
+:global([data-palette=infinity]) .header {
   position: relative;
-  border-bottom-color: transparent;
+  margin-bottom: 18px;
 }
-:global([data-palette=aleph]) .header::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 1.5px;
-  pointer-events: none;
-  background: var(--pub-iris);
-}
-:global([data-palette=aleph]) .header::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -9px;
-  width: 18px;
-  height: 18px;
-  transform: translateX(-50%);
-  pointer-events: none;
-  background: var(--pub-iris-conic);
-  -webkit-mask: var(--aleph-point);
-  mask: var(--aleph-point);
-}
-:global([data-palette=aleph]) .primaryLink {
-  border-radius: 999px;
-}
-/* Mirror: lines that converge under the header, echoed primary link. */
-:global([data-palette=mirror]) .header {
-  position: relative;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--pub-rule);
-}
-:global([data-palette=mirror]) .header::after {
+:global([data-palette=infinity]) .header::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   top: 100%;
-  height: 16px;
+  height: 18px;
   pointer-events: none;
-  background: var(--mirror-lines);
+  background: var(--pub-ink);
+  -webkit-mask: var(--inf-band) 50% 0/auto 18px no-repeat;
+  mask: var(--inf-band) 50% 0/auto 18px no-repeat;
 }
-:global([data-palette=mirror]) .brand {
-  font-family: var(--pub-mono);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+:global([data-palette=infinity]) .header::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--pub-iris-conic);
+  -webkit-mask: var(--inf-point);
+  mask: var(--inf-point);
 }
-:global([data-palette=mirror]) .intro h1 {
-  font-family: var(--pub-sans);
-  font-weight: 600;
-  letter-spacing: -.01em;
+:global([data-palette=infinity]) .brandMark {
+  width: 30px;
+  height: 14px;
+  font-size: 0;
+  background: var(--pub-iris-conic);
+  -webkit-mask: var(--inf-mark) center/contain no-repeat;
+  mask: var(--inf-mark) center/contain no-repeat;
 }
-:global([data-palette=mirror]) .primaryLink {
-  border-radius: 0;
-  box-shadow: 5px 5px 0 -1px var(--pub-paper), 5px 5px 0 0 var(--pub-brand), 10px 10px 0 -1px var(--pub-paper), 10px 10px 0 0 var(--pub-echo);
+:global([data-palette=infinity]) .primaryLink {
+  border-radius: 999px;
 }
