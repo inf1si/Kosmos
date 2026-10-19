@@ -5,7 +5,8 @@
 - 기준: main `5efe38e11294f0d8f1b2efa3c85d570755cce187`. 사용자 보고: 모바일에서 미리보기 하단이 잘리고 표지 제목이 밖으로 나옴. 운영 `/library`를 별도 익명 브라우저로 읽어 긴 제목의 가로 넘침을 확인했다. 실제 원고·게시·계정은 변경하지 않았다.
 - 재현: 모바일 Chromium에서 `text-size-adjust:150%`를 적용하면 미리보기 글자는 24px·줄 높이 45.6px가 되지만 `max-height:7.6em`은 121.6px에 머물러 세 번째 줄 중간이 잘리고 말줄임표가 사라진다. 기본 100% Chromium·WebKit에서는 말줄임표가 보였다. 단어를 나누지 않는 표지 설정은 긴 제목을 폭 밖으로 밀어냈다.
 - 회귀 검사: [`library-mobile.mjs`](tests/browser/library-mobile.mjs). 수정 전 미리보기 높이 단언이 `121.59375px / 45.6px`로 실패하고, 표지 수정만 되돌리면 360px에서 제목 가로 넘침 `677px`로 실패했다. 수정 후 dev와 최적화 빌드의 Chromium·WebKit에서 16개 테마 × 360·390·700·1280px, 공백 없는 한글/영문 제목·본문, 짧은 문단, 전체 본문으로 열기·목록 복귀·IndexedDB 공개 판본 무변경 검사가 통과했다. Chromium의 150%·200% 글자 확대에서도 네 줄 높이를 확인했다(WebKit의 이 CSS 확대 값은 글자를 키우지 않으므로 기본 배율만 확인). 스크린샷과 두 엔진의 16개 표지 모음에서 네 번째 줄 말줄임표와 표지 제목의 줄바꿈·말줄임을 확인했다.
-- 로컬: `pnpm typecheck`, `pnpm lint`, `pnpm test`(215개), `pnpm docs:check`, 최적화 빌드 성공. 브라우저·합성 자료에서만 검증했으며 실제 기기 Safari·Android 설정에서의 직접 조작은 미확인. CI·운영 배포는 아직 확인 전이다.
+- 로컬: `pnpm typecheck`, `pnpm lint`, `pnpm test`(215개), `pnpm docs:check`, 최적화 빌드 성공. 브라우저·합성 자료에서만 검증했으며 실제 기기 Safari·Android 설정에서의 직접 조작은 미확인.
+- main·운영: [PR #68](https://github.com/inf1si/Kosmos/pull/68), 소스 `995d427dcf3af3e60e8d2e5476fac7c16995f966`. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/39249157573)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/39249439535)가 모두 성공했고 19개 Anti Slop 규칙 0건을 확인했다. Vercel `dpl_2D2PpuqgiHofgm2Ps3SaJjW5arqC`의 정확한 소스 SHA·production READY·www/root 별칭을 확인했다. 실제 www 서재의 네 작품을 익명 Chromium·WebKit에서 16개 테마 × 360·390·1280px(96개 구성)로 읽어 표지 제목 넘침 0·완전한 네 줄·전체 본문 읽기·페이지 오류/쓰기 요청 없음이 통과했다. Chromium 150%·200%에서 미리보기 높이는 182.375px·243.1875px로 늘고 네 번째 줄 말줄임표가 보였다. 증거: `test-results/library-mobile/production/`(운영 스크립트는 로컬 전용).
 
 ## 2026-10-15 — 컬럼비아 테마 개성 강화
 
