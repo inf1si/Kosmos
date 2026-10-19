@@ -81,7 +81,11 @@ try {
             const rect = p.getBoundingClientRect(), line = parseFloat(getComputedStyle(p).lineHeight);
             const c = cover.getBoundingClientRect(), t = title.getBoundingClientRect(), s = small.getBoundingClientRect();
 
-            return { text: p.textContent, height: rect.height, line, truncated: p.scrollHeight > p.clientHeight + 1, titleOverflow: title.scrollWidth - title.clientWidth, titleTop: t.top - c.top, titleBottom: c.bottom - t.bottom, labelBottom: c.bottom - s.bottom };
+            // Diesel and noir draw a rotated diamond (::after) above the title; its centre sits at `top`.
+            const emblem = ['diesel', 'noir'].includes(document.documentElement.dataset.palette) ? getComputedStyle(cover, '::after') : null;
+            const emblemBottom = emblem ? parseFloat(emblem.top) + parseFloat(emblem.width) * Math.SQRT2 / 2 : 0;
+
+            return { text: p.textContent, height: rect.height, line, truncated: p.scrollHeight > p.clientHeight + 1, titleOverflow: title.scrollWidth - title.clientWidth, titleTop: t.top - c.top, titleBottom: c.bottom - t.bottom, labelBottom: c.bottom - s.bottom, emblemBottom };
         }));
 
         for (const [i, r] of results.entries()) {
@@ -95,6 +99,7 @@ try {
             if (checkCover) {
                 assert.ok(r.titleOverflow <= 1, `${label}: title ${i} overflows by ${r.titleOverflow}px`);
                 assert.ok(r.titleTop > 0 && r.titleBottom > 0 && r.labelBottom > 0, `${label}: title and genre fit inside the cover`);
+                assert.ok(r.titleTop >= r.emblemBottom, `${label}: title ${i} top ${r.titleTop}px overlaps the emblem ending at ${r.emblemBottom}px`);
             }
         }
 
