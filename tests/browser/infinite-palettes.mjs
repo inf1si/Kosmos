@@ -32,7 +32,7 @@ try {
         await page.locator('.book-list').waitFor();
         await page.getByRole('button', { name: /^테마 · / }).click();
         const picker = page.getByRole('group', { name: '테마' });
-        assert.deepEqual((await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')))).slice(-2), ['바벨 테마', '무한 테마']);
+        assert.deepEqual((await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')))).slice(12, 14), ['바벨 테마', '무한 테마']);
         await picker.getByRole('button', { name: '무한 테마' }).click();
         assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 무한');
         assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), 'infinity');

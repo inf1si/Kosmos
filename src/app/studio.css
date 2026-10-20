@@ -123,6 +123,22 @@ html:has(.studio){background:var(--ground)}
 [data-palette=silmaril] .doc-tab.active{box-shadow:inset 0 -2px 0 var(--pub-gold)}
 [data-palette=silmaril] .studio-tools::after{height:1.5px;background:var(--sm-light)}
 [data-palette=silmaril] .work-cover{border-radius:2px;background:radial-gradient(circle at 50% 40%,var(--pub-gold-hi) 0 2.5px,color-mix(in srgb,var(--pub-gold-hi) 35%,transparent) 3px,transparent 9px),linear-gradient(180deg,var(--pub-cover-top),var(--cover))}
+/* 히치하이커: 스티커 분류 글자, 둥근 제목, 큼직한 빨간 단추, 점선 궤도 구분선, 달의 위상 상태(구상 빈 달 → 초안 초승달 → 퇴고 반달 → 완성 보름달), 수건 띠. */
+[data-palette=hitchhiker] .studio-brand{font-family:var(--pub-tech);font-size:15px;font-weight:600;letter-spacing:.04em}
+[data-palette=hitchhiker] .studio-brand>span{position:relative;width:12px;height:12px;margin-right:6px;font-size:0;border-radius:50%;background:var(--pub-planet)}
+[data-palette=hitchhiker] .studio-brand>span::after{content:"";position:absolute;left:50%;top:50%;width:22px;height:7px;border:1.5px solid var(--ink);border-radius:50%;transform:translate(-50%,-50%) rotate(-20deg)}
+[data-palette=hitchhiker] .doc-kicker{width:fit-content;padding:1px 10px;border:1.5px solid var(--pub-out);border-radius:999px;background:var(--pub-sticker);color:var(--pub-sticker-ink);font-size:12px;font-weight:600;transform:rotate(-1.5deg)}
+[data-palette=hitchhiker] .doc-title{font-family:var(--pub-title);font-weight:400}
+[data-palette=hitchhiker] .doc-divider,[data-palette=hitchhiker] .manuscript hr{width:200px;height:16px;border:0;background:var(--hh-orbit);-webkit-mask:var(--hh-fade);mask:var(--hh-fade)}
+[data-palette=hitchhiker] .primary{border:2px solid var(--pub-out);border-radius:10px;background:var(--pub-accent);color:var(--pub-on-accent);font-weight:600;box-shadow:0 2px 0 var(--pub-out)}
+[data-palette=hitchhiker] .primary:hover:not(:disabled){background:var(--pub-accent-strong);border-color:var(--pub-out)}
+[data-palette=hitchhiker] .status-dot{width:9px;height:9px;border:1.5px solid var(--pub-moon);border-radius:50%;background:none;box-shadow:none}
+[data-palette=hitchhiker] .status-dot.draft{background:radial-gradient(circle at 22% 50%,transparent 0 3.2px,var(--pub-moon) 3.6px)}
+[data-palette=hitchhiker] .status-dot.review{background:linear-gradient(90deg,transparent 50%,var(--pub-moon) 50%)}
+[data-palette=hitchhiker] .status-dot.done{background:var(--pub-moon)}
+[data-palette=hitchhiker] .doc-tab.active{box-shadow:inset 0 -3px 0 var(--pub-accent)}
+[data-palette=hitchhiker] .studio-tools::after{height:5px;background:linear-gradient(var(--pub-towel) 0 1px,var(--pub-towel-a) 1px 3px,var(--pub-towel) 3px 4px,var(--pub-towel-b) 4px 5px)}
+[data-palette=hitchhiker] .work-cover{border-radius:7px;color:var(--pub-panic);background:radial-gradient(circle at 50% 42%,var(--pub-panic) 0 3px,transparent 3.5px),linear-gradient(170deg,var(--pub-screen-top),var(--pub-screen));box-shadow:inset 0 0 0 3px var(--pub-bezel),inset 0 -7px 0 var(--pub-bezel)}
 
 .login-google{width:min(360px,calc(100vw - 48px));justify-content:center}.login-help{max-width:360px;font-size:13px;line-height:1.7;text-align:center;overflow-wrap:anywhere}.account-login{display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
 .wiki-preview.note-preview-popover{position:relative;width:min(300px,calc(100vw - 24px));max-height:var(--radix-popover-content-available-height);overflow:auto}

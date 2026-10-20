@@ -592,3 +592,79 @@
 :global([data-palette=infinity]) .primaryLink {
   border-radius: 999px;
 }
+/* Hitchhiker: the header is the black top of the Guide in both modes, with the towel band under it. */
+:global([data-palette=hitchhiker]) .header {
+  position: relative;
+  margin-top: 16px;
+  margin-bottom: 14px;
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(180deg, #1d1d21, #0b0b0d);
+  color: #fff6d6;
+  --pub-ink: #fff6d6;
+  --pub-text: #e6e1d3;
+  --pub-muted: #bdb6a4;
+  --pub-rule: #bdb6a4;
+  --pub-line: #3a3a40;
+  --pub-key: #1e1e22;
+  --pub-key-line: #3a3a40;
+  --pub-bevel: none;
+}
+:global([data-palette=hitchhiker]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background: var(--hh-towel);
+}
+:global([data-palette=hitchhiker]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+:global([data-palette=hitchhiker]) .brandMark {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  margin-right: 6px;
+  font-size: 0;
+  border-radius: 50%;
+  background: var(--pub-planet);
+}
+:global([data-palette=hitchhiker]) .brandMark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 9px;
+  border: 2px solid #fff6d6;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-20deg);
+}
+:global([data-palette=hitchhiker]) .intro h1 {
+  font-family: var(--pub-tech);
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+:global([data-palette=hitchhiker]) .primaryLink {
+  border: 2px solid var(--pub-out);
+  border-radius: 12px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  font-weight: 600;
+  box-shadow: 0 3px 0 var(--pub-out);
+}
+:global([data-palette=hitchhiker]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+}
+@media (max-width: 700px) {
+  :global([data-palette=hitchhiker]) .header {
+    margin-top: 0;
+    border-radius: 0;
+  }
+}
