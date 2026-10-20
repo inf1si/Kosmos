@@ -521,3 +521,74 @@
   background: var(--pub-pri-bg) padding-box, var(--sm-light) border-box;
   color: var(--pub-on-accent);
 }
+/* Babel: honeycomb band under the header, same as the library header. */
+:global([data-palette=babel]) .header {
+  position: relative;
+  margin-bottom: 18px;
+}
+:global([data-palette=babel]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 18px;
+  pointer-events: none;
+  background: var(--pub-band);
+  -webkit-mask: var(--babel-tile) 50% 0/13.856px 24px repeat-x;
+  mask: var(--babel-tile) 50% 0/13.856px 24px repeat-x;
+}
+:global([data-palette=babel]) .primaryLink {
+  border-radius: 0;
+  padding-inline: 26px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
+}
+:global([data-palette=babel]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+}
+:global([data-palette=babel]) .primaryLink:focus-visible {
+  clip-path: none;
+}
+/* Infinity: ticks that converge on one iridescent point under the header. */
+:global([data-palette=infinity]) .header {
+  position: relative;
+  margin-bottom: 18px;
+}
+:global([data-palette=infinity]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 18px;
+  pointer-events: none;
+  background: var(--pub-ink);
+  -webkit-mask: var(--inf-band) 50% 0/auto 18px no-repeat;
+  mask: var(--inf-band) 50% 0/auto 18px no-repeat;
+}
+:global([data-palette=infinity]) .header::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: var(--pub-iris-conic);
+  -webkit-mask: var(--inf-point);
+  mask: var(--inf-point);
+}
+:global([data-palette=infinity]) .brandMark {
+  width: 30px;
+  height: 14px;
+  font-size: 0;
+  background: var(--pub-iris-conic);
+  -webkit-mask: var(--inf-mark) center/contain no-repeat;
+  mask: var(--inf-mark) center/contain no-repeat;
+}
+:global([data-palette=infinity]) .primaryLink {
+  border-radius: 999px;
+}
