@@ -404,6 +404,123 @@
 :global(:is([data-palette=diesel], [data-palette=noir])) .primaryLink:hover {
   background: var(--pub-accent-strong);
 }
+/* Forerunner, Spartan × Infinity, Red Book and Silmarillion: same header band, brand and primary link as the library. */
+:global(:is([data-palette=forerunner], [data-palette=spartan], [data-palette=redbook], [data-palette=silmaril])) .header {
+  position: relative;
+  margin-bottom: 14px;
+}
+:global(:is([data-palette=forerunner], [data-palette=spartan], [data-palette=redbook], [data-palette=silmaril])) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  pointer-events: none;
+}
+:global([data-palette=forerunner]) .header {
+  border-bottom: 1px solid var(--pub-rule);
+}
+:global([data-palette=forerunner]) .header::after {
+  height: 7px;
+  background: linear-gradient(90deg, transparent, var(--pub-glow) 12%, var(--pub-glow) 88%, transparent) 0 0/100% 1.5px no-repeat, repeating-linear-gradient(90deg, var(--pub-notch) 0 22px, transparent 22px 26px, var(--pub-notch) 26px 30px, transparent 30px 46px) 0 4px/100% 3px no-repeat;
+  filter: drop-shadow(0 0 3px var(--pub-glow));
+}
+:global([data-palette=spartan]) .header {
+  border-bottom: 1px solid var(--pub-rule);
+}
+:global([data-palette=spartan]) .header::after {
+  height: 7px;
+  background: linear-gradient(var(--pub-glow), var(--pub-glow)) 0 100%/100% 1px no-repeat, linear-gradient(var(--pub-glow), var(--pub-glow)) 20px 0/36px 6px no-repeat, repeating-linear-gradient(115deg, var(--pub-armor) 0 72px, transparent 72px 76px) 0 0/100% 6px no-repeat;
+}
+:global([data-palette=redbook]) .header {
+  border-bottom: 3px double var(--pub-gold);
+}
+:global([data-palette=redbook]) .header::after {
+  height: 13px;
+  opacity: .55;
+  background: var(--pub-map);
+  -webkit-mask: var(--rb-mountains) 0 100%/120px 13px repeat-x;
+  mask: var(--rb-mountains) 0 100%/120px 13px repeat-x;
+}
+:global([data-palette=silmaril]) .header {
+  border-bottom: 1.5px solid var(--pub-gold);
+  border-image: var(--sm-light) 1;
+}
+:global([data-palette=silmaril]) .header::after {
+  height: 12px;
+  background: var(--sm-light);
+  -webkit-mask: var(--sm-waves) 0 0/80px 12px repeat-x;
+  mask: var(--sm-waves) 0 0/80px 12px repeat-x;
+}
+:global(:is([data-palette=forerunner], [data-palette=spartan], [data-palette=redbook], [data-palette=silmaril])) .brand {
+  font-family: var(--pub-tech);
+  font-size: 15px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+:global([data-palette=forerunner]) .brandMark {
+  width: 26px;
+  height: 9px;
+  font-size: 0;
+  border: 2px solid var(--pub-glow);
+  border-radius: 50%;
+  transform: rotate(-14deg);
+  box-shadow: 0 0 6px var(--pub-glow);
+}
+:global([data-palette=spartan]) .brandMark {
+  width: 24px;
+  height: 10px;
+  font-size: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 42%, 80% 100%, 20% 100%, 0 42%);
+  background: linear-gradient(160deg, var(--pub-accent-hi) 0 28%, var(--pub-accent) 55%, var(--pub-accent-lo));
+}
+:global([data-palette=redbook]) .brandMark {
+  width: 13px;
+  height: 13px;
+  font-size: 0;
+  border: 2px solid var(--pub-gold);
+  border-radius: 50%;
+}
+:global([data-palette=silmaril]:not([data-theme=dark])) .brandMark {
+  background: conic-gradient(from 20deg at 50% 34%, var(--pub-silver-hi), var(--pub-silver), var(--pub-gold), var(--pub-silver-hi), var(--pub-brand), var(--pub-gold), var(--pub-silver-hi));
+}
+:global([data-palette=silmaril]) .brandMark {
+  width: 12px;
+  height: 15px;
+  font-size: 0;
+  clip-path: polygon(30% 0, 70% 0, 100% 32%, 50% 100%, 0 32%);
+  background: conic-gradient(from 20deg at 50% 34%, #fff, var(--pub-silver-hi), var(--pub-gold-hi), #fff, var(--pub-silver), var(--pub-gold-hi), #fff);
+}
+:global(:is([data-palette=forerunner], [data-palette=spartan])) .intro h1 {
+  font-family: var(--pub-sans);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+:global([data-palette=forerunner]) .primaryLink {
+  border-radius: 0;
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+  background: linear-gradient(180deg, var(--pub-accent-hi), var(--pub-accent) 25%, var(--pub-accent-lo));
+  color: var(--pub-on-accent);
+}
+:global([data-palette=spartan]) .primaryLink {
+  border-radius: 0;
+  padding-right: 24px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  background: linear-gradient(165deg, var(--pub-accent-hi) 0 20%, var(--pub-accent) 50%, var(--pub-accent-lo));
+  color: var(--pub-on-accent);
+}
+:global([data-palette=redbook]) .primaryLink {
+  border-radius: 3px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  box-shadow: inset 0 0 0 2px var(--pub-accent), inset 0 0 0 3px var(--pub-gold-hi);
+}
+:global([data-palette=silmaril]) .primaryLink {
+  border-radius: 2px;
+  border: 1.5px solid transparent;
+  background: var(--pub-pri-bg) padding-box, var(--sm-light) border-box;
+  color: var(--pub-on-accent);
+}
 /* Babel: honeycomb band under the header, same as the library header. */
 :global([data-palette=babel]) .header {
   position: relative;

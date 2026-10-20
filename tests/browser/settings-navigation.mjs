@@ -240,6 +240,20 @@ try {
             const box = await dialog.boundingBox();
             assert(box.x >= 0 && box.x + box.width <= width + 1);
             assert.equal(await heading.evaluate(el => el.scrollWidth > el.clientWidth + 1), false, `${item[0]} heading overflow`);
+            // Regression: the back arrow narrowed the title and '내보내기' broke mid-word at 360px.
+            assert.deepEqual(await heading.locator('h2').evaluate(h2 => {
+                const text = h2.firstChild, split = [];
+
+                for (const match of text.data.matchAll(/\S+/g)) {
+                    const range = document.createRange();
+
+                    range.setStart(text, match.index); range.setEnd(text, match.index + match[0].length);
+
+                    if (new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size > 1) split.push(match[0]);
+                }
+
+                return split;
+            }), [], `${item[0]} title words stay whole`);
             const backButton = await heading.getByRole('button', { name: '설정으로 돌아가기' }).boundingBox();
             const closeButton = await heading.getByRole('button', { name: '닫기' }).boundingBox();
             assert(backButton.x + backButton.width < closeButton.x, 'back and close do not overlap');
