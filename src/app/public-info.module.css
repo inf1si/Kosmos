@@ -668,3 +668,124 @@
     border-radius: 0;
   }
 }
+/* Tron: the grid behind the page, the light-cycle trail under the header and the identity disc. */
+:global([data-palette=tron]) .page {
+  background-image: var(--tr-grid);
+  background-size: 24px 24px;
+}
+:global([data-palette=tron]) .header {
+  position: relative;
+  margin-bottom: 10px;
+  border-bottom: 0;
+}
+:global([data-palette=tron]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+  pointer-events: none;
+  background: var(--tr-band);
+  filter: drop-shadow(0 0 2px var(--pub-glow));
+}
+:global([data-palette=tron]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+:global([data-palette=tron]) .brandMark {
+  width: 22px;
+  height: 22px;
+  font-size: 0;
+  border: 1.5px solid var(--pub-accent);
+  border-radius: 50%;
+  background: var(--tr-disc);
+  box-shadow: 0 0 8px var(--pub-glow);
+}
+:global([data-palette=tron]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+:global([data-palette=tron]) .primaryLink {
+  border-radius: 2px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 2px var(--pub-accent), inset 0 0 0 3px var(--pub-on-accent-line), 0 0 12px var(--pub-glow);
+}
+:global([data-palette=tron]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+  box-shadow: inset 0 0 0 2px var(--pub-accent-strong), inset 0 0 0 3px var(--pub-on-accent-line), 0 0 14px var(--pub-glow);
+}
+/* Matrix: digital rain under the header and a blinking block cursor after the name. */
+@keyframes mx-blink {
+  50% {
+    opacity: 0;
+  }
+}
+:global([data-palette=matrix]) .header {
+  position: relative;
+  margin-bottom: 16px;
+  border-bottom: 0;
+}
+:global([data-palette=matrix]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 16px;
+  pointer-events: none;
+  background: var(--mx-rain);
+  -webkit-mask: var(--mx-rain-fade);
+  mask: var(--mx-rain-fade);
+  filter: drop-shadow(0 0 2px var(--pub-glow));
+}
+:global([data-palette=matrix]) .brand {
+  gap: 4px;
+  font-family: var(--pub-tech);
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+:global([data-palette=matrix]) .brandMark {
+  order: 1;
+  width: 10px;
+  height: 20px;
+  font-size: 0;
+  background: var(--pub-accent);
+  box-shadow: 0 0 8px var(--pub-glow);
+  animation: mx-blink 1.1s steps(1) infinite;
+}
+:global([data-palette=matrix]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+:global([data-palette=matrix]) .primaryLink {
+  border-radius: 0;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  font-family: var(--pub-code);
+  font-weight: 700;
+  box-shadow: 0 0 12px var(--pub-glow);
+}
+:global([data-palette=matrix]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  :global([data-palette=matrix]) .brandMark {
+    animation: none;
+  }
+}
+@media (max-width: 700px) {
+  :global([data-palette=tron]) .header::after {
+    --tr-j: 96px;
+    --tr-o: 64px;
+  }
+}
