@@ -143,6 +143,29 @@ html:has(.studio){background:var(--ground)}
 [data-palette=hitchhiker] .doc-tab.active{box-shadow:inset 0 -3px 0 var(--pub-accent)}
 [data-palette=hitchhiker] .studio-tools::after{height:5px;background:linear-gradient(var(--pub-towel) 0 1px,var(--pub-towel-a) 1px 3px,var(--pub-towel) 3px 4px,var(--pub-towel-b) 4px 5px)}
 [data-palette=hitchhiker] .work-cover{border-radius:7px;color:var(--pub-panic);background:radial-gradient(circle at 50% 42%,var(--pub-panic) 0 3px,transparent 3.5px),linear-gradient(170deg,var(--pub-screen-top),var(--pub-screen));box-shadow:inset 0 0 0 3px var(--pub-bezel),inset 0 -7px 0 var(--pub-bezel)}
+/* segmented(설정의 색 계열 고르기 포함)도 계열의 주요 버튼 모양을 따른다(카세트·사이버는 위에). 선택된 버튼은 주요 버튼 색이다. */
+[data-palette=ink] .segmented{border-radius:4px}
+[data-palette=ink] .segmented button{border-radius:2px}
+[data-palette=ink] .segmented button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);box-shadow:inset 0 -2px 0 var(--pub-kicker)}
+[data-palette=columbia] .segmented button[aria-pressed=true]{background-color:var(--brand);color:var(--on-brand);box-shadow:inset 0 0 0 1px var(--gilt);background-image:var(--rivet),var(--rivet),var(--rivet),var(--rivet);background-position:2px 2px,calc(100% - 2px) 2px,2px calc(100% - 2px),calc(100% - 2px) calc(100% - 2px);background-size:7px 7px;background-repeat:no-repeat}
+[data-palette=nasapunk] .segmented button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);box-shadow:inset 0 3px 0 var(--pub-rule)}
+:is([data-palette=diesel],[data-palette=noir]) .segmented,:is([data-palette=diesel],[data-palette=noir]) .segmented button{border-radius:2px}
+:is([data-palette=diesel],[data-palette=noir]) .segmented button[aria-pressed=true]{background:var(--pub-accent);color:var(--pub-on-accent);font-weight:600;box-shadow:inset 0 1px 0 #ffffff59,0 2px 0 var(--pub-accent-edge)}
+[data-palette=forerunner] .segmented,[data-palette=spartan] .segmented,[data-palette=babel] .segmented button[aria-pressed=true]{border-radius:0}
+[data-palette=forerunner] .segmented button[aria-pressed=true]{border-radius:0;clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);background:linear-gradient(180deg,var(--pub-accent-hi),var(--pub-accent) 25%,var(--pub-accent-lo));color:var(--pub-on-accent);box-shadow:none}
+[data-palette=spartan] .segmented button[aria-pressed=true]{border-radius:0;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);background:linear-gradient(165deg,var(--pub-accent-hi) 0 20%,var(--pub-accent) 50%,var(--pub-accent-lo));color:var(--pub-on-accent);font-weight:600;box-shadow:none}
+[data-palette=redbook] .segmented{border-radius:4px}
+[data-palette=redbook] .segmented button{border-radius:3px}
+[data-palette=redbook] .segmented button[aria-pressed=true]{background:var(--pub-accent);color:var(--pub-on-accent);box-shadow:inset 0 0 0 1px var(--pub-accent),inset 0 0 0 2px var(--pub-gold-hi)}
+[data-palette=silmaril] .segmented,[data-palette=silmaril] .segmented button{border-radius:2px}
+[data-palette=silmaril] .segmented button[aria-pressed=true]{border:1px solid transparent;background:var(--pub-pri-bg) padding-box,var(--sm-light) border-box;color:var(--pub-on-accent);box-shadow:none}
+[data-palette=babel] .segmented button[aria-pressed=true]{clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%);background:var(--pub-accent);color:var(--pub-on-accent);box-shadow:none}
+:is([data-palette=forerunner],[data-palette=spartan],[data-palette=babel]) .segmented button[aria-pressed=true]:focus-visible{clip-path:none}
+[data-palette=infinity] .segmented,[data-palette=infinity] .segmented button{border-radius:999px}
+[data-palette=infinity] .segmented button[aria-pressed=true]{border:1.5px solid transparent;background:linear-gradient(var(--brand),var(--brand)) padding-box,var(--pub-iris-conic) border-box;color:var(--on-brand);box-shadow:none}
+[data-palette=hitchhiker] .segmented{border-radius:10px}
+[data-palette=hitchhiker] .segmented button{border-radius:8px}
+[data-palette=hitchhiker] .segmented button[aria-pressed=true]{background:var(--pub-accent);color:var(--pub-on-accent);font-weight:600;box-shadow:inset 0 0 0 2px var(--pub-out),0 2px 0 var(--pub-out)}
 
 .login-google{width:min(360px,calc(100vw - 48px));justify-content:center}.login-help{max-width:360px;font-size:13px;line-height:1.7;text-align:center;overflow-wrap:anywhere}.account-login{display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
 .wiki-preview.note-preview-popover{position:relative;width:min(300px,calc(100vw - 24px));max-height:var(--radix-popover-content-available-height);overflow:auto}
