@@ -36,7 +36,7 @@ try {
         await page.getByRole('button', { name: /^테마 · / }).click();
         const picker = page.getByRole('group', { name: '테마' });
         const names = await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')));
-        assert.equal(names.at(-1), '히치하이커 테마');
+        assert.equal(names[14], '히치하이커 테마');
         await page.screenshot({ path: `${output}/picker-1280.png` });
         await picker.getByRole('button', { name: '히치하이커 테마' }).click();
         assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 히치하이커');

@@ -38,14 +38,14 @@
 - 색 계열 이름으로 분기하지 않는다. 카세트의 Mono 숫자·키 모양처럼 꼭 필요한 차이만 `[data-palette=…]` 규칙으로 더한다(4절).
 - hex 값, 그라데이션, 새 그림자를 쓰지 않는다.
 
-**끝내기 전에** 같은 탭 화면(플롯보드 등)과 나란히 서른 조합 × 1280px·360px 화면을 찍어 위 표와 다른 곳이 없는지 본다. 그다음 20절 체크리스트를 확인한다.
+**끝내기 전에** 같은 탭 화면(플롯보드 등)과 나란히 서른네 조합 × 1280px·360px 화면을 찍어 위 표와 다른 곳이 없는지 본다. 그다음 22절 체크리스트를 확인한다.
 
 ## 1. 적용 상태
 
 | 영역 | 상태 | 근거 |
 |---|---|---|
-| 공개 페이지: 홈·서재·독서·설정집·데이터 이용 안내·자기소개 | **구현.** 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커 열다섯 색 계열 × 라이트·다크, 웹폰트, 글자 표지 | `src/app/globals.css`의 `--pub-*`, `src/app/public-info.module.css`, `src/lib/theme.ts`, `src/components/theme-toggle.tsx` |
-| 집필실 | **구현.** 사이드바와 편집 패널, 제목 아래 칩, 참고 패널, 부 기준 플롯보드. 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커 × 라이트·다크 | `src/app/studio.css`, `globals.css` 앞부분의 기본 토큰, `src/components/studio.tsx`·`plot-board.tsx`, [8절](#8-집필실) |
+| 공개 페이지: 홈·서재·독서·설정집·데이터 이용 안내·자기소개 | **구현.** 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커·트론·매트릭스 열일곱 색 계열 × 라이트·다크, 웹폰트, 글자 표지 | `src/app/globals.css`의 `--pub-*`, `src/app/public-info.module.css`, `src/lib/theme.ts`, `src/components/theme-toggle.tsx` |
+| 집필실 | **구현.** 사이드바와 편집 패널, 제목 아래 칩, 참고 패널, 부 기준 플롯보드. 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커·트론·매트릭스 × 라이트·다크 | `src/app/studio.css`, `globals.css` 앞부분의 기본 토큰, `src/components/studio.tsx`·`plot-board.tsx`, [8절](#8-집필실) |
 | 카세트 퓨처리즘 테마 | **구현.** 독자는 공개 헤더·읽기 설정에서, 작가는 집필실 사이드바에서 고른다(같은 저장값). LED 막대 진행 표시는 미구현 | [9절](#9-카세트-퓨처리즘-테마) |
 | 사이버 테마 | **구현.** 라이트는 사이버프렙, 다크는 사이버펑크. 고르는 곳은 카세트와 같다 | [10절](#10-사이버-테마) |
 | 잉크 테마 | **구현.** 책과 원고지. 라이트는 미색 종이에 남색 잉크, 다크는 먹색 바탕. 집필실 원고에 원고지 줄 | [11절](#11-잉크-테마) |
@@ -57,6 +57,8 @@
 | 붉은 책·실마릴리온 테마 | **구현.** 반지의 제왕 컨셉. 붉은 책은 양피지·붉은 봉인·산맥, 실마릴리온은 남색 밤에 은빛·금빛 두 나무의 빛 | [17절](#17-가운데땅-테마-붉은-책실마릴리온) |
 | 바벨·무한 테마 | **구현.** 보르헤스의 무한 두 갈래. 바벨은 육각 서가와 녹청, 무한은 한 점으로 모이는 눈금과 무지갯빛 ∞ | [18절](#18-무한-테마-바벨무한) |
 | 히치하이커 테마 | **구현.** 은하수를 여행하는 히치하이커를 위한 안내서. 미색 종이(다크는 검정)에 검은 단말기, DON'T PANIC 노랑·빨강, 수건 띠 | [19절](#19-히치하이커-테마) |
+| 트론 테마 | **구현.** 영화 「트론」의 그리드. 어둠 속 청록 빛의 선, 정체성 원반, 원근 격자 바닥, 라이트 사이클 궤적. 라이트는 흰 바탕에 짙은 청록 | [20절](#20-트론-테마) |
+| 매트릭스 테마 | **구현.** 영화 「매트릭스」의 코드비. 녹색 인광 글자, 떨어지는 반전 가타카나, 깜박이는 네모 커서. 라이트는 흰 구성 공간 | [21절](#21-매트릭스-테마) |
 
 이 문서의 구현 항목은 코드가 기준이다. 코드와 다르면 코드를 따르고 이 문서를 고친다.
 
@@ -68,7 +70,7 @@
    - Very Peri `--pub-link`: 설정 링크, 각주 번호, 읽기 진행 막대, 텍스트 링크.
 3. **서재는 책, 집필실은 도구.** 공개 페이지는 명조 제목·넓은 여백·가는 구분선으로 책처럼, 집필실은 작은 고딕·촘촘한 배치로 작업 도구처럼 만든다. 색 규칙은 같고 레이아웃과 글꼴로 구분한다.
 4. **꾸밈말보다 사실.** 슬로건·영문 장식 제목 대신 실제 데이터(편수, 날짜, 개수)를 보여준다. [7절](#7-문구)을 따른다.
-5. **서른 조합에서 모두 확인한다.** 새 화면은 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커 × 라이트·다크 서른 조합에서 각각 보고, 본문 대비 4.5:1 이상을 지킨다.
+5. **서른네 조합에서 모두 확인한다.** 새 화면은 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커·트론·매트릭스 × 라이트·다크 서른네 조합에서 각각 보고, 본문 대비 4.5:1 이상을 지킨다.
 
 ## 3. 색 토큰 (공개 페이지)
 
@@ -113,10 +115,10 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 ## 4. 테마 (색 계열 × 밝기)
 
-- 테마는 `<html>`의 두 속성으로 정한다. 밝기 `data-theme="light|dark"`와 색 계열 `data-palette="violet|cassette|cyber|ink|columbia|nasapunk|diesel|noir|forerunner|spartan|redbook|silmaril|babel|infinity|hitchhiker"`이다. 둘은 따로 고르며 서른 조합이 모두 있다. 색 계열 목록은 `src/lib/theme.ts`의 `PALETTES`(이름은 `theme-toggle.tsx`의 `paletteOptions`) 하나에서 온다.
-- `src/lib/theme.ts`의 `themeScript`가 `<head>`에서 첫 그리기 전에 실행된다. 밝기는 저장된 선택(`localStorage`의 `orbis-theme`)이 있으면 그것을, 없으면 기기 설정을 쓴다. 색 계열은 저장된 선택(`orbis-palette`)이 `cassette`·`cyber`·`ink`·`columbia`·`nasapunk`·`diesel`·`noir`·`forerunner`·`spartan`·`redbook`·`silmaril`·`babel`·`infinity`·`hitchhiker` 중 하나면 그것을, 나머지는 보라를 쓴다.
+- 테마는 `<html>`의 두 속성으로 정한다. 밝기 `data-theme="light|dark"`와 색 계열 `data-palette="violet|cassette|cyber|ink|columbia|nasapunk|diesel|noir|forerunner|spartan|redbook|silmaril|babel|infinity|hitchhiker|tron|matrix"`이다. 둘은 따로 고르며 서른네 조합이 모두 있다. 색 계열 목록은 `src/lib/theme.ts`의 `PALETTES`(이름은 `theme-toggle.tsx`의 `paletteOptions`) 하나에서 온다.
+- `src/lib/theme.ts`의 `themeScript`가 `<head>`에서 첫 그리기 전에 실행된다. 밝기는 저장된 선택(`localStorage`의 `orbis-theme`)이 있으면 그것을, 없으면 기기 설정을 쓴다. 색 계열은 저장된 선택(`orbis-palette`)이 `cassette`·`cyber`·`ink`·`columbia`·`nasapunk`·`diesel`·`noir`·`forerunner`·`spartan`·`redbook`·`silmaril`·`babel`·`infinity`·`hitchhiker`·`tron`·`matrix` 중 하나면 그것을, 나머지는 보라를 쓴다.
 - CSS는 `:root`(보라 라이트) → `[data-theme=dark]`(보라 다크) → `[data-palette=cassette]`(카세트 라이트) → `[data-palette=cassette][data-theme=dark]`(카세트 다크) 순서로 덮어쓴다. 마지막 블록은 선택자가 더 구체적이라 순서와 관계없이 이긴다.
-- 공개 페이지 헤더마다 `ThemeControls`를 둔다. 왼쪽은 지금 색 계열의 아이콘 버튼 하나(이름 "테마 · 보라")이고, 누르면 `Popover`(제목 **테마**, 260px, `.palette-popover`)에 열다섯 색 계열이 두 줄 격자(`.palette-picker`, 아이콘 + 이름, `aria-pressed`)로 열린다. 오른쪽은 달/해 밝기 버튼이다. 색 계열이 여덟 개라 버튼을 헤더에 늘어놓으면 360px 독서 화면 헤더가 넘쳐 팝오버로 옮겼다(2026-10-15). 다른 조작에서 바꿀 때는 `useSiteTheme()`·`useSitePalette()`를 쓴다. 독서 화면의 "읽기 설정 › 배경"과 "읽기 설정 › 테마"도 같은 값을 바꾼다.
+- 공개 페이지 헤더마다 `ThemeControls`를 둔다. 왼쪽은 지금 색 계열의 아이콘 버튼 하나(이름 "테마 · 보라")이고, 누르면 `Popover`(제목 **테마**, 260px, `.palette-popover`)에 열일곱 색 계열이 두 줄 격자(`.palette-picker`, 아이콘 + 이름, `aria-pressed`)로 열린다. 오른쪽은 달/해 밝기 버튼이다. 색 계열이 여덟 개라 버튼을 헤더에 늘어놓으면 360px 독서 화면 헤더가 넘쳐 팝오버로 옮겼다(2026-10-15). 다른 조작에서 바꿀 때는 `useSiteTheme()`·`useSitePalette()`를 쓴다. 독서 화면의 "읽기 설정 › 배경"과 "읽기 설정 › 테마"도 같은 값을 바꾼다.
 - **고르기 버튼 모양.** 헤더 테마·밝기 버튼(`.theme-controls .theme-toggle`), 테마 팝오버 버튼(`.palette-picker button`), 집필실 `segmented`(설정 › 화면 › 색 계열 포함)는 계열마다 그 계열 주요 버튼 모양을 따르고, 선택된 버튼은 주요 버튼 색이다. 보라만 기본 둥근 상자(6px, 선택은 `--pub-tint`)다. 잉크부터 히치하이커까지는 처음에 이것이 빠져 모두 기본 상자였다(2026-10-21 고침). 새 계열을 더할 때 세 곳을 함께 정하고 [`palette-picker-shapes.mjs`](../tests/browser/palette-picker-shapes.mjs)의 목록에 넣는다. `clip-path`로 모양을 낸 계열은 `:focus-visible`에서 `clip-path:none`으로 초점 테두리를 살린다.
 
 | 계열 | 모양 | 선택된 버튼 |
@@ -135,6 +137,8 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 | 바벨 | 양끝 뾰족한 육각, 테두리 대신 옅은 바탕 | 녹청 육각 |
 | 무한 | 알약(헤더는 원) | `brand` + 무지갯빛 고리 테(`--pub-iris-conic`) |
 | 히치하이커 | 2px `--pub-out` 외곽선, 10px, 아래 2px 그림자 | 빨강 |
+| 트론 | 2px, `--pub-accent-soft` 테두리 | 청록 + 안쪽 회로 선(다크는 빛) |
+| 매트릭스 | 0, 녹색 테두리, 고정폭 글꼴 | 녹색(다크는 빛) |
 - 이전 독서 설정(`orbit-reader-prefs`의 `theme: 'night'`)은 사이트 밝기가 저장되지 않은 경우에 한 번만 다크로 옮긴다.
 - 집필실도 두 속성을 모두 읽는다. 색 계열은 **설정 › 화면**에서만 고르고, 집필실·노트 사이드바 맨 아래에는 달/해 밝기 버튼(`ThemeToggle`, `ThemeControls`의 오른쪽 버튼과 같음)만 둔다. 둘 다 공개 페이지와 같은 `orbis-palette`·`orbis-theme` 값을 바꾼다. **설정 › 화면**의 밝기 **기기 설정**은 `orbis-theme`을 지워 기기 설정으로 되돌린다(`useThemeMode`). 저장한 밝기가 없으면 열린 화면도 기기 설정 변경을 따라간다. 집필실의 기본 토큰도 같은 순서(`:root` → `[data-theme=dark]` → `[data-palette=<계열>]` → `[data-palette=<계열>][data-theme=dark]`)로 덮어쓴다.
 
@@ -159,9 +163,9 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 | `--pub-serif` | Gowun Batang → Batang → Noto Serif KR → serif | 사이트 이름, 페이지·작품·문서 제목, 본문 미리보기, 독서 본문의 기본 폴백 |
 | `--pub-sans` | IBM Plex Sans KR → Apple SD Gothic Neo → Malgun Gothic → sans-serif | 메뉴·버튼·설명·날짜·각주·설정집 설명, 카세트의 제목 |
 | `--pub-mono` | IBM Plex Mono → IBM Plex Sans KR → ui-monospace | 카세트의 날짜·개수·각주 번호·분류 글자. 한글은 IBM Plex Sans KR로 넘어간다 |
-| `--pub-tech` | Michroma → IBM Plex Sans KR (사이버 Chakra Petch, 선조 유적 Oxanium, 스파르탄 Saira Semi Condensed, 붉은 책 Cinzel → 고운바탕, 실마릴리온 Marcellus SC → 고운바탕, 히치하이커 Fredoka) | 카세트·사이버의 사이트 이름, 홈 제목, 표지의 ORBIS TERTIUS. 사이버는 숫자·분류 글자에도 쓴다. 16·17절 네 계열은 사이트 이름·표지 ORBIS TERTIUS·장면 번호. 히치하이커는 사이트 이름·홈 제목·장면 번호 |
+| `--pub-tech` | Michroma → IBM Plex Sans KR (사이버 Chakra Petch, 선조 유적 Oxanium, 스파르탄 Saira Semi Condensed, 붉은 책 Cinzel → 고운바탕, 실마릴리온 Marcellus SC → 고운바탕, 히치하이커 Fredoka, 트론 Orbitron, 매트릭스 Share Tech Mono) | 카세트·사이버의 사이트 이름, 홈 제목, 표지의 ORBIS TERTIUS. 사이버는 숫자·분류 글자에도 쓴다. 16·17절 네 계열은 사이트 이름·표지 ORBIS TERTIUS·장면 번호. 히치하이커는 사이트 이름·홈 제목·장면 번호. 트론은 사이트 이름·분류 글자·장면 번호, 매트릭스는 사이트 이름·장면 번호 |
 
-사이트 웹폰트는 `src/app/layout.tsx`에서 Google Fonts 한 줄로 불러온다(Gowun Batang, Chakra Petch, IBM Plex Mono, IBM Plex Sans KR, Michroma, Oxanium, Saira Semi Condensed, Cinzel, Marcellus SC, Fredoka, Jua, Shrikhand). 히치하이커는 `--pub-title`에 Jua를, 표지 DON'T PANIC에 Shrikhand를 쓴다. 제목은 `--pub-serif`를 직접 쓰지 않고 `--pub-title`을 쓴다(3절 모양 토큰).
+사이트 웹폰트는 `src/app/layout.tsx`에서 Google Fonts 한 줄로 불러온다(Gowun Batang, Chakra Petch, IBM Plex Mono, IBM Plex Sans KR, Michroma, Oxanium, Saira Semi Condensed, Cinzel, Marcellus SC, Fredoka, Jua, Shrikhand, Orbitron, Share Tech Mono, Nanum Gothic Coding, M PLUS 1 Code). 히치하이커는 `--pub-title`에 Jua를, 표지 DON'T PANIC에 Shrikhand를 쓴다. 매트릭스는 `--pub-title`·분류 글자(`--pub-code`)에 Nanum Gothic Coding을, 코드비 가타카나(`--pub-glyph`)에 M PLUS 1 Code를 쓴다. 제목은 `--pub-serif`를 직접 쓰지 않고 `--pub-title`을 쓴다(3절 모양 토큰).
 
 작가가 선택하는 원고 글꼴은 별도다. 명조·고딕·코딩·손글씨·기기 글꼴 등 20가지를 제공한다([목록과 크기 범위](editor-tools.md#글꼴크기)). 크기는 10~72px에서 0.5px 단위로 직접 입력한다. `manuscript-fonts.ts`가 웹폰트를 사이트에서 직접 제공하며 preload하지 않는다. Google Fonts 글꼴은 Next Font로, Google Fonts에 없는 마루부리·나눔바른고딕·프리텐다드·원티드 산스는 npm 글꼴 패키지의 CSS를 불러온다. 원고 글꼴을 더할 때는 상업적 이용이 가능한 무료 라이선스(OFL 등)만 쓰고, 외부 CDN 대신 이 두 방식 중 하나로 사이트에서 제공한다. 선택한 글꼴만 내려받으며 글자 범위로 나뉜 글꼴은 필요한 범위만 로드한다. `--manuscript-font`는 원고 본문에만 적용한다. 글꼴·크기는 현재 브라우저에 저장하고 문서·분할 창이 바뀌어도 유지한다. 이 작가 보기 설정은 공개 페이지·문서의 서식 데이터·내보내기에 영향을 주지 않는다. 독서 화면은 같은 글꼴 목록과 웹폰트를 사용하되 `--reading-font`에 독자가 고른 family를 넣어 본문에만 적용한다. 읽기 설정은 독자의 브라우저에 별도로 저장한다.
 
@@ -249,7 +253,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 **문서 통계.** 기존 숫자 자리를 화살표가 있는 버튼으로 바꿔 그 아래 380px 팝오버를 연다(오른쪽 끝 정렬). 본문 선택 시 도구 모음 숫자를 선택 영역 기준으로 바꾸고 ‘선택’을 표시한다. 해제 시 문서 전체로 복귀한다. 표시 기준 선택과 현재 문서·선택 영역·전체 원고 비교 표, 짧은 합계 안내를 두고 세부 집계 규칙은 접힌 **집계 기준**에 넣는다. 표시 단위가 바뀌어도 카세트·사이버의 다섯 자리 카운터 모양은 유지한다. 분할 창에도 각 문서 버튼을 제공한다. `document-statistics.module.css`는 기본 토큰·모양 토큰만 사용하고 키보드 초점은 카운터 안쪽에도 표시한다. 모바일은 팝오버 내부 스크롤과 줄바꿈을 사용한다. [집계·저장 기준](document-statistics.md).
 
-**원고지 보기.** 문서 통계 창 아래 `.button` **원고지로 보기**(Grid3x3)와 **더 보기 › 원고지 보기**가 같은 `Modal`(`modal-wide`, 720px)을 연다. 머리 아래 12px `--muted` 한 줄(문서 제목 · N매), 그 아래 매마다 한 장: 20칸 × 10줄, 줄 사이 0.3칸 틈, 칸 크기 `min(30px, (100vw - 68px) / 20.6)`, 글자 0.64칸 원고 글꼴, 마침표·쉼표는 칸 왼쪽 아래, 오른쪽 아래 11px 매 번호. 칸 선은 지역 변수 `--paper-line`(`--brand` 42%와 `--panel` 혼합, 잉크는 `--pub-kicker` 45%)이라 서른 조합 모두 따로 정하지 않는다. 700px 이하에서는 창 안쪽 여백을 20px 14px로 줄여 360px에서도 가로로 넘치지 않는다. 쓰는 화면에는 칸을 그리지 않는다(11절 원고지 줄).
+**원고지 보기.** 문서 통계 창 아래 `.button` **원고지로 보기**(Grid3x3)와 **더 보기 › 원고지 보기**가 같은 `Modal`(`modal-wide`, 720px)을 연다. 머리 아래 12px `--muted` 한 줄(문서 제목 · N매), 그 아래 매마다 한 장: 20칸 × 10줄, 줄 사이 0.3칸 틈, 칸 크기 `min(30px, (100vw - 68px) / 20.6)`, 글자 0.64칸 원고 글꼴, 마침표·쉼표는 칸 왼쪽 아래, 오른쪽 아래 11px 매 번호. 칸 선은 지역 변수 `--paper-line`(`--brand` 42%와 `--panel` 혼합, 잉크는 `--pub-kicker` 45%)이라 서른네 조합 모두 따로 정하지 않는다. 700px 이하에서는 창 안쪽 여백을 20px 14px로 줄여 360px에서도 가로로 넘치지 않는다. 쓰는 화면에는 칸을 그리지 않는다(11절 원고지 줄).
 
 **선택 입력.** 설정의 분류·원고의 시점 인물은 직접 입력 가능한 combobox다. 화살표를 누르면 이미 값이 채워져 있어도 작품의 기존 항목 전체를 펼친다. 입력 중에는 항목을 거르고 위·아래·Enter로 선택, Esc·바깥 클릭으로 닫는다. 새 값도 그대로 저장한다. 목록은 `--pop`·`--line`·`--sel`, 모양은 `--ctl-r`·`--r-in`을 쓴다.
 
@@ -674,13 +678,65 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 장식 변수(`--hh-towel`·`--hh-orbit`·`--hh-fade`)는 `globals.css`의 `[data-palette=hitchhiker]` 줄에 두고 `studio.css`·`public-info.module.css`가 같은 변수를 쓴다. 헤더 글자는 검은 띠 위 `--pub-ink` #fff6d6(15.5:1)·`--pub-muted` #bdb6a4(9.7:1).
 
-## 20. 새 기능 체크리스트
+## 20. 트론 테마
+
+열여섯 번째 색 계열이다. 영화 「트론」 속 컴퓨터 세계(그리드)에서 가져왔다. `data-palette`는 `tron`, 고르기 아이콘은 Lucide Disc3(정체성 원반). 영화 로고·글자·그림은 쓰지 않는다. 사이버(네온 분홍·빛번짐 바탕·깎은 모서리)와 선조 유적(은빛 판·깎은 귀퉁이)과 겹치지 않게 모서리는 2px, 장식은 가는 빛의 선과 원으로만 만든다.
+
+- **색 역할.** 청록(`--pub-accent`, 집필실 `--brand`)이 행동 색이다. 상대편 주황(`--pub-rival`)은 궤적 장식에만 쓴다. 다크는 `--pub-glow`로 빛을 더하고 라이트는 빛이 없다(`transparent`).
+- **바탕.** 서재·홈에 24px 격자(`--tr-grid`). 독서 화면과 패널 안에는 깔지 않는다.
+- **헤더.** 아래 10px 라이트 사이클 궤적(`--tr-band`): 청록 선이 오른쪽에서 한 번 꺾여 내려가고, 위 선에는 주황 궤적과 머리가 있다. 꺾이는 자리는 `--tr-j`, 주황 길이는 `--tr-o`로 정한다(700px 이하·집필실 사이드바는 짧게). 사이트 이름은 Orbitron 대문자, 앞 기호(◌)는 겹테 원반(`--tr-disc`).
+- **표지.** 두 밝기 모두 검은 그리드. 지평선에 반쯤 잠긴 겹테 원반(배경), 원근 격자 바닥(`::before`, `perspective` + `rotateX`), 바닥을 가로지르는 주황·청록 궤적(`::after`). 제목은 위쪽(세 줄까지, 700px 이하 분류 줄 숨김). 기본 표지 그림은 숨긴다.
+- **분류 글자**(서재·독서 제목 위·집필실 원고 머리)는 양옆 2px 빛의 선 사이 `--pub-tint` 명판. **장면 번호**는 겹테 원반(38px, 700px 이하 32px).
+- **버튼.** 주요 버튼·홈 주요 링크·집필실 `.primary`는 2px 모서리에 안쪽 회로 선(`inset` 두 겹, `--pub-on-accent-line`). 보조 버튼은 `--pub-accent-soft` 테두리.
+- **구분선**(독서 제목 아래·장면 구분·집필실 제목 아래와 원고 `hr`): 청록과 주황 두 궤적이 꺾여 엇갈리는 220×16(`--tr-div`, 양 끝 `--tr-fade`).
+- **집필실 상태 점**은 원반 고리: 구상 빈 고리(`--muted`), 집필 중 4분의 1, 퇴고 중 절반, 완성 가운데 불. 표지 미니 카드는 원반·지평선·격자.
+
+| 토큰 | 라이트 | 다크 |
+|---|---|---|
+| `--pub-paper` · 집필실 `--ground` | #eef3f5 · #e4ecef | #04080b · #020507 |
+| `ink` / `muted` | #0b1a20 / #4b616a(5.8:1, 집필실 바닥 위 5.5:1) | #e4f9ff / #86a8b4(7.9:1) |
+| `--pub-accent` · `--pub-on-accent` | #0a7392 · #ffffff(5.4:1) | #3ee0ff · #021219(12.1:1) |
+| `link` · `--pub-kicker` | #0a6a88(5.5:1) · #0a6684(명판 위 5.3:1) | #7feaff(14.5:1) · #7feaff(명판 위 12.1:1) |
+| `sel` · `sel-ink` | #dceaef · #064b60(7.8:1) | #0b2a35 · #bff6ff(12.8:1) |
+| `--pub-rival`(주황, 장식) | #c45500 | #ff9a3c |
+| 표지 `cover` · `cover-sub` | #02070b · #2fdcff | #02070b · #3ee0ff |
+| 계열 전용 | `--pub-accent-soft`, `--pub-on-accent-line`, `--pub-glow`, `--pub-gridline`, `--pub-cover-line`·`-grid`·`-glow`·`-rival` | 다크만 `--pub-glow` #3ee0ff80 |
+
+장식 변수(`--tr-grid`·`--tr-disc`·`--tr-jog`·`--tr-band`·`--tr-div`·`--tr-fade`)는 `globals.css`의 `[data-palette=tron]` 줄에 두고 `studio.css`·`public-info.module.css`가 같은 변수를 쓴다.
+
+## 21. 매트릭스 테마
+
+열일곱 번째 색 계열이다. 영화 「매트릭스」의 코드비(디지털 비)에서 가져왔다. `data-palette`는 `matrix`, 고르기 아이콘은 Lucide Binary. 라이트는 영화 속 흰 구성 공간(로딩 프로그램), 다크는 검은 화면의 인광 녹색이다. 히치하이커(검은 단말기 띠·노랑·둥근 모양)와 겹치지 않게 헤더는 두 밝기 모두 바탕색 그대로 두고, 모서리는 0, 글자는 고정폭으로 만든다.
+
+- **색 역할.** 녹색(`--pub-accent`, 집필실 `--brand`)이 행동 색이다. 코드비는 흐린 녹색(`--pub-rain`)에 머리 글자만 밝게(`--pub-head`). 다크는 `--pub-glow`로 빛을 더한다.
+- **가타카나.** 코드비의 반전 가타카나·숫자는 읽는 글이 아니라 무늬다(7절 영문 장식 금지와 별개). CSS `content`에 `/ ""` 대체 글을 붙여 화면 읽기 프로그램이 읽지 않게 한다.
+- **헤더.** 아래 16px 코드비 띠(`--mx-rain`: 주기가 다른 네 겹 줄기와 머리, `--mx-rain-fade`로 위를 흐리게). 사이트 이름은 Share Tech Mono 대문자, 앞 기호(◌) 자리는 이름 뒤에서 깜박이는 네모 커서(`order:1`, `mx-blink`). `prefers-reduced-motion`이면 깜박이지 않는다.
+- **표지.** 두 밝기 모두 검정. 반전 가타카나를 세로쓰기(`writing-mode:vertical-rl`)로 채우고 열마다 위는 투명·끝은 밝은 줄기 배경을 글자에 오려 쓴다(`background-clip:text`, `--mx-streaks`, 열 폭 15px). 제목은 아래 검은 띠 위(세 줄까지). 기본 표지 그림은 숨긴다.
+- **분류 글자**는 명령 줄 표시 `›` 뒤의 고정폭 글자(`--pub-code` Nanum Gothic Coding). **장면 번호**는 두 칸 물방울이 떨어지는 녹색 숫자(Share Tech Mono).
+- **버튼.** 주요 버튼·홈 주요 링크·집필실 `.primary`는 모서리 0, 고정폭 굵은 글자. 서재 **작품 읽기**는 화살표 자리에 깜박이는 커서, **설정집**은 테두리 없이 `[ ]` 꺾쇠.
+- **구분선**: 옆으로 흐르는 가타카나 한 줄(`--mx-line`), 가운데 한 글자만 `--pub-accent`, 양 끝 `--mx-fade`.
+- **집필실 상태 점**은 세 칸 물방울(4×12px): 구상 0칸, 집필 중 1칸, 퇴고 중 2칸, 완성 3칸(맨 아래 머리가 가장 밝음). 원고 제목은 고정폭 굵은 글자. 표지 미니 카드는 떨어지는 줄기 넷.
+
+| 토큰 | 라이트 | 다크 |
+|---|---|---|
+| `--pub-paper` · 집필실 `--ground` | #f4f6f3 · #e9eee9 | #020503 · #000000 |
+| `ink` / `muted` | #0e1a11 / #4c5f51(6.3:1, 집필실 바닥 위 5.8:1) | #c6f3d0 / #6aa67b(7.2:1) |
+| `--pub-accent` · `--pub-on-accent` | #0b7a32 · #ffffff(5.5:1) | #3ae46c · #011006(11.6:1) |
+| `link` · `--pub-kicker` | #0b6e2d(5.9:1) · #0b6e2d | #7dffa6(16.3:1) · #5cf08a(13.9:1) |
+| `sel` · `sel-ink` | #e3f1e7 · #075224(8.0:1) | #0f2a17 · #b6ffca(13.3:1) |
+| 코드비 `--pub-rain` · `--pub-head` | #8cc19c · #0b7a32 | #1a6e35 · #d6ffe0 |
+| 표지 `cover` · `cover-ink` · 글자 | #000000 · #c9ffd6 · #1db954 | 같음 |
+| 계열 전용 | `--pub-code`, `--pub-glyph`, `--pub-accent-dim`·`-line`, `--pub-glow`, `--pub-off`, `--pub-cover-glyph`·`-head` | 다크만 `--pub-glow` #3ae46c73 |
+
+장식 변수(`--mx-glyphs`·`--mx-line`·`--mx-rain`·`--mx-rain-fade`·`--mx-fade`·`--mx-drop`·`--mx-streaks`)와 `@keyframes mx-blink`는 `globals.css`의 `[data-palette=matrix]` 줄에 둔다. 홈 CSS 모듈은 키프레임 이름이 지역화되므로 같은 이름의 키프레임을 모듈 안에 따로 둔다.
+
+## 22. 새 기능 체크리스트
 
 - [ ] 0절 표의 기존 부품으로 만들었고 **하지 말 것**에 걸리는 곳이 없다. 같은 종류의 기존 화면과 나란히 찍어 비교했다.
 
 - [ ] 공개 페이지는 `public-site` 안에 있고 헤더에 `ThemeControls`가 있다.
 - [ ] 집필실 기능은 8절의 자리(사이드바 도구, 제목 아래 칩과 속성 폼, 참고 패널 탭, 더 보기 메뉴, 팝오버, 대화상자)에 들어가고 원고 위 고정 영역을 늘리지 않았다. 카세트에서 키·LED·Mono 숫자 모양이 필요한지 확인했다.
-- [ ] 공개 페이지 색은 `--pub-*`, 집필실·대화상자 색은 기본 토큰만 썼고, 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커 × 라이트·다크 서른 조합을 확인했다.
+- [ ] 공개 페이지 색은 `--pub-*`, 집필실·대화상자 색은 기본 토큰만 썼고, 보라·카세트·사이버·잉크·컬럼비아·나사펑크·디젤·누아르·선조 유적·스파르탄·붉은 책·실마릴리온·바벨·무한·히치하이커·트론·매트릭스 × 라이트·다크 서른네 조합을 확인했다.
 - [ ] 새 색 계열이면 헤더 테마 버튼·테마 팝오버·`segmented` 고르기 버튼에도 그 계열 주요 버튼 모양을 주었다(4절 **고르기 버튼 모양**).
 - [ ] 제목은 `--pub-title`, 분류 글자는 `--pub-kicker-font`, 조작·설명은 `--pub-sans`다. 색 계열 이름으로 분기하는 대신 모양 토큰을 썼다.
 - [ ] 버튼 옆 작은 입력·선택은 대화상자가 아니라 팝오버나 메뉴로 열었다(8절 **떠 있는 창**).
