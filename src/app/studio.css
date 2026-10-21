@@ -95,9 +95,13 @@ html:has(.studio){background:var(--ground)}
 [data-palette=spartan] .doc-divider,[data-palette=spartan] .manuscript hr{width:220px;height:14px;border:0;background:var(--pub-glow);-webkit-mask:var(--sp-divider);mask:var(--sp-divider)}
 [data-palette=spartan] .primary{border-radius:0;padding-right:20px;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%);border-color:transparent;background:linear-gradient(165deg,var(--pub-accent-hi) 0 20%,var(--pub-accent) 50%,var(--pub-accent-lo));color:var(--pub-on-accent)}
 [data-palette=spartan] .primary:hover:not(:disabled){background:var(--pub-accent);border-color:transparent}
-[data-palette=spartan] .status-dot{width:10px;height:6px;border-radius:0;transform:skewX(-30deg)}
-[data-palette=spartan] .status-dot.review{box-shadow:0 0 5px var(--review)}
-[data-palette=spartan] .status-dot.done{box-shadow:0 0 5px var(--done)}
+/* 코타나 AI 칩: 상태 표시와 원고 분류 글자 앞. 칩 모양은 마스크, 색은 상태 토큰. */
+[data-palette=spartan] .status-dot,[data-palette=spartan] .status-dot.idea{width:14px;height:10px;border:0;border-radius:0;transform:none;box-shadow:none;background:var(--draft);-webkit-mask:var(--sp-chip) center/contain no-repeat;mask:var(--sp-chip) center/contain no-repeat}
+[data-palette=spartan] .status-dot.idea{-webkit-mask-image:var(--sp-chip-out);mask-image:var(--sp-chip-out)}
+[data-palette=spartan] .status-dot.review{background:var(--review)}
+[data-palette=spartan] .status-dot.done{background:var(--done);-webkit-mask-image:var(--sp-chip-win);mask-image:var(--sp-chip-win)}
+[data-palette=spartan] .doc-kicker{display:flex;align-items:center;gap:7px}
+[data-palette=spartan] .doc-kicker::before{content:"";width:14px;height:10px;flex-shrink:0;background:linear-gradient(90deg,#6cc4ff,#b59cff);-webkit-mask:var(--sp-chip) center/contain no-repeat;mask:var(--sp-chip) center/contain no-repeat}
 [data-palette=spartan] .doc-tab.active{box-shadow:inset 0 -2px 0 var(--pub-glow)}
 [data-palette=spartan] .studio-tools::after{height:6px;background:linear-gradient(var(--pub-glow),var(--pub-glow)) 0 100%/100% 1px no-repeat,repeating-linear-gradient(115deg,var(--pub-armor) 0 60px,transparent 60px 64px) 0 0/100% 5px no-repeat}
 [data-palette=spartan] .work-cover{border-radius:0;clip-path:polygon(0 0,62% 0,70% 4px,100% 4px,100% 100%,0 100%);background:linear-gradient(170deg,transparent 0 22%,var(--pub-accent-hi) 22% 30%,var(--pub-accent) 30% 42%,transparent 42%),linear-gradient(180deg,var(--pub-olive-hi),var(--pub-olive) 45%,var(--pub-olive-dk))}

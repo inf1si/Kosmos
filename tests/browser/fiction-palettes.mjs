@@ -95,6 +95,25 @@ try {
             });
 
             assert.ok(gap >= 2, `visor clears the cover title (${gap}px)`);
+
+            // Cortana: the work number sits in a circuit hologram box and an AI chip is slotted into the cover armour.
+            assert.equal(await page.locator('.book-category').first().textContent(), '01 · 소설');
+            assert.match(await style(page, '.book-category .book-no', 'backgroundImage'), /svg/, 'circuit work number');
+            assert.equal(await style(page, '.book-category .book-dot', 'display'), 'none');
+            assert.match(await pseudo(page, '.book-cover>span:last-child', '::after', 'backgroundImage'), /svg/, 'AI chip on the cover');
+
+            const chipGap = await page.locator('.book-cover').first().evaluate(cover => {
+                const holder = cover.querySelector('span:last-child');
+                const chip = getComputedStyle(holder, '::after');
+                const chipLeft = holder.getBoundingClientRect().right + parseFloat(chip.right) * -1 - parseFloat(chip.width);
+                const range = document.createRange();
+
+                range.selectNodeContents(cover.querySelector('strong'));
+
+                return chipLeft + parseFloat(chip.width) * .3 - Math.max(...[...range.getClientRects()].map(rect => rect.right));
+            });
+
+            assert.ok(chipGap >= 0, `cover title stays clear of the chip circuit (${chipGap}px)`);
         }
 
         if (palette === 'redbook') assert.equal(await pseudo(page, '.book-category', '::before', 'borderRadius'), '50%', 'red seal');
@@ -108,6 +127,31 @@ try {
         await page.locator('.reading-body').first().waitFor();
         assert.match(await pseudo(page, '.reading-title', '::after', 'maskImage'), /svg/, 'theme divider under the title');
         assert.match(await page.locator('.reading-scene-title h2').first().evaluate(el => getComputedStyle(el, '::before').content), palette === 'redbook' || palette === 'silmaril' ? /upper-roman/ : /decimal-leading-zero/, 'scene number');
+
+        if (palette === 'spartan') {
+            assert.match(await pseudo(page, '.reading-scene-title h2', '::before', 'backgroundImage'), /svg/, 'circuit scene number');
+            assert.match(await style(page, '.reading-progress', 'backgroundImage'), /linear-gradient/, 'data stream progress bar');
+            assert.notEqual(await pseudo(page, '.reading-progress', '::after', 'content'), 'none', 'data stream head');
+
+            // The merged hologram number was 2.8:1 on light paper.
+            const contrast = await page.locator('.reading-scene-title h2').first().evaluate(el => {
+                const channels = value => value.match(/[\d.]+/g).slice(0, 3).map(Number);
+
+                const luminance = rgb => {
+                    const [r, g, b] = rgb.map(v => v / 255).map(v => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
+
+                    return .2126 * r + .7152 * g + .0722 * b;
+                };
+
+                const ink = luminance(channels(getComputedStyle(el, '::before').color));
+                const paper = luminance(channels(getComputedStyle(document.querySelector('.public-site')).backgroundColor));
+
+                return (Math.max(ink, paper) + .05) / (Math.min(ink, paper) + .05);
+            });
+
+            assert.ok(contrast >= 4.5, `scene number contrast ${contrast.toFixed(2)}:1`);
+        }
+
         await shot('reader');
 
         await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
@@ -115,7 +159,13 @@ try {
         await shot('studio-home');
         await page.locator('.studio-home .reference-card').filter({ hasText: /./ }).nth(0).click();
         await page.locator('.editor-panes > .editor-shell .manuscript').waitFor();
-        assert.match(await style(page, '.doc-divider', 'maskImage'), /svg/, 'theme divider in the studio');
+        assert.match(await style(page, '.doc-divider', 'maskImage'), /svg/, `${palette} ${mode} ${width}: theme divider in the studio`);
+
+        if (palette === 'spartan') {
+            assert.match(await style(page, '.status-dot', 'maskImage'), /svg/, 'AI chip status');
+            assert.match(await pseudo(page, '.doc-kicker', '::before', 'maskImage'), /svg/, 'AI chip before the kicker');
+        }
+
         await shot('studio-editor');
         await context.close();
     }
