@@ -20,6 +20,7 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 | 문서·폴더·사용자 섹션 정리 | [문서 트리](document-navigation.md) |
 | 사용자 정의 속성·문서/폴더 템플릿 | [속성과 템플릿](workspace-templates.md) |
 | 글꼴·표·문단 서식·특수문자·찾기/바꾸기 | [원고 편집 도구](editor-tools.md) |
+| 웹폰트·기기 글꼴의 이용 조건과 배포 고지 | [2026-10-23 글꼴 라이선스 전수조사](font-license-audit-2026-10-23.md) |
 | 화면·원고 표시·기본 보기·AI·자동 복구 지점 설정 | [설정](settings.md) |
 | 글자·단어 수와 선택 영역·작품 합계 | [문서 통계](document-statistics.md) |
 | 제품의 목적과 SF 집필 방향 이해 | [제품 요구사항](product.md) · [상세 목표 설계](product-spec.md) |
