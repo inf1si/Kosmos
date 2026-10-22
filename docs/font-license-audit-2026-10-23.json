@@ -4833,6 +4833,43 @@
         "spdx": "OFL-1.1",
         "license_source": "https://help.naver.com/service/30016/contents/18088?osType=PC&lang=ko\nCanonical OFL text: https://raw.githubusercontent.com/google/fonts/45e3d5269e4a17d823f6d84470bc084dc5ae46f6/ofl/nanumgothic/OFL.txt"
       }
-    ]
+    ],
+    "deployment": {
+      "source_commit": "8bae034b96eb4bd2353dab9154b8afa5aa670ae6",
+      "pull_request": "https://github.com/inf1si/Kosmos/pull/81",
+      "vercel_id": "dpl_7tpHNwqkiYot9DL9BatSG568x4x5",
+      "target": "production",
+      "state": "READY",
+      "verified_at": "2026-10-23T03:25:32.919475+09:00",
+      "responses": [
+        {
+          "requested": "https://www.orbiter.ink/licenses/fonts.txt",
+          "final_url": "https://www.orbiter.ink/licenses/fonts.txt",
+          "status": 200,
+          "content_type": "text/plain; charset=utf-8",
+          "bytes": 173116,
+          "sha256": "1cec6a8b866efc3ca87f864a23a61587fb2bfb1575d7c3b7ef6bc62a1d414d1e",
+          "font_count": 33
+        },
+        {
+          "requested": "https://orbiter.ink/licenses/fonts.txt",
+          "final_url": "https://www.orbiter.ink/licenses/fonts.txt",
+          "status": 200,
+          "content_type": "text/plain; charset=utf-8",
+          "bytes": 173116,
+          "sha256": "1cec6a8b866efc3ca87f864a23a61587fb2bfb1575d7c3b7ef6bc62a1d414d1e",
+          "font_count": 33
+        },
+        {
+          "requested": "https://kosmos-ashy.vercel.app/licenses/fonts.txt",
+          "final_url": "https://kosmos-ashy.vercel.app/licenses/fonts.txt",
+          "status": 200,
+          "content_type": "text/plain; charset=utf-8",
+          "bytes": 173116,
+          "sha256": "1cec6a8b866efc3ca87f864a23a61587fb2bfb1575d7c3b7ef6bc62a1d414d1e",
+          "font_count": 33
+        }
+      ]
+    }
   }
 }
