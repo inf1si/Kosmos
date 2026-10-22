@@ -21,3 +21,8 @@ export async function getPublicAuthorProfile(){
 
   return data?publishedProfileSchema.parse(data):null;
 }
+
+/** The published profile name for the copyright line; a missing or failed profile leaves the line out. */
+export async function getPublicAuthorName(){
+  return getPublicAuthorProfile().then(profile=>profile?.name||'',()=>'');
+}

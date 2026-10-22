@@ -1,9 +1,9 @@
 import { Reader } from '@/components/public-site';
-import { getPublicData } from '@/lib/public-data';
+import { getPublicAuthorName, getPublicData } from '@/lib/public-data';
 import { manuscriptFontVariables } from '@/components/manuscript-fonts';
 
 export const dynamic='force-dynamic';
 
-export default async function ReaderPage({params}:{params:Promise<{workId:string}>}){const {workId}=await params;const data=await getPublicData().catch(()=>[]);const localPreview=!(process.env.NEXT_PUBLIC_SUPABASE_URL&&process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)&&(process.env.NODE_ENV==='development'||process.env.ALLOW_LOCAL_PREVIEW==='true');
+export default async function ReaderPage({params}:{params:Promise<{workId:string}>}){const {workId}=await params;const [data,author]=await Promise.all([getPublicData().catch(()=>[]),getPublicAuthorName()]);const localPreview=!(process.env.NEXT_PUBLIC_SUPABASE_URL&&process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)&&(process.env.NODE_ENV==='development'||process.env.ALLOW_LOCAL_PREVIEW==='true');
 
-return <Reader workId={workId} initial={data} localPreview={localPreview} fontClassName={manuscriptFontVariables}/>;}
+return <Reader workId={workId} initial={data} localPreview={localPreview} fontClassName={manuscriptFontVariables} author={author}/>;}
