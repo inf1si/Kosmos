@@ -1,5 +1,5 @@
 import { Library } from '@/components/public-site';
-import { getPublicData } from '@/lib/public-data';
+import { getPublicAuthorName, getPublicData } from '@/lib/public-data';
 
 export const dynamic='force-dynamic';
 
@@ -9,4 +9,4 @@ try{data=await getPublicData();}catch{error='서재를 불러오지 못했습니
 
 const localPreview=!(process.env.NEXT_PUBLIC_SUPABASE_URL&&process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)&&(process.env.NODE_ENV==='development'||process.env.ALLOW_LOCAL_PREVIEW==='true');
 
-return <Library initial={data} localPreview={localPreview} error={error}/>;}
+return <Library initial={data} localPreview={localPreview} error={error} author={await getPublicAuthorName()}/>;}

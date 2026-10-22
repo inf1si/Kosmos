@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-10-22 — 공개 화면 저작권 고지
+
+- 기준: main `bf881a9`. 목표: 서재·독서 화면·설정집 바닥에 공개 자기소개 이름으로 `© 연도 이름. All rights reserved.` 한 줄. 이름이 없으면 감춤. RSS·이용 허락 표시는 범위 밖.
+- 로컬 자동: `pnpm typecheck`, `pnpm test`(215 통과, 새 단위 검사 없음), 바꾼 소스·검사 파일 oxlint 0건, `pnpm docs:check`.
+- 로컬 브라우저: 새 [`public-copyright.mjs`](tests/browser/public-copyright.mjs)가 Supabase 없는 `pnpm dev` Chromium에서 통과. 기기 내 미리보기에 합성 작품 둘(2024·2026 공개)과 작가 이름을 넣어 이름 없음 → 줄 없음, 앞뒤 공백 제거, 서재 `2024–2026`, 독서·설정집은 그 작품 연도, 독서 끝의 마지막 줄 위치를 단언. 스물두 계열 × 라이트·다크 × 360·1280px의 서재·독서·설정집에서 고지가 보이고 화면 안에 있으며 12px, 가로 넘침 없음. 기존 `library-mobile.mjs`도 통과.
+- 로컬 SSR: 가짜 Supabase REST 서버(`publications`·`author_profile` 응답)를 `NEXT_PUBLIC_SUPABASE_URL`로 지정한 dev에서 `/library`·`/read/…`·`/wiki/…` 서버 HTML에 `© 2025 서버 작가. All rights reserved.`가 들어 있음을 확인.
+- 로컬 수동: 마흔네 조합 서재 바닥글(1280·360)과 독서 끝·설정집 바닥글 스크린샷을 봤다. 360px에서는 고지가 사이트 이름 아래 줄로 내려간다. dev 표시 아이콘이 왼쪽 아래를 일부 가리는 것은 개발 화면에만 있다.
+- 미확인: CI, 운영 배포, 운영 자기소개 이름 표시, 실제 기기·Safari.
+
 ## 2026-10-22 — 노스트로모 테마 (에일리언)
 
 - 기준: main `25aea06`. 목표: 시안에서 사용자가 고른 A 노스트로모 단말기를 스물두 번째 색 계열로.
