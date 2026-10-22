@@ -789,6 +789,145 @@
     --tr-o: 64px;
   }
 }
+/* Protoss: a gold hairline with a fading psionic seam under the header, a slim crystal mark and the double-framed main link. */
+:global([data-palette=protoss]) .header {
+  position: relative;
+  margin-bottom: 5px;
+  border-bottom: 1px solid var(--pub-gold);
+}
+:global([data-palette=protoss]) .header::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: calc(100% + 2px);
+  height: 1px;
+  pointer-events: none;
+  background: var(--pt-seam);
+  box-shadow: 0 0 6px var(--pub-psi-glow);
+}
+:global([data-palette=protoss]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: .38em;
+  text-transform: uppercase;
+}
+:global([data-palette=protoss]) .brandMark {
+  width: 9px;
+  height: 20px;
+  font-size: 0;
+  clip-path: var(--pt-crystal);
+  background: linear-gradient(165deg, #e8f6ff, #4aa3f5 40%, #123d93 85%);
+}
+:global([data-palette=protoss]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+:global([data-palette=protoss]) .primaryLink {
+  border: 1px solid var(--pub-gold);
+  border-radius: 2px;
+  background: var(--pt-pri);
+  color: var(--pub-on-accent);
+  letter-spacing: .06em;
+  box-shadow: inset 0 0 0 2px var(--pub-paper), 0 0 14px var(--pub-glow);
+}
+:global([data-palette=protoss]) .primaryLink:hover {
+  background: linear-gradient(var(--pub-accent-strong), var(--pub-accent-strong)) var(--pub-accent-strong);
+}
+@media (max-width: 700px) {
+  :global([data-palette=protoss]) .brand {
+    font-size: 12px;
+    letter-spacing: .28em;
+  }
+}
+/* Tatooine: dunes and twin suns under the header, the twin-sun mark and the stencil name. */
+:global([data-palette=tatooine]) .header {
+  position: relative;
+  margin-bottom: 14px;
+  border-bottom: 0;
+}
+:global([data-palette=tatooine]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--pub-sun1) 0 2.8px, transparent 3.3px) right 30px top 0 / 8px 8px no-repeat, radial-gradient(circle, var(--pub-sun2) 0 1.9px, transparent 2.4px) right 22px top 2px / 6px 6px no-repeat, var(--tt-dunes) 0 100% / 300px 14px repeat-x;
+}
+:global([data-palette=tatooine]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+:global([data-palette=tatooine]) .brandMark {
+  width: 21px;
+  height: 13px;
+  font-size: 0;
+  background: var(--tt-suns);
+}
+:global([data-palette=tatooine]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 500;
+}
+:global([data-palette=tatooine]) .primaryLink {
+  border-radius: 3px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  box-shadow: inset 0 -2px 0 var(--pub-accent-edge);
+}
+:global([data-palette=tatooine]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+}
+/* Empire: the wall panel with indicator lights under the header, the battle-station mark and the red-edged button. */
+:global([data-palette=empire]) .header {
+  position: relative;
+  margin-bottom: 12px;
+  border-bottom: 0;
+}
+:global([data-palette=empire]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+  pointer-events: none;
+  border-block: 1px solid var(--pub-seam);
+  background: var(--em-band);
+}
+:global([data-palette=empire]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+}
+:global([data-palette=empire]) .brandMark {
+  width: 19px;
+  height: 19px;
+  font-size: 0;
+  background: var(--em-death) center / contain no-repeat;
+}
+:global([data-palette=empire]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 500;
+}
+:global([data-palette=empire]) .primaryLink {
+  border-radius: 0;
+  border: 1px solid var(--pub-accent-edge);
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  box-shadow: inset 0 -1px 0 #ffffff, inset 0 -3.5px 0 var(--pub-blade), 0 3px 9px -3px var(--pub-glow);
+}
+:global([data-palette=empire]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+}
 /* Odyssey: ceiling light panels under the header, a monolith before the name and a monolith-slab primary link. */
 :global([data-palette=odyssey]) .header {
   position: relative;

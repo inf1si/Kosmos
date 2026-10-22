@@ -1,9 +1,9 @@
 export type SiteTheme='light'|'dark';
 
-export type SitePalette='violet'|'cassette'|'cyber'|'ink'|'columbia'|'nasapunk'|'diesel'|'noir'|'forerunner'|'spartan'|'redbook'|'silmaril'|'babel'|'infinity'|'hitchhiker'|'tron'|'matrix'|'odyssey';
+export type SitePalette='violet'|'cassette'|'cyber'|'ink'|'columbia'|'nasapunk'|'diesel'|'noir'|'forerunner'|'spartan'|'redbook'|'silmaril'|'babel'|'infinity'|'hitchhiker'|'tron'|'matrix'|'protoss'|'tatooine'|'empire'|'odyssey';
 
 /** Every colour family, the default first. */
-export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber','ink','columbia','nasapunk','diesel','noir','forerunner','spartan','redbook','silmaril','babel','infinity','hitchhiker','tron','matrix','odyssey'];
+export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber','ink','columbia','nasapunk','diesel','noir','forerunner','spartan','redbook','silmaril','babel','infinity','hitchhiker','tron','matrix','protoss','tatooine','empire','odyssey'];
 
 export const THEME_KEY='orbis-theme';
 
