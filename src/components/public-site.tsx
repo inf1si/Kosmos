@@ -23,7 +23,7 @@ function usePublicData(initial:Publication[],localPreview:boolean){
 return{data,loading};
 }
 
-function PublicHeader({children}:{children?:ReactNode}){return <header className="public-header"><Link href="/library" className="public-brand"><span className="public-brand-mark" aria-hidden="true">◌</span>Orbis Tertius</Link><nav>{children}<Link className="studio-link" href="/studio">집필실</Link><ThemeControls/></nav></header>;}
+function PublicHeader({children}:{children?:ReactNode}){return <header className="public-header"><Link href="/" className="public-brand" aria-label="Orbis Tertius 홈"><span className="public-brand-mark" aria-hidden="true">◌</span>Orbis Tertius</Link><nav><Link href="/library">서재</Link>{children}<Link className="studio-link" href="/studio">집필실</Link><ThemeControls/></nav></header>;}
 
 /** A typographic cover: works have no cover art, so the title is set on the brand colour under the ◌ orbit. */
 function BookCover({pub}:{pub:Publication}){return <Link className="book-cover" href={`/read/${pub.workId}`} tabIndex={-1} aria-hidden="true"><svg width="170" height="170" viewBox="0 0 170 170"><circle cx="85" cy="85" r="70" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="1.5 7" strokeLinecap="round"/><circle cx="85" cy="85" r="44" fill="none" stroke="currentColor" strokeOpacity=".5"/></svg><span className="book-cover-series">ORBIS TERTIUS</span><span><strong>{pub.title}</strong><small>소설</small></span></Link>;}
