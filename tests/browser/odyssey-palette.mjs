@@ -85,6 +85,22 @@ try {
         assert.equal(await style(page, '.book-read', 'backgroundColor'), action[mode], 'main button colour');
         assert.equal(await style(page, '.public-brand-mark', 'width'), width === 360 ? '6px' : '7px', 'monolith mark');
         assert.equal(await pseudo(page, '.book-category', '::before', 'width'), '4px', 'slab before the kicker');
+        assert.match(await pseudo(page, '.library-heading', '::after', 'backgroundImage'), /radial-gradient/, 'HAL eye on the library heading');
+
+        // The eye sits at the right end of the heading, clear of the title, count and date.
+        const libraryEye = await page.locator('.library-heading').evaluate(heading => {
+            const box = heading.getBoundingClientRect();
+            const eyeLeft = box.right - parseFloat(getComputedStyle(heading, '::after').width);
+
+            return [...heading.children].every(child => {
+                const range = document.createRange();
+                range.selectNodeContents(child);
+
+                return range.getBoundingClientRect().right <= eyeLeft;
+            });
+        });
+
+        assert.ok(libraryEye, `${mode} ${width}: HAL eye clear of the library heading text`);
         const trigger = page.getByRole('button', { name: /^테마 · / });
         assert.equal(await trigger.evaluate(el => getComputedStyle(el).borderTopLeftRadius), '2px', 'header theme button takes the family shape');
 
