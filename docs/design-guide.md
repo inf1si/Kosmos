@@ -149,7 +149,7 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 **새 공개 페이지를 만들 때**
 
 1. 가장 바깥 요소에 `public-site` 클래스를 붙인다. 바탕·글자색·글꼴과 `<html>` 바탕(넘침 스크롤 영역)이 함께 적용된다.
-2. 헤더에 `ThemeControls`를 넣는다. 기존 페이지는 `PublicHeader`(`public-site.tsx`) 또는 CSS 모듈 헤더(`page.tsx`·`privacy/page.tsx`)를 쓴다.
+2. 헤더에 `ThemeControls`를 넣는다. 사이트 로고는 모든 화면에서 메인(`/`)으로 연결한다. 공개 공용 헤더의 **서재**는 `/library`, **집필실**은 `/studio`로 연결하고, 독서·설정집의 작품별 링크와 독서 하단 **작품 목록**을 유지한다. 기존 페이지는 `PublicHeader`(`public-site.tsx`) 또는 CSS 모듈 헤더(`page.tsx`·`privacy/page.tsx`)를 쓴다.
 3. 버튼이나 단어에 딸린 작은 설정·설명은 `primitives.tsx`의 `Popover`, 화면 전체를 막아야 하는 확인·큰 작업은 `Modal`을 쓴다(8절 **떠 있는 창**). 공개 페이지가 열려 있으면 `html:has(.public-site) .popover`·`.modal` 규칙으로 테마 색을 따른다.
 4. 색 계열마다 모양이 달라야 하면 3절의 모양 토큰을 쓰고, 그래도 부족할 때만 `[data-palette=cassette] .클래스` 규칙을 `globals.css`의 카세트 줄에 추가한다. CSS 모듈에서는 `:global([data-palette=cassette]) .클래스`로 쓴다.
 
