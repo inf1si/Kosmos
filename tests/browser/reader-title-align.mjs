@@ -80,7 +80,7 @@ try {
         assert.equal(long.barHeight, 52, `${width}px: long title keeps the bar one line`);
         assert.equal(long.overflow, 0, `${width}px: long title causes no sideways scroll`);
 
-        // The hidden spacer copy is not a second 읽기 설정 button for keyboard or screen-reader users.
+        // Reading settings remains a single accessible control at both viewport widths.
         assert.equal(await page.getByRole('button', { name: '읽기 설정', exact: true }).count(), 1);
         await page.getByRole('button', { name: '읽기 설정', exact: true }).click();
         await page.getByRole('dialog', { name: '읽기 설정', exact: true }).waitFor();
