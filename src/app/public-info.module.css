@@ -980,3 +980,61 @@
     letter-spacing: .18em;
   }
 }
+/* Nostromo: a keyboard strip under the header, a motion-tracker mark before the name and a CRT-glass primary link. */
+:global([data-palette=nostromo]) .header {
+  position: relative;
+  margin-bottom: 14px;
+  border-bottom: 0;
+}
+:global([data-palette=nostromo]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 14px;
+  pointer-events: none;
+  background: var(--ns-band);
+}
+:global([data-palette=nostromo]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: .4em;
+  text-transform: uppercase;
+}
+:global([data-palette=nostromo]) .brandMark {
+  width: 24px;
+  height: 14px;
+  font-size: 0;
+  border-radius: 24px 24px 2px 2px / 18px 18px 2px 2px;
+  background: var(--ns-mark);
+  box-shadow: 0 0 0 1.5px var(--pub-bezel-edge);
+}
+:global([data-palette=nostromo]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+:global([data-palette=nostromo]) .primaryLink {
+  border: 1px solid var(--pub-accent-edge);
+  border-radius: 3px;
+  background: var(--ns-scan), var(--pub-accent);
+  color: var(--pub-on-accent);
+  font-family: var(--pub-mono);
+  text-shadow: 0 0 6px var(--pub-phos-glow);
+  box-shadow: 0 2px 0 var(--pub-accent-edge), inset 0 0 0 1px var(--pub-accent-rim);
+}
+:global([data-palette=nostromo]) .primaryLink:hover {
+  background: var(--ns-scan), var(--pub-accent-strong);
+}
+@media (max-width: 700px) {
+  :global([data-palette=nostromo]) .brand {
+    font-size: 12px;
+    letter-spacing: .24em;
+  }
+  :global([data-palette=nostromo]) .brandMark {
+    width: 18px;
+    height: 11px;
+  }
+}
