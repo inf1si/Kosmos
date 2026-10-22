@@ -175,6 +175,23 @@ html:has(.studio){background:var(--ground)}
 [data-palette=matrix] .studio-tools::after{height:14px;background:var(--mx-rain);-webkit-mask:var(--mx-rain-fade);mask:var(--mx-rain-fade)}
 [data-palette=matrix] .work-cover{border-radius:2px;background:linear-gradient(transparent,var(--pub-cover-glyph)) 5px 0/2px 20px no-repeat,linear-gradient(transparent,var(--pub-cover-glyph)) 12px 0/2px 28px no-repeat,linear-gradient(transparent,var(--pub-cover-glyph)) 19px 0/2px 14px no-repeat,linear-gradient(transparent,var(--pub-cover-glyph)) 26px 0/2px 24px no-repeat,var(--cover);box-shadow:inset 0 0 0 1px var(--pub-accent-line)}
 @media(prefers-reduced-motion:reduce){[data-palette=matrix] .studio-brand>span{animation:none}}
+/* 오디세이: 모노리스 표시, 판 분류 글자, 지평선의 판 구분선, 판 상태(구상 빈 판 → 집필 3분의 1 → 퇴고 반 → 완성 검은 판), 천장 조명판 띠, 원고 머리 오른쪽 위의 HAL 눈. */
+[data-palette=odyssey] .studio-brand{font-family:var(--pub-tech);font-size:11px;font-weight:400;letter-spacing:.24em;text-transform:uppercase}
+[data-palette=odyssey] .studio-brand>span{width:6px;height:14px;font-size:0;background:var(--brand);box-shadow:inset 1px 0 0 var(--pub-accent-rim)}
+[data-palette=odyssey] .doc-head{position:relative}
+[data-palette=odyssey] .doc-head::after{content:"";position:absolute;right:0;top:0;width:16px;height:16px;box-sizing:border-box;border:2px solid var(--pub-hal-ring);border-radius:50%;background:var(--od-eye);box-shadow:var(--pub-hal-glow);pointer-events:none}
+[data-palette=odyssey] .doc-kicker{display:flex;align-items:center;gap:8px;padding-right:28px;color:var(--pub-kicker);letter-spacing:.14em}
+[data-palette=odyssey] .doc-kicker::before{content:"";flex:none;width:4px;height:10px;background:var(--brand)}
+[data-palette=odyssey] .doc-divider,[data-palette=odyssey] .manuscript hr{width:220px;height:16px;border:0;background:var(--od-div);-webkit-mask:var(--od-fade);mask:var(--od-fade)}
+[data-palette=odyssey] .primary{border-radius:2px;letter-spacing:.04em;box-shadow:inset 1px 0 0 var(--pub-accent-rim)}
+[data-palette=odyssey] .status-dot,[data-palette=odyssey] .status-dot:is(.idea,.draft,.review,.done){width:6px;height:12px;border:1.5px solid var(--brand);border-radius:1px;background:none;box-shadow:none}
+[data-palette=odyssey] .status-dot.idea{border-color:var(--muted)}
+[data-palette=odyssey] .status-dot.draft{background:linear-gradient(transparent 66%,var(--brand) 66%)}
+[data-palette=odyssey] .status-dot.review{background:linear-gradient(transparent 50%,var(--brand) 50%)}
+[data-palette=odyssey] .status-dot.done{background:var(--brand)}
+[data-palette=odyssey] .doc-tab.active{box-shadow:inset 0 -2px 0 var(--brand)}
+[data-palette=odyssey] .studio-tools::after{height:8px;background:repeating-linear-gradient(90deg,var(--pub-lite) 0 22px,transparent 22px 27px) 0 2px/100% 4px no-repeat;filter:drop-shadow(0 0 3px var(--pub-lite-glow))}
+[data-palette=odyssey] .work-cover{border-radius:4px;font-size:0;background:linear-gradient(var(--pub-cover-rim),var(--pub-cover-rim)) 13px calc(100% - 9px)/1px 16px no-repeat,var(--od-slab) 13px calc(100% - 9px)/7px 16px no-repeat,linear-gradient(transparent 68%,var(--pub-cover-floor) 68%),var(--cover);box-shadow:inset 0 0 0 1px var(--line)}
 /* segmented(설정의 색 계열 고르기 포함)도 계열의 주요 버튼 모양을 따른다(카세트·사이버는 위에). 선택된 버튼은 주요 버튼 색이다. */
 [data-palette=ink] .segmented{border-radius:4px}
 [data-palette=ink] .segmented button{border-radius:2px}
@@ -202,6 +219,8 @@ html:has(.studio){background:var(--ground)}
 [data-palette=tron] .segmented button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);font-weight:600;box-shadow:inset 0 0 0 1px var(--brand),inset 0 0 0 2px var(--pub-on-accent-line),0 0 8px var(--pub-glow)}
 [data-palette=matrix] .segmented,[data-palette=matrix] .segmented button{border-radius:0;font-family:var(--pub-code)}
 [data-palette=matrix] .segmented button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);font-weight:700;box-shadow:0 0 8px var(--pub-glow)}
+[data-palette=odyssey] .segmented,[data-palette=odyssey] .segmented button{border-radius:2px}
+[data-palette=odyssey] .segmented button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);box-shadow:inset 1px 0 0 var(--pub-accent-rim)}
 
 .login-google{width:min(360px,calc(100vw - 48px));justify-content:center}.login-help{max-width:360px;font-size:13px;line-height:1.7;text-align:center;overflow-wrap:anywhere}.account-login{display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
 .wiki-preview.note-preview-popover{position:relative;width:min(300px,calc(100vw - 24px));max-height:var(--radix-popover-content-available-height);overflow:auto}

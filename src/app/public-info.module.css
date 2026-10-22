@@ -789,3 +789,55 @@
     --tr-o: 64px;
   }
 }
+/* Odyssey: ceiling light panels under the header, a monolith before the name and a monolith-slab primary link. */
+:global([data-palette=odyssey]) .header {
+  position: relative;
+  margin-bottom: 10px;
+  border-bottom: 0;
+}
+:global([data-palette=odyssey]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+  pointer-events: none;
+  background: var(--od-band);
+  filter: drop-shadow(0 0 3px var(--pub-lite-glow));
+}
+:global([data-palette=odyssey]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: .26em;
+  text-transform: uppercase;
+}
+:global([data-palette=odyssey]) .brandMark {
+  width: 8px;
+  height: 18px;
+  font-size: 0;
+  background: var(--pub-accent);
+  box-shadow: inset 1px 0 0 var(--pub-accent-rim);
+}
+:global([data-palette=odyssey]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+:global([data-palette=odyssey]) .primaryLink {
+  border-radius: 2px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  letter-spacing: .06em;
+  box-shadow: inset 1px 0 0 var(--pub-accent-rim);
+}
+:global([data-palette=odyssey]) .primaryLink:hover {
+  background: var(--pub-accent-strong);
+}
+@media (max-width: 700px) {
+  :global([data-palette=odyssey]) .brand {
+    font-size: 12px;
+    letter-spacing: .18em;
+  }
+}
