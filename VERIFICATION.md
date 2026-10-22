@@ -1,5 +1,20 @@
 # 구현 검증
 
+## 2026-10-23 — 화면 변경 없이 글꼴 라이선스 동봉
+
+- 기준 main `bf881a961be4331e7f8f273ebd6acd493b444343`. 사용자 승인 범위는 화면 메뉴·링크·문구를 추가하지 않고 실제 앱 배포물에 글꼴 고지를 포함하는 것이다. 새 정적 파일 [`public/licenses/fonts.txt`](public/licenses/fonts.txt)만 앱에 제공하며 폰트·메타데이터·글리프·CSS·라우트·설정·개인정보 흐름은 변경하지 않는다.
+- 33종(32종 OFL 1.1·Syncopate Apache 2.0)의 개별 원문과 저작권을 보존했다. 고정 Google Fonts 원문 29개와 고정 npm 원문 2개의 해시를 기존 조사 증거에 대조하고 줄바꿈과 줄끝 공백만 정리해 전체가 고지 파일에 포함됨을 확인했다. 마루부리·나눔바른고딕은 네이버 공식 저작권/RFN 안내와 OFL 전문을 사용한다. SIL 텍스트의 직접 HTTP 요청은 403이었으며 이미 원문과 해시를 확인한 Google Fonts 나눔고딕의 동일한 OFL 1.1 전문을 사용했다. 네이버 권리자 안내는 공식 사이트의 실제 응답에서 추출했다.
+- 로컬: 최적화 빌드 통과. 최적화 서버의 `/licenses/fonts.txt`를 익명 GET해 HTTP 200·`text/plain; charset=UTF-8`·173,116바이트·파일 전체 일치를 확인했다. SHA-256은 `1cec6a8b866efc3ca87f864a23a61587fb2bfb1575d7c3b7ef6bc62a1d414d1e`. 33개 글꼴 구분·32개 OFL/1개 Apache 구분·원문 전문 31개와 네이버 고지/OFL 2개·운영 파일 저작권 보존을 확인했다. 별도 단위 검사는 추가하지 않았다. 화면·폰트 파일 변경이 없어 테마별 화면 검사는 다시 하지 않았다.
+- main·CI: [PR #81](https://github.com/inf1si/Kosmos/pull/81)로 `8bae034b96eb4bd2353dab9154b8afa5aa670ae6`에 반영했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/39830495253)와 [main CI](https://github.com/inf1si/Kosmos/actions/runs/39830863330)가 각각 첫 실행에서 타입·215개 검사·빌드·암호화 왕복·19개 Anti Slop 규칙(219개 파일, 0건)을 통과했다.
+- 운영: Vercel `dpl_7tpHNwqkiYot9DL9BatSG568x4x5`의 정확한 소스 SHA·production READY·www/root/기존 Vercel 별칭을 확인했다. 실제 `https://www.orbiter.ink/licenses/fonts.txt`, root의 같은 경로(www로 이동), 기존 `kosmos-ashy.vercel.app`의 같은 경로를 익명 GET해 모두 HTTP 200·`text/plain; charset=utf-8`·173,116바이트·전체 해시 일치·33종 구분을 확인했다. 원고나 계정은 사용하지 않았으며 폰트·UI 코드 변경은 없다. 로컬 검증 서버를 종료했다. [조사/제공 안내](docs/font-license-audit-2026-10-23.md)·[파일 해시·출처·운영 응답](docs/font-license-audit-2026-10-23.json).
+
+## 2026-10-23 — 글꼴 라이선스 전수조사
+
+- 기준 main `bf881a961be4331e7f8f273ebd6acd493b444343`. Google Fonts 공용 요청 20종·Next Font 12종·npm 4종에서 중복 3종을 제외한 33종과 기기 글꼴 이름 6종을 조사했다. Google Fonts 원문은 `45e3d5269e4a17d823f6d84470bc084dc5ae46f6`으로 고정했다. 라이선스는 32종 OFL 1.1·Syncopate Apache 2.0이다.
+- 실제 www 공개 독서의 CSS 14개·font-face 선언 3,210개에서 33종의 전달 경로/굵기별 대표 파일 64개를 내려받아 이름 테이블의 저작권·버전·라이선스·URL과 SHA-256을 보존했다. npm에서 import한 CSS가 참조하는 202개 파일도 확인했다. 프리텐다드·원티드 산스 184개는 OFL 메타데이터가 있으며 마루부리·나눔바른고딕 18개에는 없다.
+- 운영 대표 검사에서 고지가 부족했던 나눔고딕·나눔명조·나눔손글씨 붓·나눔바른고딕·마루부리는 CSS가 참조하는 운영 파일 470개 전체를 추가 확인했다. 470개 모두 저작권은 있지만 OFL 설명/URL은 없었다. 공식 네이버 안내·OFL 원문과 대조해 배포 고지 보완 대상으로 기록했다. 다른 28종의 모든 글리프 범위까지 바이너리 전수 검사를 했다는 뜻은 아니다.
+- [보고서](docs/font-license-audit-2026-10-23.md)·[원문/패키지/운영 대표 파일 증거](docs/font-license-audit-2026-10-23.json)에 조건·한계를 구분했다. 로그인·원고·게시 쓰기 없이 공개 파일을 읽었다. 조사 문서만 작성했으며 고지 파일의 실제 배포는 미수행이다. 기능 코드를 바꾸지 않아 기능 테스트·빌드·배포는 수행하지 않았다.
+
 ## 2026-10-22 — 공개 화면 저작권 고지
 
 - 기준: main `bf881a9`. 목표: 서재·독서 화면·설정집 바닥에 공개 자기소개 이름으로 `© 연도 이름. All rights reserved.` 한 줄. 이름이 없으면 감춤. RSS·이용 허락 표시는 범위 밖.
