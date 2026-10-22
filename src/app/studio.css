@@ -193,6 +193,36 @@ html:has(.studio){background:var(--ground)}
 [data-palette=protoss] .doc-tab.active{box-shadow:inset 0 -1px 0 var(--pub-gold)}
 [data-palette=protoss] .studio-tools::after{height:3px;background:linear-gradient(var(--pub-gold),var(--pub-gold)) 0 0/100% 1px no-repeat,var(--pt-seam) 50% 100%/84% 1px no-repeat}
 [data-palette=protoss] .work-cover{border-radius:2px;background:linear-gradient(to bottom right,transparent 50%,var(--pub-psi) 50%) 14px 9px/3px 7px no-repeat,linear-gradient(to bottom left,transparent 50%,var(--pub-psi) 50%) 17px 9px/3px 7px no-repeat,linear-gradient(to top right,transparent 50%,var(--pub-psi) 50%) 14px 16px/3px 7px no-repeat,linear-gradient(to top left,transparent 50%,var(--pub-psi) 50%) 17px 16px/3px 7px no-repeat,radial-gradient(circle at 50% 16px,transparent 0 10.5px,color-mix(in srgb,var(--pub-gold) 60%,transparent) 11px 11.6px,transparent 12.2px),radial-gradient(circle at 50% 16px,var(--pub-cover-glow),transparent 16px),var(--cover);box-shadow:inset 0 0 0 1px var(--pub-gold-soft)}
+/* 타투인: 두 해 표시, 줄무늬 분류 글자, 푸른 광선검 구분선, 두 해 상태(구상 빈 고리 둘 → 집필 반쪽 → 퇴고 하나 → 완성 둘), 사구 띠. */
+[data-palette=tatooine] .studio-brand{font-family:var(--pub-tech);font-size:13px;font-weight:400;letter-spacing:.18em;text-transform:uppercase}
+[data-palette=tatooine] .studio-brand>span{width:19px;height:12px;font-size:0;background:var(--tt-suns)}
+[data-palette=tatooine] .doc-kicker{display:flex;align-items:center;gap:8px;font-family:var(--pub-tech);font-size:12px;letter-spacing:.1em;color:var(--pub-kicker)}
+[data-palette=tatooine] .doc-kicker::before{content:"";width:15px;height:8px;flex:none;background:repeating-linear-gradient(115deg,var(--brand) 0 3px,transparent 3px 6px)}
+[data-palette=tatooine] .doc-divider,[data-palette=tatooine] .manuscript hr{width:220px;height:16px;border:0;background:var(--tt-saber) center/220px 16px no-repeat}
+[data-palette=tatooine] .primary{border-radius:3px;box-shadow:inset 0 -2px 0 var(--pub-accent-edge)}
+[data-palette=tatooine] .status-dot,[data-palette=tatooine] .status-dot:is(.idea,.draft,.review,.done){--s1:radial-gradient(circle at 5px 5px,transparent 0 2.7px,var(--muted) 3px 4.2px,transparent 4.5px);--s2:radial-gradient(circle at 14px 5px,transparent 0 1.9px,var(--muted) 2.2px 3.3px,transparent 3.6px);width:18px;height:10px;border:0;border-radius:0;background:var(--s1),var(--s2);box-shadow:none}
+[data-palette=tatooine] .status-dot.draft{--s1:radial-gradient(circle at 5px 5px,var(--brand) 0 1.8px,transparent 2.1px 2.9px,var(--brand) 3px 4.2px,transparent 4.5px)}
+[data-palette=tatooine] .status-dot.review{--s1:radial-gradient(circle at 5px 5px,var(--brand) 0 4.2px,transparent 4.5px)}
+[data-palette=tatooine] .status-dot.done{--s1:radial-gradient(circle at 5px 5px,var(--brand) 0 4.2px,transparent 4.5px);--s2:radial-gradient(circle at 14px 5px,var(--pub-sun2) 0 3.3px,transparent 3.6px)}
+[data-palette=tatooine] .doc-tab.active{box-shadow:inset 0 -2px 0 var(--brand)}
+[data-palette=tatooine] .studio-tools::after{height:10px;background:var(--tt-dunes) 0 100%/240px 10px repeat-x}
+[data-palette=tatooine] .work-cover{border-radius:3px;background:linear-gradient(transparent 62%,#0d0709 62%),radial-gradient(circle 5px at 40% 50%,#fffdf0 0 55%,#ffe7a6 85%,transparent),radial-gradient(circle 3px at 64% 55%,#ffd08a 0 60%,transparent),linear-gradient(var(--pub-sky1),var(--pub-sky2) 30%,var(--pub-sky3) 48%,var(--pub-sky4) 62%)}
+/* 제국: 전투 요새 표시, 계급 명판 분류 글자, 붉은 광선검 구분선과 버튼 날, 표시등 세 칸 상태(구상 0칸 → 집필 1칸 → 퇴고 2칸 → 완성 3칸), 벽 패널 띠. */
+[data-palette=empire] .studio-brand{font-family:var(--pub-tech);font-size:12px;font-weight:600;letter-spacing:.28em;text-transform:uppercase}
+[data-palette=empire] .studio-brand>span{width:15px;height:15px;font-size:0;background:var(--em-death) center/contain no-repeat}
+[data-palette=empire] .doc-kicker{display:flex;align-items:center;gap:8px;font-family:var(--pub-tech);font-size:12px;font-weight:500;letter-spacing:.12em;color:var(--pub-kicker)}
+[data-palette=empire] .doc-kicker::before{content:"";width:21px;height:9px;flex:none;box-sizing:border-box;border:1px solid var(--pub-plaque-edge);background:linear-gradient(90deg,#c8241c 0 4px,transparent 4px 5px,#c8241c 5px 9px,transparent 9px 10px,#2357b0 10px 14px,transparent 14px 15px,#2357b0 15px 19px) 0 1px/19px 5px no-repeat,var(--pub-plaque)}
+[data-palette=empire] .doc-divider,[data-palette=empire] .manuscript hr{width:220px;height:16px;border:0;background:var(--em-saber) center/220px 16px no-repeat}
+[data-palette=empire] .primary,[data-palette=empire] .button.primary{border-radius:0;border-color:var(--pub-accent-edge);background:var(--pub-accent);color:var(--pub-on-accent);box-shadow:inset 0 -1px 0 #ffffff,inset 0 -3.5px 0 var(--pub-blade),0 3px 8px -3px var(--pub-glow)}
+[data-palette=empire] .primary:hover:not(:disabled){border-color:var(--pub-accent-edge);background:var(--pub-accent-strong)}
+[data-palette=empire] .status-dot,[data-palette=empire] .status-dot:is(.idea,.draft,.review,.done){--d1:var(--pub-off);--d2:var(--pub-off);--d3:var(--pub-off);width:16px;height:6px;border:0;border-radius:0;background:linear-gradient(90deg,var(--d1) 0 4px,transparent 4px 6px,var(--d2) 6px 10px,transparent 10px 12px,var(--d3) 12px 16px);box-shadow:none}
+[data-palette=empire] .status-dot.draft{--d1:var(--pub-lit)}
+[data-palette=empire] .status-dot.review{--d1:var(--pub-lit);--d2:var(--pub-lit)}
+[data-palette=empire] .status-dot.done{--d1:var(--pub-lit);--d2:var(--pub-lit);--d3:var(--pub-lit2)}
+[data-palette=empire][data-theme=dark] .status-dot:is(.draft,.review,.done){filter:drop-shadow(0 0 2px #ff3c2899)}
+[data-palette=empire] .doc-tab.active{box-shadow:inset 0 -2px 0 var(--pub-blade)}
+[data-palette=empire] .studio-tools::after{left:10px;right:10px;height:8px;border-block:1px solid var(--pub-seam);background:var(--em-band)}
+[data-palette=empire] .work-cover{border-radius:0;background:var(--em-death) 50% 30%/62% auto no-repeat,var(--em-stars),var(--cover)}
 /* segmented(설정의 색 계열 고르기 포함)도 계열의 주요 버튼 모양을 따른다(카세트·사이버는 위에). 선택된 버튼은 주요 버튼 색이다. */
 [data-palette=ink] .segmented{border-radius:4px}
 [data-palette=ink] .segmented button{border-radius:2px}
@@ -222,6 +252,10 @@ html:has(.studio){background:var(--ground)}
 [data-palette=matrix] .segmented button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);font-weight:700;box-shadow:0 0 8px var(--pub-glow)}
 [data-palette=protoss] .segmented,[data-palette=protoss] .segmented button{border-radius:2px}
 [data-palette=protoss] .segmented button[aria-pressed=true]{background:var(--pt-pri);color:var(--on-brand);font-weight:600;box-shadow:inset 0 0 0 1px var(--pub-gold),inset 0 0 0 2.5px var(--hover),0 0 8px var(--pub-glow)}
+[data-palette=tatooine] .segmented,[data-palette=tatooine] .segmented button{border-radius:3px}
+[data-palette=tatooine] .segmented button[aria-pressed=true]{background:var(--brand);color:var(--on-brand);font-weight:600;box-shadow:inset 0 -2px 0 var(--pub-accent-edge)}
+[data-palette=empire] .segmented,[data-palette=empire] .segmented button{border-radius:0}
+[data-palette=empire] .segmented button[aria-pressed=true]{background:var(--pub-accent);color:var(--pub-on-accent);font-weight:600;box-shadow:inset 0 0 0 1px var(--pub-accent-edge),inset 0 -1px 0 #ffffff,inset 0 -3px 0 var(--pub-blade)}
 
 .login-google{width:min(360px,calc(100vw - 48px));justify-content:center}.login-help{max-width:360px;font-size:13px;line-height:1.7;text-align:center;overflow-wrap:anywhere}.account-login{display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
 .wiki-preview.note-preview-popover{position:relative;width:min(300px,calc(100vw - 24px));max-height:var(--radix-popover-content-available-height);overflow:auto}

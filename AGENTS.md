@@ -27,8 +27,8 @@ Before building or changing any UI (public pages, the studio, dialogs), read [do
 - Build new screens from the existing parts listed in section 0 of the guide (board-bar, segmented, `.button`, `.chip`, `.status-dot`, document icons, the reference-panel layout, `Popover`/`.menu`). Do not invent new shapes, header rows, font sizes or weights; compare the new screen side by side with an existing one such as the plot board.
 - Shape tokens (`--ctl-r`, `--r-in`, `--panel-r`, `--led-r`) are only defined for cyber; always write a fallback such as `var(--ctl-r,6px)`.
 - Use tokens, never raw colours: `--pub-*` on public pages, the unprefixed base tokens in the studio and dialogs. Use shape tokens instead of branching on a palette name.
-- Check every new screen in all thirty-six palette × mode combinations and at 360px width.
-- Before finishing, go through section 23 (새 기능 체크리스트). If you add a token or pattern, update the guide and `CHANGELOG.md`.
+- Check every new screen in all forty palette × mode combinations and at 360px width.
+- Before finishing, go through section 25 (새 기능 체크리스트). If you add a token or pattern, update the guide and `CHANGELOG.md`.
 - Mockups and the design-system artifact live on claude.ai and may not be reachable from your tool; the guide's values are authoritative.
 
 # Implementation acceptance
