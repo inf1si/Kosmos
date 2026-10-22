@@ -35,7 +35,7 @@ try {
         assert.equal(await trigger.getAttribute('aria-label'), '테마 · 보라');
         await trigger.click();
         const picker = page.getByRole('group', { name: '테마' });
-        assert.deepEqual(await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label'))), ['보라 테마', '카세트 테마', '사이버 테마', '잉크 테마', '컬럼비아 테마', '나사펑크 테마', '디젤 테마', '누아르 테마', '선조 유적 테마', '스파르탄 테마', '붉은 책 테마', '실마릴리온 테마', '바벨 테마', '무한 테마', '히치하이커 테마', '트론 테마', '매트릭스 테마']);
+        assert.deepEqual(await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label'))), ['보라 테마', '카세트 테마', '사이버 테마', '잉크 테마', '컬럼비아 테마', '나사펑크 테마', '디젤 테마', '누아르 테마', '선조 유적 테마', '스파르탄 테마', '붉은 책 테마', '실마릴리온 테마', '바벨 테마', '무한 테마', '히치하이커 테마', '트론 테마', '매트릭스 테마', '프로토스 테마']);
         await picker.getByRole('button', { name: '잉크 테마' }).click();
         assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 잉크', 'trigger follows the choice');
         assert.equal(await page.evaluate(() => document.documentElement.dataset.palette), 'ink');
