@@ -789,6 +789,59 @@
     --tr-o: 64px;
   }
 }
+/* Protoss: a gold hairline with a fading psionic seam under the header, a slim crystal mark and the double-framed main link. */
+:global([data-palette=protoss]) .header {
+  position: relative;
+  margin-bottom: 5px;
+  border-bottom: 1px solid var(--pub-gold);
+}
+:global([data-palette=protoss]) .header::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: calc(100% + 2px);
+  height: 1px;
+  pointer-events: none;
+  background: var(--pt-seam);
+  box-shadow: 0 0 6px var(--pub-psi-glow);
+}
+:global([data-palette=protoss]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: .38em;
+  text-transform: uppercase;
+}
+:global([data-palette=protoss]) .brandMark {
+  width: 9px;
+  height: 20px;
+  font-size: 0;
+  clip-path: var(--pt-crystal);
+  background: linear-gradient(165deg, #e8f6ff, #4aa3f5 40%, #123d93 85%);
+}
+:global([data-palette=protoss]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+:global([data-palette=protoss]) .primaryLink {
+  border: 1px solid var(--pub-gold);
+  border-radius: 2px;
+  background: var(--pt-pri);
+  color: var(--pub-on-accent);
+  letter-spacing: .06em;
+  box-shadow: inset 0 0 0 2px var(--pub-paper), 0 0 14px var(--pub-glow);
+}
+:global([data-palette=protoss]) .primaryLink:hover {
+  background: linear-gradient(var(--pub-accent-strong), var(--pub-accent-strong)) var(--pub-accent-strong);
+}
+@media (max-width: 700px) {
+  :global([data-palette=protoss]) .brand {
+    font-size: 12px;
+    letter-spacing: .28em;
+  }
+}
 /* Tatooine: dunes and twin suns under the header, the twin-sun mark and the stencil name. */
 :global([data-palette=tatooine]) .header {
   position: relative;

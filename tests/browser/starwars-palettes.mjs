@@ -42,7 +42,7 @@ try {
         await page.getByRole('button', { name: /^테마 · / }).click();
         const picker = page.getByRole('group', { name: '테마' });
         const labels = await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')));
-        assert.deepEqual(labels.slice(16, 19), ['매트릭스 테마', '타투인 테마', '제국 테마']);
+        assert.deepEqual(labels.slice(17, 20), ['프로토스 테마', '타투인 테마', '제국 테마']);
         await picker.getByRole('button', { name: `${names[palette]} 테마` }).click();
         assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), `테마 · ${names[palette]}`);
         assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), palette);
