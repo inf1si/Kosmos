@@ -6,7 +6,10 @@
 - 적용 범위: 복귀는 항상 `/library`이며 이력 뒤로가기를 호출하지 않는다. 서재 제목·표지·작품 읽기로 같은 탭에서 열면 작품 ID·정렬·카드의 화면 안 위치만 `sessionStorage`에 기록한다. 해당 작품의 복귀 링크로 돌아왔을 때 정렬·카드 위치·작품 읽기 초점을 복원하고 기록을 소비한다. 글꼴 로딩과 목록 정렬 뒤 카드 기준으로 복원해 화면 폭 변경에도 대응한다. 직접 진입·다른 작품의 오래된 기록·손상된 기록·저장소 차단은 목록 처음으로 간다. 원고·공개 순서·판본·계정·백업 데이터는 바꾸지 않는다.
 - 브라우저: [`reader-library-return.mjs`](tests/browser/reader-library-return.mjs)가 최적화 빌드 Chromium·WebKit에서 통과했다. 합성 작품 8개에서 세 입구 → 스크롤 → 목차 이동 → 읽기 설정 열기 → Esc/설정 열린 채 복귀, 고정 링크의 클릭·Enter와 하단 복귀, 정렬·카드 위치(2px 이내)·초점 복원, 360↔1280px 변경, 직접 진입/손상/다른 작품 기록/저장소 차단을 확인했다. 42개 테마 × 360·1280px의 52px 한 줄·화면 중앙 작품명·조작 겹침/가로 넘침 없음을 확인했고 42개 모바일 도구줄을 모아 눈으로 봤다. 증거: `test-results/reader-library-return/optimized-chromium/`, `optimized-webkit/`. 실제 작가 자료를 쓰거나 서버에 게시하지 않았다.
 - 회귀: 기존 `reader-title-align.mjs`의 제목 중앙·긴 제목 말줄임·목차/설정 검사와 `reader-preferences.mjs`의 글꼴 20종·크기/폭 선택·저장 및 웹폰트 16종 실제 렌더링 검사도 통과했다.
-- 로컬 검사: 타입·전체 Anti Slop 린트·215개 Node 검사·최적화 빌드·문서 검사 통과. React 검토에서 저장소 읽기는 브라우저 효과/이벤트에서만 수행하며 임시 복귀 정보는 ref로 보관하고, 비동기 글꼴 대기 뒤에는 언마운트 여부를 확인한다. CI·운영 배포·실제 모바일 기기는 아직 확인 전이다.
+- 로컬 검사: 타입·전체 Anti Slop 린트·215개 Node 검사·최적화 빌드·문서 검사 통과. React 검토에서 저장소 읽기는 브라우저 효과/이벤트에서만 수행하며 임시 복귀 정보는 ref로 보관하고, 비동기 글꼴 대기 뒤에는 언마운트 여부를 확인한다.
+- main·CI: [PR #79](https://github.com/inf1si/Kosmos/pull/79), 소스 `19d99c40b89f1c3b60cc781c5a1c178751c58067`. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/39730044847)는 첫 실행에서 이전 작업과 같은 Next.js 글꼴 빌드의 `next/font/google queries have exactly one entry` 오류로 실패했고 같은 SHA 재실행에서 통과했다. 소스 변경은 없으며 원인은 확정하지 않았다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/39730450384)는 첫 실행에서 타입·215개 검사·빌드·암호화 왕복·19개 Anti Slop 규칙(218개 파일, 0건)이 통과했다.
+- 운영: Vercel `dpl_BcNCR1hrBy5pxHjEoXzDrKR1WAuL`의 정확한 소스 SHA·production READY·www/root/기존 Vercel 도메인 별칭을 확인했다. 실제 www에서 익명 Chromium·WebKit 각각 360·1280px의 서재 정렬 → 작품 열기 → 스크롤 → 목차 선택 → 읽기 설정 → 클릭/Enter 복귀를 확인했다. 카드 위치 2px 이내·정렬·초점 복원과 임시 기록 소비, 설정 창이 열린 채 복귀, 직접 진입 시 서재 맨 위, 서재·설정집 기존 메뉴도 통과했다. 두 브라우저에서 각각 42개 테마 × 두 폭의 고정 52px 막대·가운데 제목·조작 요소 배치와 가로 넘침 없음을 확인했다. 운영 모바일·데스크톱 스크린샷을 눈으로 확인했고 페이지 오류·API 쓰기 요청은 없었다. 증거: `test-results/reader-library-return/live-chromium/`, `live-webkit/`(운영 검사 스크립트는 로컬 전용).
+- 미확인: 실제 모바일 기기. 실제 로그인 계정·원고 편집·게시 쓰기는 이번 검증에 사용하지 않았다.
 
 ## 2026-10-22 — 로고를 메인으로 통일
 
