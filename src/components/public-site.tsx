@@ -5,7 +5,7 @@ import { documentTitle } from '@/lib/model';
 import { z } from 'zod';
 import { useEffect, useState, type ReactNode, useRef } from 'react';
 import Link from 'next/link';
-import { List, Settings2, X, Link2 } from 'lucide-react';
+import { ArrowLeft, List, Settings2, X, Link2 } from 'lucide-react';
 import { Publication, RichNode, footnotes, plainText } from '@/lib/model';
 import { db } from '@/lib/database';
 import { seedWorkspace } from '@/lib/seed';
@@ -23,15 +23,68 @@ function usePublicData(initial:Publication[],localPreview:boolean){
 return{data,loading};
 }
 
-function PublicHeader({children}:{children?:ReactNode}){return <header className="public-header"><Link href="/" className="public-brand" aria-label="Orbis Tertius 홈"><span className="public-brand-mark" aria-hidden="true">◌</span>Orbis Tertius</Link><nav><Link href="/library">서재</Link>{children}<Link className="studio-link" href="/studio">집필실</Link><ThemeControls/></nav></header>;}
+const libraryLocationKey='kosmos-library-location';
+
+const libraryLocationSchema=z.object({workId:z.string().uuid(),sort:z.string(),offset:z.number().finite(),restore:z.boolean()});
+
+function libraryLocation(){
+  try{const result=libraryLocationSchema.safeParse(JSON.parse(sessionStorage.getItem(libraryLocationKey)||'null'));
+
+return result.success?result.data:null;}catch{return null;}
+}
+
+function LibraryReturnLink({workId,children,className}:{workId:string;children:ReactNode;className?:string}){
+  return <Link href="/library" className={className} onNavigate={()=>{
+    try{const saved=libraryLocation();
+
+      if(saved?.workId===workId)sessionStorage.setItem(libraryLocationKey,JSON.stringify({...saved,restore:true}));else sessionStorage.removeItem(libraryLocationKey);
+    }catch{}
+  }}>{children}</Link>;
+}
+
+function PublicHeader({children,reading=false}:{children?:ReactNode;reading?:boolean}){return <header className="public-header"><Link href="/" className="public-brand" aria-label="Orbis Tertius 홈"><span className="public-brand-mark" aria-hidden="true">◌</span>Orbis Tertius</Link><nav>{!reading&&<Link href="/library">서재</Link>}{children}{!reading&&<Link className="studio-link" href="/studio">집필실</Link>}<ThemeControls/></nav></header>;}
 
 /** A typographic cover: works have no cover art, so the title is set on the brand colour under the ◌ orbit. */
-function BookCover({pub}:{pub:Publication}){return <Link className="book-cover" href={`/read/${pub.workId}`} tabIndex={-1} aria-hidden="true"><svg width="170" height="170" viewBox="0 0 170 170"><circle cx="85" cy="85" r="70" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="1.5 7" strokeLinecap="round"/><circle cx="85" cy="85" r="44" fill="none" stroke="currentColor" strokeOpacity=".5"/></svg><span className="book-cover-series">ORBIS TERTIUS</span><span><strong>{pub.title}</strong><small>소설</small></span></Link>;}
+function BookCover({pub,onOpen}:{pub:Publication;onOpen:()=>void}){return <Link className="book-cover" href={`/read/${pub.workId}`} onNavigate={onOpen} tabIndex={-1} aria-hidden="true"><svg width="170" height="170" viewBox="0 0 170 170"><circle cx="85" cy="85" r="70" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="1.5 7" strokeLinecap="round"/><circle cx="85" cy="85" r="44" fill="none" stroke="currentColor" strokeOpacity=".5"/></svg><span className="book-cover-series">ORBIS TERTIUS</span><span><strong>{pub.title}</strong><small>소설</small></span></Link>;}
 
 export function Library({initial,localPreview,error}:{initial:Publication[];localPreview:boolean;error?:string}){
   const {data,loading}=usePublicData(initial,localPreview);
   const [sort,setSort]=useState<LibrarySort>('author');
-  useEffect(()=>{try{setSort(librarySort(localStorage.getItem(LIBRARY_SORT_KEY)));}catch{}},[]);
+  const [ready,setReady]=useState(false);
+  const returnLocation=useRef<ReturnType<typeof libraryLocation>>(null);
+  useEffect(()=>{
+    const saved=libraryLocation();returnLocation.current=saved?.restore?saved:null;
+
+    try{setSort(librarySort(saved?.restore?saved.sort:localStorage.getItem(LIBRARY_SORT_KEY)));}catch{}
+
+    setReady(true);
+  },[]);
+  useEffect(()=>{
+    const saved=returnLocation.current;
+
+    if(loading||!ready||!saved)return;
+    let cancelled=false;
+    // Restore against the selected card after sorting and font loading, including a changed viewport width.
+    void document.fonts.ready.then(()=>requestAnimationFrame(()=>{
+      if(cancelled)return;
+      const card=document.getElementById(`library-work-${saved.workId}`);
+      window.scrollTo(0,card?card.getBoundingClientRect().top+window.scrollY-saved.offset:0);
+      card?.querySelector<HTMLAnchorElement>('.book-read')?.focus({preventScroll:true});
+      returnLocation.current=null;
+
+      try{sessionStorage.removeItem(libraryLocationKey);}catch{}
+    }));
+
+    return()=>{cancelled=true;};
+  },[loading,ready]);
+
+  function rememberLocation(workId:string){
+    try{const card=document.getElementById(`library-work-${workId}`);
+
+      if(card)sessionStorage.setItem(libraryLocationKey,JSON.stringify({workId,sort,offset:card.getBoundingClientRect().top,restore:false}));
+    }catch{}
+  }
+
   const ordered=sortPublications(data,sort);
   const latest=data.length?new Date(Math.max(...data.map(p=>new Date(p.publishedAt).getTime()))).toLocaleDateString('ko-KR'):'';
 
@@ -39,7 +92,7 @@ export function Library({initial,localPreview,error}:{initial:Publication[];loca
     {!error&&<div className="library-sort"><label>정렬<select aria-label="서재 정렬" value={sort} onChange={e=>{const next=librarySort(e.target.value);setSort(next);
 
 try{localStorage.setItem(LIBRARY_SORT_KEY,next);}catch{}}}>{Object.entries(librarySorts).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div>}
-    {loading?<p className="muted">서재를 여는 중입니다.</p>:data.length?<div className="book-list">{ordered.map((p,i)=><article className="book-entry" key={p.id}><BookCover pub={p}/><div className="book-info"><span className="book-category"><span className="book-no">{String(i+1).padStart(2,'0')}</span><span className="book-dot"> · </span><span className="book-kind">소설</span></span><Link href={`/read/${p.workId}`}><h2>{p.title}</h2></Link><p className="book-subtitle">{p.subtitle}</p><p className="book-description">{p.description}</p><div className="book-actions"><Link className="book-read" href={`/read/${p.workId}`}>작품 읽기<span aria-hidden="true">→</span></Link><Link className="book-wiki" href={`/wiki/${p.workId}`}>설정집</Link><span>{new Date(p.publishedAt).toLocaleDateString('ko-KR')}</span></div></div><div className="book-excerpt"><span>본문 미리보기</span><p>{plainText(p.scenes[0].content).split('\n\n').find(text=>text.trim())?.replace(/\s+/g,' ').trim()}</p></div></article>)}</div>:!error&&<div className="empty-library"><h2>공개한 작품이 없습니다.</h2></div>}
+    {loading?<p className="muted">서재를 여는 중입니다.</p>:data.length?<div className="book-list">{ordered.map((p,i)=><article className="book-entry" key={p.id} id={`library-work-${p.workId}`}><BookCover pub={p} onOpen={()=>rememberLocation(p.workId)}/><div className="book-info"><span className="book-category"><span className="book-no">{String(i+1).padStart(2,'0')}</span><span className="book-dot"> · </span><span className="book-kind">소설</span></span><Link href={`/read/${p.workId}`} onNavigate={()=>rememberLocation(p.workId)}><h2>{p.title}</h2></Link><p className="book-subtitle">{p.subtitle}</p><p className="book-description">{p.description}</p><div className="book-actions"><Link className="book-read" href={`/read/${p.workId}`} onNavigate={()=>rememberLocation(p.workId)}>작품 읽기<span aria-hidden="true">→</span></Link><Link className="book-wiki" href={`/wiki/${p.workId}`}>설정집</Link><span>{new Date(p.publishedAt).toLocaleDateString('ko-KR')}</span></div></div><div className="book-excerpt"><span>본문 미리보기</span><p>{plainText(p.scenes[0].content).split('\n\n').find(text=>text.trim())?.replace(/\s+/g,' ').trim()}</p></div></article>)}</div>:!error&&<div className="empty-library"><h2>공개한 작품이 없습니다.</h2></div>}
     <footer className="public-footer">Orbis Tertius</footer></main></div>;
 }
 
@@ -171,22 +224,22 @@ return()=>{window.removeEventListener('scroll',scroll);
 if(timer)clearTimeout(timer);};
   },[pub,workId]);
 
-  if(loading)return <div className="public-site"><PublicHeader/><p className="public-loading">작품을 여는 중입니다.</p></div>;
+  if(loading)return <div className="public-site"><PublicHeader reading/><p className="public-loading">작품을 여는 중입니다.</p></div>;
 
-  if(!pub)return <div className="public-site"><PublicHeader/><div className="public-loading"><h1>아직 공개되지 않은 작품입니다.</h1><Link href="/library">서재로 돌아가기</Link></div></div>;
+  if(!pub)return <div className="public-site"><PublicHeader reading/><div className="public-loading"><h1>아직 공개되지 않은 작품입니다.</h1><LibraryReturnLink workId={workId}>서재로 돌아가기</LibraryReturnLink></div></div>;
   const selectedFont=manuscriptFonts.find(item=>item.id===font)||manuscriptFonts[0];
   const sizes=fontSizes.includes(size)?fontSizes:[...fontSizes,size].sort((a,b)=>a-b);
   const wiki=pub.wiki.find(w=>w.id===wikiId);const notes=pub.scenes.flatMap(scene=>footnotes(scene.content)).filter((n,i,a)=>a.findIndex(x=>x.id===n.id)===i);
 
-  return <div className={`public-site reader ${fontClassName}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--reading-size':`${size}px`,'--reading-width':`${width}px`,'--reading-font':selectedFont.family} as React.CSSProperties}><PublicHeader><Link href={`/wiki/${workId}`}>설정집</Link></PublicHeader>
-    <div className="reading-controls">{/* The hidden copy of the wider 읽기 설정 button keeps both side columns equal, so the title stays on the page's centre line even when it is cut short. */}<div className="reading-controls-start"><button onClick={()=>setToc(v=>!v)}><List size={17}/>목차</button><button className="reading-controls-spacer" type="button" tabIndex={-1} aria-hidden="true" disabled><Settings2 size={17}/>읽기 설정</button></div><span>{pub.title}</span><Popover open={settings} onOpenChange={next=>{setSettings(next);
+  return <div className={`public-site reader ${fontClassName}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--reading-size':`${size}px`,'--reading-width':`${width}px`,'--reading-font':selectedFont.family} as React.CSSProperties}><PublicHeader reading><Link href={`/wiki/${workId}`}>설정집</Link></PublicHeader>
+    <div className="reading-controls"><div className="reading-controls-start"><LibraryReturnLink workId={workId} className="reading-library-link"><ArrowLeft size={17} aria-hidden="true"/><span>서재</span></LibraryReturnLink><button className="reading-compact-control" aria-label="목차" title="목차" onClick={()=>setToc(v=>!v)}><List size={17}/><span className="reading-controls-label">목차</span></button></div><span>{pub.title}</span><Popover open={settings} onOpenChange={next=>{setSettings(next);
 
-if(!next)setSizeDraft(String(size));}} align="end" width={340} title="읽기 설정" trigger={<button><Settings2 size={17}/>읽기 설정</button>}><div className="reading-preferences"><label className="reading-font">글꼴<select value={font} onChange={e=>setFont(e.target.value)}>{manuscriptFonts.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{sizes.map(value=><option key={value} value={value}>{value}px</option>)}</select></label><label>크기 직접 입력 (px)<input type="number" inputMode="decimal" min={10} max={72} step={0.5} value={sizeDraft} title="10–72px · 0.5px 단위" onChange={e=>setSizeDraft(e.target.value)} onBlur={commitSize} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commitSize();e.currentTarget.blur();}}}/></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(preferredPalette(e.target.value))}>{paletteOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div></Popover></div>
+if(!next)setSizeDraft(String(size));}} align="end" width={340} title="읽기 설정" trigger={<button className="reading-compact-control" aria-label="읽기 설정" title="읽기 설정"><Settings2 size={17}/><span className="reading-controls-label">읽기 설정</span></button>}><div className="reading-preferences"><label className="reading-font">글꼴<select value={font} onChange={e=>setFont(e.target.value)}>{manuscriptFonts.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label><label>글자 크기<select value={size} onChange={e=>setSize(Number(e.target.value))}>{sizes.map(value=><option key={value} value={value}>{value}px</option>)}</select></label><label>크기 직접 입력 (px)<input type="number" inputMode="decimal" min={10} max={72} step={0.5} value={sizeDraft} title="10–72px · 0.5px 단위" onChange={e=>setSizeDraft(e.target.value)} onBlur={commitSize} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commitSize();e.currentTarget.blur();}}}/></label><label>본문 폭<select value={width} onChange={e=>setWidth(Number(e.target.value))}><option value={580}>좁게</option><option value={680}>기본</option><option value={780}>넓게</option></select></label><label>배경<select value={theme} onChange={e=>setTheme(e.target.value==='dark'?'dark':'light')}><option value="light">밝게</option><option value="dark">어둡게</option></select></label><label>테마<select value={palette} onChange={e=>setPalette(preferredPalette(e.target.value))}>{paletteOptions.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div></Popover></div>
     <div className="reading-progress" style={{width:`${progress}%`}}/>
     {toc&&<aside className="reading-toc"><div><h2>목차</h2><button aria-label="목차 닫기" onClick={()=>setToc(false)}><X size={18}/></button></div>{pub.scenes.map(scene=><a key={scene.id} href={`#scene-${scene.id}`} onClick={()=>setToc(false)}>{documentTitle(scene)}</a>)}</aside>}
     <main className="reading-page"><header className="reading-title"><span>소설</span><h1>{pub.title}</h1><p>{pub.subtitle}</p></header>{pub.scenes.map(scene=><section key={scene.id} className="reading-scene" id={`scene-${scene.id}`}><div className="reading-scene-title"><span>{scene.chapter}</span><h2>{documentTitle(scene)}</h2></div><div className="reading-body"><RichReader content={scene.content} publication={pub} onWiki={(id,link)=>{wikiAnchor.current=link;setWikiId(id);}}/></div></section>)}
       {notes.length>0&&<section className="reading-notes"><h2>주석</h2><ol>{notes.map((note,i)=><li id={`note-${note.id}`} key={note.id}><a href={`#ref-${note.id}`} aria-label={`각주 ${i+1} 본문으로 돌아가기`}>{i+1}</a><p>{note.text}</p></li>)}</ol></section>}
-      <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><Link href="/library">작품 목록</Link><Link href={`/wiki/${workId}`}>설정집 읽기</Link></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small></footer>
+      <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><LibraryReturnLink workId={workId}>작품 목록</LibraryReturnLink><Link href={`/wiki/${workId}`}>설정집 읽기</Link></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small></footer>
     </main>
     
     <Popover open={!!wiki} onOpenChange={open=>{if(!open)setWikiId(null);}} anchor={wikiAnchor} width={320} className="wiki-card" title={wiki?.title||'설정'} onReturnFocus={()=>wikiAnchor.current instanceof HTMLElement&&wikiAnchor.current.focus()}>{wiki&&<><span className="wiki-category">{wiki.category}</span><p className="wiki-summary">{wiki.summary}</p><Link className="button" href={`/wiki/${workId}?doc=${wiki.id}`}>설정 문서 열기</Link></>}</Popover>
