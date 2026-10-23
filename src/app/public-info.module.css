@@ -1038,3 +1038,226 @@
     height: 11px;
   }
 }
+/* Space frontier families (탐구·특이점·정수·고대 회로·궤도): the same header line, mark and main link as their public pages. */
+:global([data-palette=inquiry]) .header {
+  position: relative;
+}
+:global([data-palette=inquiry]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  top: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--pub-glow) 30%, var(--pub-glow) 70%, transparent);
+}
+:global([data-palette=inquiry]) .brand {
+  font-family: var(--pub-tech);
+  font-weight: 300;
+  letter-spacing: .36em;
+  text-transform: uppercase;
+}
+:global([data-palette=inquiry]) .brandMark {
+  width: 15px;
+  height: 17px;
+  font-size: 0;
+  background: var(--iq-mark) center/contain no-repeat;
+}
+:global([data-palette=inquiry]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+:global([data-palette=inquiry]) .primaryLink {
+  border-radius: 2px;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+  box-shadow: inset 0 0 0 1px var(--pub-accent), inset 0 0 0 2px var(--pub-accent-ring);
+}
+:global([data-palette=singularity]) .header {
+  position: relative;
+  border-bottom: 0;
+}
+:global([data-palette=singularity]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  top: 100%;
+  height: 10px;
+  background: var(--sg-shards) right 12% top 3px/90px 9px no-repeat, linear-gradient(var(--pub-ab-c), var(--pub-ab-c)) 0 0/100% 1px no-repeat, linear-gradient(color-mix(in srgb, var(--pub-ink) 45%, transparent), color-mix(in srgb, var(--pub-ink) 45%, transparent)) 0 1px/100% 1px no-repeat, linear-gradient(var(--pub-ab-r), var(--pub-ab-r)) 0 2px/100% 1px no-repeat;
+}
+:global([data-palette=singularity]) .brand {
+  font-family: var(--pub-tech);
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  text-shadow: -.7px 0 var(--pub-ab-r), .7px 0 var(--pub-ab-c);
+}
+:global([data-palette=singularity]) .brandMark {
+  width: 16px;
+  height: 16px;
+  font-size: 0;
+  background: var(--sg-mark) center/contain no-repeat;
+}
+:global([data-palette=singularity]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+:global([data-palette=singularity]) .primaryLink {
+  border-radius: 0;
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+}
+:global([data-palette=essence]) .header {
+  position: relative;
+  border-bottom: 0;
+}
+:global([data-palette=essence]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  top: 100%;
+  height: 10px;
+  background: var(--es-step) 50% 0/160px 10px no-repeat, linear-gradient(var(--pub-amber), var(--pub-amber)) 0 2px/calc(50% - 79px) 1px no-repeat, linear-gradient(var(--pub-amber), var(--pub-amber)) 100% 2px/calc(50% - 79px) 1px no-repeat;
+  filter: drop-shadow(0 0 2px var(--pub-amber-glow));
+}
+:global([data-palette=essence]) .brand {
+  font-family: var(--pub-tech);
+  letter-spacing: .32em;
+  text-transform: uppercase;
+}
+:global([data-palette=essence]) .brandMark {
+  width: 16px;
+  height: 14px;
+  font-size: 0;
+  background: var(--es-mark) center/contain no-repeat;
+}
+:global([data-palette=essence]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+:global([data-palette=essence]) .primaryLink {
+  --es-cut: 7px;
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(135deg, transparent var(--es-cut), var(--pub-accent) var(--es-cut) calc(100% - var(--es-cut)), transparent calc(100% - var(--es-cut)));
+  color: var(--pub-on-accent);
+}
+:global([data-palette=relic]) .header {
+  position: relative;
+  border-bottom: 0;
+}
+:global([data-palette=relic]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  top: 100%;
+  height: 12px;
+  background: var(--rl-band) 100% 0/300px 12px no-repeat, linear-gradient(var(--pub-gilt), var(--pub-gilt)) 0 1.5px/calc(100% - 299px) .8px no-repeat;
+}
+:global([data-palette=relic]) .brand {
+  font-family: var(--pub-tech);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: .26em;
+}
+:global([data-palette=relic]) .brandMark {
+  width: 16px;
+  height: 16px;
+  font-size: 0;
+  background: var(--rl-mark) center/contain no-repeat;
+}
+:global([data-palette=relic]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+:global([data-palette=relic]) .primaryLink {
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  background: var(--pub-accent);
+  color: var(--pub-on-accent);
+}
+:global([data-palette=orbit]) .header {
+  position: relative;
+}
+:global([data-palette=orbit]) .header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  top: calc(100% - 3px);
+  height: 6px;
+  background: var(--ob-band) right 6% top 0/240px 6px no-repeat;
+}
+:global([data-palette=orbit]) .brand {
+  font-family: var(--pub-tech);
+  font-weight: 300;
+  letter-spacing: .48em;
+  text-transform: uppercase;
+}
+:global([data-palette=orbit]) .brandMark {
+  width: 16px;
+  height: 16px;
+  font-size: 0;
+  background: var(--ob-mark) center/contain no-repeat;
+}
+:global([data-palette=orbit]) .intro h1 {
+  font-family: var(--pub-title);
+  font-weight: 400;
+  letter-spacing: .02em;
+}
+:global([data-palette=orbit]) .primaryLink {
+  border-radius: 2px;
+  padding-left: 26px;
+  background: repeating-linear-gradient(90deg, var(--pub-tick) 0 1px, transparent 1px 3px) 9px 50%/8px 55% no-repeat, var(--pub-accent);
+  color: var(--pub-on-accent);
+  box-shadow: 0 0 14px var(--pub-glow);
+}
+:global([data-palette=essence]:not([data-theme=dark])) .header {
+  background: #0b0c10;
+  --pub-ink: #efe9dc;
+  --pub-text: #d9d2c3;
+  --pub-muted: #a69f91;
+  --pub-rule: #a69f91;
+  --pub-line: #2b2d35;
+  --pub-line-soft: #1c1e25;
+  --pub-raised: #14161c;
+  --pub-key: #14161c;
+  --pub-key-line: #2b2d35;
+  --pub-bevel: none;
+  --pub-amber: #ff9f2e;
+  --pub-amber-glow: #ff9f2e66;
+  --es-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 14'%3E%3Cpath d='M1.5 13.5L8 1L14.5 13.5' fill='none' stroke='%23ff9f2e' stroke-width='1.2'/%3E%3Cpath d='M8 5.5V11' stroke='%23ffd27a' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  --es-step: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 10'%3E%3Cpath d='M0 2.5H8L16 7.5H144L152 2.5H160' fill='none' stroke='%23ff9f2e' stroke-width='1'/%3E%3Cpath d='M40 7.5H120' stroke='%23ffd27a' stroke-width='1.2'/%3E%3C/svg%3E");
+  color: var(--pub-ink);
+}
+:global([data-palette=relic]) .primaryLink:focus-visible {
+  clip-path: none;
+}
+@media (max-width: 700px) {
+  :global([data-palette=inquiry]) .brand,
+  :global([data-palette=singularity]) .brand,
+  :global([data-palette=essence]) .brand {
+    font-size: 12px;
+    letter-spacing: .24em;
+  }
+  :global([data-palette=relic]) .brand {
+    font-size: 15px;
+    letter-spacing: .2em;
+  }
+  :global([data-palette=orbit]) .brand {
+    font-size: 12px;
+    letter-spacing: .22em;
+  }
+}

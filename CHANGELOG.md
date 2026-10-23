@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 2026-10-23 — 우주 개척 테마 다섯 (엔드리스 스페이스)
+
+- 사용자 요청("엔드리스 스페이스 테마")에 시안을 네 차례 보였다. 1~3차가 "평이"·"조잡"하다는 평을 받아 4차는 게임 원화·아트북·대표 그림을 보고 탐구·특이점·정수·유적 넷을 만들었고, 사용자가 "4개 만들어줘"라고 했다. 대표 그림을 보여 준 뒤 "따로 하나 더 (궤도)"를 골라 다섯이 됐다. 색 계열 다섯을 더했다(`orbis-palette` 값 `inquiry`·`singularity`·`essence`·`relic`·`orbit`, 이름 **탐구**·**특이점**·**정수**·**고대 회로**·**궤도**, 아이콘 Lucide ScanEye·Flower2·Flame·CircuitBoard·CircleDashed). 고르기 목록 맨 끝(노스트로모 다음)이다. 시안 이름 "유적"은 고르기 목록의 **선조 유적**과 헷갈려 **고대 회로**로 바꿨다.
+- 탐구는 파란 연구실(남색·흰 외피 버튼, 빛 선, 두 눈 투구, 동심원 홀로그램), 특이점은 하얀 허공(모서리 0, 색 번짐 세 줄 선, 흩어지는 조각, 막 속 빨간 꽃), 정수는 밤하늘과 주황 빛(라이트도 검은 머리줄, 계단형 빛줄, Λ 두건, 비스듬히 잘린 버튼, 삼각 상태 점), 고대 회로는 금빛 회로(팔각 버튼·틀, 회로선 띠, 빛살 표지), 궤도는 대표 그림의 가는 원·눈금 호·행성 지평선(표지에 은빛 별과 푸른 보라 성운)이다. 표지 그림은 두 모드에서 같다.
+- 고르기 버튼 세 곳(헤더 테마 버튼·테마 팝오버·집필실 `segmented`)도 계열 주요 버튼 모양과 색으로. 새 토큰·장식 변수(`--pub-holo`·`--pub-red`·`--pub-glow`·`--pub-flower*`·`--pub-ab-*`·`--pub-amber*`·`--pub-gilt*`·`--pub-arc`·`--pub-tick`·`--pub-nebula` 등, `--iq-*`·`--sg-*`·`--es-*`·`--rl-*`·`--ob-*`)는 각 계열에만 정의했다. 새 웹폰트 Source Sans 3·Space Grotesk·Tenor Sans·Cormorant SC·Raleway를 불러오고 `public/licenses/fonts.txt`에 다섯 글꼴의 저작권과 OFL 전문을 더했다(38종).
+- 디자인 가이드에 [27~31절](docs/design-guide.md#27-탐구-테마)을 더하고 확인 범위를 쉰네 조합(스물일곱 색 계열 × 라이트·다크), 체크리스트를 32절로 옮겼다(`AGENTS.md`도 같이). `new-palettes.mjs`·`palette-picker-shapes.mjs` 목록에 새 항목을 넣고 `frontier-palettes.mjs`를 더했다.
+
 ## 2026-10-23 — 글꼴 라이선스 동봉
 
 - 웹폰트 33종의 저작권 안내·예약 글꼴명·출처와 OFL 1.1/Apache 2.0 전문을 [`public/licenses/fonts.txt`](public/licenses/fonts.txt)에 함께 제공한다. 네이버의 나눔·마루부리 저작권 안내도 포함한다. 공개 경로는 `/licenses/fonts.txt`이며 화면 메뉴·링크·문구나 폰트 파일은 바꾸지 않는다. [조사와 제공 범위](docs/font-license-audit-2026-10-23.md).
