@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-10-23 — 테마 표시 이름 바꾸기
+
+- 기준: main `ce4b101`. 목표: 사용자가 고른 여섯 이름(두 태양·황금함대·마더·에아렌델·그리드·117)이 헤더 테마 버튼·테마 팝오버·설정 색 계열에 보이고, `data-palette` 값과 저장된 선택은 그대로.
+- 로컬 자동: `pnpm typecheck`, `pnpm test`, `pnpm docs:check`.
+- 로컬 브라우저(Supabase 없는 `pnpm dev --webpack` Chromium, 기기 내 미리보기 예시 작품): 이름을 바꾼 [`palette-picker-shapes.mjs`](tests/browser/palette-picker-shapes.mjs)·[`fiction-palettes.mjs`](tests/browser/fiction-palettes.mjs)·[`tron-matrix-palettes.mjs`](tests/browser/tron-matrix-palettes.mjs)·[`protoss-palette.mjs`](tests/browser/protoss-palette.mjs)·[`starwars-palettes.mjs`](tests/browser/starwars-palettes.mjs)·[`nostromo-palette.mjs`](tests/browser/nostromo-palette.mjs)·[`odyssey-palette.mjs`](tests/browser/odyssey-palette.mjs)·[`new-palettes.mjs`](tests/browser/new-palettes.mjs)·[`frontier-palettes.mjs`](tests/browser/frontier-palettes.mjs)가 통과. 팝오버 순서·`aria-label`(예: `테마 · 117`)·새로고침 뒤 선택 유지·설정 `segmented` 선택을 새 이름으로 확인했다.
+- 로컬 수동: 117 다크 팝오버와 그리드 라이트 설정 스크린샷에서 새 이름이 두 줄 격자·한 줄 버튼 안에 들어가는 것을 봤다.
+- 미확인: CI, 운영 배포, Safari, 실제 기기.
+
 ## 2026-10-23 — 우주 개척 테마 다섯 (엔드리스 스페이스)
 
 - 기준: main `9670da1`. 목표: 사용자가 고른 시안 넷(탐구·특이점·정수·유적)과 추가로 고른 궤도를 스물세~스물일곱 번째 색 계열로. 유적은 선조 유적과 이름이 겹쳐 고대 회로로 바꿨다.

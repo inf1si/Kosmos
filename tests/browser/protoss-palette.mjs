@@ -42,9 +42,9 @@ try {
         await page.getByRole('button', { name: /^테마 · / }).click();
         const picker = page.getByRole('group', { name: '테마' });
         const labels = await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')));
-        assert.deepEqual(labels.slice(15, 18), ['트론 테마', '매트릭스 테마', '프로토스 테마']);
-        await picker.getByRole('button', { name: '프로토스 테마' }).click();
-        assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 프로토스');
+        assert.deepEqual(labels.slice(15, 18), ['그리드 테마', '매트릭스 테마', '황금함대 테마']);
+        await picker.getByRole('button', { name: '황금함대 테마' }).click();
+        assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), '테마 · 황금함대');
         assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), 'protoss');
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.locator('.book-list').waitFor();
@@ -54,7 +54,7 @@ try {
         await page.locator('.studio-tools').getByRole('button', { name: '설정', exact: true }).click();
         const dialog = page.getByRole('dialog', { name: '설정' });
         await dialog.waitFor();
-        const pressed = dialog.getByRole('group', { name: '색 계열', exact: true }).getByRole('button', { name: '프로토스', exact: true });
+        const pressed = dialog.getByRole('group', { name: '색 계열', exact: true }).getByRole('button', { name: '황금함대', exact: true });
         assert.equal(await pressed.getAttribute('aria-pressed'), 'true');
         assert.equal(await pressed.evaluate(el => getComputedStyle(el).backgroundColor), action.light, 'segmented choice takes the main button colour');
         assert.match(await pressed.evaluate(el => getComputedStyle(el).boxShadow), /rgb\(180, 140, 60\)/, 'gold frame on the segmented choice');
@@ -105,7 +105,7 @@ try {
 
         await trigger.click();
         await page.locator('.palette-popover').waitFor();
-        const pressed = page.getByRole('group', { name: '테마' }).getByRole('button', { name: '프로토스 테마' });
+        const pressed = page.getByRole('group', { name: '테마' }).getByRole('button', { name: '황금함대 테마' });
         assert.equal(await pressed.evaluate(el => getComputedStyle(el).backgroundColor), action[mode], 'popover choice takes the main button colour');
         await page.locator('.palette-popover').screenshot({ path: `${output}/protoss-popover-${mode}-${width}.png` });
         await page.keyboard.press('Escape');
