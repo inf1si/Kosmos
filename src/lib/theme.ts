@@ -1,9 +1,9 @@
 export type SiteTheme='light'|'dark';
 
-export type SitePalette='violet'|'cassette'|'cyber'|'ink'|'columbia'|'nasapunk'|'diesel'|'noir'|'forerunner'|'spartan'|'redbook'|'silmaril'|'babel'|'infinity'|'hitchhiker'|'tron'|'matrix'|'protoss'|'tatooine'|'empire'|'odyssey'|'nostromo';
+export type SitePalette='violet'|'cassette'|'cyber'|'ink'|'columbia'|'nasapunk'|'diesel'|'noir'|'forerunner'|'spartan'|'redbook'|'silmaril'|'babel'|'infinity'|'hitchhiker'|'tron'|'matrix'|'protoss'|'tatooine'|'empire'|'odyssey'|'nostromo'|'inquiry'|'singularity'|'essence'|'relic'|'orbit';
 
 /** Every colour family, the default first. */
-export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber','ink','columbia','nasapunk','diesel','noir','forerunner','spartan','redbook','silmaril','babel','infinity','hitchhiker','tron','matrix','protoss','tatooine','empire','odyssey','nostromo'];
+export const PALETTES:readonly SitePalette[]=['violet','cassette','cyber','ink','columbia','nasapunk','diesel','noir','forerunner','spartan','redbook','silmaril','babel','infinity','hitchhiker','tron','matrix','protoss','tatooine','empire','odyssey','nostromo','inquiry','singularity','essence','relic','orbit'];
 
 export const THEME_KEY='orbis-theme';
 

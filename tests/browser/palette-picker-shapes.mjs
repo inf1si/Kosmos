@@ -20,9 +20,9 @@ const browser = await chromium.launch({ executablePath: process.env.KOSMOS_CHROM
 
 const errors = [];
 
-const palettes = ['violet', 'cassette', 'cyber', 'ink', 'columbia', 'nasapunk', 'diesel', 'noir', 'forerunner', 'spartan', 'redbook', 'silmaril', 'babel', 'infinity', 'hitchhiker', 'tron', 'matrix', 'protoss', 'tatooine', 'empire', 'odyssey', 'nostromo'];
+const palettes = ['violet', 'cassette', 'cyber', 'ink', 'columbia', 'nasapunk', 'diesel', 'noir', 'forerunner', 'spartan', 'redbook', 'silmaril', 'babel', 'infinity', 'hitchhiker', 'tron', 'matrix', 'protoss', 'tatooine', 'empire', 'odyssey', 'nostromo', 'inquiry', 'singularity', 'essence', 'relic', 'orbit'];
 
-const names = { violet: '보라', cassette: '카세트', cyber: '사이버', ink: '잉크', columbia: '컬럼비아', nasapunk: '나사펑크', diesel: '디젤', noir: '누아르', forerunner: '선조 유적', spartan: '스파르탄', redbook: '붉은 책', silmaril: '실마릴리온', babel: '바벨', infinity: '무한', hitchhiker: '히치하이커', tron: '트론', matrix: '매트릭스', protoss: '프로토스', tatooine: '타투인', empire: '제국', odyssey: '오디세이', nostromo: '노스트로모' };
+const names = { violet: '보라', cassette: '카세트', cyber: '사이버', ink: '잉크', columbia: '컬럼비아', nasapunk: '나사펑크', diesel: '디젤', noir: '누아르', forerunner: '선조 유적', spartan: '스파르탄', redbook: '붉은 책', silmaril: '실마릴리온', babel: '바벨', infinity: '무한', hitchhiker: '히치하이커', tron: '트론', matrix: '매트릭스', protoss: '프로토스', tatooine: '타투인', empire: '제국', odyssey: '오디세이', nostromo: '노스트로모', inquiry: '탐구', singularity: '특이점', essence: '정수', relic: '고대 회로', orbit: '궤도' };
 
 const look = el => ['borderRadius', 'clipPath', 'borderTopWidth', 'borderTopColor', 'boxShadow', 'backgroundColor', 'backgroundImage', 'color'].map(key => getComputedStyle(el)[key]).join(' | ');
 
@@ -87,7 +87,7 @@ try {
         // Columbia keeps the default corners and changes only the edge colour to gilt.
         const corners = look => look.split(' | ').slice(0, 3).join();
 
-        for (const palette of ['cyber', 'ink', 'nasapunk', 'diesel', 'noir', 'forerunner', 'spartan', 'redbook', 'silmaril', 'babel', 'infinity', 'hitchhiker', 'tron', 'matrix', 'protoss', 'tatooine', 'empire', 'odyssey', 'nostromo']) {
+        for (const palette of ['cyber', 'ink', 'nasapunk', 'diesel', 'noir', 'forerunner', 'spartan', 'redbook', 'silmaril', 'babel', 'infinity', 'hitchhiker', 'tron', 'matrix', 'protoss', 'tatooine', 'empire', 'odyssey', 'nostromo', 'inquiry', 'singularity', 'essence', 'relic', 'orbit']) {
             assert.notEqual(corners(seen.idle.get(palette)), corners(seen.idle.get('violet')), `${palette} ${mode}: picker button shape`);
             assert.notEqual(corners(seen.trigger.get(palette)), corners(seen.trigger.get('violet')), `${palette} ${mode}: header theme button shape`);
         }
