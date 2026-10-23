@@ -53,7 +53,7 @@ try {
         await page.getByRole('button', { name: /^테마 · / }).click();
         const picker = page.getByRole('group', { name: '테마' });
         const labels = await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')));
-        assert.deepEqual(labels.slice(21), ['노스트로모 테마', '탐구 테마', '특이점 테마', '정수 테마', '고대 회로 테마', '궤도 테마']);
+        assert.deepEqual(labels.slice(21), ['마더 테마', '탐구 테마', '특이점 테마', '정수 테마', '고대 회로 테마', '궤도 테마']);
         await picker.getByRole('button', { name: `${family.name} 테마` }).click();
         assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), `테마 · ${family.name}`);
         assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), id);

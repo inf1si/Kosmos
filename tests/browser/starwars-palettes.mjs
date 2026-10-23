@@ -25,7 +25,7 @@ const style = (page, selector, property) => page.locator(selector).first().evalu
 
 const pseudo = (page, selector, which, property) => page.locator(selector).first().evaluate((el, [which, property]) => getComputedStyle(el, which)[property], [which, property]);
 
-const names = { tatooine: '타투인', empire: '제국' };
+const names = { tatooine: '두 태양', empire: '제국' };
 
 const paper = { tatooine: { light: 'rgb(239, 230, 220)', dark: 'rgb(20, 13, 22)' }, empire: { light: 'rgb(241, 242, 240)', dark: 'rgb(10, 11, 13)' } };
 
@@ -42,7 +42,7 @@ try {
         await page.getByRole('button', { name: /^테마 · / }).click();
         const picker = page.getByRole('group', { name: '테마' });
         const labels = await picker.getByRole('button').evaluateAll(list => list.map(b => b.getAttribute('aria-label')));
-        assert.deepEqual(labels.slice(17, 20), ['프로토스 테마', '타투인 테마', '제국 테마']);
+        assert.deepEqual(labels.slice(17, 20), ['황금함대 테마', '두 태양 테마', '제국 테마']);
         await picker.getByRole('button', { name: `${names[palette]} 테마` }).click();
         assert.equal(await page.getByRole('button', { name: /^테마 · / }).getAttribute('aria-label'), `테마 · ${names[palette]}`);
         assert.equal(await page.evaluate(() => localStorage.getItem('orbis-palette')), palette);
