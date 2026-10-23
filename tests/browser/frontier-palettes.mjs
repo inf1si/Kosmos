@@ -26,7 +26,13 @@ const style = (page, selector, property) => page.locator(selector).first().evalu
 const pseudo = (page, selector, which, property) => page.locator(selector).first().evaluate((el, [which, property]) => getComputedStyle(el, which)[property], [which, property]);
 
 // Colour and image together, since some main buttons paint the colour inside a gradient.
-const paint = (page, selector) => page.locator(selector).first().evaluate(el => { const s = getComputedStyle(el); return `${s.backgroundColor} ${s.backgroundImage}`; });
+const paintOf = locator => locator.evaluate(el => {
+    const s = getComputedStyle(el);
+
+    return `${s.backgroundColor} ${s.backgroundImage}`;
+});
+
+const paint = (page, selector) => paintOf(page.locator(selector).first());
 
 const families = {
     inquiry: { name: '탐구', paper: { light: 'rgb(243, 246, 249)', dark: 'rgb(3, 13, 31)' }, action: { light: 'rgb(11, 42, 92)', dark: 'rgb(242, 246, 251)' } },
@@ -61,7 +67,7 @@ try {
         await dialog.waitFor();
         const pressed = dialog.getByRole('group', { name: '색 계열', exact: true }).getByRole('button', { name: family.name, exact: true });
         assert.equal(await pressed.getAttribute('aria-pressed'), 'true');
-        assert.ok((await pressed.evaluate(el => { const s = getComputedStyle(el); return `${s.backgroundColor} ${s.backgroundImage}`; })).includes(family.action.light), `${id}: segmented choice takes the main button colour`);
+        assert.ok((await paintOf(pressed)).includes(family.action.light), `${id}: segmented choice takes the main button colour`);
         await dialog.screenshot({ path: `${output}/${id}-settings-light.png` });
         await context.close();
     }
@@ -90,14 +96,17 @@ try {
         assert.match(await style(page, '.public-brand-mark', 'backgroundImage'), /data:image\/svg\+xml/, `${tag}: brand mark`);
         assert.ok((await paint(page, '.book-read')).includes(family.action[mode]), `${tag}: main button colour`);
         assert.notEqual(await pseudo(page, '.book-category', '::before', 'content'), 'none', `${tag}: mark before the kicker`);
+
         if (id === 'essence' && mode === 'light') assert.equal(await style(page, '.public-header', 'backgroundColor'), 'rgb(11, 12, 16)', `${tag}: black header bar on light paper`);
 
         // The cover title stays inside the cover.
         const inside = await page.locator('.book-cover').first().evaluate(cover => {
             const box = cover.getBoundingClientRect();
             const text = cover.querySelector('strong').getBoundingClientRect();
+
             return text.top >= box.top && text.bottom <= box.bottom && text.left >= box.left && text.right <= box.right;
         });
+
         assert.ok(inside, `${tag}: cover title inside the cover`);
 
         // The header stays one row at 360px.
@@ -110,7 +119,7 @@ try {
         await page.locator('.palette-popover').waitFor();
         const pressed = page.getByRole('group', { name: '테마' }).getByRole('button', { name: `${family.name} 테마` });
         assert.equal(await pressed.getAttribute('aria-pressed'), 'true');
-        assert.ok((await pressed.evaluate(el => { const s = getComputedStyle(el); return `${s.backgroundColor} ${s.backgroundImage}`; })).includes(family.action[mode]), `${tag}: popover choice takes the main button colour`);
+        assert.ok((await paintOf(pressed)).includes(family.action[mode]), `${tag}: popover choice takes the main button colour`);
         await page.locator('.palette-popover').screenshot({ path: `${output}/${id}-popover-${mode}-${width}.png` });
         await page.keyboard.press('Escape');
 
