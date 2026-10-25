@@ -31,7 +31,7 @@ try{
   const source=data.notes.find(n=>n.title==='출발 노트'),target=data.notes.find(n=>n.title==='도시 설정'),work=data.works[0],scene=work.documents.find(d=>d.kind==='scene'),wiki=work.documents.find(d=>d.kind==='wiki');
   scene.content=fromText('본문 문장.\n\n');wiki.title='도시 설정';wiki.content=fromText('합성 설정집의 원문입니다.');
   const foreign=newDocument('memo','다른 작품 자료');foreign.content=fromText('다른 작품의 합성 자료입니다.');
-  const foreignWork={...work,id:uid(),title:'별도 작품',documents:[foreign],navigation:undefined,publications:[],activePublicationId:null};data.works.push(foreignWork);workspaceSchema.parse(data);
+  const foreignWork={...work,id:uid(),title:`별도 작품 ${'긴 작품 이름 '.repeat(12)}`,documents:[foreign],navigation:undefined,publications:[],activePublicationId:null};data.works.push(foreignWork);workspaceSchema.parse(data);
   let version=1,cloudSeen=false,closing=false,writes=0;
   const context=await browser.newContext({viewport:{width,height:900}});
   const profile={id:'11111111-1111-4111-8111-111111111111',aud:'authenticated',role:'authenticated',email:'synthetic@example.invalid',created_at:'2026-10-25T00:00:00.000Z',app_metadata:{provider:'email',providers:['email']},user_metadata:{},identities:[]};
@@ -78,7 +78,14 @@ if(cloudSeen)await until(page,()=>check(data),'cloud save');};
   const slash=page.getByRole('listbox',{name:'노트 입력 명령'});await slash.waitFor();assert.equal(await page.getByRole('listbox',{name:'참조할 글'}).count(),0,'slash replaces reference search');
   assert.equal(await editor.getAttribute('aria-controls'),await slash.getAttribute('id'));
   await page.keyboard.press('Backspace');await page.getByRole('listbox',{name:'참조할 글'}).waitFor();assert.equal(await slash.count(),0,'removing slash restores the @ search');await page.keyboard.press('Escape');
-  await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('시작 문장. ');await page.keyboard.type('@');await page.getByRole('listbox',{name:'참조할 글'}).waitFor();await page.keyboard.insertText('도시');
+  await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('시작 문장. ');await page.keyboard.type('@');await page.getByRole('listbox',{name:'참조할 글'}).waitFor();
+  const rows=await page.getByRole('listbox',{name:'참조할 글'}).getByRole('option').evaluateAll(nodes=>nodes.map(node=>({height:node.getBoundingClientRect().height,width:node.getBoundingClientRect().width,listWidth:node.parentElement.getBoundingClientRect().width,align:getComputedStyle(node).textAlign})));
+  assert(rows.length>=10,'unfiltered results exercise a populated list');
+
+  for(const row of rows){assert(row.height>=32&&row.height<=42,'reference rows remain compact even with long paths');assert(Math.abs(row.width-row.listWidth)<1,'result rows fill the list width');assert.equal(row.align,'left');}
+
+  await page.locator('.internal-reference-search').screenshot({path:resolve(output,`populated-list-${width}.png`)});
+  await page.keyboard.insertText('도시');
   const list=page.getByRole('listbox',{name:'참조할 글'});await until(page,()=>list.getByRole('option').count().then(n=>n===2),'duplicate-title search options');
   await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');
   const chip=editor.locator('[data-internal-reference]');await chip.first().waitFor();assert.match(await chip.first().innerText(),/도시 설정/);
@@ -151,6 +158,7 @@ if(cloudSeen)await until(page,()=>check(data),'cloud save');};
   for(const palette of PALETTES)for(const mode of ['light','dark']){
    await page.evaluate(([p,m])=>{document.documentElement.dataset.palette=p;document.documentElement.dataset.theme=m;},[palette,mode]);
    const popup=page.locator('.internal-reference-search'),b=await popup.boundingBox();assert(b.x>=0&&b.x+b.width<=width+1,`${palette}/${mode}/${width} search bounds`);
+   const row=await list.getByRole('option').first().boundingBox();assert(row.height>=32&&row.height<=42,`${palette}/${mode}/${width} compact row`);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth),false);
    await popup.screenshot({path:resolve(output,`${palette}-${mode}-${width}.png`)});
   }
