@@ -25,8 +25,9 @@
 .internal-reference>span{min-width:0;max-width:240px;overflow:hidden;text-overflow:ellipsis}
 .internal-reference.is-selected{outline:2px solid var(--focus);outline-offset:2px}
 .internal-reference-search{width:360px;max-width:calc(100vw - 24px)}
+.internal-reference-search .internal-reference-option{padding:4px 10px;line-height:1.25}
 .internal-reference-option>span{display:flex;flex-direction:column;min-width:0;flex:1}
 .internal-reference-option strong{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.internal-reference-option small{font-size:12px;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
+.internal-reference-option small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .internal-reference-empty{margin:10px}
 .internal-reference-preview h3{overflow-wrap:anywhere}
