@@ -1,5 +1,9 @@
 # 로컬 실행·계정 연결·배포
 
+## 글 참조 배포 (2026-10-25)
+
+앱 배포 전에 `20261025130617_internal_references.sql`을 적용한다. 발행 RPC에서 비공개 참조를 제거하고 공개 저장 제약을 더한다. [확인·호환성·롤백 경계](internal-references.md#배포-순서).
+
 ## 개인 자기소개 배포 (2026-10-09)
 
 앱 배포 전에 [20261009121112_author_profile.sql](../supabase/migrations/20261009121112_author_profile.sql)을 한 번 적용한다. 공개 스냅샷 테이블·RLS·공개 열 SELECT 권한·작성자 쓰기 권한을 만들며 작업 공간/인증 제공자/환경 변수는 바꾸지 않는다. 기존 프로젝트에는 `author_profile`로 적용했고 익명 공개 필드 200/소유자 ID 열 401 및 실제 역할의 롤백 쓰기 검사를 완료했다. 새 프로젝트에서는 `authors`와 `auth.uid()`가 있는 초기 스키마 뒤에 적용한다. [기능](author-profile.md)·[검증](../VERIFICATION.md).

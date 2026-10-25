@@ -20,3 +20,13 @@
 .reading-body mark{background:var(--pub-tint);color:var(--pub-tint-ink)}
 .editor-search-match{background:var(--soft);color:var(--soft-ink)}
 .editor-search-match.current{outline:2px solid var(--focus);outline-offset:1px}
+/* Private references reuse chips, command rows and the existing reference panel. */
+.manuscript .internal-reference{max-width:100%;vertical-align:baseline;font-family:var(--sans);line-height:1.4;cursor:pointer;user-select:none}
+.internal-reference>span{min-width:0;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.internal-reference.is-selected{outline:2px solid var(--focus);outline-offset:2px}
+.internal-reference-search{width:360px;max-width:calc(100vw - 24px)}
+.internal-reference-option>span{display:flex;flex-direction:column;min-width:0;flex:1}
+.internal-reference-option strong{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.internal-reference-option small{font-size:12px;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
+.internal-reference-empty{margin:10px}
+.internal-reference-preview h3{overflow-wrap:anywhere}

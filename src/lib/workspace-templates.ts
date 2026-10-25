@@ -2,6 +2,7 @@ import { documentTitle, uid, workspaceSchema, workspaceTemplateSchema, type Asse
 import { applyNavigation, descendantsOf, navigationOrder, resolveNavigation, type DocumentDestination, type DocumentNavigation } from './document-navigation';
 import { applyNoteNavigation, noteTitle, noteTreeWork, resolveNoteNavigation, type NoteDestination } from './note-navigation';
 import { asNoteNavigation } from './note-navigation-schema';
+import { internalReferenceSchema,internalReferenceType } from './internal-reference-node';
 
 export type TemplateSource={scope:'work';workId:string}|{scope:'notes'};
 
@@ -30,10 +31,15 @@ export function templateSelection(nav:DocumentNavigation,selected:string[]):Set<
   return ids;
 }
 
-function copyContent(content:RichNode,ids:Map<string,string>,assets:Map<string,string>):RichNode{
+function copyContent(content:RichNode,ids:Map<string,string>,assets:Map<string,string>,owner:Pick<AssetMeta,'workId'|'noteId'|'templateId'>):RichNode{
   const copy=structuredClone(content);
 
   function visit(node:RichNode){
+    if(node.type===internalReferenceType){const parsed=internalReferenceSchema.safeParse(node.attrs),id=parsed.success?ids.get(parsed.data.targetId):undefined;
+
+      if(parsed.success&&id)node.attrs={...parsed.data,targetId:id,...(owner.workId?{kind:'document',workId:owner.workId}:owner.noteId?{kind:'note',workId:null}:{})};
+    }
+
     if(node.attrs?.blockId)node.attrs.blockId=uid();
 
     if(node.type==='footnote'&&node.attrs)node.attrs.noteId=uid();
@@ -74,7 +80,7 @@ function cloneItems<T extends NovelDocument|PersonalNote>(items:T[],nav:Document
   const now=new Date().toISOString();
 
   const documents=items.map(item=>{
-    const copy={...structuredClone(item),id:ids.get(item.id)!,content:copyContent(item.content,ids,assetIds),assetIds:item.assetIds.map(id=>assetIds.get(id)!),updatedAt:now};
+    const copy={...structuredClone(item),id:ids.get(item.id)!,content:copyContent(item.content,ids,assetIds,owner(item)),assetIds:item.assetIds.map(id=>assetIds.get(id)!),updatedAt:now};
 
     if(item.customProperties)copy.customProperties=item.customProperties.map(p=>({...p,id:uid()}));
 

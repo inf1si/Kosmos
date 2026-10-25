@@ -18,6 +18,9 @@ import { useStudio } from './studio-provider';
 import { GoogleAccountControl } from './studio-auth';
 import { IconButton, Popover, TooltipProvider } from './primitives';
 import { RichEditor, type NoteTools } from './rich-editor';
+import { InternalReferencePanel } from './internal-reference-panel';
+import type { InternalReference } from '@/lib/internal-reference-node';
+import type { ReferenceTarget } from '@/lib/internal-references';
 import { NoteImageView } from './note-image';
 import { FolderWorkPopover, NotesImportDialog } from './notes-transfer';
 import { noteExtensions } from '@/lib/editor-extensions';
@@ -43,6 +46,8 @@ type Props={activeId:string;captureId:string;importRequested:boolean;onImportOpe
 export function PersonalNotes({activeId,captureId,importRequested,onImportOpened,onImportBack,onSelect,onReturn,onNew,onOpenWork}:Props){
   const s=useStudio(),notes=s.state?.notes||EMPTY_NOTES;
   const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);
+  const [referencePreview,setReferencePreview]=useState<InternalReference|null>(null);
+  useEffect(()=>setReferencePreview(null),[activeId]);
   const [sidebar,setSidebar]=useState(false),[compact,setCompact]=useState(true),[side,setSide]=useState<'links'|'ai'|null>(null);
   const [listView,chooseList]=useStoredChoice(NOTES_LIST_VIEW_KEY,notesListViews,'tree'),[importOpen,setImportOpen]=useState(false),[folderWork,setFolderWork]=useState<{id:string;anchor:HTMLElement|null}|null>(null);
   const [query,setQuery]=useState(''),[filterOpen,setFilterOpen]=useState(false),[box,setBox]=useState<'all'|'inbox'|'icebox'>('all'),[tag,setTag]=useState(''),[workId,setWorkId]=useState('');
@@ -98,6 +103,12 @@ if(compact)setSidebar(false);}
 
 if(compact)setSidebar(false);}
 
+  function previewReference(ref:InternalReference){setReferencePreview(ref);setSide('links');
+
+if(compact)setSidebar(false);}
+
+  function openReferenceTarget(target:ReferenceTarget){if(target.kind==='note')select(target.targetId);else if(target.workId)onOpenWork(target.workId,target.targetId);}
+
   function patch(id:string,change:Parameters<typeof patchNote>[2]){s.update(state=>patchNote(state,id,change));}
 
   async function trashNote(id:string){
@@ -139,7 +150,9 @@ if(compact)setSidebar(false);}
     <main className="studio-panel">
       <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {active?<RichEditor key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');
+      {active?<RichEditor key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} references={{onPreview:previewReference,onConnections:()=>{setReferencePreview(null);setSide(value=>value==='links'&&!referencePreview?null:'links');
+
+if(compact)setSidebar(false);},open:side==='links'}} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');
 
 if(compact)setSidebar(false);}}} onChange={content=>patch(active.id,{content})}
         heading={<NoteHead key={active.id} note={active} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');
@@ -150,7 +163,7 @@ if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpen
 if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
         :<NotesHome state={s.state} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
     </main>
-    {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<NoteLinks note={active} notes={notes} onOpen={select}/>
+    {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<><InternalReferencePanel sourceId={active.id} preview={referencePreview} onPreview={setReferencePreview} onOpen={openReferenceTarget} showEmpty={!noteLinkCount}/>{!referencePreview&&noteLinkCount>0&&<NoteLinks note={active} notes={notes} onOpen={select}/>}</>
       :<AIChat key={`${s.namespace}-${active.id}-${s.epoch}`} noteId={active.id} doc={noteDocument(active)} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);
 
 return;}
