@@ -118,9 +118,9 @@ if(cloudSeen)await until(page,()=>check(data),'cloud save');};
 
   if(await page.getByRole('button',{name:'사이드바 열기',exact:true}).count())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();
   await page.locator(`[data-navigation-row="${scene.id}"]`).getByTitle(scene.title,{exact:true}).click();
-  const sceneEditor=page.locator('.editor-panes > .editor-shell .manuscript');await sceneEditor.waitFor();
+  const sceneEditor=page.getByLabel(`${scene.title} 원고`,{exact:true});await sceneEditor.waitFor();
   await sceneEditor.locator('p').last().click({position:{x:2,y:4}});await page.keyboard.press('End');await page.keyboard.press('ControlOrMeta+e');await page.keyboard.type('@literal');
-  assert.equal(await list.count(),0,'inline code stays literal');assert.equal(await sceneEditor.locator('code').last().innerText(),'@literal');
+  await sceneEditor.locator('code').last().waitFor();assert.equal(await list.count(),0,'inline code stays literal');assert.equal(await sceneEditor.locator('code').last().innerText(),'@literal');
   await page.keyboard.press('ControlOrMeta+e');assert.equal(await list.count(),0,'an @ inside code cannot become a trigger after leaving its mark');await page.keyboard.press('Enter');await page.keyboard.type('@');await page.keyboard.insertText('변경된 도시');await list.waitFor();
   await sceneEditor.dispatchEvent('compositionstart',{data:'도시',bubbles:true});
   await sceneEditor.dispatchEvent('keydown',{key:'Enter',code:'Enter',keyCode:229,isComposing:true,bubbles:true});
