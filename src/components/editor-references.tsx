@@ -75,7 +75,7 @@ return;}
       const text=$from.parent.textBetween(0,$from.parentOffset,'','\ufffc'),offset=text.lastIndexOf('@'),prefix=text.slice(0,offset),value=text.slice(offset+1);
 
       // ASCII email addresses stay literal. Inline atom placeholders keep ProseMirror offsets intact.
-      if(offset<0||/[A-Za-z0-9._%+-]$/.test(prefix)||!/^[^@\n\ufffc]{0,80}$/.test(value)) {dismissed.current=null;setQuery(null);
+      if(offset<0||/[A-Za-z0-9._%+-]$/.test(prefix)||!/^[^@/\n\ufffc]{0,80}$/.test(value)) {dismissed.current=null;setQuery(null);
 
 return;}
 

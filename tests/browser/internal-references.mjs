@@ -74,6 +74,10 @@ if(cloudSeen)await until(page,()=>check(data),'cloud save');};
 
   await page.goto(`${base}/studio#notes/${source.id}`,{waitUntil:'networkidle'});const editor=page.locator('.manuscript[contenteditable=true]').first();await editor.waitFor();
   await editor.locator('p').last().click({position:{x:2,y:4}});await page.keyboard.press('End');await page.keyboard.type('a@b');assert.equal(await page.getByRole('listbox',{name:'참조할 글'}).count(),0);
+  await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('@/');
+  const slash=page.getByRole('listbox',{name:'노트 입력 명령'});await slash.waitFor();assert.equal(await page.getByRole('listbox',{name:'참조할 글'}).count(),0,'slash replaces reference search');
+  assert.equal(await editor.getAttribute('aria-controls'),await slash.getAttribute('id'));
+  await page.keyboard.press('Backspace');await page.getByRole('listbox',{name:'참조할 글'}).waitFor();assert.equal(await slash.count(),0,'removing slash restores the @ search');await page.keyboard.press('Escape');
   await page.keyboard.press('ControlOrMeta+A');await page.keyboard.type('시작 문장. ');await page.keyboard.type('@');await page.getByRole('listbox',{name:'참조할 글'}).waitFor();await page.keyboard.insertText('도시');
   const list=page.getByRole('listbox',{name:'참조할 글'});await until(page,()=>list.getByRole('option').count().then(n=>n===2),'duplicate-title search options');
   await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowUp');await page.keyboard.press('Enter');

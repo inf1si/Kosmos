@@ -6,12 +6,14 @@
 - 로컬 중간 확인: 새 단위 검사 5개 통과(백업·본문 통계·ID 해석·템플릿·PGlite 실제 발행 및 권한). Chromium dev의 초기 PC/360px 참조 흐름과 27계열 × 두 밝기 검사 통과. 추가 경계·최적화 빌드·기존 슬래시/AI 회귀는 진행 중이다.
 - 재현한 결함: 모바일 서랍 닫기 버튼의 정보 툴팁 포털이 원문 열기 클릭을 가로막아 wrapper와 툴팁을 pointer-events:none으로 바꿨다. 본문 미리보기 같은 조작 가능한 팝오버는 유지한다. 합성 fixture가 IndexedDB 주입 뒤 hash 이동만 하여 이전 상태를 보여주던 문제는 명시적 reload로 수정했다.
 - 운영 DB 사전 확인: 공개본의 비공개 참조 노드 0건, 새 함수·제약 없음. 보안 advisor는 기존 INFO(내부 테이블 RLS 무정책 2개), 의도된 인증 RPC definer 경고 7개, 유출 비밀번호 보호 비활성 경고 1개가 있다. 이번 기능에서 해당 정책을 변경하지 않는다. [RLS 안내](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)·[RPC 권한](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)·[Auth 설정](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
-- 운영 DB: `internal_references` 마이그레이션 적용 성공. 합성 중첩 JSON에서 본문만 남는 제거 결과, anon/authenticated 제거 함수 실행 불가, invoker 속성, 인증 작가 발행 허용/익명 불가, 발행 함수의 제거 호출, 공개 제약 validated와 비공개 노드 0건을 확인했다. 기존 원고·판본 행을 수정하지 않았다. 적용 후 보안 advisor 세 종류·개수는 전과 같다. 성능 advisor의 기존 FK/정책/index 안내는 이번 DDL의 대상이 아니다.
+- 운영 DB: `internal_references` 마이그레이션 적용 성공. 합성 중첩 JSON에서 본문만 남는 제거 결과, anon/authenticated 제거 함수 실행 불가, invoker 속성, 인증 작가 발행 허용/익명 불가, 발행 함수의 제거 호출, 공개 제약 validated와 비공개 노드 0건을 확인했다. 기존 원고·판본 행을 수정하지 않았다. 적용 후 보안 advisor 세 종류·개수는 전과 같다. 적용 후 성능 advisor의 FK/정책/index 안내는 이번 DDL의 대상이 아니다.
 - 로컬: 타입·린트·전체 220개 자동 검사·최적화 빌드 통과. HTML/MD/ENEX 실제 파일과 ZIP 매니페스트에서도 참조 제목·ID·노드가 제외됨을 확인했다. 새 템플릿 ID 매핑과 실제 PGlite publish RPC/익명 읽기/권한·공개 제약 거부를 포함한다. 최적화 UI 검사는 합성 Supabase URL/키를 빌드에 주고 모든 인증·DB·API를 가로채 클라우드 저장 경로를 검사한다.
 - 최적화 브라우저: Chromium과 WebKit 각각 1280/360px에서 이메일·인라인 코드 제외, 한글 검색, 중복 제목과 경로, 키보드 삽입/미리보기, 한 번의 undo/redo, 원문 이동·백링크, 제목 변경, 노트→작품 설정·다른 작품 이동, 원고·설정·분할 창의 저장 대상, 합성 composition/229 Enter, 완전 reload 뒤 3개 참조 보존, Esc 재열림 방지를 확인했다. 모든 인증·저장은 합성 계정과 가로챈 응답이며 실제 작가 계정은 사용하지 않았다. 각 브라우저에서 검색 메뉴와 참고 패널을 27계열 × 라이트/다크 × 두 폭(각 화면 108조합)으로 캡처하고 경계·가로 넘침을 확인했다. 대표 모바일/PC 캡처를 기존 chip/menu/참고 패널과 비교했다.
 - 기존 동작 회귀: `studio-inline-commands.mjs`(합성 AI 요청 7·저장 9·화면 12)와 `note-inline-commands.mjs`(요청 4·저장 6·화면 12) 통과. 기존 `/`, 선택 영역/문단 AI, 적용·되돌리기·원문 서식·각주·설정/노트 링크와 분할 대상 흐름을 포함한다. 실제 AI 제공자 호출은 하지 않았다.
 - React·디자인 확인: 추가 훅은 조건부 반환 전에 실행하고 이벤트 플러그인/ARIA 소유권은 정리한다. 키보드·명명·원자 노드·목록의 안정적인 ID를 확인했으며 새 색 토큰·고정 막대·공개 UI·원시 HTML 삽입은 없다. 디자인 가이드 32절에서 해당하는 기존 부품·한글 문구·패널 위치·54조합/360px·연속 조작을 확인했다.
-- 아직 수행하지 않은 것: CI, 앱 운영 배포/브라우저, 실제 기기/실제 OS 한글 IME. 아래 후속 기록에서 수행 결과를 갱신한다.
+- 최초 배포: [PR #85](https://github.com/inf1si/Kosmos/pull/85)로 main `abb46a7bf8a7e9851f06067e3694c4f9c0d5a2d0`에 반영했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/40196877447)와 [main CI](https://github.com/inf1si/Kosmos/actions/runs/40197091593)가 각각 첫 실행에 타입·220개 검사·빌드·암호화 왕복·228개 파일/19개 Anti Slop 규칙(0건)을 통과했다. Vercel `dpl_FaSTpnEZS3vn5da62Prb5QuT2Jqb`의 정확한 SHA·production READY·www/root/기존 Vercel 별칭을 확인했다. 실제 www의 Chromium·WebKit/두 폭에서도 같은 합성 흐름·54개 테마 메뉴와 패널이 통과했다. 실제 계정 쓰기는 없다.
+- 후속 조합 검사: 별도 합성 운영 검사에서 `@/` 입력 시 listbox가 참조 1개·슬래시 1개 함께 생기는 것을 재현했다. 참조 검색은 `/`에서 종료해 슬래시 메뉴로 넘기도록 수정했다. 최적화 빌드·린트·문서 검사와 Chromium/WebKit 두 폭의 전체 참조 흐름·54개 테마가 다시 통과했다. `/`에서 슬래시만 표시, 제거 시 참조만 복귀, aria-controls 소유권까지 확인했다. 후속 수정의 CI·운영 배포는 아직 미확인이다.
+- 실제 기기/실제 OS 한글 IME는 미확인이다. composition/229 이벤트 검사는 실제 OS IME를 대신하지 않는다.
 
 ## 2026-10-23 — 테마 표시 이름 바꾸기
 
