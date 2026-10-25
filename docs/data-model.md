@@ -1,5 +1,9 @@
 # 데이터 모델과 권한
 
+## 비공개 글 참조 (2026-10-25)
+
+노트·작품의 RichNode는 `internalReference` 인라인 원자 노드 `{kind:'note'|'document',targetId:uuid,workId:uuid|null,label:string(최대 300)}`를 받는다. document에는 작품 ID가 필수, note에는 null이며 text/content/marks를 허용하지 않는다. 공개 원고 스키마는 이 노드를 거부한다. JSON 형식 버전 1과 기존 RPC 인수는 유지한다. 서버 발행 함수는 노드를 제거하고 공개 테이블 제약도 적용한다. [저장·ID·복제 계약](internal-references.md#저장발행내보내기).
+
 ## 개인 자기소개 (2026-10-09)
 
 선택 필드 `Workspace.authorProfile`은 `{name: string(최대 80자), bio: string(최대 10,000자)}`다. 빈 초안을 허용하며 JSON 버전 1을 유지한다. 작품·판본과 독립이다. 공개 내용은 `public.author_profile`의 단일 행(`id=true`, `owner_id=auth.uid()` 기본값, `name`, 비어 있지 않은 `bio`, `published_at`)에 따로 둔다. RLS는 익명 읽기·허용 작가 최초 작성·작성자 수정/삭제를 허용한다. 열 권한으로 익명/인증 클라이언트에게 `owner_id` 읽기/쓰기를 허용하지 않는다. [전체 계약](author-profile.md).

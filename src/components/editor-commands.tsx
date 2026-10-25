@@ -193,9 +193,9 @@ return next;});
     const dom=editor.view.dom;
 
     if(slash&&filtered.length){dom.setAttribute('aria-controls',listId);dom.setAttribute('aria-activedescendant',`${listId}-${filtered[chosen].id}`);}
-    else{dom.removeAttribute('aria-controls');dom.removeAttribute('aria-activedescendant');}
+    else if(dom.getAttribute('aria-controls')===listId){dom.removeAttribute('aria-controls');dom.removeAttribute('aria-activedescendant');}
 
-    return()=>{dom.removeAttribute('aria-controls');dom.removeAttribute('aria-activedescendant');};
+    return()=>{if(dom.getAttribute('aria-controls')===listId){dom.removeAttribute('aria-controls');dom.removeAttribute('aria-activedescendant');}};
   },[editor,slash,filtered,chosen,listId]);
   const anchor=useRef({getBoundingClientRect:()=>new DOMRect()});
   anchor.current.getBoundingClientRect=()=>{

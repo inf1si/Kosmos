@@ -8,6 +8,9 @@ import { ArrowDown, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUp
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
+import { InternalReferencePanel } from './internal-reference-panel';
+import type { InternalReference } from '@/lib/internal-reference-node';
+import type { ReferenceTarget } from '@/lib/internal-references';
 import { DocumentStatistics } from './document-statistics';
 import { ManuscriptPaper } from './manuscript-paper';
 import type { NoteDestination } from '@/lib/note-navigation';
@@ -104,6 +107,8 @@ return()=>window.removeEventListener('keydown',key);},[createNote,notesOpen,s.ca
   const [workId,setWorkId]=useState(entry.workId);const [current,setCurrent]=useState(entry.home?HOME:entry.docId);const [lastDoc,setLastDoc]=useState(entry.docId);const [tabs,setTabs]=useState<string[]>(entry.home?[HOME]:[]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
+  const [referencePreview,setReferencePreview]=useState<InternalReference|null>(null),[referenceSource,setReferenceSource]=useState('');
+  useEffect(()=>{setReferencePreview(null);setReferenceSource('');},[current,workId]);
   const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);const [noteImport,setNoteImport]=useState(false);
   const importFromStudio=useRef(false);
   // Settings opens templates and note import; the notes space answers templates itself while it is shown.
@@ -179,6 +184,16 @@ for(const ids of references.values())for(const id of ids)appearances[id]=(appear
   const navigation=resolveNavigation(work),placement=navigation.nodes.find(n=>n.id===active.id);
   const siblings=placement?childrenOf(navigation,placement.parentId,placement.sectionId).map(n=>n.id):[];const position=siblings.indexOf(active.id);
   const showSidebar=sidebar&&!focus;const readonly=!!s.conflict;const total=scenes.reduce((n,d)=>n+countChars(d),0);
+
+  function previewReference(sourceId:string,ref:InternalReference){setReferenceSource(sourceId);setReferencePreview(ref);setFocus(false);setReference('links');
+
+if(compact)setSidebar(false);}
+
+  function showReferenceConnections(sourceId:string){setReferenceSource(sourceId);setReferencePreview(null);setFocus(false);setReference(value=>value==='links'&&referenceSource===sourceId&&!referencePreview?null:'links');
+
+if(compact)setSidebar(false);}
+
+  function openReferenceTarget(target:ReferenceTarget){if(target.kind==='note')openNotes(target.targetId);else if(target.workId===work.id)openDoc(target.targetId);else if(target.workId)switchWork(target.workId,target.targetId);}
 
   function show(id:string){setCurrent(id);
 
@@ -328,15 +343,15 @@ return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon 
       :onGraph?<DocumentGraph key={work.id} documents={docs} initialDocumentId={active.id} onOpen={id=>openDoc(id)}/>
       :onBoard?<PlotBoard documents={docs} onOpen={id=>openDoc(id)} onCreate={chapter=>createDoc('scene',chapter,false)}/>
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
-        <RichEditor key={`${active.id}-${s.epoch}`} doc={active} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:active.id},onContinue:()=>{setFocus(false);setReference('ai');}}} appearances={appearances}
-          heading={<DocHead doc={active} wiki={wiki} linked={linked.length} backlinks={backlinks.length} attachments={active.assetIds.length} readonly={readonly} open={properties} onToggle={()=>setProperties(v=>!v)} onPatch={patch=>patchDoc(active.id,patch)} onOpenBeside={id=>openDoc(id,true)} onReference={setReference}/>}
+        <RichEditor key={`${active.id}-${s.epoch}`} doc={active} references={{onPreview:ref=>previewReference(active.id,ref),onConnections:()=>showReferenceConnections(active.id),open:reference==='links'}} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:active.id},onContinue:()=>{setFocus(false);setReference('ai');}}} appearances={appearances}
+          heading={<DocHead doc={active} wiki={wiki} linked={linked.length} backlinks={backlinks.length} attachments={active.assetIds.length} readonly={readonly} open={properties} onToggle={()=>setProperties(v=>!v)} onPatch={patch=>patchDoc(active.id,patch)} onOpenBeside={id=>openDoc(id,true)} onReference={value=>{setReferencePreview(null);setReferenceSource(active.id);setReference(value);}}/>}
           renderToolbarEnd={selection=><><DocumentStatistics doc={active} work={work} selection={selection} onPaper={()=>setPaperId(active.id)}/>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 대화</button></>}/>
         {split&&<><div className="split-divider resize-handle" role="separator" aria-label="분할 편집 폭" aria-orientation="vertical" aria-valuenow={splitWidth} aria-valuemin={30} aria-valuemax={70} tabIndex={0} onPointerDown={e=>e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={e=>{if(e.buttons){const rect=e.currentTarget.parentElement!.getBoundingClientRect();setSplitWidth(Math.max(30,Math.min(70,(e.clientX-rect.left)/rect.width*100)));}}} onKeyDown={e=>{if(e.key==='ArrowLeft')setSplitWidth(v=>Math.max(30,v-2));
 
-if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="split-pane"><div className="split-heading"><span>참고 · {documentTitle(split)}</span><IconButton label="분할 닫기" onClick={()=>setSplitId(null)}><X size={15}/></IconButton></div><RichEditor key={`${split.id}-${s.epoch}`} doc={split} onChange={content=>patchDoc(split.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:split.id},onContinue:()=>{openDoc(split.id);setSplitId(active.id);setFocus(false);setReference('ai');}}} renderToolbarEnd={selection=><DocumentStatistics doc={split} work={work} selection={selection} onPaper={()=>setPaperId(split.id)}/>} appearances={appearances}/></div></>}
+if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="split-pane"><div className="split-heading"><span>참고 · {documentTitle(split)}</span><IconButton label="분할 닫기" onClick={()=>setSplitId(null)}><X size={15}/></IconButton></div><RichEditor key={`${split.id}-${s.epoch}`} doc={split} references={{onPreview:ref=>previewReference(split.id,ref),onConnections:()=>showReferenceConnections(split.id),open:reference==='links'}} onChange={content=>patchDoc(split.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:split.id},onContinue:()=>{openDoc(split.id);setSplitId(active.id);setFocus(false);setReference('ai');}}} renderToolbarEnd={selection=><DocumentStatistics doc={split} work={work} selection={selection} onPaper={()=>setPaperId(split.id)}/>} appearances={appearances}/></div></>}
       </div>
       {reference&&!focus&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeReference}/><aside ref={referenceRef} className={`reference-panel ${reference==='ai'?'is-chat':''}`} aria-label="참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="참고 자료">{(['links','files','notes','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={reference===p} onClick={()=>setReference(p)}>{p==='links'?'연결':p==='files'?'첨부':p==='notes'?'노트':'AI 대화'}</button>)}<IconButton label="참고 패널 닫기" data-drawer-close onClick={closeReference}><X size={15}/></IconButton></div><div className="reference-content">
-        {reference==='links'?<><h3>연결된 설정</h3>{linked.length?linked.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id,true)}><WikiIcon category={d.category}/><span><strong>{documentTitle(d)}</strong><small>{d.category||'설정'} · 옆에서 열기</small></span></button>):<p className="muted">본문에 연결한 설정이 없습니다.</p>}<h3>이 문서를 참조하는 문서</h3>{backlinks.length?backlinks.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id)}><DocIcon doc={d}/><span><strong>{documentTitle(d)}</strong><small>{kinds[d.kind]}</small></span></button>):<p className="muted">아직 참조가 없습니다.</p>}</>
+        {reference==='links'?<><InternalReferencePanel sourceId={referenceSource||active.id} preview={referencePreview} onPreview={setReferencePreview} onOpen={openReferenceTarget} showEmpty={!!referenceSource&&referenceSource!==active.id||!linked.length&&!backlinks.length}/>{!referencePreview&&(!referenceSource||referenceSource===active.id)&&(linked.length>0||backlinks.length>0)&&<><h3>연결된 설정</h3>{linked.length?linked.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id,true)}><WikiIcon category={d.category}/><span><strong>{documentTitle(d)}</strong><small>{d.category||'설정'} · 옆에서 열기</small></span></button>):<p className="muted">본문에 연결한 설정이 없습니다.</p>}<h3>이 문서를 참조하는 문서</h3>{backlinks.length?backlinks.map(d=><button type="button" className="reference-card" key={d.id} onClick={()=>openDoc(d.id)}><DocIcon doc={d}/><span><strong>{documentTitle(d)}</strong><small>{kinds[d.kind]}</small></span></button>):<p className="muted">아직 참조가 없습니다.</p>}</>}</>
         :reference==='notes'?<NotesReference workId={work.id} readonly={readonly} onOpenNote={id=>{setCaptureId('');openNotes(id);}}/>
         :reference==='files'?<><h3>첨부 자료</h3>{active.assetIds.length?<div className="asset-list">{active.assetIds.map(id=><button type="button" key={id} onClick={()=>void downloadAsset(id)}><Paperclip size={14}/>{s.state!.assets.find(a=>a.id===id)?.name}</button>)}</div>:<p className="muted">이 문서에 첨부한 이미지가 없습니다.</p>}<label className="asset-upload">이미지 첨부<input aria-label="이미지 첨부" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];
 

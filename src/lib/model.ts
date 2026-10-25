@@ -8,12 +8,13 @@ import { cellSpan, formatNumber, inlineFontSize, validListStyle } from './manusc
 import { jsonValueSchema, type JsonValue } from './json-value';
 import { customPropertiesSchema } from './custom-properties';
 import { authorProfileSchema } from './author-profile';
+import { internalReferenceSchema, internalReferenceType, internalReferences, withoutInternalReferences } from './internal-reference-node';
 
 export type RichAttributes = { [key: string]: JsonValue | undefined };
 
 export type RichNode = { type: string; text?: string; attrs?: RichAttributes; marks?: {type: string; attrs?: RichAttributes}[]; content?: RichNode[] };
 
-const nodeTypes = new Set(['doc','text','paragraph','heading','bulletList','orderedList','listItem','hardBreak','blockquote','codeBlock','horizontalRule','footnote','table','tableRow','tableCell','tableHeader']);
+const nodeTypes = new Set(['doc','text','paragraph','heading','bulletList','orderedList','listItem','hardBreak','blockquote','codeBlock','horizontalRule','footnote','table','tableRow','tableCell','tableHeader',internalReferenceType]);
 
 // Personal notes also keep checklists and in-body images; works and publications never accept these nodes.
 const noteNodeTypes = new Set(['taskList','taskItem','noteImage']);
@@ -64,6 +65,8 @@ export function isRichDocument(value: JsonValue | RichNode | undefined, noteNode
     if (!parsed.success) return false;
     const v = parsed.data;
     const attrs=v.attrs||{};
+
+    if(v.type===internalReferenceType&&(!internalReferenceSchema.safeParse(attrs).success||v.content!==undefined||v.text!==undefined||v.marks?.length))return false;
 
     if(['paragraph','heading'].includes(v.type))for(const [key,min,max] of [['lineHeight',1,3],['indent',0,8],['firstLineIndent',0,4],['spaceBefore',0,48],['spaceAfter',0,48]] as const){const number=attrs[key];
 
@@ -130,7 +133,7 @@ export const documentSchema = z.object({
 
 export type NovelDocument = z.infer<typeof documentSchema>;
 
-const publicSceneSchema = z.object({id:z.uuid(), title:z.string(), chapter:z.string(), content:contentSchema});
+const publicSceneSchema = z.object({id:z.uuid(), title:z.string(), chapter:z.string(), content:contentSchema.refine(content=>!internalReferences(content).length,'공개본에 작업용 참조를 포함할 수 없습니다.')});
 
 const publicWikiSchema = z.object({id:z.uuid(),title:z.string(),category:z.string(),summary:z.string()});
 
@@ -340,7 +343,7 @@ export function makePublication(work:Work,sceneIds:string[]):Publication {
   if(!scenes.length) throw new Error('공개할 문서를 하나 이상 선택하세요.');
 
   return publicationSchema.parse({id:uid(),workId:work.id,title:work.title,subtitle:work.subtitle,description:work.description,publishedAt:new Date().toISOString(),
-    scenes:scenes.map(d=>({id:d.id,title:d.title,chapter:d.chapter,content:structuredClone(d.content)})),
+    scenes:scenes.map(d=>({id:d.id,title:d.title,chapter:d.chapter,content:withoutInternalReferences(d.content)})),
     wiki:work.documents.filter(d=>d.kind==='wiki'&&d.isPublic&&d.publicSummary.trim()).map(d=>({id:d.id,title:d.title,category:d.category,summary:d.publicSummary})),
   });
 }
