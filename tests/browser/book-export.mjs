@@ -30,6 +30,12 @@ try{
   const enc=x=>Buffer.from(JSON.stringify(x)).toString('base64url'),token=`${enc({alg:'HS256',typ:'JWT'})}.${enc({sub:profile.id,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})}.synthetic-signature`;
   await context.addInitScript(({profile,token})=>{
    if(window!==window.top)return;
+
+   // Safari before 18.4 has no Iterator helpers; the dialog must still open there.
+   const iterator=Object.getPrototypeOf(Object.getPrototypeOf([].values()));
+
+   for(const name of ['map','filter','take','drop','flatMap','reduce','toArray','forEach','some','every','find'])delete iterator[name];
+
    localStorage.setItem('kosmos-app-preferences',JSON.stringify({studioStart:'last'}));
    localStorage.setItem('sb-krakjollsufgnwealroh-auth-token',JSON.stringify({access_token:token,refresh_token:'synthetic-refresh',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:profile}));
   },{profile,token});

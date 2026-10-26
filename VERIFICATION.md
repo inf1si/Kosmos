@@ -1,5 +1,11 @@
 # 구현 검증
 
+## 2026-10-26 — main 리뷰: 자동 링크·책 내보내기 창
+
+- 기준 main `3d44af1`(#92~#95 리뷰). 결함 둘을 실제 브라우저에서 재현했다. ① Chromium에서 Iterator 도우미(`filter`·`map`·`toArray` 등)를 지워 Safari 18.4 이전 엔진을 흉내 내면 책 내보내기 창이 `toggles.values(...).filter is not a function`으로 열리지 않음. ② 본문에 " Mr.Kim readme.md naver.com "을 입력하면 세 낱말 모두 `https://` 링크가 됨.
+- 회귀: `book-export.mjs`는 모든 페이지에서 Iterator 도우미를 지운 채 실행한다(수정 전 실패, 수정 후 통과). `editor-web-links.mjs`에 입력 자동 링크 단계를 넣었다(수정 전 세 낱말 링크로 실패, 수정 후 `https://`만 링크). 단위 `explicitWebAddress` 검사 추가.
+- 로컬: 타입, 변경 파일 린트, 단위 256개 통과. 브라우저 개발 실행(webpack, 합성 Supabase) Chromium 1280/360px에서 `book-export.mjs`·`editor-web-links.mjs`·`editor-position-menu.mjs`를 첫 색 계열 × 두 밝기(quick)로 통과. 54조합 전체·WebKit·실제 Safari/iOS·CI·운영은 미확인.
+
 ## 2026-10-26 — PDF·EPUB·단일 HTML 책 내보내기
 
 - 기준 main `bf92e2a`. 설정/문서 교환에서 진입하는 책 설정·문서 선택·쪽 미리보기와 세 형식의 실제 다운로드를 추가했다. 원고/DB 스키마·공개 판본·기기 보기 설정은 바꾸지 않는다. [계약](docs/book-export.md).
