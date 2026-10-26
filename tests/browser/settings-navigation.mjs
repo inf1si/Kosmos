@@ -8,6 +8,7 @@ import { fromText, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
 import { trashNote } from '../../src/lib/workspace-trash.ts';
 import { prepareTemplate } from '../../src/lib/workspace-templates.ts';
+import { chooseOption, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -115,7 +116,7 @@ async function back(dialog, [id, label]) {
     await dialog.getByRole('button', { name: '설정으로 돌아가기', exact: true }).click();
     await settings().waitFor();
     assert.equal(await settings().getByRole('button', { name: '저장 · 백업', exact: true }).getAttribute('aria-pressed'), 'true', `${id}: return to data section`);
-    assert.equal(await settings().getByRole('combobox', { name: '자동 복구 지점 간격' }).inputValue(), '5', `${id}: keep chosen value`);
+    assert.equal(await selectedValue(settings().getByRole('combobox', { name: '자동 복구 지점 간격' })), '5', `${id}: keep chosen value`);
     await focused(settings().getByRole('button', { name: label, exact: true }));
     assert.equal(await page.locator('.modal[role="dialog"]').count(), 1, `${id}: child dismissed`);
 }
@@ -124,7 +125,7 @@ try {
     await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
     await page.locator('.ProseMirror').first().waitFor();
     await openSettings();
-    await settings().getByRole('combobox', { name: '자동 복구 지점 간격' }).selectOption('5');
+    await chooseOption(settings().getByRole('combobox', { name: '자동 복구 지점 간격' }), '5');
 
     for (const item of children) {
         const dialog = await child(item);

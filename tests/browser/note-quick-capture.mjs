@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
+import { chooseOption } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -121,7 +122,7 @@ try {
     assert.equal(await indent('.notes-workspace'), '0px', 'Notes drop the manuscript indent');
     // Filters fold into a popover beside search; the views are one segmented row.
     await button('노트 필터').click();
-    await page.getByRole('combobox', { name: '태그로 노트 찾기', exact: true }).selectOption('자료');
+    await chooseOption(page.getByRole('combobox', { name: '태그로 노트 찾기', exact: true }), '자료');
     await page.keyboard.press('Escape');
     await button('노트 필터 · 1개 적용').waitFor();
     assert(!(await page.locator('.notes-list').innerText()).includes('합성 노트'));

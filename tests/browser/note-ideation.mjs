@@ -10,6 +10,7 @@ import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
 import { applyNoteNavigation, resolveNoteNavigation } from '../../src/lib/note-navigation.ts';
+import { chooseOption } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -154,7 +155,7 @@ try {
     await page.keyboard.press('Home');
     await page.keyboard.press('Shift+End');
     await button('노트 링크 추가').click();
-    await page.getByRole('combobox', { name: '연결할 노트' }).selectOption({ label: '달 아래 도시' });
+    await chooseOption(page.getByRole('combobox', { name: '연결할 노트' }), { label: '달 아래 도시' });
     await button('연결').click();
     await page.locator('#note-links-toggle').click();
     const panel = page.getByRole('complementary', { name: '노트 참고 패널' });

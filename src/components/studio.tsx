@@ -43,6 +43,7 @@ import { db } from '@/lib/database';
 import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences';
 import { openingDocument, readStudioPosition, rememberStudioPosition } from '@/lib/studio-position';
 import { workShelves, workShelfTitle } from '@/lib/work-shelves';
+import { Select } from './select';
 
 const HOME='home';
 
@@ -383,7 +384,7 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
     <span className="doc-kicker">{doc.kind==='scene'?doc.chapter||'부 미지정':doc.kind==='wiki'?doc.category||'설정':kinds.memo}</span>
     <TitleInput key={doc.id} value={doc.title} disabled={readonly} onCommit={title=>onPatch({title})}/>
     <div className="doc-chips">
-      <label className="chip chip-status"><i className={`status-dot ${doc.status}`} aria-hidden="true"/><select aria-label="진행 상태" value={doc.status} disabled={readonly} onChange={e=>onPatch({status:documentSchema.shape.status.parse(e.target.value)})}>{Object.entries(statuses).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
+      <label className="chip chip-status"><i className={`status-dot ${doc.status}`} aria-hidden="true"/><Select aria-label="진행 상태" value={doc.status} disabled={readonly} onChange={value=>onPatch({status:documentSchema.shape.status.parse(value)})}>{Object.entries(statuses).map(([v,l])=><option key={v} value={v}>{l}</option>)}</Select></label>
       {doc.kind==='scene'&&doc.pov.trim()&&(person?<button type="button" className="chip soft" title={`${person.title} 설정을 옆에서 엽니다`} onClick={()=>onOpenBeside(person.id)}><User size={13}/>{doc.pov} 시점</button>:<button type="button" className="chip" onClick={onToggle}><User size={13}/>{doc.pov} 시점</button>)}
       {doc.kind==='scene'&&doc.storyTime.trim()&&<button type="button" className="chip" onClick={onToggle}><Clock3 size={13}/>{doc.storyTime}</button>}
       {doc.kind==='wiki'&&<button type="button" className="chip" onClick={onToggle}>{shared?<Globe2 size={13}/>:<Lock size={13}/>}{shared?'독자 공개':doc.isPublic?'공개 설명 없음':'비공개'}</button>}

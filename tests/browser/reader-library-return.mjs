@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { PALETTES } from '../../src/lib/theme.ts';
+import { chooseOption, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -73,7 +74,7 @@ try {
             };
         }), data);
         await page.reload({ waitUntil: 'networkidle' });
-        await page.getByRole('combobox', { name: '서재 정렬' }).selectOption('titleDesc');
+        await chooseOption(page.getByRole('combobox', { name: '서재 정렬' }), 'titleDesc');
         await page.evaluate(() => document.fonts.ready);
         const links = ['.book-read', '.book-info h2', '.book-cover'];
         let workId = '';
@@ -110,7 +111,7 @@ try {
             await page.waitForURL(`${base}/library`);
             await page.locator('.book-list').waitFor();
             await until(page, async () => Math.abs((await page.locator(`#library-work-${workId}`).boundingBox()).y - 80) < 2, 'selected card returns to the same viewport position');
-            assert.equal(await page.getByRole('combobox', { name: '서재 정렬' }).inputValue(), 'titleDesc');
+            assert.equal(await selectedValue(page.getByRole('combobox', { name: '서재 정렬' })), 'titleDesc');
             assert.equal(await page.locator(`#library-work-${workId} .book-read`).evaluate(el => el === document.activeElement), true, 'focus returns to the selected work');
             assert.equal(await page.evaluate(key => sessionStorage.getItem(key), locationKey), null, 'return position is consumed once');
         }

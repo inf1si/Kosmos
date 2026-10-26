@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
+import { chooseOption, readOptions, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -113,13 +114,13 @@ try{
   await page.goto(`${base}/studio`,{waitUntil:'domcontentloaded'});await editor().waitFor();await page.waitForTimeout(1500);
   // New families are declared globally but fetched only once selected.
   assert.equal(fontRequests.filter(r=>/pretendard|wanted|nanumbarun|maruburi/i.test(r.url)).length,0,'no new font fetched before selection');
-  const labels=await select().locator('option').allInnerTexts();assert.equal(labels.length,20);
+  const labels=(await readOptions(select())).map(option=>option.label);assert.equal(labels.length,20);
 
 for(const [,label] of added)assert(labels.includes(label),label);
 
   for(const [id,label,family] of added){
     const before=fontRequests.length;
-    await select().selectOption(id);
+    await chooseOption(select(), id);
     await page.waitForFunction(f=>document.fonts.check(`18px "${f}"`,'가나다')&&[...document.fonts].some(x=>x.family.replace(/"/g,'')===f&&x.status==='loaded'),family,{timeout:20000});
     const computed=await editor().evaluate(el=>getComputedStyle(el).fontFamily);
     assert(computed.includes(family),`${label}: ${computed}`);
@@ -136,7 +137,7 @@ return [a,c.measureText('갈매기 나는 바다와 하늘').width];},family);
   }
 
   // The choice is a device preference and survives reload.
-  await select().selectOption('pretendard');await page.reload({waitUntil:'domcontentloaded'});await editor().waitFor();assert.equal(await select().inputValue(),'pretendard');
+  await chooseOption(select(), 'pretendard');await page.reload({waitUntil:'domcontentloaded'});await editor().waitFor();assert.equal(await selectedValue(select()),'pretendard');
   await page.waitForFunction(()=>document.fonts.check('18px "Pretendard Variable"','가'));
 
   for(const width of [1280,360])for(const palette of ['violet','cassette','cyber'])for(const theme of ['light','dark']){

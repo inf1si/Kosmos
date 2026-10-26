@@ -5,6 +5,7 @@ import { Plus, X } from 'lucide-react';
 import { customPropertiesSchema, customPropertySchema, propertyText, propertyTypes, type CustomProperty } from '@/lib/custom-properties';
 import { uid } from '@/lib/model';
 import { IconButton, Popover } from './primitives';
+import { Select } from './select';
 
 export function CustomPropertyChips({properties=[],onOpen}:{properties?:CustomProperty[];onOpen:()=>void}){
   const filled=properties.filter(p=>p.type==='checkbox'||p.value!==''&&p.value!==null);
@@ -36,7 +37,7 @@ return;}
       <IconButton label={`${p.name} 속성 삭제`} disabled={disabled} onClick={()=>onChange(properties.filter(item=>item.id!==p.id))}><X size={14}/></IconButton>
     </div>)}</div>
     <Popover open={open} onOpenChange={value=>{setOpen(value);setError('');}} width={300} title="속성 추가" trigger={<button type="button" className="button" disabled={disabled||properties.length>=40}><Plus size={14}/>속성 추가</button>}>
-      <form className="form-grid" onSubmit={e=>{e.preventDefault();add();}}><label>속성 이름<input autoFocus aria-label="새 속성 이름" maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label><label>형식<select aria-label="새 속성 형식" value={type} onChange={e=>setType(customPropertySchema.options.find(o=>o.shape.type.value===e.target.value)!.shape.type.value)}>{Object.entries(propertyTypes).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>{error&&<p className="error-message" role="alert">{error}</p>}<div className="popover-actions"><button type="submit" className="button" disabled={disabled}>추가</button></div></form>
+      <form className="form-grid" onSubmit={e=>{e.preventDefault();add();}}><label>속성 이름<input autoFocus aria-label="새 속성 이름" maxLength={80} value={name} onChange={e=>setName(e.target.value)}/></label><label>형식<Select aria-label="새 속성 형식" value={type} onChange={value=>setType(customPropertySchema.options.find(o=>o.shape.type.value===value)!.shape.type.value)}>{Object.entries(propertyTypes).map(([key,label])=><option key={key} value={key}>{label}</option>)}</Select></label>{error&&<p className="error-message" role="alert">{error}</p>}<div className="popover-actions"><button type="submit" className="button" disabled={disabled}>추가</button></div></form>
     </Popover>
   </div>;
 }

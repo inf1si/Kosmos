@@ -7,6 +7,7 @@ import { seedWorkspace } from '../../src/lib/seed.ts';
 import { makePublication, newDocument, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { applyNavigation, resolveNavigation } from '../../src/lib/document-navigation.ts';
 import { libraryItemSchema, sortPublications } from '../../src/lib/library-order.ts';
+import { chooseOption } from './select.mjs';
 
 const require=createRequire(import.meta.url),{chromium}=require(process.env.KOSMOS_PLAYWRIGHT_MODULE||'playwright-core');
 
@@ -116,7 +117,7 @@ try{
     await grip(original[0]).focus();await page.keyboard.press('ArrowDown');assert.deepEqual((await order()).slice(0,3),[original[1],original[0],original[2]]);await page.keyboard.press('ArrowUp');assert.deepEqual(await order(),original);
     await row(original[0]).getByRole('button',{name:/아래로$/}).click();await reset();
 
-    for(const sort of ['titleAsc','titleDesc','newest','oldest']){await dialog().getByLabel('자동 정렬 기준').selectOption(sort);await button('자동 정렬').click();assert.deepEqual(await order(),sortPublications(publications,sort).map(p=>p.id));await reset();}
+    for(const sort of ['titleAsc','titleDesc','newest','oldest']){await chooseOption(dialog().getByLabel('자동 정렬 기준'), sort);await button('자동 정렬').click();assert.deepEqual(await order(),sortPublications(publications,sort).map(p=>p.id));await reset();}
 
     console.log('PASS mouse both directions, cancel, outside, focus, keyboard and automatic sort');
 

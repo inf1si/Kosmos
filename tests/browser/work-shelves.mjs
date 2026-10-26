@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { applyNavigation, resolveNavigation } from '../../src/lib/document-navigation.ts';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, newDocument, uid, workspaceSchema } from '../../src/lib/model.ts';
+import { chooseOption, readOptions, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -138,7 +139,7 @@ async function checkLateMenuFocus() {
 
 async function moveWork(work, title) {
     await button(`${work.title} 책장 이동`).click();
-    await page.getByLabel('옮길 책장', { exact: true }).selectOption({ label: title });
+    await chooseOption(page.getByLabel('옮길 책장', { exact: true }), { label: title });
     await button('옮기기').click();
     await shelf(title).locator(`[data-work-id="${work.id}"]`).waitFor();
 }
@@ -259,21 +260,21 @@ async function checkDrag() {
     await page.getByLabel('책장 이름', { exact: true }).fill('임시 이름');await button('이름 저장').click();
     await menu('임시 이름', '이름 변경');await page.getByLabel('책장 이름', { exact: true }).fill('');await button('이름 저장').click();
     await button(`${original.works[1].title} 책장 이동`).click();
-    const options = await page.getByLabel('옮길 책장', { exact: true }).locator('option').allTextContents();
+    const options = (await readOptions(page.getByLabel('옮길 책장', { exact: true }))).map(option => option.label);
     assert.deepEqual(options, ['기본 책장', '이름 없는 책장', '이름 없는 책장']);
-    await page.getByLabel('옮길 책장', { exact: true }).selectOption(blankB);
+    await chooseOption(page.getByLabel('옮길 책장', { exact: true }), blankB);
     await button('옮기기').click();assert.deepEqual(await workOrder(blankB), [a, b]);
     await card(b).locator('.reference-card').click({ button: 'right' });
     await page.getByRole('menuitem', { name: '작품 정보 편집', exact: true }).click();
     const blankInfo = page.getByRole('dialog', { name: '작품 정보', exact: true });
-    assert.deepEqual(await blankInfo.getByLabel('책장', { exact: true }).locator('option').allTextContents(), options);
-    await blankInfo.getByLabel('책장', { exact: true }).selectOption(blankA);
+    assert.deepEqual((await readOptions(blankInfo.getByLabel('책장', { exact: true }))).map(option => option.label), options);
+    await chooseOption(blankInfo.getByLabel('책장', { exact: true }), blankA);
     await blankInfo.getByRole('button', { name: '닫기', exact: true }).click();
     assert.deepEqual(await workOrder(blankA), [b]);
     await shelfById(blankA).getByRole('button', { name: '이름 없는 책장 새 작품', exact: true }).click();
     const blankNew = page.getByRole('dialog', { name: '새 작품', exact: true });
-    assert.equal(await blankNew.getByLabel('책장', { exact: true }).inputValue(), blankA);
-    assert.deepEqual(await blankNew.getByLabel('책장', { exact: true }).locator('option').allTextContents(), options);
+    assert.equal(await selectedValue(blankNew.getByLabel('책장', { exact: true })), blankA);
+    assert.deepEqual((await readOptions(blankNew.getByLabel('책장', { exact: true }))).map(option => option.label), options);
     await page.keyboard.press('Escape');await cleanSave();
     await page.locator('.work-card').click();
     assert.deepEqual(await page.locator('.work-menu-shelf').allTextContents(), options);
@@ -399,7 +400,7 @@ try {
     await page.waitForFunction(() => document.activeElement?.matches('[data-work-id] .reference-card'));
     await card(original.works[1].id).locator('.reference-card').click({ button: 'right' });
     await page.getByRole('menuitem', { name: '책장 이동', exact: true }).click();
-    await page.getByLabel('옮길 책장', { exact: true }).selectOption({ label: '구상' });
+    await chooseOption(page.getByLabel('옮길 책장', { exact: true }), { label: '구상' });
     await button('옮기기').click();
     await shelf('구상').locator(`[data-work-id="${original.works[1].id}"]`).waitFor();
     await moveWork(original.works[1], '보관');
@@ -424,14 +425,14 @@ try {
     const pausedShelfId = await shelf('잠시 멈춘 작품').getAttribute('data-work-shelf');
     await button('잠시 멈춘 작품 새 작품').click();
     const newDialog = page.getByRole('dialog', { name: '새 작품', exact: true });
-    assert.equal(await newDialog.getByLabel('책장', { exact: true }).inputValue(), pausedShelfId);
+    assert.equal(await selectedValue(newDialog.getByLabel('책장', { exact: true })), pausedShelfId);
     await newDialog.getByLabel('작품명', { exact: true }).fill('책장에서 만든 작품');
     await newDialog.getByRole('button', { name: '작품 만들기', exact: true }).click();
     await shelf('잠시 멈춘 작품').getByRole('button', { name: /^책장에서 만든 작품/ }).first().waitFor();
     await card(original.works[1].id).locator('.reference-card').click({ button: 'right' });
     await page.getByRole('menuitem', { name: '작품 정보 편집', exact: true }).click();
     const info = page.getByRole('dialog', { name: '작품 정보', exact: true });
-    await info.getByLabel('책장', { exact: true }).selectOption({ label: '구상' });
+    await chooseOption(info.getByLabel('책장', { exact: true }), { label: '구상' });
     await info.getByRole('button', { name: '닫기', exact: true }).click();
     await shelf('구상').locator(`[data-work-id="${original.works[1].id}"]`).waitFor();
     await menu('잠시 멈춘 작품', '책장 삭제');
@@ -533,14 +534,14 @@ try {
         const ideaShelfId = await shelf(ideaTitle).getAttribute('data-work-shelf');
         await button(`${ideaTitle} 새 작품`).click();
         await newDialog.waitFor();
-        assert.equal(await newDialog.getByLabel('책장', { exact: true }).inputValue(), ideaShelfId);
+        assert.equal(await selectedValue(newDialog.getByLabel('책장', { exact: true })), ideaShelfId);
         await page.screenshot({ path: resolve(output, `new-work-${palette}-${theme}-${width}.png`) });
         await page.keyboard.press('Escape');
 
         await card(original.works[1].id).locator('.reference-card').click({ button: 'right' });
         await page.getByRole('menuitem', { name: '작품 정보 편집', exact: true }).click();
         await info.waitFor();
-        assert.equal(await info.getByLabel('책장', { exact: true }).inputValue(), ideaShelfId);
+        assert.equal(await selectedValue(info.getByLabel('책장', { exact: true })), ideaShelfId);
         await page.screenshot({ path: resolve(output, `work-info-${palette}-${theme}-${width}.png`) });
         await page.keyboard.press('Escape');
         await button(`${ideaTitle} 책장 메뉴`).click();

@@ -9,6 +9,7 @@ import { templateSelection, templateTree, type TemplateSource } from '@/lib/work
 import { useStudio } from './studio-provider';
 import { DocIcon } from './studio-icons';
 import { Modal } from './primitives';
+import { Select } from './select';
 
 export type TemplateDialogRequest={selected?:string[];destination?:DocumentDestination;fromSettings?:boolean};
 
@@ -63,7 +64,7 @@ try{await operation();}catch(e){setError(e instanceof Error?e.message:'템플릿
       <p className="field-help">본문·속성·첨부·내부 연결 포함 · 외부 연결·작품 연결·AI 대화·공개 상태 제외</p>
       <div className="modal-actions"><button type="button" className="button primary" disabled={readonly||!count||!name.trim()} onClick={()=>void run(save)}>{busy?'저장 중':'템플릿 저장'}</button></div>
     </>:templates.length?<>
-      <div className="form-grid"><label>저장한 템플릿<select aria-label="저장한 템플릿" disabled={readonly} value={templateId} onChange={e=>{setId(e.target.value);}}>{templates.map(t=><option key={t.id} value={t.id}>{t.name} · {t.scope==='work'?t.documents.length:t.notes.length}개</option>)}</select></label><label>넣을 위치<select aria-label="템플릿을 넣을 위치" disabled={readonly} value={destination} onChange={e=>setLocation(e.target.value)}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label></div>
+      <div className="form-grid"><label>저장한 템플릿<Select aria-label="저장한 템플릿" disabled={readonly} value={templateId} onChange={value=>{setId(value);}}>{templates.map(t=><option key={t.id} value={t.id}>{t.name} · {t.scope==='work'?t.documents.length:t.notes.length}개</option>)}</Select></label><label>넣을 위치<Select aria-label="템플릿을 넣을 위치" disabled={readonly} value={destination} onChange={value=>setLocation(value)}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select></label></div>
       <p className="field-help"><Files size={14}/> {template?.scope==='work'?template.documents.length:template?.notes.length}개 {noun} 추가</p>
       <div className="modal-actions"><button type="button" className="button" disabled={readonly} onClick={()=>setConfirmDelete(true)}><Trash2 size={14}/>템플릿 삭제</button><button type="button" className="button primary" disabled={readonly} onClick={()=>void run(apply)}>{busy?'만드는 중':'템플릿으로 만들기'}</button></div>
     </>:<p className="muted">저장한 템플릿이 없습니다.</p>}

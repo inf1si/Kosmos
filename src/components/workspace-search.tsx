@@ -8,6 +8,7 @@ import { referenceKey,referencePlace } from '@/lib/internal-references';
 import { useStudio } from './studio-provider';
 import { IconButton,Modal } from './primitives';
 import { DocIcon } from './studio-icons';
+import { Select } from './select';
 
 export function openWorkspaceSearch(){window.dispatchEvent(new Event('workspace-search'));}
 
@@ -51,7 +52,7 @@ function SearchContents({currentWorkId,onChoose}:{currentWorkId:string;onChoose:
     if(!busy&&visible.length&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();setIndex(i=>(i+(e.key==='ArrowDown'?1:-1)+visible.length)%visible.length);}
 
     if(!busy&&e.key==='Enter'&&visible.length){e.preventDefault();onChoose(visible[chosen],deferred);}
-  }}/>{query&&<IconButton label="전체 검색어 지우기" onClick={()=>{setQuery('');setIndex(0);setLimit(50);input.current?.focus();}}><X size={14}/></IconButton>}</div><select aria-label="검색 범위" value={scope} onChange={e=>{setScope(e.target.value);setIndex(0);setLimit(50);}}><option value="all">전체</option><option value="current">현재 작품 · {state.works.find(work=>work.id===currentWorkId)?.title}</option><option value="notes">노트</option><optgroup label="작품">{state.works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</optgroup></select></div>
+  }}/>{query&&<IconButton label="전체 검색어 지우기" onClick={()=>{setQuery('');setIndex(0);setLimit(50);input.current?.focus();}}><X size={14}/></IconButton>}</div><Select aria-label="검색 범위" value={scope} onChange={value=>{setScope(value);setIndex(0);setLimit(50);}}><option value="all">전체</option><option value="current">현재 작품 · {state.works.find(work=>work.id===currentWorkId)?.title}</option><option value="notes">노트</option><optgroup label="작품">{state.works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</optgroup></Select></div>
   <p className="field-help" role="status">{found.length}개</p><div ref={list} className="workspace-search-results" role="listbox" id={listId} aria-label="전체 검색 결과" aria-busy={busy}>{visible.map((hit,i)=>{const target=hit.document;
 
 return <button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} key={referenceKey(target)} aria-selected={chosen===i} className="reference-card" onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} disabled={busy} onClick={()=>onChoose(hit,deferred)}>{target.kind==='note'?<StickyNote size={15}/>:<DocIcon doc={{kind:target.docKind,category:target.docCategory}} size={15}/>}<span><strong title={target.label}><SearchHighlight text={target.label} terms={terms}/></strong><small title={target.path}><SearchHighlight text={referencePlace(target)} terms={terms}/></small>{hit.snippet&&<p className="workspace-search-snippet"><SearchHighlight text={hit.snippet} terms={terms}/></p>}</span><MatchCount hit={hit} terms={terms}/></button>;})}</div>{deferred.trim()&&!found.length&&<p className="field-help">검색 결과가 없습니다.</p>}{found.length>limit&&<button type="button" className="button" onClick={()=>{setIndex(limit);setLimit(value=>value+50);input.current?.focus();}}>더 보기</button>}</>;

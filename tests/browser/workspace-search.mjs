@@ -9,6 +9,7 @@ import {seedWorkspace} from '../../src/lib/seed.ts';
 import {fromText,workspaceSchema,makePublication,newDocument,uid} from '../../src/lib/model.ts';
 import {newNote,addNote} from '../../src/lib/personal-notes.ts';
 import {PALETTES} from '../../src/lib/theme.ts';
+import { chooseOption, selectedValue } from './select.mjs';
 
 const require=createRequire(import.meta.url),playwright=require(process.env.KOSMOS_PLAYWRIGHT_MODULE||'playwright-core');
 
@@ -80,20 +81,20 @@ tx.onerror=()=>reject(tx.error);};}),data);
 
   await page.getByLabel(`${scene.title} 원고`,{exact:true}).click();
 
-  if(width===1280){await page.locator('[data-workspace-search-opener]').click();await dialog.waitFor();assert.equal(await input.evaluate(el=>el===document.activeElement),true);}else await open();assert.equal(await scope.inputValue(),'all');await query('별빛');
+  if(width===1280){await page.locator('[data-workspace-search-opener]').click();await dialog.waitFor();assert.equal(await input.evaluate(el=>el===document.activeElement),true);}else await open();assert.equal(await selectedValue(scope),'all');await query('별빛');
   await until(page,()=>list.getByRole('option').count().then(count=>count===4),'all work and note results');
   assert.equal(await list.getByRole('option').first().locator('strong').innerText(),'별빛');assert.equal(await list.getByRole('option').first().locator('.workspace-search-count').innerText(),'1곳','body match count');assert.equal(await list.getByRole('option').nth(1).locator('strong').innerText(),'별빛 기록');assert((await list.locator('mark').count())>0);
   await dialog.getByRole('button',{name:'전체 검색어 지우기',exact:true}).click();assert.equal(await input.inputValue(),'');assert.equal(await input.evaluate(el=>el===document.activeElement),true);await query('별빛');
-  await scope.selectOption('notes');await until(page,()=>list.getByRole('option').count().then(count=>count===1),'notes scope');
-  await scope.selectOption('current');await until(page,()=>list.getByRole('option').count().then(count=>count===2),'current work scope');
-  await scope.selectOption(foreignWork.id);await until(page,()=>list.getByRole('option').count().then(count=>count===1),'specific work scope');
-  await scope.selectOption('all');await until(page,()=>list.getByRole('option').count().then(count=>count===4),'all scope restored');
+  await chooseOption(scope, 'notes');await until(page,()=>list.getByRole('option').count().then(count=>count===1),'notes scope');
+  await chooseOption(scope, 'current');await until(page,()=>list.getByRole('option').count().then(count=>count===2),'current work scope');
+  await chooseOption(scope, foreignWork.id);await until(page,()=>list.getByRole('option').count().then(count=>count===1),'specific work scope');
+  await chooseOption(scope, 'all');await until(page,()=>list.getByRole('option').count().then(count=>count===4),'all scope restored');
 
   for(const palette of palettes)for(const mode of ['light','dark']){
    await page.evaluate(([p,m])=>{document.documentElement.dataset.palette=p;document.documentElement.dataset.theme=m;},[palette,mode]);
    const bounds=await dialog.boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=width+1,`${palette}/${mode}/${width} dialog bounds`);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth),false);
-   const heights=await dialog.evaluate(el=>[...el.querySelectorAll('.workspace-search-controls .sidebar-search,.workspace-search-controls select')].map(child=>Math.round(child.getBoundingClientRect().height)));assert.equal(heights.length,2);assert(heights[0]>=30&&heights[0]===heights[1],`${palette}/${mode}/${width} search box and scope share one height: ${heights}`);
+   const heights=await dialog.evaluate(el=>[...el.querySelectorAll('.workspace-search-controls .sidebar-search,.workspace-search-controls .select')].map(child=>Math.round(child.getBoundingClientRect().height)));assert.equal(heights.length,2);assert(heights[0]>=30&&heights[0]===heights[1],`${palette}/${mode}/${width} search box and scope share one height: ${heights}`);
    const styles=await list.getByRole('option').last().locator('.workspace-search-snippet').evaluate(el=>({clamp:getComputedStyle(el).webkitLineClamp,size:getComputedStyle(el).fontSize}));assert.equal(styles.clamp,'2');assert.equal(styles.size,'12px');
    await dialog.screenshot({path:resolve(output,`${palette}-${mode}-${width}.png`)});
   }
@@ -110,9 +111,9 @@ tx.onerror=()=>reject(tx.error);};}),data);
 return states.some(state=>contents(state)===original);},'search does not mutate persisted documents');
   await foreignEditor.press('Escape');assert.equal(await mark.count(),0);await foreignEditor.press('ArrowRight');await page.keyboard.insertText('!');await until(page,()=>foreignEditor.innerText().then(text=>text.includes('좌표!')),'intentional edit at selected search result');await foreignEditor.press('ControlOrMeta+z');
   await until(page,()=>foreignEditor.innerText().then(text=>!text.includes('좌표!')),'undo only the intentional edit');
-  await open();await query('별빛');await scope.selectOption('notes');await list.getByRole('option').first().click();
+  await open();await query('별빛');await chooseOption(scope, 'notes');await list.getByRole('option').first().click();
   const noteEditor=page.getByLabel('노트 본문',{exact:true});await noteEditor.waitFor();await until(page,()=>page.evaluate(()=>window.getSelection()?.toString()).then(text=>text==='별빛'),'work to note body jump');assert.equal(await noteEditor.evaluate(el=>el===document.activeElement),true);
-  await open();assert.equal(await scope.inputValue(),'notes','scope stays for the next search');assert.equal(await input.inputValue(),'별빛','query stays for the next search');assert.equal(await input.evaluate(el=>el.selectionStart===0&&el.selectionEnd===el.value.length),true,'reopened query is selected');await scope.selectOption('all');await query('보랏빛');await input.press('Enter');await until(page,()=>noteEditor.locator('.editor-search-match.current').innerText().then(text=>text==='보랏빛'),'checklist note jump');
+  await open();assert.equal(await selectedValue(scope),'notes','scope stays for the next search');assert.equal(await input.inputValue(),'별빛','query stays for the next search');assert.equal(await input.evaluate(el=>el.selectionStart===0&&el.selectionEnd===el.value.length),true,'reopened query is selected');await chooseOption(scope, 'all');await query('보랏빛');await input.press('Enter');await until(page,()=>noteEditor.locator('.editor-search-match.current').innerText().then(text=>text==='보랏빛'),'checklist note jump');
   await open();await query('.*');await until(page,()=>list.getByRole('option').count().then(count=>count===0),'literal regex characters');await dialog.getByText('검색 결과가 없습니다.',{exact:true}).waitFor();
   await query('페이지넘김');await until(page,()=>list.getByRole('option').count().then(count=>count===50),'first result page');await dialog.getByRole('button',{name:'더 보기',exact:true}).focus();await page.keyboard.press('Enter');await until(page,()=>list.getByRole('option').count().then(count=>count===56),'expanded result page');assert.equal(await input.evaluate(el=>el===document.activeElement),true);await list.getByRole('option').last().click();await until(page,()=>noteEditor.locator('.editor-search-match.current').innerText().then(text=>text==='페이지넘김'),'paginated note jump');
   await noteEditor.press('ArrowRight');await open();await query('현재 원고');await input.press('Enter');await page.getByLabel(`${scene.title} 원고`,{exact:true}).waitFor();

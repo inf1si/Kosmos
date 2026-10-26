@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-10-26 — 드롭다운 모양 통일
+
+- 기준 main `3df2d09`. 사용자 보고("특정 구역에서 드롭다운이 기본")로 `src`의 기본 `<select>` 52개를 찾았다. 편집 도구 글자 크기만 앱 Popover였고 나머지는 운영체제 목록으로 열렸다. 모두 공용 `Select`(Radix Select, `.menu` 모양)로 바꿨다. 저장값·데이터 형식 변경은 없다.
+- 로컬: 타입 검사와 단위 검사 230개가 통과했다. 새 파일은 Anti Slop 지적이 없다.
+- 로컬 브라우저(dev, Chromium, 합성 Supabase): 드롭다운을 쓰는 검사 `work-actions`·`settings-navigation`·`count-and-footnote`·`work-shelves`·`workspace-search`·`manuscript-fonts`·`ai-skills`·`note-quick-capture`·`note-ideation`·`studio-inline-commands`·`note-inline-commands`·`app-settings`가 통과했다. Supabase 없는 dev에서 `reader-library-return`·`reader-preferences`가 통과했다(키보드 Enter·End·Enter 고르기 포함). 검사는 새 `tests/browser/select.mjs` 도우미로 바꿨다. `manuscript-paper`(`.studio-home` 대기)·`library-order-drag`(테마 버튼 이름)는 main에서도 같은 자리에서 실패해 이번 변경과 무관하다.
+- 화면: 쉰네 조합 × 1280·360px에서 편집 도구 글꼴·상태 칩·설정 원고 표시 글꼴, 공개 서재 정렬·읽기 설정 글꼴 목록을 열어 테마 색을 따르고 화면 밖으로 나가지 않음을 확인했다. 여덟 조합 × 두 폭에서 AI 제공자(연결 전 항목 흐림), 그래프 필터 팝오버 안 분류(Esc는 목록만 닫음), 주변 연결 단계, 작품 정보 책장을 확인했다. 대화상자 위 목록이 가려지던 문제(z-index 80 < 91)를 찾아 95로 고쳤다. 문단 스타일을 고르면 Radix가 초점을 칸으로 되돌려 원고에 바로 이어 쓸 수 없던 것을 찾아, 바뀜 처리가 옮긴 초점은 유지하게 했다(제목 2 → 바로 입력 → 실행 취소 두 번으로 원래대로, 상태 칩은 칸에 초점 유지·화살표·Enter 고르기·새로고침 뒤 유지 확인). 이 수정 뒤 `work-actions`·`count-and-footnote`·`studio-inline-commands`·`note-inline-commands`를 다시 돌려 통과했다. 나사펑크 메뉴 모서리 0은 계산된 스타일로 확인했다. 스크린샷 `/mnt/project-files/dropdown-2026-10-26/`(프로젝트 파일).
+- 미확인: WebKit·Safari·실제 모바일 터치, 운영 빌드·배포 화면, 기본 select가 쓰던 모바일 운영체제 선택기 대신 앱 목록이 뜨는 점에 대한 사용 감.
+
 ## 2026-10-26 — 전체 검색·@ 참조 사용성 개선
 
 - 사용자 요청: 리뷰에서 찾은 개선점 1~5 반영([정리](https://github.com/inf1si/Kosmos/pull/90)). 기준 main `3df2d09`, 같은 PR #90에 추가.

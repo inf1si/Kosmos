@@ -12,6 +12,7 @@ import { WikiIcon } from './studio-icons';
 import styles from './document-tree.module.css';
 import type { TemplateDialogRequest } from './workspace-templates';
 import { documentTitle } from '@/lib/model';
+import { Select } from './select';
 
 type FormState = {type:'move';id:string}|{type:'folder';to:DocumentDestination}|{type:'document';to:DocumentDestination;kind:NovelDocument['kind']}|{type:'section'};
 
@@ -346,8 +347,8 @@ if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openFor
 
 if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButtonElement>(`[data-navigation-row="${activeId}"] button`)||document.getElementById('sidebar-toggle'))?.focus();}}>
       <form onSubmit={e=>{e.preventDefault();formSubmit();}} className={styles.form}>
-        {dialog?.type==='move'?<><label>옮길 위치<select value={destination} onChange={e=>{setDestination(e.target.value);setPlace('last');}}>{targets.map(t=><option value={t.value} key={t.value}>{t.label}</option>)}</select></label><label>순서<select value={place} onChange={e=>setPlace(e.target.value)}><option value="last">맨 뒤</option><option value="first">맨 앞</option>{moveSiblings.map(n=><option key={n.id} value={`before:${n.id}`}>{title(n)} 앞</option>)}</select></label></>:<label>{dialog?.type==='document'?'문서 제목':'이름'}<input autoFocus value={name} onChange={e=>setName(e.target.value)} maxLength={dialog?.type==='section'?200:300} placeholder={dialog?.type==='document'?'제목 없음':undefined} required={dialog?.type!=='document'}/></label>}
-        {(dialog?.type==='section'||dialog?.type==='document')&&<label>{dialog.type==='section'?'기본 문서 종류':'문서 종류'}<select value={kind} onChange={e=>setKind(documentSchema.shape.kind.parse(e.target.value))}>{Object.entries(labels).map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></label>}
+        {dialog?.type==='move'?<><label>옮길 위치<Select value={destination} onChange={value=>{setDestination(value);setPlace('last');}}>{targets.map(t=><option value={t.value} key={t.value}>{t.label}</option>)}</Select></label><label>순서<Select value={place} onChange={value=>setPlace(value)}><option value="last">맨 뒤</option><option value="first">맨 앞</option>{moveSiblings.map(n=><option key={n.id} value={`before:${n.id}`}>{title(n)} 앞</option>)}</Select></label></>:<label>{dialog?.type==='document'?'문서 제목':'이름'}<input autoFocus value={name} onChange={e=>setName(e.target.value)} maxLength={dialog?.type==='section'?200:300} placeholder={dialog?.type==='document'?'제목 없음':undefined} required={dialog?.type!=='document'}/></label>}
+        {(dialog?.type==='section'||dialog?.type==='document')&&<label>{dialog.type==='section'?'기본 문서 종류':'문서 종류'}<Select value={kind} onChange={value=>setKind(documentSchema.shape.kind.parse(value))}>{Object.entries(labels).map(([v,label])=><option key={v} value={v}>{label}</option>)}</Select></label>}
         {dialog?.type==='section'&&<p className="field-help">섹션을 옮겨도 문서 종류는 유지됩니다.</p>}
 
         {error&&<p role="alert" className={styles.error}>{error}</p>}<div className={styles.formButtons}><button type="button" className="button" onClick={()=>setDialog(null)}>취소</button><button type="submit" className="button primary" disabled={readonly}>{dialog?.type==='move'?'이동':'추가'}</button></div>
