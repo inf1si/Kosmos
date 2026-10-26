@@ -1,18 +1,20 @@
 'use client';
 
 import {useEffect,useRef,useState} from 'react';
-import type {Editor,ChainedCommands} from '@tiptap/core';
+import {getMarkRange,type Editor,type ChainedCommands} from '@tiptap/core';
 import {Plugin,PluginKey,Selection,TextSelection,AllSelection,NodeSelection} from '@tiptap/pm/state';
 import {closeHistory} from '@tiptap/pm/history';
 import {CellSelection} from '@tiptap/pm/tables';
 import * as Popup from '@radix-ui/react-popover';
-import {ArrowLeft,ChevronRight,Clipboard,Heading1,Heading2,Heading3,ImagePlus,Link2,List,ListChecks,ListOrdered,MessageSquareText,Minus,Plus,Quote,Table2,Trash2,Type} from 'lucide-react';
+import {ArrowLeft,ChevronRight,Clipboard,Globe,ExternalLink,Unlink,Heading1,Heading2,Heading3,ImagePlus,Link2,List,ListChecks,ListOrdered,MessageSquareText,Minus,Plus,Quote,Table2,Trash2,Type} from 'lucide-react';
 import type {RichNode} from '@/lib/model';
 import {internalReferenceSchema,type InternalReference} from '@/lib/internal-reference-node';
 import {editorFootnote} from '@/lib/editor-footnotes';
 import {EditorFootnotePopover} from './editor-footnote-popover';
+import {requestWebLink} from './editor-web-link';
+import {normalizeWebLink} from '@/lib/editor-web-links';
 
-type Context={x:number;y:number;selection:Selection;document:Editor['state']['doc']} & ({kind:'paragraph'|'table'}|{kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference});
+type Context={x:number;y:number;selection:Selection;document:Editor['state']['doc']} & ({kind:'paragraph'|'table'}|{kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference}|{kind:'web-link';pos:number;to:number;href:string});
 
 type Action={label:string;icon:typeof Type;apply:(chain:ChainedCommands)=>ChainedCommands};
 
@@ -82,7 +84,7 @@ close();}
 
     if(selectedTextAt(pos))return false;
     const atom=element.closest('[data-note-id],[data-internal-reference]');
-    let special:{kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference}|null=null;
+    let special:{kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference}|{kind:'web-link';pos:number;to:number;href:string}|null=null;
 
     if(atom){
       const start=editor.view.posAtDOM(atom,0),node=editor.state.doc.nodeAt(start);
@@ -99,6 +101,9 @@ close();}
       }
     }
 
+    const web=element.closest('a[href]'),range=web?getMarkRange(editor.state.doc.resolve(pos),editor.schema.marks.link):undefined;
+
+    if(!special&&web&&range)special={kind:'web-link',pos:range.from,to:range.to,href:web.getAttribute('href')||''};
     const cell=element.closest('td,th');
     const selection=selected instanceof CellSelection&&cell?.classList.contains('selectedCell')?selected:Selection.near(editor.state.doc.resolve(special?.pos??pos));
 
@@ -179,7 +184,7 @@ return paragraph;});
     {label:'표 삭제',icon:Trash2,apply:c=>c.deleteTable()},
   ];
 
-  const label=menu?.kind==='table'?'표 메뉴':menu?.kind==='footnote'?'각주 메뉴':menu?.kind==='reference'?'참조 메뉴':'문단 메뉴';
+  const label=menu?.kind==='table'?'표 메뉴':menu?.kind==='footnote'?'각주 메뉴':menu?.kind==='reference'?'참조 메뉴':menu?.kind==='web-link'?'웹 링크 메뉴':'문단 메뉴';
   const actionButton=(action:Action)=><button type="button" role="menuitem" className="menu-item" key={action.label} disabled={!menu||!current(menu)||!action.apply(editor.can().chain()).run()} onClick={()=>run(action.apply)}><action.icon size={15}/>{action.label}</button>;
 
   return <>
@@ -203,12 +208,20 @@ if(action&&!editor.isDestroyed){editor.view.focus();action();}}}>
               {actionButton({label:'표 삽입',icon:Table2,apply:c=>c.insertTable({rows:3,cols:3,withHeaderRow:true})})}
               {actionButton({label:'구분선',icon:Minus,apply:c=>c.setHorizontalRule()})}
               <button type="button" role="menuitem" className="menu-item" onClick={()=>next(onFootnote)}><MessageSquareText size={15}/>각주 추가</button>
+              <button type="button" role="menuitem" className="menu-item" onClick={()=>next(()=>requestWebLink(editor))}><Globe size={15}/>웹 링크</button>
               <button type="button" role="menuitem" className="menu-item" onClick={()=>next(onLink)}><Link2 size={15}/>{note?'노트 링크 추가':'설정 링크 추가'}</button>
               {onImage&&<button type="button" role="menuitem" className="menu-item" onClick={()=>{if(menu&&restore(menu)){close(true);onImage();}}}><ImagePlus size={15}/>이미지</button>}
             </>}
           </>}
           {menu?.kind==='table'&&tables.map(actionButton)}
           {menu?.kind==='footnote'&&<><button type="button" role="menuitem" className="menu-item" onClick={()=>{const id=menu.id;next(()=>{onEditing(true);setEditing(id);});}}><MessageSquareText size={15}/>각주 수정</button>{actionButton({label:'각주 삭제',icon:Trash2,apply:c=>c.deleteRange({from:menu.pos,to:menu.pos+1})})}</>}
+          {menu?.kind==='web-link'&&<>
+            <button type="button" role="menuitem" className="menu-item" onClick={()=>next(()=>requestWebLink(editor))}><Globe size={15}/>웹 링크 수정</button>
+            <button type="button" role="menuitem" className="menu-item" disabled={!normalizeWebLink(menu.href)} onClick={()=>{const href=normalizeWebLink(menu.href);
+
+if(href)window.open(href,'_blank','noopener,noreferrer');close(true);}}><ExternalLink size={15}/>새 탭에서 열기</button>
+            {actionButton({label:'링크 해제',icon:Unlink,apply:c=>c.setTextSelection({from:menu.pos,to:menu.to}).unsetLink()})}
+          </>}
           {menu?.kind==='reference'&&<><button type="button" role="menuitem" className="menu-item" disabled={!onReference} onClick={()=>{const ref=menu.reference;next(()=>onReference?.(ref));}}><Link2 size={15}/>미리보기</button>{actionButton({label:'참조 제거',icon:Trash2,apply:c=>c.deleteRange({from:menu.pos,to:menu.pos+1})})}</>}
         </div>
       </Popup.Content>

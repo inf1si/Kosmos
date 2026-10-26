@@ -8,7 +8,8 @@ import { CellSelection } from '@tiptap/pm/tables';
 import { closeHistory } from '@tiptap/pm/history';
 import { DOMSerializer } from '@tiptap/pm/model';
 import * as Popup from '@radix-ui/react-popover';
-import { Heading1,Heading2,Heading3,MessageSquareText,List,ListOrdered,ListChecks,Table2,ImagePlus,Link2,Sparkles,Quote,Minus,Type,Copy,Scissors,Clipboard,Settings2,WandSparkles } from 'lucide-react';
+import { Heading1,Heading2,Heading3,MessageSquareText,List,ListOrdered,ListChecks,Table2,ImagePlus,Link2,Globe,Sparkles,Quote,Minus,Type,Copy,Scissors,Clipboard,Settings2,WandSparkles } from 'lucide-react';
+import {requestWebLink} from './editor-web-link';
 import type { EditorAIScope } from '@/lib/ai-conversation';
 import { captureEditorTarget,targetIsCurrent,type EditorTarget } from '@/lib/editor-target';
 import { EditorInlineAI,editorAIActions,type EditorAIAction } from './editor-inline-ai';
@@ -29,6 +30,7 @@ const commandItems=[
   {id:'rule',label:'구분선',words:'divider',icon:Minus},
   {id:'image',label:'이미지',words:'사진 image',icon:ImagePlus},
   {id:'link',label:'노트 링크',words:'연결 link',icon:Link2},
+  {id:'web-link',label:'웹 링크',words:'웹사이트 주소 URL website hyperlink',icon:Globe},
   {id:'footnote',label:'각주',words:'주석 footnote',icon:MessageSquareText},
   {id:'ai',label:'AI 질문',words:'질문 chat',icon:Sparkles},
 ];
@@ -100,7 +102,7 @@ return true;});
     chain.run();
     editor.view.dispatch(closeHistory(editor.state.tr));setSlash(null);dismissed.current=null;
 
-    if(id==='ai')openAI('ask');else if(id.startsWith('skill:'))openAI(`skill:${id.slice(6)}`);else if(id==='skills')setManage(true);else if(id==='link')onLink();else if(id==='footnote')onFootnote();else if(id==='image')onImage?.();
+    if(id==='ai')openAI('ask');else if(id.startsWith('skill:'))openAI(`skill:${id.slice(6)}`);else if(id==='skills')setManage(true);else if(id==='web-link')requestWebLink(editor);else if(id==='link')onLink();else if(id==='footnote')onFootnote();else if(id==='image')onImage?.();
   }
 
   handlers.current={
