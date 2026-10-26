@@ -5,7 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { seedWorkspace } from '../src/lib/seed';
 import { documentSchema,fromText,isRichDocument,makePublication,newDocument,plainText,publicationSchema,uid,workspaceSchema,type RichNode } from '../src/lib/model';
 import { internalReferenceSchema,internalReferenceType,internalReferences,withoutInternalReferences } from '../src/lib/internal-reference-node';
-import { referenceBacklinks,referenceChildren,referenceConnections,referenceGroup,referenceKey,referenceLabel,referenceTargets,searchReferences } from '../src/lib/internal-references';
+import { referenceBacklinks,referenceChildren,referenceConnections,referenceGroup,referenceKey,referenceLabel,referencePlace,referenceTargets,searchReferences } from '../src/lib/internal-references';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { createBackup,readBackup } from '../src/lib/backup';
 import { textStatistics } from '../src/lib/text-statistics';
@@ -195,4 +195,22 @@ test('PostgreSQL publisher removes every private reference before storage/respon
     await pg.exec('set role anon');const rows=await pg.query<{payload:unknown}>('select payload from public.publications where active');assert.equal(JSON.stringify(rows.rows[0].payload),snapshot);
     await assert.rejects(()=>pg.query('select public.publish_work($1,$2,$3::uuid[])',[id,state.works[0].id,[source.id]]),/permission/);
   }finally{await pg.close();}
+});
+
+test('reference place lines do not repeat a kind that already starts the path',()=>{
+  assert.equal(referencePlace({category:'노트',path:'노트'}),'노트');
+  assert.equal(referencePlace({category:'노트',path:'노트 / 자료 폴더 / 하위 자료'}),'노트 / 자료 폴더 / 하위 자료');
+  assert.equal(referencePlace({category:'노트 폴더',path:'노트 / 자료 폴더'}),'노트 폴더 · 노트 / 자료 폴더');
+  assert.equal(referencePlace({category:'원고',path:'먼 별의 항구 / 원고 / 제1부'}),'원고 · 먼 별의 항구 / 원고 / 제1부');
+  assert.equal(referencePlace({category:'노트',path:'노트북 / 자료'}),'노트 · 노트북 / 자료');
+});
+
+test('@ results put title matches before items that only share a work or folder name',()=>{
+  let state=seedWorkspace();const work=state.works[0];work.title='먼 별의 항구';
+  const wiki=work.documents.find(doc=>doc.kind==='wiki')!;wiki.title='제7항구';
+  state=addNote(addNote(state,{...newNote(),title:'항구 메모 모음',content:fromText('x')}),{...newNote(),title:'항구',content:fromText('x')});
+  const found=searchReferences(referenceTargets(state),'none','항구');
+  assert.deepEqual(found.filter(t=>t.kind==='note').map(t=>t.label),['항구','항구 메모 모음']);
+  assert.equal(found.find(t=>t.kind==='document')?.label,'제7항구');
+  assert.deepEqual(searchReferences(referenceTargets(state),'none','').filter(t=>t.kind==='document').map(t=>t.targetId),referenceTargets(state).filter(t=>t.kind==='document').map(t=>t.targetId).slice(0,30),'an empty query keeps tree order');
 });

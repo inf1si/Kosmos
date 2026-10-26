@@ -3,13 +3,16 @@
 import { Fragment,useDeferredValue,useEffect,useId,useMemo,useRef,useState } from 'react';
 import { Search,StickyNote,X } from 'lucide-react';
 import { uid } from '@/lib/model';
-import { searchDocuments,searchTerms,searchWorkspace,textRanges,type WorkspaceSearchHit,type WorkspaceSearchJump } from '@/lib/workspace-search';
-import { referenceKey } from '@/lib/internal-references';
+import { bodyMatchCount,searchDocuments,searchTerms,searchWorkspace,textRanges,type WorkspaceSearchHit,type WorkspaceSearchJump } from '@/lib/workspace-search';
+import { referenceKey,referencePlace } from '@/lib/internal-references';
 import { useStudio } from './studio-provider';
 import { IconButton,Modal } from './primitives';
 import { DocIcon } from './studio-icons';
 
 export function openWorkspaceSearch(){window.dispatchEvent(new Event('workspace-search'));}
+
+/** The last query and scope stay for this page only, so the next result is one reopen away. Never stored. */
+const last={query:'',scope:'all'};
 
 export function WorkspaceSearch({currentWorkId,onOpen}:{currentWorkId:string;onOpen:(hit:WorkspaceSearchHit,jump:WorkspaceSearchJump)=>void}){
   const [open,setOpen]=useState(false),origin=useRef<HTMLElement|null>(null),pending=useRef<WorkspaceSearchHit|null>(null),query=useRef('');
@@ -35,10 +38,12 @@ if(hit)onOpen(hit,{id:uid(),targetId:hit.document.targetId,terms:searchTerms(que
 }
 
 function SearchContents({currentWorkId,onChoose}:{currentWorkId:string;onChoose:(hit:WorkspaceSearchHit,query:string)=>void}){
-  const state=useStudio().state!,[query,setQuery]=useState(''),[scope,setScope]=useState('all'),[index,setIndex]=useState(0),[limit,setLimit]=useState(50),listId=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLDivElement>(null);
+  const state=useStudio().state!,[query,setQuery]=useState(last.query),[scope,setScope]=useState(()=>['all','current','notes'].includes(last.scope)||state.works.some(work=>work.id===last.scope)?last.scope:'all'),[index,setIndex]=useState(0),[limit,setLimit]=useState(50),listId=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLDivElement>(null);
   const deferred=useDeferredValue(query),busy=query!==deferred,documents=useMemo(()=>searchDocuments(state),[state]),found=useMemo(()=>searchWorkspace(documents,deferred,scope,currentWorkId),[documents,deferred,scope,currentWorkId]);
   const visible=found.slice(0,limit),chosen=Math.min(index,Math.max(0,visible.length-1)),terms=searchTerms(deferred);
   useEffect(()=>{list.current?.querySelector('[aria-selected=true]')?.scrollIntoView({block:'nearest'});},[chosen,deferred,scope]);
+  useEffect(()=>{last.query=query;last.scope=scope;},[query,scope]);
+  useEffect(()=>{input.current?.select();},[]);
 
   return <><div className="workspace-search-controls"><div className="sidebar-search"><Search size={16}/><input ref={input} autoFocus type="text" inputMode="search" role="combobox" aria-label="전체 검색어" aria-autocomplete="list" aria-expanded={visible.length>0} aria-controls={listId} aria-activedescendant={visible.length?`${listId}-${chosen}`:undefined} placeholder="제목 · 본문 검색" maxLength={500} value={query} onChange={e=>{setQuery(e.target.value);setIndex(0);setLimit(50);}} onKeyDown={e=>{
     if(e.nativeEvent.isComposing||e.nativeEvent.keyCode===229)return;
@@ -49,7 +54,13 @@ function SearchContents({currentWorkId,onChoose}:{currentWorkId:string;onChoose:
   }}/>{query&&<IconButton label="전체 검색어 지우기" onClick={()=>{setQuery('');setIndex(0);setLimit(50);input.current?.focus();}}><X size={14}/></IconButton>}</div><select aria-label="검색 범위" value={scope} onChange={e=>{setScope(e.target.value);setIndex(0);setLimit(50);}}><option value="all">전체</option><option value="current">현재 작품 · {state.works.find(work=>work.id===currentWorkId)?.title}</option><option value="notes">노트</option><optgroup label="작품">{state.works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</optgroup></select></div>
   <p className="field-help" role="status">{found.length}개</p><div ref={list} className="workspace-search-results" role="listbox" id={listId} aria-label="전체 검색 결과" aria-busy={busy}>{visible.map((hit,i)=>{const target=hit.document;
 
-return <button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} key={referenceKey(target)} aria-selected={chosen===i} className="reference-card" onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} disabled={busy} onClick={()=>onChoose(hit,deferred)}>{target.kind==='note'?<StickyNote size={15}/>:<DocIcon doc={{kind:target.docKind,category:target.docCategory}} size={15}/>}<span><strong title={target.label}><SearchHighlight text={target.label} terms={terms}/></strong><small title={target.path}><SearchHighlight text={target.path===target.category?target.path:`${target.category} · ${target.path}`} terms={terms}/></small>{hit.snippet&&<p className="workspace-search-snippet"><SearchHighlight text={hit.snippet} terms={terms}/></p>}</span></button>;})}</div>{deferred.trim()&&!found.length&&<p className="field-help">검색 결과가 없습니다.</p>}{found.length>limit&&<button type="button" className="button" onClick={()=>{setIndex(limit);setLimit(value=>value+50);input.current?.focus();}}>더 보기</button>}</>;
+return <button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} key={referenceKey(target)} aria-selected={chosen===i} className="reference-card" onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} disabled={busy} onClick={()=>onChoose(hit,deferred)}>{target.kind==='note'?<StickyNote size={15}/>:<DocIcon doc={{kind:target.docKind,category:target.docCategory}} size={15}/>}<span><strong title={target.label}><SearchHighlight text={target.label} terms={terms}/></strong><small title={target.path}><SearchHighlight text={referencePlace(target)} terms={terms}/></small>{hit.snippet&&<p className="workspace-search-snippet"><SearchHighlight text={hit.snippet} terms={terms}/></p>}</span><MatchCount hit={hit} terms={terms}/></button>;})}</div>{deferred.trim()&&!found.length&&<p className="field-help">검색 결과가 없습니다.</p>}{found.length>limit&&<button type="button" className="button" onClick={()=>{setIndex(limit);setLimit(value=>value+50);input.current?.focus();}}>더 보기</button>}</>;
+}
+
+function MatchCount({hit,terms}:{hit:WorkspaceSearchHit;terms:string[]}){
+  const count=bodyMatchCount(hit.document.content,terms);
+
+  return count>0&&<small className="workspace-search-count" aria-label={`본문 ${count}곳 일치`}>{count}곳</small>;
 }
 
 function SearchHighlight({text,terms}:{text:string;terms:string[]}){

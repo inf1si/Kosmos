@@ -8,7 +8,7 @@ import { fromText,newDocument,uid,workspaceSchema,type RichNode } from '../src/l
 import { seedWorkspace } from '../src/lib/seed';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { trashNote } from '../src/lib/workspace-trash';
-import { bodyRuns,firstBodyMatch,searchDocuments,searchTerms,searchWorkspace,textRanges } from '../src/lib/workspace-search';
+import { bodyMatchCount,bodyRuns,firstBodyMatch,searchDocuments,searchTerms,searchWorkspace,textRanges } from '../src/lib/workspace-search';
 import { searchJumpKey,searchJumpPlugin } from '../src/lib/editor-search';
 
 const schema=getSchema([...editorExtensions,...noteExtensions,NoteImage,Node.create({name:'internalReference',group:'inline',inline:true,atom:true})]);
@@ -77,4 +77,22 @@ test('opening and selecting a list-only note never appends a paragraph; actual e
   state=state.applyTransaction(state.tr.setMeta(searchJumpKey,null).setMeta('addToHistory',false)).state;assert.deepEqual(state.doc.toJSON(),doc.toJSON());
   state=state.applyTransaction(state.tr.setSelection(TextSelection.create(state.doc,3,5)).setMeta('addToHistory',false)).state;assert.deepEqual(state.doc.toJSON(),doc.toJSON());
   state=state.applyTransaction(state.tr.insertText('새 ',3)).state;assert.equal(state.doc.lastChild!.type.name,'paragraph');assert.equal(state.doc.childCount,2);
+});
+
+test('summary, point of view, story time and custom properties are searched and quoted when the body does not match',()=>{
+  const {state,work}=fixture(),scene=state.works[0].documents.find(doc=>doc.kind==='scene')!;
+  scene.summary='주인공이 등대지기를 만난다';scene.pov='한서';scene.storyTime='삼 년 전 겨울';scene.customProperties=[{id:uid(),name:'장소',type:'text',value:'북쪽 방파제'},{id:uid(),name:'완료',type:'checkbox',value:true}];
+  const index=searchDocuments(state);
+
+  for(const [query,label] of [['등대지기','요약'],['한서','시점 인물'],['삼 년 전','작중 시간'],['방파제','장소']]){
+    const found=searchWorkspace(index,query,'all',work.id);
+    assert.equal(found.length,1,query);assert.equal(found[0].document.targetId,scene.id);assert.equal(found[0].rank,4,`${query} ranks with body text`);assert(found[0].snippet.startsWith(`${label} · `),found[0].snippet);
+  }
+
+  assert.equal(searchWorkspace(index,'체크됨','all',work.id).length,0,'checkbox values are not searchable words');
+});
+
+test('body match counts include every occurrence of every term',()=>{
+  const content=fromText('별빛 아래 별빛.\n\n바다와 별빛.');
+  assert.equal(bodyMatchCount(content,['별빛']),3);assert.equal(bodyMatchCount(content,['별빛','바다']),4);assert.equal(bodyMatchCount(content,['없음']),0);
 });
