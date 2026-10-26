@@ -37,3 +37,27 @@
 @media(max-width:1200px){.reference-panel.is-chat{width:340px}}
 @media(max-width:900px){.studio-sidebar{padding-top:8px}.sidebar-close{display:flex;justify-content:flex-end;margin:0 8px -8px}.sidebar-close .icon-button{width:28px;height:28px}.reference-panel,.reference-panel.is-chat{position:absolute;top:0;right:0;bottom:0;width:360px;max-width:100%;z-index:25;box-shadow:var(--shadow)}.reference-backdrop{display:block;position:absolute;inset:0;z-index:24;background:var(--overlay)}}
 @media(max-width:700px){.reference-panel,.reference-panel.is-chat{width:100%;border-left:0}.chat-heading{padding-top:12px}.chat-context{max-height:24dvh;overflow-y:auto}.chat-log{min-height:70px}.chat-composer{padding:10px 16px}.chat-connection{font-size:11px;padding:7px 9px}.chat-composer textarea{max-height:120px}}
+
+/* Book controls reuse the studio form parts; the isolated iframe represents printed paper. */
+.book-export{display:grid;grid-template-columns:280px minmax(0,1fr);gap:24px;font-size:13px}
+.book-export-options,.book-export-preview{min-width:0}
+.book-export-options .form-grid{gap:12px;margin:0}
+.book-export-options .field-help{margin-top:12px}
+.book-export-field{display:flex;flex-direction:column;gap:6px;color:var(--ink2)}
+.book-export-field .segmented button{flex:1}
+.book-export-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0}
+.book-export-pair>*{min-width:0}
+.book-export-checks{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.book-export-checks label{display:flex;flex-direction:row;align-items:center;gap:6px;margin:0}
+.book-export-checks input{width:auto;accent-color:var(--brand)}
+.book-export-documents{border-top:1px solid var(--line);padding-top:12px}
+.book-export-documents summary{cursor:pointer;color:var(--ink2)}
+.book-export-documents .transfer-list{max-height:220px}
+.book-export-documents .transfer-export-row span{overflow-wrap:anywhere}
+.book-export-preview{display:flex;flex-direction:column;align-self:start;gap:12px;position:sticky;top:0}
+.book-preview-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.book-export-preview iframe{width:100%;height:auto;max-height:520px;border:1px solid var(--line);border-radius:var(--r-in,8px);background:var(--side)}
+.book-export-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;min-height:300px;text-align:center;color:var(--muted);border:1px solid var(--line);border-radius:var(--r-in,8px);background:var(--side)}
+.book-export-empty p{margin:0;line-height:1.7}
+.book-preview-pages{display:flex;align-items:center;justify-content:center;gap:12px;color:var(--muted);font-size:12px}
+@media(max-width:700px){.book-export{grid-template-columns:minmax(0,1fr);gap:20px}.book-export-preview{position:static}.book-export-preview iframe{max-height:480px}.book-export-empty{min-height:160px}}

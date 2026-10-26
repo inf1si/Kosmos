@@ -85,7 +85,7 @@
 
 DB 마이그레이션은 필요 없고 작업 공간 형식 1을 유지한다. 예전 원고도 기본값으로 열린다. 새 노드가 들어간 원고를 수정·복원할 때는 최신 집필실을 사용한다. 이전 앱은 새 노드의 가져오기를 거절할 수 있다. 기존 클라우드 버전 충돌 검사는 유지하며 동시 편집의 자동 병합은 추가하지 않았다.
 
-변경 추적·페이지 조판·머리말/꼬리말·페이지 번호·맞춤법 검사·수식 엔진·DOCX/EPUB는 후속 범위다.
+[책으로 내보내기](book-export.md)는 PDF·EPUB·단일 HTML과 PDF/HTML의 용지·단수·쪽 번호·미리보기를 지원한다. 편집기 자체는 연속 원고 보기다. 변경 추적·머리말/사용자 꼬리말·맞춤법 검사·수식 엔진·DOCX 내보내기는 후속 범위다.
 
 구현: [편집 확장](../src/lib/editor-extensions.ts), [서식 UI](../src/components/editor-format-tools.tsx), [검색](../src/lib/editor-search.ts), [안전한 서식](../src/lib/manuscript-format.ts), [검증](../tests/editor-tools.test.ts).
 
