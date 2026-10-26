@@ -8,6 +8,8 @@ import { ArrowDown, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUp
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
+import { WorkspaceSearch,openWorkspaceSearch } from './workspace-search';
+import type { WorkspaceSearchJump,WorkspaceSearchHit } from '@/lib/workspace-search';
 import { InternalReferencePanel } from './internal-reference-panel';
 import type { InternalReference } from '@/lib/internal-reference-node';
 import type { ReferenceTarget } from '@/lib/internal-references';
@@ -16,8 +18,8 @@ import { ManuscriptPaper } from './manuscript-paper';
 import type { NoteDestination } from '@/lib/note-navigation';
 import { PersonalNotes } from './personal-notes';
 import { QuickNote } from './quick-note';
-import { NoteCard, NotesReference } from './notes-reference';
-import { addNote, filterNotes, newNote, noteFromTemplate } from '@/lib/personal-notes';
+import { NotesReference } from './notes-reference';
+import { addNote, newNote, noteFromTemplate } from '@/lib/personal-notes';
 import { PlotBoard } from './plot-board';
 import { StudioHome } from './studio-home';
 import { WorkDialogs, type WorkConfirm } from './work-actions';
@@ -121,7 +123,7 @@ if(event.detail==='note-import'){importFromStudio.current=!notesOpen;setNoteImpo
 window.addEventListener('studio-modal',listener);
 
 return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openNotes,selectedNote]);
-  const [query,setQuery]=useState('');const [searching,setSearching]=useState(false);
+  const [searchJump,setSearchJump]=useState<WorkspaceSearchJump|null>(null);
   const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [paperId,setPaperId]=useState<string|null>(null);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const sidebarStyle=useSidebarStyle();const referenceRef=useRef<HTMLElement>(null);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
@@ -129,7 +131,7 @@ return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openN
   useDrawerFocus(!notesOpen&&compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,'reference-toggle');
   const workMenuRef=useDismiss(workMenu,setWorkMenu);const moreMenuRef=useDismiss(moreMenu,setMoreMenu);
 
-  function openSearch(){setReference(null);setFocus(false);setSidebar(true);setSearching(true);setTimeout(()=>document.getElementById('workspace-search')?.focus(),30);}
+  function openSearch(){openWorkspaceSearch();}
 
   useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);
 
@@ -142,13 +144,6 @@ if(media.matches)setSidebar(false);};
 media.addEventListener('change',resize);
 
 return()=>media.removeEventListener('change',resize);},[]);
-  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(document.querySelector('.notes-workspace'))return;
-
-if((e.ctrlKey||e.metaKey)&&(e.code==='KeyK'||e.key.toLowerCase()==='k')){e.preventDefault();openSearch();}};
-
-window.addEventListener('keydown',onKey,true);
-
-return()=>window.removeEventListener('keydown',onKey,true);},[]);
   useEffect(()=>{const list=document.querySelector('.tab-list');
 
 if(!list)return;const reveal=()=>list.querySelector('.doc-tab.active')?.scrollIntoView({block:'nearest',inline:'nearest'});const observer=new ResizeObserver(reveal);observer.observe(list);reveal();
@@ -170,7 +165,17 @@ if(!works)return;const w=works.find(item=>item.id===workId)||works[0];rememberSt
 
 if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(docId?[docId]:[]);setBack([]);setForward([]);setSplitId(null);setReference(null);}}
 
-  if(notesOpen)return <TooltipProvider><PersonalNotes activeId={selectedNote} captureId={captureId} importRequested={noteImport} onImportOpened={()=>setNoteImport(false)} onImportBack={()=>{if(importFromStudio.current)returnToWork();modal('settings-return:note-import');}} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs key="studio-dialogs" workId={work.id}/></TooltipProvider>;
+  function openSearchResult(hit:WorkspaceSearchHit,jump:WorkspaceSearchJump){
+    const target=hit.document;setFocus(false);setReference(null);
+
+    if(target.kind==='note')openNotes(target.targetId);else if(notesOpen)returnToWork(target.workId!,target.targetId);else if(target.workId===work.id)openDoc(target.targetId);else switchWork(target.workId!,target.targetId);
+
+    if(compact)setSidebar(false);setSearchJump(jump);
+  }
+
+  const searchDialog=<WorkspaceSearch key="workspace-search" currentWorkId={work.id} onOpen={openSearchResult}/>;
+
+  if(notesOpen)return <TooltipProvider>{searchDialog}<PersonalNotes searchJump={searchJump} onSearchJump={()=>setSearchJump(null)} onSearch={openSearch} activeId={selectedNote} captureId={captureId} importRequested={noteImport} onImportOpened={()=>setNoteImport(false)} onImportBack={()=>{if(importFromStudio.current)returnToWork();modal('settings-return:note-import');}} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs key="studio-dialogs" workId={work.id}/></TooltipProvider>;
   const onHome=current===HOME,onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onHome||onBoard||onGraph;
   const active=openingDocument(docs,onOverview?lastDoc:current,lastDoc);
   const view=onHome?HOME:onGraph?GRAPH:onBoard?BOARD:active.id;
@@ -283,7 +288,7 @@ if(result.error)throw result.error;blob=result.data||undefined;}
 
 if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.createObjectURL(blob);const a=document.createElement('a');a.href=href;a.download=meta.name;a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);}catch(e){alert(e instanceof Error?e.message:'첨부를 열지 못했습니다.');}}
 
-  return <TooltipProvider><div className={`studio ${focus?'focus-mode':''}`}>
+  return <TooltipProvider>{searchDialog}<div className={`studio ${focus?'focus-mode':''}`}>
     {showSidebar&&<div className="sidebar-backdrop" aria-hidden="true" onClick={()=>setSidebar(false)}/>}
     {showSidebar&&<aside className="studio-sidebar" aria-label="작품 탐색" ref={sidebarRef} style={sidebarStyle} role={compact?'dialog':undefined} aria-modal={compact||undefined}>
       <div className="sidebar-close"><IconButton label="작품 탐색 닫기" data-drawer-close onClick={closeSidebar}><X size={17}/></IconButton></div>
@@ -295,16 +300,14 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       </div>
       <nav className="studio-tools" aria-label="작업 도구">
         <button type="button" className="nav-item" aria-pressed={onHome} onClick={()=>go(HOME)}><House size={16}/><span>집필실 홈</span></button>
-        {searching||query?<div className="sidebar-search"><Search size={15}/><input id="workspace-search" aria-label="작품과 노트 검색" placeholder="제목 · 본문 · 노트 검색" value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Escape'){setQuery('');setSearching(false);}}}/><IconButton label="검색 닫기" onClick={()=>{setQuery('');setSearching(false);}}><X size={14}/></IconButton></div>
-          :<button type="button" className="nav-item" onClick={openSearch}><Search size={16}/><span>검색</span><kbd>Ctrl K</kbd></button>}
+        <button type="button" className="nav-item" data-workspace-search-opener onClick={openSearch}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
         <button type="button" className="nav-item" aria-pressed={onGraph} onClick={()=>go(GRAPH)}><Network size={16}/><span>문서 그래프</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('trash')}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state!.trash).length}</small></button>
         <button type="button" className="nav-item" data-settings-opener onClick={()=>modal('settings')}><Settings size={16}/><span>설정</span></button>
       </nav>
       <div className="sidebar-scroll">
-        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query={query} activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument} onTrashFolder={trashFolder} onTemplate={setTemplateRequest}/>
-        {query.trim()&&<WorkspaceNoteResults query={query} onOpen={id=>openNotes(id)}/>}
+        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query="" activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument} onTrashFolder={trashFolder} onTemplate={setTemplateRequest}/>
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
@@ -343,7 +346,7 @@ return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon 
       :onGraph?<DocumentGraph key={work.id} documents={docs} initialDocumentId={active.id} onOpen={id=>openDoc(id)}/>
       :onBoard?<PlotBoard documents={docs} onOpen={id=>openDoc(id)} onCreate={chapter=>createDoc('scene',chapter,false)}/>
       :<div className="editor-row"><div className={`editor-panes ${split?'is-split':''}`} style={/* SAFETY: React forwards CSS custom properties whose values here are strings or numbers. */ {'--split-percent':`${splitWidth}%`} as React.CSSProperties}>
-        <RichEditor key={`${active.id}-${s.epoch}`} doc={active} references={{onPreview:ref=>previewReference(active.id,ref),onConnections:()=>showReferenceConnections(active.id),open:reference==='links'}} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:active.id},onContinue:()=>{setFocus(false);setReference('ai');}}} appearances={appearances}
+        <RichEditor searchJump={searchJump} onSearchJump={()=>setSearchJump(null)} key={`${active.id}-${s.epoch}`} doc={active} references={{onPreview:ref=>previewReference(active.id,ref),onConnections:()=>showReferenceConnections(active.id),open:reference==='links'}} onChange={content=>patchDoc(active.id,{content})} wiki={wiki} onWikiClick={id=>openDoc(id,true)} readonly={readonly} aiTools={{scope:{workId:work.id,docId:active.id},onContinue:()=>{setFocus(false);setReference('ai');}}} appearances={appearances}
           heading={<DocHead doc={active} wiki={wiki} linked={linked.length} backlinks={backlinks.length} attachments={active.assetIds.length} readonly={readonly} open={properties} onToggle={()=>setProperties(v=>!v)} onPatch={patch=>patchDoc(active.id,patch)} onOpenBeside={id=>openDoc(id,true)} onReference={value=>{setReferencePreview(null);setReferenceSource(active.id);setReference(value);}}/>}
           renderToolbarEnd={selection=><><DocumentStatistics doc={active} work={work} selection={selection} onPaper={()=>setPaperId(active.id)}/>{!showSidebar&&<span className="toolbar-status">{s.status}</span>}<span className="toolbar-divider"/><button type="button" className="toolbar-text-button" aria-pressed={reference==='ai'&&!focus} onClick={()=>{setFocus(false);setReference(r=>r==='ai'&&!focus?null:'ai');}}><Sparkles size={15}/>AI 대화</button></>}/>
         {split&&<><div className="split-divider resize-handle" role="separator" aria-label="분할 편집 폭" aria-orientation="vertical" aria-valuenow={splitWidth} aria-valuemin={30} aria-valuemax={70} tabIndex={0} onPointerDown={e=>e.currentTarget.setPointerCapture(e.pointerId)} onPointerMove={e=>{if(e.buttons){const rect=e.currentTarget.parentElement!.getBoundingClientRect();setSplitWidth(Math.max(30,Math.min(70,(e.clientX-rect.left)/rect.width*100)));}}} onKeyDown={e=>{if(e.key==='ArrowLeft')setSplitWidth(v=>Math.max(30,v-2));
@@ -373,12 +376,6 @@ function TitleInput({value,disabled,onCommit}:{value:string;disabled:boolean;onC
 
 /** Title, property chips and the property form above the manuscript. */
 /** Studio search also finds personal notes, so an idea can be found without switching spaces. */
-function WorkspaceNoteResults({query,onOpen}:{query:string;onOpen:(id:string)=>void}){
-  const s=useStudio(),found=filterNotes(s.state?.notes||[],{query});
-
-  return <section className="workspace-note-results" aria-label="노트 검색 결과"><h3>노트 {found.length}개</h3>{found.slice(0,8).map(note=><NoteCard key={note.id} note={note} onOpen={onOpen}/>)}{found.length>8&&<p className="muted">노트 공간에서 나머지 {found.length-8}개를 볼 수 있습니다.</p>}</section>;
-}
-
 function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,onPatch,onOpenBeside,onReference}:{doc:NovelDocument;wiki:NovelDocument[];linked:number;backlinks:number;attachments:number;readonly:boolean;open:boolean;onToggle:()=>void;onPatch:(patch:Partial<NovelDocument>)=>void;onOpenBeside:(id:string)=>void;onReference:(panel:Reference)=>void}){
   const person=doc.pov.trim()?wiki.find(w=>w.title.trim()===doc.pov.trim()):undefined;const shared=doc.isPublic&&!!doc.publicSummary.trim();
 

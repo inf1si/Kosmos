@@ -24,6 +24,9 @@ import { captureEditorTarget,targetIsCurrent } from '@/lib/editor-target';
 import { EditorFootnotePopover } from './editor-footnote-popover';
 import { InternalReferenceNode } from './internal-reference-node';
 import { EditorReferences } from './editor-references';
+import { Selection,TextSelection } from '@tiptap/pm/state';
+import { firstBodyMatch,type WorkspaceSearchJump } from '@/lib/workspace-search';
+import { searchJumpKey } from '@/lib/editor-search';
 import { InternalReferenceHover } from './internal-reference-panel';
 import { internalReferenceSchema,type InternalReference } from '@/lib/internal-reference-node';
 
@@ -36,7 +39,7 @@ const SETTING_LINK_COPY:LinkCopy={tool:'설정 링크 추가',title:'설정집 �
 export type NoteTools={extensions:AnyExtension[];onImage:(file:File)=>Promise<string>};
 
 /** heading replaces the default kicker and title; toolbarEnd sits at the right of the toolbar; appearances counts each setting's referring documents for the link preview. */
-export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,renderToolbarEnd,appearances,autofocus=false,contentLabel,linkCopy=SETTING_LINK_COPY,noteTools,aiTools,references}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode;renderToolbarEnd?:(selection:RichNode|null)=>ReactNode;appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string;linkCopy?:LinkCopy;noteTools?:NoteTools;aiTools?:{scope:EditorAIScope;onContinue:()=>void};references?:{onPreview:(ref:InternalReference)=>void;onConnections:()=>void;open:boolean}}){
+export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,renderToolbarEnd,appearances,autofocus=false,contentLabel,linkCopy=SETTING_LINK_COPY,noteTools,aiTools,references,searchJump,onSearchJump}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode;renderToolbarEnd?:(selection:RichNode|null)=>ReactNode;appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string;linkCopy?:LinkCopy;noteTools?:NoteTools;aiTools?:{scope:EditorAIScope;onContinue:()=>void};searchJump?:WorkspaceSearchJump|null;onSearchJump?:()=>void;references?:{onPreview:(ref:InternalReference)=>void;onConnections:()=>void;open:boolean}}){
   const [{font,size},setPreferences]=useEditorPreferences();const [appPreferences]=useAppPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
   const toolbarRef=useRef<HTMLDivElement>(null);const [overflow,setOverflow]=useState({before:false,after:false});
   const [dialog,setDialog]=useState<'note'|'wiki'|null>(null);const [note,setNote]=useState('');const [target,setTarget]=useState(wiki[0]?.id||'');
@@ -68,6 +71,22 @@ if(lastContent.current===source)return;
     // AI/external changes must reach the mounted editor; local keystrokes already match it.
     if(!first&&source!==JSON.stringify(editor.getJSON()))editor.commands.setContent(doc.content,{emitUpdate:false});
   },[editor,doc.content]);
+  useEffect(()=>{
+    if(!editor||!searchJump||searchJump.targetId!==doc.id)return;
+
+    const frame=requestAnimationFrame(()=>{
+      if(editor.isDestroyed)return;
+      const range=firstBodyMatch(editor.getJSON(),searchJump.terms),selection=range?TextSelection.create(editor.state.doc,range.from,range.to):Selection.atStart(editor.state.doc);
+      editor.view.dispatch(editor.state.tr.setSelection(selection).setMeta(searchJumpKey,range).setMeta('addToHistory',false));editor.view.focus();
+      const box=scrollRef.current;
+
+      if(box){if(range){const caret=editor.view.coordsAtPos(range.from);box.scrollTop+=caret.top-box.getBoundingClientRect().top-box.clientHeight/3;}else box.scrollTop=0;}
+
+      onSearchJump?.();
+    });
+
+    return()=>cancelAnimationFrame(frame);
+  },[editor,searchJump,doc.id,onSearchJump]);
   useEffect(()=>{const bar=toolbarRef.current;
 
 if(!bar)return;const measure=()=>setOverflow({before:bar.scrollLeft>2,after:bar.scrollWidth-bar.clientWidth-bar.scrollLeft>2});const observer=new ResizeObserver(measure);observer.observe(bar);bar.addEventListener('scroll',measure);measure();

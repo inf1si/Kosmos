@@ -10,7 +10,7 @@ import { Plugin } from '@tiptap/pm/state';
 import { uid, type RichAttributes } from './model';
 import { z } from 'zod';
 import { htmlParagraphAttrs,paragraphCss,inlineFontSize,listStyleType,validListStyle } from './manuscript-format';
-import { searchPlugin } from './editor-search';
+import { searchPlugin,searchJumpPlugin } from './editor-search';
 
 const Note=Node.create({name:'footnote',priority:1000,group:'inline',inline:true,atom:true,
   addAttributes(){return {noteId:{default:null},text:{default:''}};},parseHTML(){return [{tag:'sup[data-note-id]'}];},
@@ -57,9 +57,18 @@ export const NoteImage=Node.create({name:'noteImage',group:'block',atom:true,dra
   renderHTML({HTMLAttributes}){return ['figure',{'data-note-image':HTMLAttributes.assetId,'data-alt':HTMLAttributes.alt,class:'note-image'}];},
 });
 
-const SearchMarks=Extension.create({name:'searchMarks',addProseMirrorPlugins(){return [searchPlugin()];}});
+const SearchMarks=Extension.create({name:'searchMarks',addProseMirrorPlugins(){return [searchPlugin(),searchJumpPlugin()];}});
 
-export const editorExtensions=[StarterKit,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];
+/** Selection/search transactions must not append and save a paragraph in an untouched list-only note. */
+export function trailingParagraphPlugin(){return new Plugin({appendTransaction:(transactions,_old,state)=>{
+  if(!transactions.some(tr=>tr.docChanged)||state.doc.lastChild?.type.name==='paragraph')return null;
+
+  return state.tr.insert(state.doc.content.size,state.schema.nodes.paragraph.create());
+}});}
+
+const TrailingParagraph=Extension.create({name:'trailingParagraph',addProseMirrorPlugins(){return [trailingParagraphPlugin()];}});
+
+export const editorExtensions=[StarterKit.configure({trailingNode:false}),TrailingParagraph,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];
 
 /** Personal notes add checklists and in-body images. Works keep the base set so their documents never hold these nodes. */
 export const noteExtensions=[TaskList,TaskItem.configure({nested:true})];
