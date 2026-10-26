@@ -143,3 +143,17 @@ return node;};
     assert.deepEqual(back.filter(n=>n.type==='bulletList'||n.type==='orderedList').map(n=>n.attrs?.listStyle??null),['square','hangul',null],format);
   }
 });
+
+test('세로로 병합한 표의 생략된 빈 행은 저장·백업 검증을 통과한다',async()=>{
+  const cell=()=>({type:'tableCell',content:[paragraph(text('셀'))]});
+  let state=EditorState.create({schema,doc:schema.nodeFromJSON(doc({type:'table',content:[{type:'tableRow',content:[cell(),cell()]},{type:'tableRow',content:[cell(),cell()]}]}))});
+  const table=state.doc.firstChild!,last=2+table.firstChild!.nodeSize+table.lastChild!.firstChild!.nodeSize;
+  state=state.apply(state.tr.setSelection(CellSelection.create(state.doc,2,last)));
+  assert(mergeCells(state,tr=>{state=state.apply(tr);}));
+  const content=JSON.parse(JSON.stringify(state.doc.toJSON()));assert.equal(content.content[0].content[1].content,undefined);assert(isRichDocument(content));
+  const workspace=seedWorkspace();workspace.works[0].documents[0].content=content;
+  assert.deepEqual((await readBackup(await createBackup(workspace,[],[]))).data.works[0].documents[0].content,content);
+  assert(!isRichDocument(doc({type:'table',content:[{type:'tableRow'}]})));
+  assert(!isRichDocument(doc({type:'table',content:[{type:'tableRow',content:[cell()]},{type:'tableRow'}]})));
+  assert(!isRichDocument(doc({type:'table',content:[{type:'tableRow',content:[{...cell(),attrs:{rowspan:2}},cell()]},{type:'tableRow'}]})));
+});

@@ -7,8 +7,11 @@ import * as Popup from '@radix-ui/react-popover';
 import { MessageSquareText } from 'lucide-react';
 import { editorFootnote,updateEditorFootnote } from '@/lib/editor-footnotes';
 
-export function EditorFootnotePopover({editor,id,readonly,onClose,onStay,onLeave,onEditing}:{editor:Editor;id:string;readonly:boolean;onClose:()=>void;onStay:()=>void;onLeave:()=>void;onEditing:(value:boolean)=>void}){
-  const [draft,setDraft]=useState<{original:string;text:string}|null>(null),[error,setError]=useState('');
+export function EditorFootnotePopover({editor,id,readonly,onClose,onStay,onLeave,onEditing,initialEditing=false}:{editor:Editor;id:string;readonly:boolean;onClose:()=>void;onStay:()=>void;onLeave:()=>void;onEditing:(value:boolean)=>void;initialEditing?:boolean}){
+  const [draft,setDraft]=useState<{original:string;text:string}|null>(()=>{const note=initialEditing?editorFootnote(editor.state.doc,id):null;
+
+return note?{original:note.text,text:note.text}:null;}),[error,setError]=useState('');
+
   const input=useRef<HTMLTextAreaElement>(null),restoreFocus=useRef(false);
   const note=editorFootnote(editor.state.doc,id),current=!!note&&(!draft||note.text===draft.original);
   const editing=!!draft;
