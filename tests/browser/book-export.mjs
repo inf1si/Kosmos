@@ -6,7 +6,7 @@ import {createRequire} from 'node:module';
 import {execFileSync} from 'node:child_process';
 import {PDFDocument} from 'pdf-lib';
 import JSZip from 'jszip';
-import {chooseOption} from './select.mjs';
+import {chooseOption,selectedValue} from './select.mjs';
 import {bookFixture} from '../fixtures/book-work.ts';
 import {workspaceSchema} from '../../src/lib/model.ts';
 import {PALETTES} from '../../src/lib/theme.ts';
@@ -95,15 +95,16 @@ tx.onerror=()=>reject(tx.error);};}),data);
   assert(await frame().locator('svg').evaluate(svg=>svg.getBoundingClientRect().bottom<=innerHeight+1),'one whole page fits the preview');
   assert((await frame().locator('svg text').allTextContents()).join('').includes(`검증 책 ${width}`));
   const viewBox=await frame().locator('svg').getAttribute('viewBox');const dims=viewBox.split(' ').map(Number);assert(dims[2]>dims[3]);
-  await group('미리보기 펼침').getByRole('button',{name:'두 쪽',exact:true}).click();await frame().locator('.page').nth(1).waitFor();
 
-  const spreadBoxes=await frame().locator('.page').evaluateAll(pages=>pages.map(page=>{const b=page.getBoundingClientRect();
+  // Two-page view: page 1 stands alone as a right-hand page, then 2–3; landscape pages stack so both stay legible.
+  const boxes=()=>frame().locator('.page').evaluateAll(pages=>pages.map(page=>{const b=page.getBoundingClientRect();
 
-return {x:b.x,y:b.y};}));
+return {x:b.x,y:b.y,bottom:b.bottom,width:b.width};}));
 
-assert(spreadBoxes[1].x>spreadBoxes[0].x);assert(Math.abs(spreadBoxes[1].y-spreadBoxes[0].y)<1);
+  await group('미리보기 펼침').getByRole('button',{name:'두 쪽',exact:true}).click();await dialog().getByText(/^1 \/ \d+쪽$/).waitFor();assert.equal(await frame().locator('.page').count(),1);
+  await dialog().getByRole('button',{name:'다음 쪽',exact:true}).click();await frame().locator('.page#book-page-3').waitFor();await dialog().getByText(/^2–3 \/ \d+쪽$/).waitFor();
+  const stacked=await boxes();assert(stacked[1].y>stacked[0].y);assert(Math.abs(stacked[1].x-stacked[0].x)<1);
   assert(await frame().locator('.page').evaluateAll(pages=>pages.every(page=>page.getBoundingClientRect().bottom<=innerHeight+1)),'both whole pages fit the preview');
-  await dialog().getByRole('button',{name:'다음 쪽',exact:true}).click();await frame().locator('.page#book-page-3').waitFor();
   assert((await frame().locator('svg text').allTextContents()).join('').includes('한글과'));
 
   async function save(format){
@@ -154,9 +155,21 @@ return b.left<root.getBoundingClientRect().left||b.right>root.getBoundingClientR
    results.push({width,palette,mode,format:'epub',overflow});
   }
 
+  // Portrait spreads sit side by side, page 1 on the right half.
+  await group('책 파일 형식').getByRole('button',{name:'PDF',exact:true}).click();await group('책 방향').getByRole('button',{name:'세로',exact:true}).click();await dialog().getByRole('button',{name:'미리보기',exact:true}).click();await frame().locator('svg text').first().waitFor({timeout:60000});
+  const [single]=await boxes(),frameWidth=await frame().locator('body').evaluate(()=>innerWidth);assert(single.x>frameWidth/2-1,'page 1 is a right-hand page');
+  await dialog().getByRole('button',{name:'다음 쪽',exact:true}).click();await dialog().getByText(/^2–3 \/ \d+쪽$/).waitFor();const across=await boxes();assert(across[1].x>across[0].x);assert(Math.abs(across[1].y-across[0].y)<1);
+  await group('책 파일 형식').getByRole('button',{name:'EPUB',exact:true}).click();
   await dialog().getByRole('button',{name:'닫기',exact:true}).click();
   assert.equal(JSON.stringify(await stored()),before,'export must not alter workspace or settings');
   await page.reload({waitUntil:'networkidle'});assert.equal(JSON.stringify(await stored()),before,'reload retains original workspace');
+  // The last book settings for this work come back on this device after a reload.
+
+  if(width===360)await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();
+  await page.locator('[data-settings-opener]').first().click();await page.getByRole('button',{name:'저장 · 백업',exact:true}).click();await page.getByRole('button',{name:'책으로 내보내기',exact:true}).click();
+  assert.equal(await dialog().getByRole('textbox',{name:'책 제목',exact:true}).inputValue(),`검증 책 ${width}`);assert.equal(await group('책 파일 형식').getByRole('button',{name:'EPUB',exact:true}).getAttribute('aria-pressed'),'true');
+  await group('책 파일 형식').getByRole('button',{name:'PDF',exact:true}).click();assert.equal(await selectedValue(dialog().getByRole('combobox',{name:'책 용지',exact:true})),'trade');assert.equal(await selectedValue(dialog().getByRole('combobox',{name:'책 글꼴',exact:true})),'wanted');
+  await dialog().getByRole('button',{name:'닫기',exact:true}).click();assert.equal(JSON.stringify(await stored()),before,'remembered settings stay out of the workspace');
   assert.equal(writes,0,'synthetic server saw no source mutations');
   await context.close();
  }

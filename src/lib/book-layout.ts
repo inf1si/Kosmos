@@ -219,13 +219,24 @@ return;
   if(options.toc){
     pageNew();y=margin+32;page.commands.push({kind:'text',text:'목차',x:margin,y:margin+18,size:18,width:metrics.width('목차',18,true),tracking:0,bold:true});
     source.chapters.forEach((chapter,index)=>{
-      const lines=wrapBookText([{text:chapter.title||String(index+1)}],11,width-margin*2-38,metrics),needed=lines.length*18+9;
+      // A section heads its chapters once; chapters under a section are indented.
+      if(chapter.sectionStart){
+        const lines=wrapBookText([{text:chapter.section,bold:true}],11,width-margin*2-38,metrics);
+
+        if(y+lines.length*18+27>bottom)pageNew();
+
+        for(const line of lines){const text=line.map(g=>g.text).join('');page.commands.push({kind:'text',text,x:margin,y:y+11,size:11,width:metrics.width(text,11,true),tracking:0,bold:true,href:`#${chapter.id}`});y+=18;}
+
+        y+=4;
+      }
+
+      const inset=chapter.section?12:0,lines=wrapBookText([{text:chapter.title||String(index+1)}],11,width-margin*2-38-inset,metrics),needed=lines.length*18+9;
 
       if(y+Math.min(needed,36)>bottom)pageNew();const commands:BookText[]=[];const firstPage=page,numberY=y+11;
 
       for(let i=0;i<lines.length;i++){
         if(y+18>bottom)pageNew();
-        const text=lines[i].map(g=>g.text).join(''),command:BookText={kind:'text',text,x:margin,y:y+11,size:11,width:metrics.width(text,11,false),tracking:0,href:`#${chapter.id}`};page.commands.push(command);commands.push(command);y+=18;
+        const text=lines[i].map(g=>g.text).join(''),command:BookText={kind:'text',text,x:margin+inset,y:y+11,size:11,width:metrics.width(text,11,false),tracking:0,href:`#${chapter.id}`};page.commands.push(command);commands.push(command);y+=18;
       }
 
       const number:BookText={kind:'text',text:'',x:width-margin-32,y:numberY,size:11,width:32,tracking:0,href:`#${chapter.id}`};firstPage.commands.push(number);commands.push(number);tocEntries.push({chapter:chapter.id,commands});y+=9;
@@ -235,7 +246,7 @@ return;
   for(const chapter of source.chapters){
     pageNew();anchor(chapter.id);
 
-    if(chapter.section)paragraph([{text:chapter.section}],{size:options.size*.9,after:options.size,align:'left'});
+    if(chapter.sectionStart)paragraph([{text:chapter.section}],{size:options.size*.9,after:options.size,align:'left'});
 
     if(chapter.title)paragraph([{text:chapter.title,bold:true}],{size:options.size*1.7,after:options.size*2,align:'left',keep:true});
     blocks(chapter.content);

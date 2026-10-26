@@ -38,11 +38,12 @@ try{
     ...fromText('첫 번째 문단 보존.\n\n두 번째 문단 변경 위치.').content,
     {type:'paragraph',content:[{type:'text',text:'각주 앞 '},{type:'footnote',attrs:{noteId:footId,text:'기존 각주 내용'}},{type:'text',text:' 참조 앞 '},{type:'internalReference',attrs:{kind:'note',targetId:target.id,workId:null,label:target.title}},{type:'text',text:' 끝.'}]},
     {type:'table',content:['A','B'].map(row=>({type:'tableRow',content:['1','2'].map(col=>({type:'tableCell',content:fromText(row+col).content}))}))},
+    {type:'paragraph',content:[{type:'text',text:'설정 연결',marks:[{type:'wikiLink',attrs:{targetId:wiki.id}}]},{type:'text',text:' 뒤.'}]},
     ...fromText('마지막 문단.').content,
   ]};
 
   scene.title='합성 원고';scene.content=structuredClone(body);wiki.content=structuredClone(body);memo.content=structuredClone(body);
-  const note={...newNote(),title:'합성 노트',content:structuredClone(body)};data=addNote(addNote(data,target),note);workspaceSchema.parse(data);
+  const note={...newNote(),title:'합성 노트',content:structuredClone(body)};note.content.content.splice(-1,0,{type:'noteImage',attrs:{assetId:uid(),alt:'원래 설명'}});note.content.content[4].content[0].marks[0].attrs.targetId=target.id;data=addNote(addNote(data,target),note);workspaceSchema.parse(data);
   let version=1,cloudSeen=false,closing=false,writes=0;
   const context=await browser.newContext({viewport:{width,height:900}});
   const profile={id:'11111111-1111-4111-8111-111111111111',aud:'authenticated',role:'authenticated',email:'synthetic@example.invalid',created_at:'2026-10-25T00:00:00.000Z',app_metadata:{provider:'email',providers:['email']},user_metadata:{},identities:[]};
@@ -119,7 +120,7 @@ await page.mouse.move(selectionBox.x,selectionBox.y+selectionBox.height/2);await
   assert.deepEqual(await menu('선택한 글 메뉴').getByRole('menuitem').allTextContents(),['요약','문장 다듬기','아이디어 확장','질문하기','복사','잘라내기','붙여넣기']);await item('질문하기').click();await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();assert.equal(await page.locator('.note-ai-popover .note-ai-target').textContent(),selected);await page.keyboard.press('Escape');await page.keyboard.press('ArrowRight');
   // Insertion opens the existing dialog, then edits exactly the clicked paragraph.
   await right(editor().locator(':scope > p').nth(1));await item('삽입').click();await item('각주 추가').click();await page.getByPlaceholder('각주 내용을 입력하세요').fill('추가 각주');await page.getByRole('button',{name:'각주 삽입',exact:true}).click();assert.equal(await editor().locator('[data-note-id]').count(),2);await undo(editor());await until(page,()=>editor().locator('[data-note-id]').count().then(n=>n===1),'undo footnote insertion');
-  await right(editor().locator(':scope > p').nth(1));await item('삽입').click();await item('설정 링크 추가').click();await chooseOption(page.getByRole('combobox',{name:'연결할 설정',exact:true}),wiki.id);await page.getByRole('button',{name:'연결',exact:true}).click();await editor().locator('[data-wiki-id]').waitFor();assert((await editor().locator(':scope > p').nth(1).innerText()).includes(wiki.title));await undo(editor());await editor().locator('[data-wiki-id]').waitFor({state:'hidden'});
+  await right(editor().locator(':scope > p').nth(1));await item('삽입').click();await item('설정 링크 추가').click();await chooseOption(page.getByRole('combobox',{name:'연결할 설정',exact:true}),wiki.id);await page.getByRole('button',{name:'연결',exact:true}).click();await editor().locator('[data-wiki-id]').filter({hasText:'설정 연결'}).waitFor();assert((await editor().locator(':scope > p').nth(1).innerText()).includes(wiki.title));await undo(editor());await editor().locator('[data-wiki-id]').filter({hasText:wiki.title}).waitFor({state:'hidden'});
   // Existing atom, including pointer hover before right click.
   await right(editor().locator('[data-note-id]').first());await menu('각주 메뉴').waitFor();await item('각주 수정').click();const draft=page.getByRole('textbox',{name:'각주 내용',exact:true});await draft.waitFor();assert.equal(await draft.inputValue(),'기존 각주 내용');await draft.fill('우클릭에서 고친 각주');await page.getByRole('button',{name:'각주 저장',exact:true}).click();await editor().locator('[data-note-id]').hover();await page.getByText('우클릭에서 고친 각주',{exact:true}).waitFor();await undo(editor());
   await right(editor().locator('[data-note-id]').first());await item('각주 삭제').click();assert.equal(await editor().locator('[data-note-id]').count(),0);await undo(editor());await editor().locator('[data-note-id]').waitFor();
@@ -137,8 +138,8 @@ await page.mouse.move(selectionBox.x,selectionBox.y+selectionBox.height/2);await
   await until(page,()=>editor().locator('.selectedCell').count().then(n=>n===4),'dragged table cells');await right(editor().locator('tr').first().locator('td').first());await item('셀 병합').click();assert.equal(await editor().locator('td[colspan="2"][rowspan="2"]').count(),1);await until(page,()=>JSON.stringify(data.works[0].documents.find(d=>d.id===scene.id).content).includes('"rowspan":2'),'merged table saved');await waitSave();await right(editor().locator('td').first());assert.equal(await item('셀 나누기').isEnabled(),true);await item('셀 나누기').click();assert.equal(await editor().locator('td').count(),4);await undo(editor());await undo(editor());
 
   // All palette/mode combinations: live menu size, computed tokens, focus state, and screenshots.
-  for(const kind of ['문단','표','각주','참조']){
-   const target=kind==='문단'?editor().locator(':scope > p').nth(1):kind==='표'?editor().locator('td').first():kind==='각주'?editor().locator('[data-note-id]'):editor().locator('[data-internal-reference]');await page.keyboard.press('ArrowRight');await right(target);const dialog=page.locator('.note-command-menu').filter({has:menu(kind+' 메뉴')});
+  for(const kind of ['문단','표','각주','참조','설정 링크']){
+   const target=kind==='문단'?editor().locator(':scope > p').nth(1):kind==='표'?editor().locator('td').first():kind==='각주'?editor().locator('[data-note-id]'):kind==='참조'?editor().locator('[data-internal-reference]'):editor().locator('[data-wiki-id]').filter({hasText:'설정 연결'});await page.keyboard.press('ArrowRight');await right(target);const dialog=page.locator('.note-command-menu').filter({has:menu(kind+' 메뉴')});
 
    for(const palette of palettes)for(const mode of ['light','dark']){
     await page.evaluate(([p,m])=>{document.documentElement.dataset.palette=p;document.documentElement.dataset.theme=m;},[palette,mode]);const b=await dialog.boundingBox();assert(b.x>=0&&b.x+b.width<=width+1&&b.y>=0&&b.y+b.height<=901,`${kind}/${palette}/${mode}/${width} bounds`);
@@ -152,6 +153,9 @@ await page.mouse.move(selectionBox.x,selectionBox.y+selectionBox.height/2);await
   // Persistence is a real synthetic save and reload, not a DOM-only edit.
   await change(editor());await right(editor().locator(':scope > p').nth(1));await item('문단 스타일').click();await item('제목 3').click();await until(page,()=>data.works[0].documents.find(d=>d.id===scene.id).content.content[1].type==='heading','saved heading');await waitSave();await page.reload();await editor().locator('h3').waitFor();assert.equal(await editor().locator('h3').innerText(),'두 번째 문단 변경 위치.');
 
+  // Setting links: unlink is one undo step and keeps the words; open moves to the linked document.
+  await right(editor().locator('[data-wiki-id]').filter({hasText:'설정 연결'}));await item('연결 해제').click();assert.equal(await editor().locator('[data-wiki-id]').filter({hasText:'설정 연결'}).count(),0);assert((await editor().innerText()).includes('설정 연결 뒤.'));await undo(editor());await editor().locator('[data-wiki-id]').filter({hasText:'설정 연결'}).waitFor();
+
   // Shared studio consumers (wiki/memo), then split editor and notes.
   for(const doc of [wiki,memo]){
    if(width===360)await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();await page.locator(`[data-navigation-row="${doc.id}"]`).getByTitle(doc.title,{exact:true}).click();await page.getByLabel(`${doc.title} 원고`,{exact:true}).waitFor();await change(editor());
@@ -159,11 +163,18 @@ await page.mouse.move(selectionBox.x,selectionBox.y+selectionBox.height/2);await
 
   if(width===1280){await page.getByRole('button',{name:'옆에 열기',exact:true}).click();const split=page.locator('.split-pane .manuscript');await split.waitFor();await change(split);await page.getByRole('button',{name:'분할 닫기',exact:true}).click();}
 
+  await right(page.locator('.manuscript [data-wiki-id]').filter({hasText:'설정 연결'}).first());await item('설정 열기').click();await page.getByLabel(`${wiki.title} 원고`,{exact:true}).waitFor();
   await waitSave();await page.goto(`${base}/studio#notes/${note.id}`,{waitUntil:'networkidle'});const noteEditor=page.locator('.notes-workspace .manuscript');await noteEditor.waitFor();await change(noteEditor);
   await right(noteEditor.locator(':scope > p').nth(1));await item('문단 스타일').click();await item('체크리스트').click();await noteEditor.locator('ul[data-type="taskList"]').waitFor();await undo(noteEditor);
   await right(noteEditor.locator(':scope > p').nth(1));await item('삽입').click();const [chooser]=await Promise.all([page.waitForEvent('filechooser'),item('이미지').click()]);await chooser.setFiles([]);
+  // Note images: description saves, delete undoes, replace opens the same file picker.
+  await right(noteEditor.locator('[data-note-image]'));await page.locator('.note-command-menu').filter({has:menu('이미지 메뉴')}).waitFor();await item('이미지 설명').click();const altField=page.getByRole('textbox',{name:'이미지 설명',exact:true});await altField.waitFor();assert.equal(await altField.inputValue(),'원래 설명');await altField.fill('새 설명');await altField.press('Enter');
+  await until(page,()=>JSON.stringify(data.notes.find(n=>n.id===note.id).content).includes('새 설명'),'saved image description');
+  await right(noteEditor.locator('[data-note-image]'));await item('이미지 삭제').click();assert.equal(await noteEditor.locator('[data-note-image]').count(),0);await undo(noteEditor);await noteEditor.locator('[data-note-image]').waitFor();
+  await right(noteEditor.locator('[data-note-image]'));const [replace]=await Promise.all([page.waitForEvent('filechooser'),item('이미지 바꾸기').click()]);await replace.setFiles([]);
+  await right(noteEditor.locator('[data-wiki-id]').filter({hasText:'설정 연결'}));await page.locator('.note-command-menu').filter({has:menu('노트 링크 메뉴')}).waitFor();await item('노트 열기').click();await until(page,async()=>await page.getByRole('textbox',{name:'노트 제목',exact:true}).inputValue()===target.title,'opened linked note');await page.goto(`${base}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await noteEditor.waitFor();
   await right(noteEditor.locator('[data-note-id]'));await item('각주 수정').click();await page.getByRole('textbox',{name:'각주 내용',exact:true}).fill('노트 각주 수정');await page.getByRole('button',{name:'각주 저장',exact:true}).click();await until(page,()=>JSON.stringify(data.notes.find(n=>n.id===note.id).content).includes('노트 각주 수정'),'saved note footnote');await waitSave();await page.reload({waitUntil:'networkidle'});await noteEditor.waitFor();await right(noteEditor.locator('[data-note-id]'));await item('각주 수정').click();assert.equal(await page.getByRole('textbox',{name:'각주 내용',exact:true}).inputValue(),'노트 각주 수정');await page.keyboard.press('Escape');
-  results.push({width,palettes:palettes.length,modes:2,menuKinds:4,cloud:cloudSeen,simulatedSaves:writes});closing=true;await context.close();
+  results.push({width,palettes:palettes.length,modes:2,menuKinds:7,cloud:cloudSeen,simulatedSaves:writes});closing=true;await context.close();
  }
 
  assert.deepEqual(errors,[]);await writeFile(resolve(output,'results.json'),JSON.stringify({engine,results,errors},null,2));console.log(JSON.stringify({engine,results,errors,output}));
