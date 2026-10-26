@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
+import { chooseOption, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -138,8 +139,8 @@ try{
 
   // Manuscript display applies to the open manuscript at once.
   await section('원고 표시').click();
-  await dialog().getByRole('combobox',{name:'본문 글꼴'}).selectOption({label:'나눔명조'});
-  await dialog().getByRole('combobox',{name:'본문 글자 크기'}).selectOption('20');
+  await chooseOption(dialog().getByRole('combobox',{name:'본문 글꼴'}), {label:'나눔명조'});
+  await chooseOption(dialog().getByRole('combobox',{name:'본문 글자 크기'}), '20');
   await choose('줄간격','2.4');await choose('문단 첫 줄 들여쓰기','없음');await choose('문단 간격','0.6줄');await choose('본문 폭','800px');
   const preview=await dialog().locator('.settings-preview .manuscript').evaluate(el=>({lineHeight:getComputedStyle(el).lineHeight,indent:getComputedStyle(el.querySelectorAll('p')[1]).textIndent}));
   assert.deepEqual(preview,{lineHeight:'48px',indent:'0px'});
@@ -147,13 +148,13 @@ try{
   let after=await manuscriptStyle();
   assert.deepEqual({lineHeight:after.lineHeight,fontSize:after.fontSize,maxWidth:after.maxWidth,indent:after.indent,gap:after.gap},{lineHeight:'48px',fontSize:'20px',maxWidth:'800px',indent:'0px',gap:'12px'});
   assert.match(after.fontFamily,/nanum.?myeongjo|Nanum_Myeongjo|__Nanum/i);
-  assert.equal(await page.locator('.editor-panes > .editor-shell').getByRole('combobox',{name:'본문 글꼴'}).inputValue(),'nanum-myeongjo','toolbar shows the same font');
+  assert.equal(await selectedValue(page.locator('.editor-panes > .editor-shell').getByRole('combobox',{name:'본문 글꼴'})),'nanum-myeongjo','toolbar shows the same font');
   await page.reload();await editor().waitFor();after=await manuscriptStyle();
   assert.deepEqual([after.lineHeight,after.maxWidth,after.indent],['48px','800px','0px'],'survives reload');
 
   // Tools: plot board and graph open with the chosen view; count basis is shared with the statistics popover.
   await openSettings();await section('집필 도구').click();
-  await dialog().getByRole('combobox',{name:'글자 수 기준'}).selectOption('words');
+  await chooseOption(dialog().getByRole('combobox',{name:'글자 수 기준'}), 'words');
   await choose('플롯보드 첫 보기','진행 상태');await choose('문서 그래프 첫 범위','주변 연결');await choose('주변 연결 단계','2단계');await choose('시점 인물 연결선','끔');
   assert.deepEqual(await prefs(),{lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:800,plotBoardMode:'status',graphScope:'local',graphDepth:2,graphIncludePov:false,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'last',sidebarWidth:null});
   await close();
@@ -162,7 +163,7 @@ try{
   assert.equal(await page.getByRole('group',{name:'보드 기준'}).getByRole('button',{name:'진행 상태'}).getAttribute('aria-pressed'),'true');
   await page.locator('.studio-tools').getByRole('button',{name:'문서 그래프',exact:true}).click();
   assert.equal(await page.getByLabel('그래프 범위').getByRole('button',{name:'주변 연결',exact:true}).getAttribute('aria-pressed'),'true');
-  assert.equal(await page.getByRole('combobox',{name:'주변 연결 단계'}).inputValue(),'2');
+  assert.equal(await selectedValue(page.getByRole('combobox',{name:'주변 연결 단계'})),'2');
   await page.getByRole('button',{name:/^필터/}).click();assert.equal(await page.getByRole('checkbox',{name:'시점 인물 연결'}).isChecked(),false);await page.keyboard.press('Escape');
 
   // AI: the existing AI settings live in this section; new chats start with the chosen sources.
@@ -176,7 +177,7 @@ try{
 
   // Data: the checkpoint interval is stored; sync timings remain internal.
   await openSettings();await section('저장 · 백업').click();
-  await dialog().getByRole('combobox',{name:'자동 복구 지점 간격'}).selectOption('5');assert.equal((await prefs()).checkpointMinutes,5);
+  await chooseOption(dialog().getByRole('combobox',{name:'자동 복구 지점 간격'}), '5');assert.equal((await prefs()).checkpointMinutes,5);
   await dialog().getByRole('button',{name:'백업과 복구'}).click();await page.getByRole('dialog',{name:'백업과 복구'}).waitFor();assert.equal(await dialog().count(),0);await page.keyboard.press('Escape');
 
   // Templates, backup, interchange and note import live only here; the sidebars keep 휴지통 and the light/dark switch.

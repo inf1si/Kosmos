@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { manuscriptFonts, fontSizes } from '../../src/lib/editor-preferences.ts';
 import { seedWorkspace } from '../../src/lib/seed.ts';
+import { chooseOption, readOptions, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -88,20 +89,23 @@ try {
     await page.goto(`${base}/read/${workId}`, { waitUntil: 'domcontentloaded' });
     await body().waitFor();
     await open();
-    assert.equal(await font().locator('option').count(), 20);
-    assert.equal(await font().inputValue(), 'ibm-plex', 'old sans preference migrates');
-    assert.equal(await sizes().inputValue(), '23', 'old custom size is retained');
-    assert.equal(await page.getByRole('combobox', { name: '본문 폭', exact: true }).inputValue(), '580');
-    assert.deepEqual(await sizes().locator('option').evaluateAll(list => list.map(option => Number(option.value))), [...fontSizes, 23].sort((a, b) => a - b));
+    assert.equal((await readOptions(font())).length, 20);
+    assert.equal(await selectedValue(font()), 'ibm-plex', 'old sans preference migrates');
+    assert.equal(await selectedValue(sizes()), '23', 'old custom size is retained');
+    assert.equal(await selectedValue(page.getByRole('combobox', { name: '본문 폭', exact: true })), '580');
+    assert.deepEqual((await readOptions(sizes())).map(option => Number(option.value)), [...fontSizes, 23].sort((a, b) => a - b));
 
-    // Native select keyboard operation and actual webfont rendering.
+    // Keyboard operation (Enter opens, End moves to the last option, Enter picks it) and actual webfont rendering.
     await font().focus();
+    await page.keyboard.press('Enter');
+    await page.locator('.select-menu [role="option"]:focus').waitFor();
     await page.keyboard.press('End');
     await page.keyboard.press('Enter');
-    assert.equal(await font().inputValue(), 'system');
+    await page.locator('.select-menu[role="listbox"]').waitFor({ state: 'hidden' });
+    assert.equal(await selectedValue(font()), 'system');
 
     for (const item of manuscriptFonts) {
-        await font().selectOption(item.id);
+        await chooseOption(font(), item.id);
 
         const actual = await body().evaluate(async (el, item) => {
             el.getBoundingClientRect();
@@ -132,14 +136,14 @@ try {
     assert.equal(new Set(renderedFonts.flatMap(item => item.families)).size, 16, 'sixteen distinct webfont families actually render');
 
     for (const size of fontSizes) {
-        await sizes().selectOption(String(size));
+        await chooseOption(sizes(), String(size));
         assert.equal(await computedSize(), size);
     }
 
     await input().fill('22.5');
     await input().press('Enter');
     assert.equal(await computedSize(), 22.5);
-    assert.equal(await sizes().inputValue(), '22.5');
+    assert.equal(await selectedValue(sizes()), '22.5');
 
     for (const invalid of ['99', '20.1', '']) {
         await input().fill(invalid);
@@ -157,7 +161,7 @@ try {
     assert.equal(await computedSize(), 22.5);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await open();
-    assert.equal(await font().inputValue(), 'system');
+    assert.equal(await selectedValue(font()), 'system');
     assert.equal(await computedSize(), 22.5);
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('orbis-editor-preferences'))), { font: 'system', size: 18 });
 
@@ -165,10 +169,10 @@ try {
         await page.setViewportSize({ width, height: 850 });
 
         for (const palette of ['violet', 'cassette', 'cyber']) for (const theme of ['light', 'dark']) {
-            await page.getByRole('combobox', { name: '테마', exact: true }).selectOption(palette);
-            await page.getByRole('combobox', { name: '배경', exact: true }).selectOption(theme);
-            await font().selectOption('maruburi');
-            await sizes().selectOption('72');
+            await chooseOption(page.getByRole('combobox', { name: '테마', exact: true }), palette);
+            await chooseOption(page.getByRole('combobox', { name: '배경', exact: true }), theme);
+            await chooseOption(font(), 'maruburi');
+            await chooseOption(sizes(), '72');
             assert.equal(await computedSize(), 72, 'mobile does not cap the chosen size');
 
             const layout = await page.getByRole('dialog', { name: '읽기 설정', exact: true }).evaluate(el => {
@@ -178,25 +182,25 @@ try {
             });
 
             assert.deepEqual(layout, { inside: true, controlsFit: true, overflow: false });
-            await sizes().selectOption('24');
+            await chooseOption(sizes(), '24');
             await page.screenshot({ path: resolve(output, `${palette}-${theme}-${width}.png`) });
             layouts.push({ width, palette, theme });
         }
     }
 
-    await font().selectOption('pretendard');
+    await chooseOption(font(), 'pretendard');
     await page.getByRole('button', { name: '목차', exact: true }).click();
     await page.getByRole('dialog', { name: '읽기 설정', exact: true }).waitFor({ state: 'hidden' });
     assert(await page.locator('.reading-toc').isVisible());
     await page.getByRole('button', { name: '목차 닫기', exact: true }).click();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await open();
-    assert.equal(await font().inputValue(), 'pretendard');
+    assert.equal(await selectedValue(font()), 'pretendard');
     assert.equal(await computedSize(), 24);
     await page.evaluate(() => localStorage.setItem('orbit-reader-prefs', JSON.stringify({ font: 'serif', size: 17, width: 680 })));
     await page.reload({ waitUntil: 'domcontentloaded' });
     await open();
-    assert.equal(await font().inputValue(), 'gowun');
+    assert.equal(await selectedValue(font()), 'gowun');
     assert.equal(await computedSize(), 17);
     assert.deepEqual(errors, []);
     assert.deepEqual(failedFonts, []);

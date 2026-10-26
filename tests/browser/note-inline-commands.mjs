@@ -8,6 +8,7 @@ import { deflateSync,crc32 } from 'node:zlib';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
+import { chooseOption, selectedValue } from './select.mjs';
 
 function png(width, height, rgb) {
     const raw = Buffer.concat(Array.from({ length: height }, () => Buffer.from([0, ...Array.from({ length: width }, () => rgb).flat()])));
@@ -143,13 +144,13 @@ try{
   // Other block commands, links and file insertion use the same actual cursor.
   for(const [query,selector] of [['글머리','ul'],['번호','ol'],['인용','blockquote'],['구분선','hr']]){await start();await page.keyboard.insertText('/'+query);await page.keyboard.press('Enter');await editor().locator(selector).waitFor();await button('실행 취소').click();await editor().locator(selector).waitFor({state:'hidden'});await start();await page.keyboard.press('Shift+End');await page.keyboard.press('Backspace');}
 
-  await start();await page.keyboard.insertText('/링크');await page.keyboard.press('Enter');await page.getByRole('combobox',{name:'연결할 노트',exact:true}).waitFor();await page.getByRole('combobox',{name:'연결할 노트',exact:true}).selectOption(other.id);await button('연결').click();await editor().locator('[data-wiki-id]').first().waitFor();await button('실행 취소').click();await start();await page.keyboard.press('Shift+End');await page.keyboard.press('Backspace');
+  await start();await page.keyboard.insertText('/링크');await page.keyboard.press('Enter');await page.getByRole('combobox',{name:'연결할 노트',exact:true}).waitFor();await chooseOption(page.getByRole('combobox',{name:'연결할 노트',exact:true}), other.id);await button('연결').click();await editor().locator('[data-wiki-id]').first().waitFor();await button('실행 취소').click();await start();await page.keyboard.press('Shift+End');await page.keyboard.press('Backspace');
   await start();await page.keyboard.insertText('/이미지');await page.getByRole('listbox',{name:'노트 입력 명령'}).getByRole('option',{name:'이미지',exact:true}).waitFor();const [chooser]=await Promise.all([page.waitForEvent('filechooser'),page.keyboard.press('Enter')]);await chooser.setFiles({name:'synthetic.png',mimeType:'image/png',buffer:picture});await editor().locator('.note-image img').waitFor();assert(await editor().locator('.note-image img').evaluate(el=>el.naturalWidth===20));await button('실행 취소').click();await editor().locator('.note-image').waitFor({state:'hidden'});await start();await page.keyboard.press('Shift+End');await page.keyboard.press('Backspace');
   await start();await page.keyboard.insertText('https://example.invalid/path');assert.equal(await page.getByRole('listbox',{name:'노트 입력 명령'}).count(),0);await page.keyboard.press('Home');await page.keyboard.press('Shift+End');await page.keyboard.press('Backspace');
   await selectParagraph(2);await page.keyboard.press('Alt+Enter');await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();
   assert.equal((await page.locator('.note-ai-popover summary').innerText()).trim(),'선택한 글 · 6자');
   assert(await page.getByRole('textbox',{name:'AI에게 질문'}).evaluate(el=>el===document.activeElement));
-  await page.getByRole('combobox',{name:'AI 질문 제공자'}).selectOption('anthropic');
+  await chooseOption(page.getByRole('combobox',{name:'AI 질문 제공자'}), 'anthropic');
   await page.getByRole('textbox',{name:'AI에게 질문'}).fill('다듬어 줘');await button('AI 질문 보내기').click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();
   await page.getByRole('textbox',{name:'적용할 AI 답변'}).fill('');assert(await button('선택 부분 바꾸기').isDisabled());await page.getByRole('textbox',{name:'적용할 AI 답변'}).fill(reply);
   assert.equal(requests.length,1);assert.equal(requests[0].noteRange.text,'반복 문장.');assert.equal(requests[0].provider,'anthropic');assert.equal(requests[0].sourceIds.length,0);
@@ -182,7 +183,7 @@ await page.mouse.click(word.x,word.y,{button:'right'});await page.getByRole('men
   reply='<b>실행되지 않는 글</b>\n다음 문단';await button('AI 질문 보내기').click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();await button('커서에 삽입').click();await page.locator('.note-ai-popover').waitFor({state:'hidden'});assert((await editor().innerText()).includes('<b>실행되지 않는 글</b>'));assert.equal(await editor().locator('b').count(),0);await button('실행 취소').click();
   await synced();
   // Both surfaces share provider, preset and persisted exchanges.
-  await editor().locator('p').nth(1).click();await page.keyboard.press('Alt+Enter');await button('AI 대화에서 계속').click();await page.getByRole('combobox',{name:'AI 제공자',exact:true}).waitFor();assert.equal(await page.getByRole('combobox',{name:'AI 제공자',exact:true}).inputValue(),'anthropic');assert((await page.locator('.chat-log').innerText()).includes('다듬어 줘'));await button('노트 참고 패널 닫기').click();
+  await editor().locator('p').nth(1).click();await page.keyboard.press('Alt+Enter');await button('AI 대화에서 계속').click();await page.getByRole('combobox',{name:'AI 제공자',exact:true}).waitFor();assert.equal(await selectedValue(page.getByRole('combobox',{name:'AI 제공자',exact:true})),'anthropic');assert((await page.locator('.chat-log').innerText()).includes('다듬어 줘'));await button('노트 참고 패널 닫기').click();
   // Responses do not overwrite edits made while waiting.
   await selectParagraph(1);await page.keyboard.press('Alt+Enter');await page.getByRole('textbox',{name:'AI에게 질문'}).fill('지연 응답');delay=1000;await button('AI 질문 보내기').click();await editor().locator('p').nth(1).click();await page.keyboard.press('End');await page.keyboard.insertText(' 수정');
   await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert(await button('선택 부분 바꾸기').isDisabled());assert((await editor().locator('p').nth(1).innerText()).endsWith(' 수정'));await page.keyboard.press('Escape');delay=0;
@@ -206,6 +207,6 @@ await page.mouse.click(r.x+r.width/2,r.y+r.height/2,{button:'right'});await page
   }
 
   await inlineSlashScenarios({page,body:editor,undo:()=>button('실행 취소'),redo:()=>button('다시 실행'),menuLabel:'노트 입력 명령',synced});
-  await page.setViewportSize({width:1280,height:900});await page.goto(`${base}/studio`,{waitUntil:'domcontentloaded'});await page.locator('.studio-panel .manuscript').first().waitFor();await button('AI 대화').click();await page.getByRole('combobox',{name:'AI 제공자',exact:true}).waitFor();assert.equal(await page.getByRole('combobox',{name:'AI 제공자',exact:true}).inputValue(),'anthropic');assert((await page.locator('.chat-heading').innerText()).trim());
+  await page.setViewportSize({width:1280,height:900});await page.goto(`${base}/studio`,{waitUntil:'domcontentloaded'});await page.locator('.studio-panel .manuscript').first().waitFor();await button('AI 대화').click();await page.getByRole('combobox',{name:'AI 제공자',exact:true}).waitFor();assert.equal(await selectedValue(page.getByRole('combobox',{name:'AI 제공자',exact:true})),'anthropic');assert((await page.locator('.chat-heading').innerText()).trim());
   assert.equal(errors.length,0,errors.join('\n'));assert(saves>0);await writeFile(resolve(output,'report.json'),JSON.stringify({requests:requests.length,saves,layouts,errors},null,2));console.log(JSON.stringify({passed:true,requests:requests.length,saves,layouts:layouts.length,errors}));
 }catch(error){await page.screenshot({path:resolve(output,'failure.png')});console.error(JSON.stringify(await page.evaluate(()=>({selection:getSelection()?.toString(),active:document.activeElement?.getAttribute('aria-label'),summary:document.querySelector('.note-ai-popover summary')?.textContent,body:document.querySelector('.notes-workspace .manuscript')?.innerHTML}))));throw error;}finally{await browser.close();}

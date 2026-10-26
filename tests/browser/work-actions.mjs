@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { workspaceSchema } from '../../src/lib/model.ts';
+import { chooseOption } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -123,7 +124,7 @@ try{
   const info=dialog('작품 정보');await info.waitFor();
   assert.equal(await info.getByRole('textbox',{name:'작품명'}).inputValue(),second.title);
   assert.equal(await info.locator('.work-public-state').innerText(),'공개 서재에 게시하지 않음');
-  await info.getByRole('combobox',{name:'형식'}).selectOption('장편');
+  await chooseOption(info.getByRole('combobox',{name:'형식'}), '장편');
   await info.getByRole('textbox',{name:'부제'}).fill('합성 부제');
   await saved(()=>data.works[1].form==='장편'&&data.works[1].subtitle==='합성 부제','info saved');
   assert.equal(data.works[0].form,first.form,'other work untouched');

@@ -3,7 +3,7 @@
 .selection{font-size:11px;white-space:nowrap;color:inherit}
 .trigger:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;box-shadow:inset 0 0 0 2px var(--focus)}
 .root{min-width:0;font-size:13px;color:var(--ink2)}
-.root label{gap:7px}.root select{width:100%;min-height:36px;border-radius:var(--ctl-r,6px)}
+.root label{gap:7px}.root :global(.select){width:100%;min-height:36px;border-radius:var(--ctl-r,6px)}
 .document{margin:14px 0 8px;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
 .root table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px}
 .root caption{text-align:left;padding-bottom:8px;color:var(--muted)}

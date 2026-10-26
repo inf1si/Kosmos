@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { chooseOption } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -102,7 +103,7 @@ try {
         assert.ok(Number(pages) > 0);
         assert.equal(await page.locator('.popover').evaluate(el => el.scrollWidth - el.clientWidth), 0, 'popover fits');
         await page.screenshot({ path: resolve(output, `a4-statistics-${width}.png`) });
-        await page.getByRole('combobox', { name: '통계 표시 기준' }).selectOption('a4');
+        await chooseOption(page.getByRole('combobox', { name: '통계 표시 기준' }), 'a4');
         await page.keyboard.press('Escape');
         assert.match(await trigger.getAttribute('aria-label'), new RegExp(`^${pages.replace('.', '\\.')}매 · A4 · 문서 통계 열기$`, 'u'));
         await page.reload({ waitUntil: 'domcontentloaded' });

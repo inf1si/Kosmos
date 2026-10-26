@@ -7,6 +7,7 @@ import { type AIProviderStatus,type CredentialInput } from '@/lib/ai-settings';
 import { Modal } from './primitives';
 import { AIPromptEditor } from './ai-prompt-editor';
 import { AISkillEditor } from './ai-skill-editor';
+import { Select } from './select';
 
 type PanelProps={providers:AIProviderStatus[];providerId:AIProviderStatus['id'];storageAvailable:boolean;onRefresh:(provider:AIProviderStatus['id'])=>Promise<void>;section?:'skills'};
 
@@ -45,7 +46,7 @@ if(!response.ok)throw new Error(body.error||'AI 설정을 저장하지 못했습
   return <div className="ai-settings">
       <section aria-labelledby="ai-connection-title"><h3 id="ai-connection-title">제공자 연결</h3>
         <form onSubmit={e=>{e.preventDefault();void change();}}>
-          <div className="ai-settings-grid"><label>제공자<select aria-label="설정할 AI 제공자" value={provider} disabled={busy} onChange={e=>{setProvider(providerSchema.parse(e.target.value));setError('');setNotice('');}}>{providers.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label><label>모델 ID<input aria-label="AI 모델 ID" value={model} maxLength={200} required disabled={busy} autoComplete="off" spellCheck={false} placeholder="제공자의 모델 ID" onChange={e=>setModel(e.target.value)}/></label></div>
+          <div className="ai-settings-grid"><label>제공자<Select aria-label="설정할 AI 제공자" value={provider} disabled={busy} onChange={value=>{setProvider(providerSchema.parse(value));setError('');setNotice('');}}>{providers.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</Select></label><label>모델 ID<input aria-label="AI 모델 ID" value={model} maxLength={200} required disabled={busy} autoComplete="off" spellCheck={false} placeholder="제공자의 모델 ID" onChange={e=>setModel(e.target.value)}/></label></div>
           <p className="ai-settings-state">{selected.browserInvalid?'AI 연결이 만료되었습니다. 키를 다시 입력하세요.':selected.source==='browser'?'브라우저 연결':selected.source==='server'?'서버 연결':'연결 없음'}</p>
           <label>API 키<input type="password" aria-label="AI API 키" value={key} maxLength={1600} autoComplete="new-password" spellCheck={false} disabled={busy||!cloudConfigured||!storageAvailable} placeholder={selected.source==='browser'?'보관된 키 유지 · 교체할 때만 입력':'이 제공자의 API 키 붙여 넣기'} onChange={e=>setKey(e.target.value)}/></label>
           <p className="ai-settings-help">이 브라우저에 30일간 보관 · 백업 제외</p>

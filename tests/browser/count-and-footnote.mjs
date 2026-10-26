@@ -7,6 +7,7 @@ import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
 import { manuscriptStatistics } from '../../src/lib/text-statistics.ts';
+import { chooseOption, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -156,16 +157,16 @@ const editFootnote=async(body,id)=>{await openFootnote(body,id);await card().get
 try{
   await page.goto(`${base}/studio`,{waitUntil:'domcontentloaded'});await editor().waitFor();
   await page.waitForFunction(()=>document.querySelector('.editor-panes > .editor-shell .char-count')?.getAttribute('aria-label')==='13자 · 공백 포함 · 문서 통계 열기');
-  assert.equal(await page.getByRole('combobox',{name:'본문 글꼴',exact:true}).inputValue(),'ibm-plex');
-  await count().click();await page.getByRole('combobox',{name:'통계 표시 기준'}).waitFor();assert.equal(await page.getByRole('combobox',{name:'통계 표시 기준'}).inputValue(),'charactersWithSpaces');
-  await page.getByRole('combobox',{name:'통계 표시 기준'}).selectOption('charactersWithoutSpaces');await page.keyboard.press('Escape');
+  assert.equal(await selectedValue(page.getByRole('combobox',{name:'본문 글꼴',exact:true})),'ibm-plex');
+  await count().click();await page.getByRole('combobox',{name:'통계 표시 기준'}).waitFor();assert.equal(await selectedValue(page.getByRole('combobox',{name:'통계 표시 기준'})),'charactersWithSpaces');
+  await chooseOption(page.getByRole('combobox',{name:'통계 표시 기준'}), 'charactersWithoutSpaces');await page.keyboard.press('Escape');
   assert.equal(await count().getAttribute('aria-label'),'9자 · 공백 제외 · 문서 통계 열기');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('orbis-editor-preferences')).countMetricVersion),1);
   await page.reload();await editor().waitFor();assert.equal(await count().getAttribute('aria-label'),'9자 · 공백 제외 · 문서 통계 열기');
   const workCount=manuscriptStatistics(work.documents).charactersWithSpaces;
   assert((await page.locator('.work-card small').innerText()).includes(`${workCount.toLocaleString()}자`));
   await button('게시 준비').click();await page.locator('.publish-scene-list').waitFor();assert((await page.locator('.publish-scene').filter({hasText:scene.title}).innerText()).includes('13자'));await page.keyboard.press('Escape');
-  await count().click();await page.getByRole('combobox',{name:'통계 표시 기준'}).selectOption('charactersWithSpaces');await page.keyboard.press('Escape');
+  await count().click();await chooseOption(page.getByRole('combobox',{name:'통계 표시 기준'}), 'charactersWithSpaces');await page.keyboard.press('Escape');
   // The fixed sidebar/board counts use spaces even if the toolbar has another explicit metric.
   await button('플롯보드').click();await page.locator('.plot-card').first().waitFor();
   assert((await page.locator('.plot-card').filter({hasText:scene.title}).locator('.plot-card-meta').innerText()).includes('13자'));
@@ -173,7 +174,7 @@ try{
   await editor().focus();await page.keyboard.press('Tab');await card().waitFor();assert((await card().innerText()).includes('각주 1'));await page.keyboard.press('Escape');
   await editFootnote(editor(),firstId);await page.mouse.move(2,2);await page.waitForTimeout(250);assert(await card().isVisible());
   await card().getByRole('textbox',{name:'각주 내용'}).fill('저장하지 않은 설명');await page.keyboard.press('Escape');await card().waitFor({state:'hidden'});assert.equal((await noteAt(editor(),firstId)).text,'같은 설명');
-  await editFootnote(editor(),firstId);await card().getByRole('textbox',{name:'각주 내용'}).fill('바깥 클릭으로 취소할 설명');await count().click();await card().waitFor({state:'hidden'});await page.getByRole('combobox',{name:'통계 표시 기준'}).waitFor();assert.equal((await noteAt(editor(),firstId)).text,'같은 설명');assert.equal(await page.getByRole('combobox',{name:'통계 표시 기준'}).inputValue(),'charactersWithSpaces');await page.keyboard.press('Escape');
+  await editFootnote(editor(),firstId);await card().getByRole('textbox',{name:'각주 내용'}).fill('바깥 클릭으로 취소할 설명');await count().click();await card().waitFor({state:'hidden'});await page.getByRole('combobox',{name:'통계 표시 기준'}).waitFor();assert.equal((await noteAt(editor(),firstId)).text,'같은 설명');assert.equal(await selectedValue(page.getByRole('combobox',{name:'통계 표시 기준'})),'charactersWithSpaces');await page.keyboard.press('Escape');
   await editFootnote(editor(),firstId);await card().getByRole('textbox',{name:'각주 내용'}).fill(' ');assert(await card().getByRole('button',{name:'각주 저장'}).isDisabled());
   await card().getByRole('textbox',{name:'각주 내용'}).fill('수정한 첫 설명\n둘째 줄');const before=await editor().evaluate(el=>el.editor.getJSON());
   await card().getByRole('button',{name:'각주 저장'}).click();await card().waitFor({state:'hidden'});assert.equal((await noteAt(editor(),firstId)).text,'수정한 첫 설명\n둘째 줄');assert.equal((await noteAt(editor(),secondId)).text,'같은 설명');

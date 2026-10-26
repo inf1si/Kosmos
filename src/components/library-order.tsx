@@ -7,6 +7,7 @@ import { librarySort, librarySorts, moveLibraryItem, sortPublications, type Libr
 import { useStudio } from './studio-provider';
 import { IconButton, Modal } from './primitives';
 import treeStyles from './document-tree.module.css';
+import { Select } from './select';
 
 type Drop={id:string;edge:'before'|'after'};
 
@@ -90,7 +91,7 @@ return()=>{active=false;};},[s.namespace]);
 try{const result=await s.setLibraryOrder(items.map(p=>p.id));setItems(result);setSaved(result);}catch(e){setError(e instanceof Error?e.message:'서재 순서를 저장하지 못했습니다.');}finally{setBusy(false);}}
 
   return <><Modal open onReturnFocus={onReturnFocus} onClose={()=>{if(dragRef.current)finishDrag(true);else if(!busy)onClose();}} title="서재 순서 편집" wide>
-    <div className="library-order-controls"><label>자동 정렬 기준<select aria-label="자동 정렬 기준" value={sort} disabled={locked} onChange={e=>setSort(e.target.value)}>{Object.entries(librarySorts).filter(([key])=>key!=='author').map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><button type="button" className="button" disabled={locked||items.length<2} onClick={()=>{setItems(sortPublications(items,librarySort(sort)));}}>자동 정렬</button></div>
+    <div className="library-order-controls"><label>자동 정렬 기준<Select aria-label="자동 정렬 기준" value={sort} disabled={locked} onChange={value=>setSort(value)}>{Object.entries(librarySorts).filter(([key])=>key!=='author').map(([key,label])=><option key={key} value={key}>{label}</option>)}</Select></label><button type="button" className="button" disabled={locked||items.length<2} onClick={()=>{setItems(sortPublications(items,librarySort(sort)));}}>자동 정렬</button></div>
     {loading?<p className="muted" role="status">서재를 불러오는 중입니다.</p>:items.length?<ol className="library-order-list" ref={list} aria-label="서재 순서">{items.map((p,i)=><li className={`reference-card library-order-row${drag?.active&&drag.id===p.id?' is-dragging':''}`} data-library-id={p.id} data-drop-edge={drag?.active&&drag.drop?.id===p.id?drag.drop.edge:undefined} key={p.id}>
       <button type="button" aria-label={`${p.title} 순서 이동`} title="드래그로 순서 변경 · ↑↓로 이동" className="icon-button library-order-grip" aria-description="드래그하거나 위아래 방향키로 순서를 바꿉니다." disabled={disabled||items.length<2}
         onPointerDown={e=>{if(e.button!==0||!e.isPrimary||dragRef.current)return;e.preventDefault();e.currentTarget.focus();e.currentTarget.setPointerCapture(e.pointerId);const value={id:p.id,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false};dragRef.current=value;setDrag(value);}}

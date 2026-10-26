@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
+import { chooseOption, selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -148,7 +149,7 @@ try{
   await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'AI 설정'}).waitFor({state:'hidden'});await page.waitForFunction(()=>document.activeElement?.matches('.editor-panes > .editor-shell .manuscript'));
   // `/` runs the skill on the current paragraph; the request is the saved prompt.
   await slash('/존댓');await page.getByRole('option',{name:'존댓말로',exact:true}).waitFor();assert.equal(await page.locator('.note-command-menu .note-command-caption').filter({hasText:'내 스킬'}).count(),1);await page.keyboard.press('Enter');
-  await question().waitFor();assert.equal(await question().inputValue(),prompt);assert.equal(await skillBox().inputValue(),`skill:${skill.id}`);assert((await page.locator('.note-ai-popover summary').innerText()).includes('현재 문단'));
+  await question().waitFor();assert.equal(await question().inputValue(),prompt);assert.equal(await selectedValue(skillBox()),`skill:${skill.id}`);assert((await page.locator('.note-ai-popover summary').innerText()).includes('현재 문단'));
   assert.equal(await editor().locator('p').nth(1).innerText(),'반복 문장.');
   reply='반복되는 문장입니다.';await button('AI 질문 보내기').click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();
   assert.equal(requests.at(-1).message,prompt);assert.equal(requests.at(-1).documentRange.kind,'paragraph');assert.equal(requests.at(-1).documentRange.text,'반복 문장.');assert.equal(requests.at(-1).docId,scene.id);
@@ -163,7 +164,7 @@ for(let i=0;i<3;i++)await page.keyboard.press('Backspace');assert.equal(await ed
   for(const label of ['요약','문장 다듬기','아이디어 확장','질문하기','존댓말로'])await page.getByRole('menuitem',{name:label,exact:true}).waitFor();
   const icons=await page.locator('.note-command-menu [role=menuitem] svg').evaluateAll(list=>list.slice(0,4).map(svg=>svg.getAttribute('class')));assert.equal(new Set(icons).size,4,'AI 항목마다 다른 아이콘');
   await page.getByRole('menuitem',{name:'존댓말로',exact:true}).click();await question().waitFor();assert.equal(await question().inputValue(),prompt);assert((await page.locator('.note-ai-popover summary').innerText()).includes('선택한 글'));
-  await skillBox().selectOption('summarize');assert.match(await question().inputValue(),/요약/);await skillBox().selectOption(`skill:${skill.id}`);assert.equal(await question().inputValue(),prompt);
+  await chooseOption(skillBox(), 'summarize');assert.match(await question().inputValue(),/요약/);await chooseOption(skillBox(), `skill:${skill.id}`);assert.equal(await question().inputValue(),prompt);
   reply='선택 답변';await button('AI 질문 보내기').click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(requests.at(-1).documentRange.kind,'selection');assert.equal(requests.at(-1).message,prompt);await page.keyboard.press('Escape');
   // Notes use the same skills.
   await page.goto(`${base}/studio#notes/${note.id}`);const noteBody=()=>page.locator('.notes-workspace .manuscript');await noteBody().waitFor();
@@ -182,7 +183,7 @@ for(let i=0;i<3;i++)await page.keyboard.press('Backspace');
 for(let i=0;i<3;i++)await page.keyboard.press('Backspace');
     await selectParagraph(2);r=await editor().locator('p').nth(2).boundingBox();await page.mouse.click(r.x+20,r.y+r.height/2,{button:'right'});await page.getByRole('menuitem',{name:'존댓말로',exact:true}).waitFor();inside(await page.locator('.note-command-menu').boundingBox());await page.screenshot({path:resolve(output,`context-${name}.png`)});
     await page.getByRole('menuitem',{name:'존댓말로',exact:true}).click();await question().waitFor();const ai=await page.locator('.note-ai-popover').boundingBox();inside(ai);const select=await skillBox().boundingBox();assert(select.x+select.width<=ai.x+ai.width,name);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:resolve(output,`panel-${name}.png`)});await page.keyboard.press('Escape');await page.locator('.note-ai-popover').waitFor({state:'hidden'});
-    await manage();await page.getByRole('heading',{name:'내 스킬'}).waitFor();assert.equal(await page.getByRole('combobox',{name:'편집할 스킬'}).inputValue(),skill.id);const dialog=await page.getByRole('dialog',{name:'AI 설정'}).evaluate(el=>({scroll:el.scrollWidth<=el.clientWidth}));assert(dialog.scroll,name);await page.screenshot({path:resolve(output,`settings-${name}.png`)});await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'AI 설정'}).waitFor({state:'hidden'});
+    await manage();await page.getByRole('heading',{name:'내 스킬'}).waitFor();assert.equal(await selectedValue(page.getByRole('combobox',{name:'편집할 스킬'})),skill.id);const dialog=await page.getByRole('dialog',{name:'AI 설정'}).evaluate(el=>({scroll:el.scrollWidth<=el.clientWidth}));assert(dialog.scroll,name);await page.screenshot({path:resolve(output,`settings-${name}.png`)});await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'AI 설정'}).waitFor({state:'hidden'});
     layouts.push({name,menu,ai});
   }
 

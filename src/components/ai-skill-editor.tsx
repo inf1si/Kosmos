@@ -4,6 +4,7 @@ import { useEffect,useRef,useState } from 'react';
 import { deleteSkill,MAX_SKILLS,saveSkill,type AISkill } from '@/lib/ai-prompt-presets';
 import { uid } from '@/lib/model';
 import { useStudio } from './studio-provider';
+import { Select } from './select';
 
 const blank:AISkill={id:'new',title:'',description:'',prompt:'',updatedAt:''};
 
@@ -12,7 +13,7 @@ export function AISkillEditor({focus=false}:{focus?:boolean}){
   const [selectedId,setSelectedId]=useState(skills[0]?.id||'new'),baseline=useRef<AISkill>(skills[0]||blank);
   const [title,setTitle]=useState(baseline.current.title),[description,setDescription]=useState(baseline.current.description),[prompt,setPrompt]=useState(baseline.current.prompt);
   const [pending,setPending]=useState<string|null>(null),[deleteOpen,setDeleteOpen]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
-  const section=useRef<HTMLElement>(null),picker=useRef<HTMLSelectElement>(null);
+  const section=useRef<HTMLElement>(null),picker=useRef<HTMLButtonElement>(null);
   useEffect(()=>{if(focus){section.current?.scrollIntoView({block:'start'});picker.current?.focus();}},[focus]);
   const selected=skills.find(p=>p.id===selectedId),readonly=!!studio.conflict||busy;
   const dirty=title!==baseline.current.title||description!==baseline.current.description||prompt!==baseline.current.prompt;
@@ -52,7 +53,7 @@ return {...state,aiPreferences:next};});
   }
 
   return <section ref={section} aria-labelledby="ai-skill-title" className="ai-prompt-editor"><h3 id="ai-skill-title">내 스킬</h3>
-    <div className="ai-preset-picker"><label>편집할 스킬<select ref={picker} aria-label="편집할 스킬" value={selectedId} disabled={readonly} onChange={e=>{if(dirty){setPending(e.target.value);setDeleteOpen(false);}else load(e.target.value);}}>{skills.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}{selectedId!=='new'&&!selected&&<option value={selectedId}>삭제된 스킬의 편집본</option>}<option value="new">새 스킬 작성</option></select></label></div>
+    <div className="ai-preset-picker"><label>편집할 스킬<Select ref={picker} aria-label="편집할 스킬" value={selectedId} disabled={readonly} onChange={value=>{if(dirty){setPending(value);setDeleteOpen(false);}else load(value);}}>{skills.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}{selectedId!=='new'&&!selected&&<option value={selectedId}>삭제된 스킬의 편집본</option>}<option value="new">새 스킬 작성</option></Select></label></div>
     {pending&&<div className="ai-prompt-confirm" role="status"><p>저장하지 않은 변경이 있습니다.</p><button type="button" onClick={()=>load(pending)} disabled={readonly}>편집을 버리고 전환</button><button type="button" onClick={()=>setPending(null)}>계속 편집</button></div>}
     {remoteChanged&&<div className="ai-prompt-confirm" role="status"><p>다른 창에서 스킬이 바뀌었거나 삭제되었습니다.</p><button type="button" onClick={()=>load(selected?selected.id:'new')}>최신 내용 불러오기</button></div>}
     <label>스킬 이름<input aria-label="스킬 이름" maxLength={40} value={title} disabled={readonly} placeholder="예: 존댓말로 바꾸기" onChange={e=>setTitle(e.target.value)}/></label>

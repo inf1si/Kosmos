@@ -6,6 +6,7 @@ import { activePromptPreset,activatePromptPreset,deletePromptPreset,DEFAULT_PROM
 import { uid } from '@/lib/model';
 import { useStudio } from './studio-provider';
 import { useLegacyAISystemPrompt } from './use-ai-system-prompt';
+import { Select } from './select';
 
 export function AIPromptEditor(){
   const studio=useStudio(),preferences=studio.state?.aiPreferences,catalog=promptCatalog(preferences),active=activePromptPreset(preferences);
@@ -77,7 +78,7 @@ if(!next)return;
 
   return <section aria-labelledby="ai-system-title" className="ai-prompt-editor"><h3 id="ai-system-title">시스템 프롬프트·프리셋</h3>
     <p className="ai-settings-help">현재 적용: <strong>{active.title}</strong></p>
-    <div className="ai-preset-picker"><label>프롬프트 프리셋<select aria-label="편집할 프롬프트 프리셋" value={selectedId} disabled={readonly} onChange={e=>select(e.target.value)}><optgroup label="기본 프리셋">{catalog.filter(p=>p.builtin).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</optgroup><optgroup label="사용자 프리셋">{catalog.filter(p=>!p.builtin).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</optgroup>{selectedId!=='new'&&!selected&&<option value={selectedId}>삭제된 프리셋의 편집본</option>}<option value="new">새 프리셋 작성</option></select></label><button type="button" disabled={readonly||!selected||dirty||remoteChanged} onClick={()=>activate()}>선택 적용</button></div>
+    <div className="ai-preset-picker"><label>프롬프트 프리셋<Select aria-label="편집할 프롬프트 프리셋" value={selectedId} disabled={readonly} onChange={value=>select(value)}><optgroup label="기본 프리셋">{catalog.filter(p=>p.builtin).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</optgroup><optgroup label="사용자 프리셋">{catalog.filter(p=>!p.builtin).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</optgroup>{selectedId!=='new'&&!selected&&<option value={selectedId}>삭제된 프리셋의 편집본</option>}<option value="new">새 프리셋 작성</option></Select></label><button type="button" disabled={readonly||!selected||dirty||remoteChanged} onClick={()=>activate()}>선택 적용</button></div>
     {pendingSelection&&<div className="ai-prompt-confirm" role="status"><p>저장하지 않은 변경이 있습니다.</p><button type="button" onClick={()=>load(pendingSelection)} disabled={readonly}>편집을 버리고 전환</button><button type="button" onClick={()=>setPendingSelection(null)}>계속 편집</button></div>}
     {remoteChanged&&<div className="ai-prompt-confirm" role="status"><p>다른 창에서 프리셋이 바뀌었습니다.</p><button type="button" onClick={()=>selected?load(selected.id):load(DEFAULT_PROMPT_ID)}>최신 내용 불러오기</button></div>}
     <label>프리셋 이름<input aria-label="프리셋 이름" maxLength={80} value={name} disabled={readonly} onChange={e=>setName(e.target.value)}/></label>

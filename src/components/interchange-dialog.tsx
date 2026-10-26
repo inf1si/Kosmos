@@ -10,6 +10,7 @@ import { DownloadLink } from './download-link';
 import { useStudio } from './studio-provider';
 import { readInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
 import { plainText } from '@/lib/model';
+import { Select } from './select';
 
 const exportFormats=['markdown','html','enex'] as const;
 
@@ -58,11 +59,11 @@ if(operation.current!==op)return;setBundle(parsed);setChoices(parsed.pages.map(p
       </div>
       {bundle&&<>
         <div className="transfer-summary"><strong>{choices.length} / {bundle.pages.length}개 문서 선택 · {bundle.assets.filter(a=>bundle.pages.some(p=>selectedKeys.has(p.key)&&p.assetKeys.includes(a.key))).length}개 첨부</strong><span>새 문서로 추가 · 기존 문서 유지</span></div>
-        <div className="transfer-target"><label>가져올 위치<select aria-label="가져올 작품" value={target} disabled={busy} onChange={e=>setTarget(e.target.value)}><option value="new">새 작품 만들기</option>{s.state?.works.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}</select></label>{target==='new'&&<label>새 작품 제목<input aria-label="가져올 새 작품 제목" value={title} maxLength={300} disabled={busy} onChange={e=>setTitle(e.target.value)}/></label>}</div>
+        <div className="transfer-target"><label>가져올 위치<Select aria-label="가져올 작품" value={target} disabled={busy} onChange={value=>setTarget(value)}><option value="new">새 작품 만들기</option>{s.state?.works.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}</Select></label>{target==='new'&&<label>새 작품 제목<input aria-label="가져올 새 작품 제목" value={title} maxLength={300} disabled={busy} onChange={e=>setTitle(e.target.value)}/></label>}</div>
         <div className="transfer-bulk"><span>전체 문서 분류</span>{Object.entries(kinds).map(([kind,label])=><button className="button" disabled={busy} key={kind} onClick={()=>selectAll(documentSchema.shape.kind.parse(kind))}>{label}</button>)}<button className="button" disabled={busy} onClick={()=>setChoices([])}>선택 해제</button></div>
         <div className="transfer-list">{bundle.pages.map(p=>{const choice=choices.find(c=>c.key===p.key);
 
-return <div className="transfer-row" key={p.key}><input aria-label={`${p.title} 가져오기 선택`} type="checkbox" checked={!!choice} disabled={busy} onChange={e=>setChoices(c=>e.target.checked?[...c,{key:p.key,title:p.title,kind:p.kind}]:c.filter(v=>v.key!==p.key))}/><button className={preview===p.key?'selected':''} disabled={busy} onClick={()=>setPreview(p.key)}><FileText size={14}/><span>{p.title}<small>{p.key}</small></span></button><select aria-label={`${p.title} 문서 종류`} value={choice?.kind||p.kind} disabled={!choice||busy} onChange={e=>setChoices(c=>c.map(v=>v.key===p.key?{...v,kind:documentSchema.shape.kind.parse(e.target.value)}:v))}>{Object.entries(kinds).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>;})}</div>
+return <div className="transfer-row" key={p.key}><input aria-label={`${p.title} 가져오기 선택`} type="checkbox" checked={!!choice} disabled={busy} onChange={e=>setChoices(c=>e.target.checked?[...c,{key:p.key,title:p.title,kind:p.kind}]:c.filter(v=>v.key!==p.key))}/><button className={preview===p.key?'selected':''} disabled={busy} onClick={()=>setPreview(p.key)}><FileText size={14}/><span>{p.title}<small>{p.key}</small></span></button><Select aria-label={`${p.title} 문서 종류`} value={choice?.kind||p.kind} disabled={!choice||busy} onChange={value=>setChoices(c=>c.map(v=>v.key===p.key?{...v,kind:documentSchema.shape.kind.parse(value)}:v))}>{Object.entries(kinds).map(([v,l])=><option key={v} value={v}>{l}</option>)}</Select></div>;})}</div>
         {preview&&<div className="transfer-preview"><strong>본문 미리보기</strong><p>{plainText(bundle.pages.find(p=>p.key===preview)!.content).slice(0,2000)||'본문이 비어 있습니다.'}</p></div>}
         {bundle.warnings.length>0&&<details className="transfer-warnings" open><summary>변환 시 확인할 항목 {bundle.warnings.length}개</summary><ul>{bundle.warnings.slice(0,100).map(w=><li key={w}>{w}</li>)}</ul>{bundle.warnings.length>100&&<p>추가 {bundle.warnings.length-100}개 항목이 있습니다. 파일을 더 작게 나누어 확인하세요.</p>}</details>}
         <p className="field-help">설정집으로 가져온 문서 사이 링크만 설정 연결로 변환됩니다.</p>
@@ -70,7 +71,7 @@ return <div className="transfer-row" key={p.key}><input aria-label={`${p.title} 
       </>}
     </>:work&&<>
       <div className="transfer-guide"><p><strong>{work.title}</strong> · 비공개 문서도 내보내기에 포함됩니다.</p></div>
-      <label className="transfer-format">내보내기 형식<select aria-label="외부 문서 내보내기 형식" value={format} disabled={busy} onChange={e=>{setFormat(exportFormats.find(value=>value===e.target.value)||'markdown');setDownload(null);}}><option value="markdown">Markdown ZIP · Notion / Obsidian / 일반 편집기</option><option value="html">HTML ZIP · Notion / 웹 문서</option><option value="enex">Evernote ENEX · Evernote 가져오기</option></select></label>
+      <label className="transfer-format">내보내기 형식<Select aria-label="외부 문서 내보내기 형식" value={format} disabled={busy} onChange={value=>{setFormat(exportFormats.find(format=>format===value)||'markdown');setDownload(null);}}><option value="markdown">Markdown ZIP · Notion / Obsidian / 일반 편집기</option><option value="html">HTML ZIP · Notion / 웹 문서</option><option value="enex">Evernote ENEX · Evernote 가져오기</option></Select></label>
       <div className="transfer-bulk"><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.map(d=>d.id));setDownload(null);}}>전체 선택</button><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.filter(d=>d.kind==='scene').map(d=>d.id));setDownload(null);}}>원고만</button><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.filter(d=>d.kind==='wiki').map(d=>d.id));setDownload(null);}}>설정집만</button></div>
       <div className="transfer-list">{work.documents.map(d=><label className="transfer-export-row" key={d.id}><input type="checkbox" checked={ids.includes(d.id)} disabled={busy} onChange={e=>{setIds(v=>e.target.checked?[...v,d.id]:v.filter(id=>id!==d.id));setDownload(null);}}/><span>{documentTitle(d)}</span><small>{kinds[d.kind]}</small></label>)}</div>
       <p className="field-help">첨부·각주 포함 · 복구 이력·공개 판본 제외. ENEX의 각주·설정 연결은 일반 텍스트로 변환됩니다.</p>

@@ -10,6 +10,7 @@ import { Popover } from './primitives';
 import { WikiIcon } from './studio-icons';
 import styles from './document-graph.module.css';
 import { useAppPreferences } from './use-app-preferences';
+import { Select } from './select';
 
 const kindNames = { scene: '원고', wiki: '설정집', memo: '메모' } as const;
 
@@ -170,7 +171,7 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
       <Popover open={filters} onOpenChange={setFilters} align="end" width={300} title="그래프 필터" trigger={<button type="button" className={`button ${styles.filterButton}`} aria-pressed={!!filtered}><SlidersHorizontal size={14}/>필터{filtered && <i className={styles.filterDot} aria-label="적용 중"/>}</button>}>
         <div className={styles.filters}>
           <fieldset><legend>문서 종류</legend>{(['scene', 'wiki', 'memo'] as const).map(kind => <label key={kind}><input type="checkbox" checked={kinds.includes(kind)} onChange={e => setKinds(k => e.target.checked ? [...k, kind] : k.filter(x => x !== kind))}/>{kindNames[kind]}</label>)}</fieldset>
-          <label className={styles.field}>설정집 분류<select aria-label="그래프 설정집 분류" value={category} onChange={e => setCategory(e.target.value)}><option value="">모든 분류</option>{categories.map(c => <option key={c}>{c}</option>)}</select></label>
+          <label className={styles.field}>설정집 분류<Select aria-label="그래프 설정집 분류" value={category} onChange={value=> setCategory(value)}><option value="">모든 분류</option>{categories.map(c => <option key={c}>{c}</option>)}</Select></label>
           <label><input type="checkbox" checked={includePov} onChange={e => setIncludePov(e.target.checked)}/>시점 인물 연결</label>
           <label><input type="checkbox" checked={hideIsolated} onChange={e => setHideIsolated(e.target.checked)}/>연결 없는 문서 숨기기</label>
         </div>
@@ -178,8 +179,8 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
       </Popover>
     </header>
     {mode === 'local' && <div className={styles.localControls}>
-      <label>중심 문서<select aria-label="그래프 중심 문서" value={center} onChange={e => {setCenter(e.target.value); setSelected(e.target.value);}}>{documents.map(d => <option value={d.id} key={d.id}>{documentTitle(d)}</option>)}</select></label>
-      <label>범위<select aria-label="주변 연결 단계" value={depth} onChange={e => setDepth(Number(e.target.value))}>{[1, 2, 3].map(n => <option key={n} value={n}>{n}단계</option>)}</select></label>
+      <label>중심 문서<Select aria-label="그래프 중심 문서" value={center} onChange={value=> {setCenter(value); setSelected(value);}}>{documents.map(d => <option value={d.id} key={d.id}>{documentTitle(d)}</option>)}</Select></label>
+      <label>범위<Select aria-label="주변 연결 단계" value={depth} onChange={value=> setDepth(Number(value))}>{[1, 2, 3].map(n => <option key={n} value={n}>{n}단계</option>)}</Select></label>
     </div>}
     {visible.limited && <p className={styles.notice}>문서 {visible.documents.length} / {visible.total}개 · 연결 최대 {GRAPH_EDGE_LIMIT}개</p>}
     <div className={styles.body}>

@@ -8,6 +8,7 @@ import { useStudio } from './studio-provider';
 import { readInterchange, type ImportBundle } from '@/lib/interchange';
 import { resolveNoteNavigation } from '@/lib/note-navigation';
 import type { Work } from '@/lib/model';
+import { Select } from './select';
 
 const noteFileTypes='.enex,.zip,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.hwp,.hwpx,.epub,.png,.jpg,.jpeg,.webp';
 
@@ -64,7 +65,7 @@ try{const id=await s.createWorkFromFolder(folderId,{title,form});onCreated(id);}
 
   return <Popover open onOpenChange={open=>{if(!open&&!busy)onClose();}} anchor={anchorRef} side={typeof window!=='undefined'&&window.innerWidth<700?'bottom':'right'} width={300} title="새 작품으로 만들기" description="노트를 메모로 복사합니다. 원본은 남습니다." onReturnFocus={()=>{if(anchor?.isConnected)(anchor.matches('button')?anchor:anchor.querySelector<HTMLElement>('[data-row-menu],button'))?.focus();}}>
     <label>작품 제목<input aria-label="새 작품 제목" value={title} maxLength={300} disabled={busy} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&title.trim())void create();}}/></label>
-    <label>형식<select aria-label="새 작품 형식" value={form} disabled={busy} onChange={e=>setForm(workSchema.shape.form.parse(e.target.value))}>{(['단편','중편','장편'] as const).map(v=><option key={v}>{v}</option>)}</select></label>
+    <label>형식<Select aria-label="새 작품 형식" value={form} disabled={busy} onChange={value=>setForm(workSchema.shape.form.parse(value))}>{(['단편','중편','장편'] as const).map(v=><option key={v}>{v}</option>)}</Select></label>
     {error&&<p className="danger" role="alert">{error}</p>}
     <div className="popover-actions"><button type="button" className="button" disabled={busy} onClick={onClose}>취소</button><button type="button" className="button primary" disabled={busy||!title.trim()} onClick={()=>void create()}>{busy?'만드는 중…':'작품 만들기'}</button></div>
   </Popover>;

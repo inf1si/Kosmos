@@ -29,6 +29,7 @@ import { firstBodyMatch,type WorkspaceSearchJump } from '@/lib/workspace-search'
 import { searchJumpKey } from '@/lib/editor-search';
 import { InternalReferenceHover } from './internal-reference-panel';
 import { internalReferenceSchema,type InternalReference } from '@/lib/internal-reference-node';
+import { Select } from './select';
 
 /** The link tool targets settings in a work and other notes in the notes space. */
 type LinkCopy={tool:string;title:string;description:string;select:string;open:string};
@@ -129,7 +130,7 @@ if(previewLocked.current)return;hideTimer.current=window.setTimeout(()=>setPrevi
     <div className="editor-toolbar-frame">
     {overflow.before&&<div className="toolbar-scroll before"><IconButton label="이전 편집 도구" onClick={()=>toolbarRef.current?.scrollBy({left:-240,behavior:'smooth'})}><ChevronLeft size={16}/></IconButton></div>}
     <div className="editor-toolbar" ref={toolbarRef}>
-      <select aria-label="본문 글꼴" title="이 기기에 저장되는 원고 표시 설정" value={font} onChange={e=>setPreferences({font:e.target.value})}>{manuscriptFonts.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}</select>
+      <Select aria-label="본문 글꼴" title="이 기기에 저장되는 원고 표시 설정" value={font} onChange={value=>setPreferences({font:value})}>{manuscriptFonts.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}</Select>
       <FontSizeControl editor={editor} readonly={readonly} size={size} onBaseChange={size=>setPreferences({size})}/>
       <span className="toolbar-divider"/>
       <IconButton label="실행 취소" disabled={!editor?.can().undo()||readonly} onClick={()=>editor?.chain().focus().undo().run()}><Undo2 size={16}/></IconButton>
@@ -173,7 +174,7 @@ if(ref&&references){references.onPreview(ref);closePreview();}else showPreview(e
 
 if(input?.showPicker)input.showPicker();else input?.click();}:undefined} onContinue={aiTools.onContinue}/>}
     <Popover open={dialog==='note'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={320} title="각주 추가" description="공개할 원고에 포함되는 설명입니다." onReturnFocus={()=>editor?.commands.focus()}><textarea autoFocus value={note} onChange={e=>setNote(e.target.value)} placeholder="각주 내용을 입력하세요" rows={5}/><div className="popover-actions"><button className="primary" disabled={!note.trim()} onClick={()=>{editor?.chain().focus().setTextSelection(selection.to).insertContent({type:'footnote',attrs:{noteId:uid(),text:note.trim()}}).run();setDialog(null);setNote('');}}>각주 삽입</button></div></Popover>
-    <Popover open={dialog==='wiki'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={300} title={linkCopy.title} description={linkCopy.description} onReturnFocus={()=>editor?.commands.focus()}><select aria-label={linkCopy.select} value={target} onChange={e=>setTarget(e.target.value)}>{wiki.map(d=><option key={d.id} value={d.id}>{documentTitle(d)}</option>)}</select><div className="popover-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Popover>
+    <Popover open={dialog==='wiki'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={300} title={linkCopy.title} description={linkCopy.description} onReturnFocus={()=>editor?.commands.focus()}><Select aria-label={linkCopy.select} value={target} onChange={value=>setTarget(value)}>{wiki.map(d=><option key={d.id} value={d.id}>{documentTitle(d)}</option>)}</Select><div className="popover-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Popover>
   </div>;
 }
 
