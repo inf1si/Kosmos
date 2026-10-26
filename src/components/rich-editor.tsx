@@ -20,6 +20,7 @@ import { EditorFormatTools,FontSizeControl,ListMenu } from './editor-format-tool
 import { EditorSearch } from './editor-search';
 import type { EditorAIScope } from '@/lib/ai-conversation';
 import { EditorCommands } from './editor-commands';
+import { EditorPositionMenu } from './editor-position-menu';
 import { captureEditorTarget,targetIsCurrent } from '@/lib/editor-target';
 import { EditorFootnotePopover } from './editor-footnote-popover';
 import { InternalReferenceNode } from './internal-reference-node';
@@ -110,6 +111,8 @@ if(previewLocked.current)return;hideTimer.current=window.setTimeout(()=>setPrevi
 
   function closePreview(){window.clearTimeout(hideTimer.current);previewLocked.current=false;setPreview(null);}
 
+  function pickImage(){imageInput.current?.click();}
+
   useEffect(()=>{window.clearTimeout(hideTimer.current);previewLocked.current=false;setPreview(null);},[doc.id]);
   useEffect(()=>()=>window.clearTimeout(hideTimer.current),[]);
   const previewDoc=preview?.kind==='wiki'?wiki.find(d=>d.id===preview.id):undefined;
@@ -175,9 +178,8 @@ if(ref&&references){references.onPreview(ref);closePreview();}else showPreview(e
       {preview?.kind==='note'&&editor&&<EditorFootnotePopover key={`${doc.id}-${preview.id}`} editor={editor} id={preview.id} readonly={readonly} onClose={closePreview} onStay={()=>window.clearTimeout(hideTimer.current)} onLeave={hidePreview} onEditing={value=>{previewLocked.current=value;window.clearTimeout(hideTimer.current);}}/>}
     </div>
     {editor&&references&&!readonly&&<EditorReferences editor={editor} sourceId={doc.id}/>}
-    {aiTools&&editor&&!readonly&&<EditorCommands editor={editor} scope={aiTools.scope} onLink={()=>openDialog('wiki',editor.view.dom)} onFootnote={()=>openDialog('note',editor.view.dom)} onImage={noteTools?()=>{const input=imageInput.current;
-
-if(input?.showPicker)input.showPicker();else input?.click();}:undefined} onContinue={aiTools.onContinue}/>}
+    {aiTools&&editor&&!readonly&&<EditorCommands editor={editor} scope={aiTools.scope} onLink={()=>openDialog('wiki',editor.view.dom)} onFootnote={()=>openDialog('note',editor.view.dom)} onImage={noteTools?pickImage:undefined} onContinue={aiTools.onContinue}/>}
+    {editor&&!readonly&&<EditorPositionMenu editor={editor} note={!!noteTools} onLink={()=>openDialog('wiki',editor.view.dom)} onFootnote={()=>openDialog('note',editor.view.dom)} onImage={noteTools?pickImage:undefined} onReference={references?.onPreview} onOpen={closePreview} onEditing={value=>{previewLocked.current=value;window.clearTimeout(hideTimer.current);}}/>}
     <Popover open={dialog==='note'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={320} title="각주 추가" description="공개할 원고에 포함되는 설명입니다." onReturnFocus={()=>editor?.commands.focus()}><textarea autoFocus value={note} onChange={e=>setNote(e.target.value)} placeholder="각주 내용을 입력하세요" rows={5}/><div className="popover-actions"><button className="primary" disabled={!note.trim()} onClick={()=>{editor?.chain().focus().setTextSelection(selection.to).insertContent({type:'footnote',attrs:{noteId:uid(),text:note.trim()}}).run();setDialog(null);setNote('');}}>각주 삽입</button></div></Popover>
     <Popover open={dialog==='wiki'} onOpenChange={open=>{if(!open)setDialog(null);}} anchor={dialogAnchor} width={300} title={linkCopy.title} description={linkCopy.description} onReturnFocus={()=>editor?.commands.focus()}><Select aria-label={linkCopy.select} value={target} onChange={value=>setTarget(value)}>{wiki.map(d=><option key={d.id} value={d.id}>{documentTitle(d)}</option>)}</Select><div className="popover-actions"><button className="primary" disabled={!target} onClick={()=>{if(selection.from===selection.to){const text=wiki.find(d=>d.id===target)?.title||'설정';editor?.chain().focus().setTextSelection(selection.from).insertContent({type:'text',text,marks:[{type:'wikiLink',attrs:{targetId:target}}]}).run();}else editor?.chain().focus().setTextSelection(selection).setMark('wikiLink',{targetId:target}).run();setDialog(null);}}>연결</button></div></Popover>
   </div>;

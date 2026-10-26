@@ -34,12 +34,14 @@ function validEmptyTableRows(rows: RichNode[]): boolean {
   let pending: number[] = [];
 
   for (const row of rows) {
-    if (row?.type !== 'tableRow' || !Array.isArray(row.content)) return false;
+    if (row?.type !== 'tableRow' || row.content !== undefined && !Array.isArray(row.content)) return false;
+    // ProseMirror omits content on rows completely covered by a previous cell's rowspan.
+    const cells = row.content || [];
 
-    if (!row.content.length && (!pending.length || pending.some(span => span === 0))) return false;
+    if (!cells.length && (!pending.length || pending.some(span => span === 0))) return false;
     let column = 0;
 
-    for (const cell of row.content) {
+    for (const cell of cells) {
       if (!cell || !['tableCell', 'tableHeader'].includes(cell.type)) return false;
 
       while (pending[column] > 0) column++;
@@ -76,7 +78,7 @@ if(number!==undefined&&number!==null&&formatNumber(number,min,max)===undefined)r
 
     if(v.type==='table'&&(!v.content?.length||!validEmptyTableRows(v.content)))return false;
 
-    if(v.type==='tableRow'&&(!v.content||!mergedRow&&!v.content.length||v.content.some(c=>!['tableCell','tableHeader'].includes(c?.type))))return false;
+    if(v.type==='tableRow'&&(!mergedRow&&!v.content?.length||v.content?.some(c=>!['tableCell','tableHeader'].includes(c?.type))))return false;
 
     if(['tableCell','tableHeader'].includes(v.type)){
       if(!Array.isArray(v.content)||!v.content.length||v.content.some(c=>!['paragraph','heading','bulletList','orderedList','blockquote','codeBlock','horizontalRule','table'].includes(c?.type)))return false;

@@ -641,6 +641,7 @@ html:has(.public-site) .popover{background:var(--pub-popover);color:var(--pub-te
 .note-command-menu .menu-item[data-highlighted],.note-command-menu .menu-item:hover,.note-command-menu .menu-item:focus-visible{background:var(--hover);color:var(--ink)}
 .note-command-caption{display:flex;justify-content:space-between;gap:12px;padding:6px 10px;color:var(--muted);font-size:12px}
 .note-command-menu kbd{margin-left:auto;font:inherit;font-size:11px;color:var(--muted)}
+.editor-position-menu .menu-item>svg:last-child:not(:first-child){margin-left:auto}
 .note-ai-popover{width:min(400px,calc(100vw - 24px));max-height:min(var(--radix-popover-content-available-height),80dvh)}
 .note-inline-ai{display:flex;flex-direction:column;gap:12px;min-width:0}
 .note-inline-ai .chat-heading{padding:0;border:0;gap:4px}

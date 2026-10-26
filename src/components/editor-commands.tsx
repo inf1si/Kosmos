@@ -3,7 +3,8 @@
 import type { RichNode } from '@/lib/model';
 import { Fragment,useEffect,useId,useRef,useState } from 'react';
 import type { Editor } from '@tiptap/core';
-import { Plugin,PluginKey } from '@tiptap/pm/state';
+import { Plugin,PluginKey,NodeSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import { closeHistory } from '@tiptap/pm/history';
 import { DOMSerializer } from '@tiptap/pm/model';
 import * as Popup from '@radix-ui/react-popover';
@@ -134,7 +135,7 @@ return true;}
       return false;
     },
     context:event=>{
-      if(!editor.isEditable)return false;
+      if(!editor.isEditable||editor.state.selection instanceof NodeSelection||editor.state.selection instanceof CellSelection)return false;
       const target=captureEditorTarget(editor);
 
 if(target.kind!=='selection')return false;
