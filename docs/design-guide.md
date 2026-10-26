@@ -270,9 +270,9 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 **선택 입력.** 설정의 분류·원고의 시점 인물은 직접 입력 가능한 combobox다. 화살표를 누르면 이미 값이 채워져 있어도 작품의 기존 항목 전체를 펼친다. 입력 중에는 항목을 거르고 위·아래·Enter로 선택, Esc·바깥 클릭으로 닫는다. 새 값도 그대로 저장한다. 목록은 `--pop`·`--line`·`--sel`, 모양은 `--ctl-r`·`--r-in`을 쓴다.
 
-**웹 링크.** 공용 Popover에 13px 기본 label/input과 popover-actions를 쓴다. 삽입 창은 주소·표시할 글, 수정 창은 주소·링크 해제·새 탭 버튼이다. 도구 모음과 입력 명령/삽입 메뉴 아이콘은 Globe, 새 탭은 ExternalLink, 해제는 Unlink를 쓴다. 본문 링크는 기존 editor-wiki-link의 `--link` 색·`--soft` 밑줄을 재사용한다. 새 색·모양·고정 줄은 없다. [사용 계약](editor-web-links.md).
+**웹 링크.** 공용 Popover에 13px 기본 label/input과 popover-actions를 쓴다. 삽입 창은 주소·표시할 글, 수정 창은 주소·링크 해제·새 탭 버튼이다. 도구 모음과 입력 명령/삽입 메뉴 아이콘은 Globe, 새 탭은 ExternalLink, 해제는 Unlink를 쓴다. 본문 링크는 기존 editor-wiki-link의 `--link` 색·`--soft` 밑줄을 재사용한다. 링크를 클릭하면 먼저 **링크 말풍선**(`.popover.editor-link-bubble`, 300px, 한 줄)이 뜬다. 왼쪽은 13px `--link` 밑줄 주소(한 줄 말줄임, 새 탭), 오른쪽은 Pencil 수정·Unlink 해제 `IconButton`이다. 본문 초점을 빼앗지 않도록 `Popover`의 `initialFocus="none"`을 쓴다. 입력하거나 커서가 링크를 벗어나면 닫는다. 글 고치기를 방해하지 않아야 하는 본문 위 작은 창은 이 패턴을 쓴다. 새 색·모양·고정 줄은 없다. [사용 계약](editor-web-links.md).
 
-**본문 우클릭.** 선택 글 메뉴를 유지하고 선택 없는 본문·표·각주·참조에는 같은 `.menu.note-command-menu`·`.menu-item`·`.menu-separator`와 Radix Popover 위치 관리를 쓴다. 문단 스타일·삽입은 같은 창 안에서 목록을 바꾸고 ArrowLeft **뒤로**로 돌아간다. 삽입은 Plus, 표 동작은 Table2·삭제는 Trash2, 본문·제목·목록·각주·링크는 기존 도구 아이콘을 재사용한다. 새 색/모양/고정 줄은 없다. [우클릭 계약](editor-context-menu.md).
+**본문 우클릭.** 선택 글 메뉴를 유지하고 선택 없는 본문·표·각주·참조에는 같은 `.menu.note-command-menu`·`.menu-item`·`.menu-separator`와 Radix Popover 위치 관리를 쓴다. 문단 스타일·삽입은 같은 창 안에서 목록을 바꾸고 ArrowLeft **뒤로**로 돌아간다. 설정/노트 링크(열기 FileText·연결 해제 Unlink)와 노트 이미지(바꾸기 ImagePlus·설명 TextCursorInput·삭제 Trash2)도 같은 메뉴다. 이미지 설명은 같은 Popover 자리에 label/input과 `popover-actions`를 띄운다. 삽입은 Plus, 표 동작은 Table2·삭제는 Trash2, 본문·제목·목록·각주·링크는 기존 도구 아이콘을 재사용한다. 새 색/모양/고정 줄은 없다. [우클릭 계약](editor-context-menu.md).
 
 **책 내보내기.** 기존 Modal·form-grid·Select·segmented·transfer-list·DownloadLink를 사용한다. BookOpen 아이콘의 **책으로 내보내기**는 설정의 저장·백업과 기존 문서 내보내기 창에 둔다. 미리보기는 iframe 안의 실제 책 페이지이며 앱 제어부는 기존 토큰·13px을 따른다. 출력물의 종이/잉크는 테마와 독립적인 고정 흰색/검정(표 제목·강조는 옅은 회색)으로 표시한다. 이 색은 인쇄 결과를 보여주는 출력물 캔버스에만 허용하며 앱 컨트롤에 쓰지 않는다. 화면 폭이 좁으면 설정과 미리보기를 위아래로 놓는다.
 

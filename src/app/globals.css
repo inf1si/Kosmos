@@ -661,3 +661,4 @@ html:has(.public-site) .popover{background:var(--pub-popover);color:var(--pub-te
 
 .library-sort{display:flex;justify-content:flex-end;margin-bottom:20px}.library-sort label{display:flex;flex-direction:row;align-items:center;gap:10px;font-size:13px;color:var(--pub-muted)}.library-sort .select{width:auto;max-width:100%;padding:8px 12px;border:1px solid var(--pub-line);border-radius:var(--pub-ctl-r,6px);background:var(--pub-paper);color:var(--pub-text);font-family:var(--pub-sans);font-size:14px}.library-sort .select:focus-visible{outline:2px solid var(--pub-brand);outline-offset:3px}
 .editor-web-link-form{display:flex;flex-direction:column;gap:12px}
+.popover.editor-link-bubble{flex-direction:row;align-items:center;gap:2px;padding:4px 6px 4px 12px}.editor-link-bubble-url{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--link);text-decoration:underline;text-underline-offset:2px}

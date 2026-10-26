@@ -3,7 +3,7 @@
 import {useEffect,useId,useRef,useState} from 'react';
 import type {Editor} from '@tiptap/core';
 import {closeHistory} from '@tiptap/pm/history';
-import {Globe,ExternalLink,Unlink} from 'lucide-react';
+import {Globe,ExternalLink,Pencil,Unlink} from 'lucide-react';
 import {captureEditorTarget} from '@/lib/editor-target';
 import {captureWebLink,normalizeWebLink,webLinkTransaction,type WebLinkTarget} from '@/lib/editor-web-links';
 import {IconButton,Popover,type PopoverAnchor} from './primitives';
@@ -13,6 +13,8 @@ export function requestWebLink(editor:Editor){editor.view.dom.dispatchEvent(new 
 export function EditorWebLink({editor,readonly}:{editor:Editor|null;readonly:boolean}){
   const [target,setTarget]=useState<WebLinkTarget|null>(null),[url,setUrl]=useState(''),[label,setLabel]=useState(''),[error,setError]=useState('');
   const buttonId=useId(),anchor:PopoverAnchor=useRef(null),opener=useRef<()=>void>(()=>{}),input=useRef<HTMLInputElement>(null);
+  // Clicking a link only places the caret and shows its address; editing the address is one more click.
+  const [bubble,setBubble]=useState<WebLinkTarget|null>(null),bubbleAnchor:PopoverAnchor=useRef(null),bubbler=useRef<()=>void>(()=>{});
   const current=!!editor&&!!target&&!readonly&&!editor.isDestroyed&&editor.isEditable&&editor.state.doc.eq(target.document),href=normalizeWebLink(url);
 
   function show(){
@@ -32,7 +34,33 @@ export function EditorWebLink({editor,readonly}:{editor:Editor|null;readonly:boo
     }catch(e){setError(e instanceof Error?e.message:'글을 선택하세요.');}
   }
 
-  opener.current=show;
+  function showBubble(){
+    if(!editor||readonly||!editor.isEditable)return;
+
+    try{
+      const next=captureWebLink(editor.state);
+
+      if(!next.linked)return;
+      setBubble(next);
+      bubbleAnchor.current={getBoundingClientRect:()=>{try{const c=editor.view.coordsAtPos(next.from);
+
+return new DOMRect(c.left,c.top,1,c.bottom-c.top);}catch{return new DOMRect();}}};
+    }catch{/* A link inside a node selection keeps the plain caret. */}
+  }
+
+  opener.current=show;bubbler.current=showBubble;
+  useEffect(()=>{
+    if(!editor||!bubble)return;
+
+    // Typing or moving out of the link closes the address bubble; the caret stays where it is.
+    const update=()=>{const {from,to}=editor.state.selection;
+
+if(!editor.state.doc.eq(bubble.document)||from<bubble.from||to>bubble.to)setBubble(null);};
+
+    editor.on('transaction',update);
+
+    return()=>{editor.off('transaction',update);};
+  },[editor,bubble]);
   useEffect(()=>{
     if(!editor)return;
 
@@ -55,7 +83,7 @@ if(href)window.open(href,'_blank','noopener,noreferrer');}
         const pos=event.detail===0?editor.view.posAtDOM(link,0):editor.view.posAtCoords({left:event.clientX,top:event.clientY})?.pos;
 
         if(pos!==undefined)editor.commands.setTextSelection(pos);
-        opener.current();
+        bubbler.current();
       }
     };
 
@@ -65,6 +93,13 @@ if(href)window.open(href,'_blank','noopener,noreferrer');}
   },[editor]);
 
   function close(){setTarget(null);setError('');}
+
+  function edit(){setBubble(null);show();}
+
+  function unlink(){
+    if(!editor||!bubble||readonly||!editor.isEditable||!editor.state.doc.eq(bubble.document))return;
+    editor.view.dispatch(webLinkTransaction(editor.state,bubble,null,''));editor.view.dispatch(closeHistory(editor.state.tr));setBubble(null);editor.view.focus();
+  }
 
   function apply(remove=false){
     if(!editor||!target||!current||readonly||!editor.isEditable)return;
@@ -76,6 +111,11 @@ if(href)window.open(href,'_blank','noopener,noreferrer');}
   return <>
     <IconButton id={buttonId} label="웹 링크" disabled={!editor||readonly} aria-pressed={editor?.isActive('link')||!!target} onMouseDown={event=>event.preventDefault()} onClick={show}><Globe size={16}/></IconButton>
     {error&&!target&&<span className="note-command-notice" role="status">{error}</span>}
+    <Popover open={!!bubble} onOpenChange={open=>{if(!open)setBubble(null);}} anchor={bubbleAnchor} width={300} initialFocus="none" className="editor-link-bubble">
+      <a className="editor-link-bubble-url" href={normalizeWebLink(bubble?.href||'')||undefined} target="_blank" rel="noopener noreferrer" title={bubble?.href}>{bubble?.href}</a>
+      <IconButton label="웹 링크 수정" onMouseDown={event=>event.preventDefault()} onClick={edit}><Pencil size={15}/></IconButton>
+      <IconButton label="링크 해제" onMouseDown={event=>event.preventDefault()} onClick={unlink}><Unlink size={15}/></IconButton>
+    </Popover>
     <Popover open={!!target} onOpenChange={open=>{if(!open)close();}} anchor={anchor} title={target?.linked?'웹 링크 수정':'웹 링크 추가'} width={320} onReturnFocus={()=>{if(editor&&!editor.isDestroyed)editor.view.focus();}}>
       <form className="editor-web-link-form" onSubmit={event=>{event.preventDefault();apply();}}>
         <label>주소<input ref={input} autoFocus aria-label="웹 링크 주소" type="text" inputMode="url" autoComplete="url" autoCapitalize="off" spellCheck={false} maxLength={4096} placeholder="https://example.com" value={url} aria-invalid={!!error} onChange={event=>{setUrl(event.target.value);setError('');}}/></label>

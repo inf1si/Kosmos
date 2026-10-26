@@ -6,14 +6,15 @@ import JSZip from 'jszip';
 import {PDFDocument,PDFName,PDFArray,PDFDict,PDFRawStream,decodePDFRawStream} from 'pdf-lib';
 import {XMLValidator} from 'fast-xml-parser';
 import {bookFixture} from './fixtures/book-work';
-import {bookDocuments,bookChapterXhtml,bookHref,bookFonts,makeBookSource,defaultBookOptions,type BookOptions} from '../src/lib/book-content';
+import fontkit from '@pdf-lib/fontkit';
+import {bookDocuments,bookChapterXhtml,bookHref,bookFonts,bookSpread,makeBookSource,defaultBookOptions,readBookPreset,saveBookPreset,type BookOptions} from '../src/lib/book-content';
 import {prepareBook,exportBook,bookHtml,type BookFontData} from '../src/lib/book-export';
 import {layoutBook,wrapBookText,mm} from '../src/lib/book-layout';
 import {fromText} from '../src/lib/model';
 
-async function fonts(font:BookOptions['font']='maruburi'):Promise<BookFontData>{const names=bookFonts[font];
+async function fonts(font:BookOptions['font']='maruburi'):Promise<BookFontData>{const names=bookFonts[font],zip=await JSZip.loadAsync(await readFile(`public/book-fonts/${font}-fallback.zip`));
 
-return {regular:new Uint8Array(await readFile(`public/book-fonts/${names.regular}`)),bold:new Uint8Array(await readFile(`public/book-fonts/${names.bold}`)),license:await readFile('public/licenses/fonts.txt','utf8'),pdf:{regular:await readFile(font==='maruburi'?'node_modules/@kfonts/maruburi/src/MaruBuri-Regular.ttf':'node_modules/wanted-sans/fonts/ttf/WantedSans-Regular.ttf'),bold:await readFile(font==='maruburi'?'node_modules/@kfonts/maruburi/src/MaruBuri-Bold.ttf':'node_modules/wanted-sans/fonts/ttf/WantedSans-Bold.ttf')}};}
+return {fallback:{regular:await zip.file(`${names.fallbackName}-Regular.ttf`)!.async('uint8array'),bold:await zip.file(`${names.fallbackName}-Bold.ttf`)!.async('uint8array')},subsetter:new Uint8Array(await readFile('public/book-fonts/harfbuzz-subset.wasm')),regular:new Uint8Array(await readFile(`public/book-fonts/${names.regular}`)),bold:new Uint8Array(await readFile(`public/book-fonts/${names.bold}`)),license:await readFile('public/licenses/fonts.txt','utf8'),pdf:{regular:await readFile(font==='maruburi'?'node_modules/@kfonts/maruburi/src/MaruBuri-Regular.ttf':'node_modules/wanted-sans/fonts/ttf/WantedSans-Regular.ttf'),bold:await readFile(font==='maruburi'?'node_modules/@kfonts/maruburi/src/MaruBuri-Bold.ttf':'node_modules/wanted-sans/fonts/ttf/WantedSans-Bold.ttf')}};}
 
 const fixture=bookFixture(),source=makeBookSource(fixture.work,[fixture.second.id,fixture.first.id]),options={...defaultBookOptions,title:'우주 <너머> & 책',author:'합성 작가'};
 
@@ -140,4 +141,55 @@ test('큰 글자가 섞인 문단과 표는 글리프가 줄·셀 위로 침범�
  assert(paragraph.y-paragraph.size*.9>=options.margin*mm,'paragraph ascenders fit within the line');
  assert(cell.y-cell.size*.9>=border.y+4,'table ascenders fit within cell padding');
  assert(cell.y+cell.size*.25<=border.y+border.height-4,'table descenders fit within cell padding');
+});
+
+test('한자·가나·기호는 보조 글꼴로 PDF에 넣고 쓴 글자만 담는다',async()=>{
+ for(const font of ['maruburi','wanted'] as const){
+  const {work,first}=bookFixture();first.title='天劍 第一章';first.content=fromText('그는 天劍을 들었다！ 「春夏秋冬」 ～ αβγ Привет ひらがな ①② Ⅰ ≤≥∞ ◆♪');
+  const book=await prepareBook(makeBookSource(work,[first.id]),{...options,font},await fonts(font));
+  assert.deepEqual(book.missingGlyphs,[]);assert(book.fallback?.regular&&book.fallback.regular.length<100000);assert(book.fallback.bold&&book.fallback.bold.length<100000);
+  const cut=fontkit.create(Buffer.from(book.fallback.regular));assert(cut.hasGlyphForCodePoint(0x5929));assert(!cut.hasGlyphForCodePoint(0x5b87),'only used characters');
+  const pdf=await PDFDocument.load(await (await exportBook(book,'pdf')).blob.arrayBuffer()),fontFiles=pdf.context.enumerateIndirectObjects().filter(([,object])=>object instanceof PDFDict&&object.has(PDFName.of('FontFile2')));assert.equal(fontFiles.length,4);
+  assert((await (await exportBook(book,'html')).blob.text()).includes('font-family:BookFallback'));
+ }
+});
+
+test('PDF에 없는 문자는 들어 있는 문서 이름과 함께 알린다',async()=>{
+ const {work,first,second}=bookFixture();first.content=fromText('별빛 🪐 기록');const book=await prepareBook(makeBookSource(work,[first.id,second.id]),options,await fonts());
+ assert.deepEqual(book.missingPlaces,[first.title]);await assert.rejects(()=>exportBook(book,'pdf'),new RegExp(`🪐 \\(${first.title}\\)`));
+});
+
+test('같은 부가 이어지면 부 제목은 처음 한 번만 찍고 목차는 부 아래로 묶는다',async()=>{
+ const {work,first,second}=bookFixture();first.chapter='제1부';second.chapter='제1부';const source=makeBookSource(work,[first.id,second.id]);
+ assert.deepEqual(source.chapters.map(c=>c.sectionStart),[true,false]);
+ const book=await prepareBook(source,options,await fonts()),texts=book.layout.pages.map(page=>page.commands.flatMap(c=>c.kind==='text'?[c.text]:[]));
+ assert.equal(texts.flat().filter(text=>text==='제1부').length,2,'once in the TOC and once above the first chapter');
+ const toc=book.layout.pages[1].commands.flatMap(c=>c.kind==='text'?[c]:[]),part=toc.find(c=>c.text==='제1부')!,entry=toc.find(c=>c.text===second.title)!;assert(part.bold);assert(entry.x>part.x);
+ assert(!bookChapterXhtml(source.chapters[1]).includes('제1부'));
+ const zip=await JSZip.loadAsync(await (await exportBook(await prepareBook(source,options,await fonts(),'epub'),'epub')).blob.arrayBuffer()),nav=await zip.file('OEBPS/nav.xhtml')!.async('string');
+ assert.equal(XMLValidator.validate(nav),true);assert(nav.includes('<li><a href="chapter-1.xhtml">제1부</a><ol><li><a href="chapter-1.xhtml">'));assert(nav.includes('</a></li></ol></li></ol></nav>'));
+});
+
+test('두 쪽 보기는 1쪽을 혼자 두고 2–3, 4–5쪽을 펼친다',()=>{
+ assert.deepEqual(bookSpread(0,6),[0]);assert.deepEqual(bookSpread(1,6),[1,2]);assert.deepEqual(bookSpread(2,6),[1,2]);assert.deepEqual(bookSpread(5,6),[5]);assert.deepEqual(bookSpread(4,5),[3,4]);
+});
+
+test('책 설정은 작품별로 이 기기에만 기억하고 깨진 값은 무시한다',()=>{
+ const store=new Map<string,string>();Object.assign(globalThis,{localStorage:{getItem:(key:string)=>store.get(key)??null,setItem:(key:string,value:string)=>store.set(key,value)}});
+
+ try{
+  assert.equal(readBookPreset('work-a'),null);saveBookPreset('work-a',{options:{paper:'a4',size:12},format:'epub'});
+  assert.deepEqual(readBookPreset('work-a'),{options:{paper:'a4',size:12},format:'epub'});assert.equal(readBookPreset('work-b'),null);
+  store.set('kosmos-book-export','{"work-a":{"options":{"size":99}}}');assert.equal(readBookPreset('work-a'),null);
+ }finally{Reflect.deleteProperty(globalThis,'localStorage');}
+});
+
+test('보조 글꼴 묶음은 기본 글꼴에 없는 글자만 담고 부분 글꼴 도구는 npm 원본이다',async()=>{
+ for(const font of ['maruburi','wanted'] as const){
+  const data=await fonts(font),regular=fontkit.create(Buffer.from(data.fallback!.regular));
+  assert(regular.hasGlyphForCodePoint(0x5929));assert(!regular.hasGlyphForCodePoint(0xac00),'Hangul stays in the book font');
+  assert.equal((await JSZip.loadAsync(await readFile(`public/book-fonts/${font}-fallback.zip`))).file('fonts.txt')&&await (await JSZip.loadAsync(await readFile(`public/book-fonts/${font}-fallback.zip`))).file('fonts.txt')!.async('string'),data.license);
+ }
+
+ assert.deepEqual(await readFile('public/book-fonts/harfbuzz-subset.wasm'),await readFile('node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm'));
 });

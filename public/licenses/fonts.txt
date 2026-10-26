@@ -2117,7 +2117,7 @@ END FONT 19: Nanum Pen Script
 ========================================================================
 BEGIN FONT 20: Noto Sans KR
 SPDX-License-Identifier: OFL-1.1
-Delivery: Next Font self-hosted
+Delivery: Next Font self-hosted; book PDF/HTML fallback for Wanted Sans: subset of npm package @expo-google-fonts/noto-sans-kr@0.4.4 (characters Wanted Sans lacks, outlines unchanged)
 Source: https://raw.githubusercontent.com/google/fonts/45e3d5269e4a17d823f6d84470bc084dc5ae46f6/ofl/notosanskr/OFL.txt
 
 Copyright notices retained in the distributed font files:
@@ -2225,7 +2225,7 @@ END FONT 20: Noto Sans KR
 ========================================================================
 BEGIN FONT 21: Noto Serif KR
 SPDX-License-Identifier: OFL-1.1
-Delivery: Next Font self-hosted
+Delivery: Next Font self-hosted; book PDF/HTML fallback for MaruBuri: subset of npm package @expo-google-fonts/noto-serif-kr@0.4.4 (characters MaruBuri lacks, outlines unchanged)
 Source: https://raw.githubusercontent.com/google/fonts/45e3d5269e4a17d823f6d84470bc084dc5ae46f6/ofl/notoserifkr/OFL.txt
 
 Copyright notices retained in the distributed font files:

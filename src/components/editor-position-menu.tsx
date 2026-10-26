@@ -6,7 +6,8 @@ import {Plugin,PluginKey,Selection,TextSelection,AllSelection,NodeSelection} fro
 import {closeHistory} from '@tiptap/pm/history';
 import {CellSelection} from '@tiptap/pm/tables';
 import * as Popup from '@radix-ui/react-popover';
-import {ArrowLeft,ChevronRight,Clipboard,Globe,ExternalLink,Unlink,Heading1,Heading2,Heading3,ImagePlus,Link2,List,ListChecks,ListOrdered,MessageSquareText,Minus,Plus,Quote,Table2,Trash2,Type} from 'lucide-react';
+import {ArrowLeft,ChevronRight,Clipboard,Globe,ExternalLink,Unlink,Heading1,Heading2,Heading3,ImagePlus,Link2,List,ListChecks,ListOrdered,MessageSquareText,Minus,Plus,Quote,Table2,Trash2,Type,TextCursorInput,FileText} from 'lucide-react';
+import {Popover} from './primitives';
 import type {RichNode} from '@/lib/model';
 import {internalReferenceSchema,type InternalReference} from '@/lib/internal-reference-node';
 import {editorFootnote} from '@/lib/editor-footnotes';
@@ -14,14 +15,17 @@ import {EditorFootnotePopover} from './editor-footnote-popover';
 import {requestWebLink} from './editor-web-link';
 import {normalizeWebLink} from '@/lib/editor-web-links';
 
-type Context={x:number;y:number;selection:Selection;document:Editor['state']['doc']} & ({kind:'paragraph'|'table'}|{kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference}|{kind:'web-link';pos:number;to:number;href:string});
+type Special={kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference}|{kind:'web-link';pos:number;to:number;href:string}|{kind:'wiki-link';pos:number;to:number;targetId:string}|{kind:'image';pos:number;alt:string};
+
+type Context={x:number;y:number;selection:Selection;document:Editor['state']['doc']} & ({kind:'paragraph'|'table'}|Special);
 
 type Action={label:string;icon:typeof Type;apply:(chain:ChainedCommands)=>ChainedCommands};
 
 const key=new PluginKey('editorPositionMenu');
 
 /** Separate from the selected-text menu: commands keep the clicked caret/cell, never the AI paragraph range. */
-export function EditorPositionMenu({editor,note,onLink,onFootnote,onImage,onReference,onOpen,onEditing}:{editor:Editor;note:boolean;onLink:()=>void;onFootnote:()=>void;onImage?:()=>void;onReference?:(reference:InternalReference)=>void;onOpen:()=>void;onEditing:(editing:boolean)=>void}){
+export function EditorPositionMenu({editor,note,onLink,onFootnote,onImage,onReference,onWiki,onOpen,onEditing}:{editor:Editor;note:boolean;onLink:()=>void;onFootnote:()=>void;onImage?:()=>void;onReference?:(reference:InternalReference)=>void;onWiki?:(id:string)=>void;onOpen:()=>void;onEditing:(editing:boolean)=>void}){
+  const [alt,setAlt]=useState<{pos:number;value:string;document:Editor['state']['doc']}|null>(null),altAnchor=useRef({getBoundingClientRect:()=>new DOMRect()});
   const [menu,setMenu]=useState<Context|null>(null),[page,setPage]=useState<'root'|'paragraph'|'insert'>('root'),[editing,setEditing]=useState<string|null>(null),[notice,setNotice]=useState('');
   const handler=useRef<(event:MouseEvent)=>boolean>(()=>false),pending=useRef<(()=>void)|null>(null);
   const editingChanged=useRef(onEditing);editingChanged.current=onEditing;
@@ -83,8 +87,14 @@ close();}
     const selected=editor.state.selection;
 
     if(selectedTextAt(pos))return false;
-    const atom=element.closest('[data-note-id],[data-internal-reference]');
-    let special:{kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference}|{kind:'web-link';pos:number;to:number;href:string}|null=null;
+    const atom=element.closest('[data-note-id],[data-internal-reference]'),figure=element.closest('[data-note-image]');
+    let special:Special|null=null;
+
+    if(figure){
+      const at=editor.view.posAtDOM(figure,0),start=[at,at-1].find(value=>value>=0&&editor.state.doc.nodeAt(value)?.type.name==='noteImage');
+
+      if(start!==undefined)special={kind:'image',pos:start,alt:String(editor.state.doc.nodeAt(start)?.attrs.alt||'')};
+    }
 
     if(atom){
       const start=editor.view.posAtDOM(atom,0),node=editor.state.doc.nodeAt(start);
@@ -104,8 +114,11 @@ close();}
     const web=element.closest('a[href]'),range=web?getMarkRange(editor.state.doc.resolve(pos),editor.schema.marks.link):undefined;
 
     if(!special&&web&&range)special={kind:'web-link',pos:range.from,to:range.to,href:web.getAttribute('href')||''};
+    const wiki=element.closest('[data-wiki-id]'),wikiRange=wiki?getMarkRange(editor.state.doc.resolve(pos),editor.schema.marks.wikiLink):undefined;
+
+    if(!special&&wiki&&wikiRange)special={kind:'wiki-link',pos:wikiRange.from,to:wikiRange.to,targetId:wiki.getAttribute('data-wiki-id')||''};
     const cell=element.closest('td,th');
-    const selection=selected instanceof CellSelection&&cell?.classList.contains('selectedCell')?selected:Selection.near(editor.state.doc.resolve(special?.pos??pos));
+    const selection=special?.kind==='image'?NodeSelection.create(editor.state.doc,special.pos):selected instanceof CellSelection&&cell?.classList.contains('selectedCell')?selected:Selection.near(editor.state.doc.resolve(special?.pos??pos));
 
     if(!special&&!(selection instanceof CellSelection)&&!selection.$from.parent.isTextblock)return false;
     event.preventDefault();pending.current=null;onOpen();setEditing(null);onEditing(true);setPage('root');setNotice('');
@@ -184,7 +197,16 @@ return paragraph;});
     {label:'표 삭제',icon:Trash2,apply:c=>c.deleteTable()},
   ];
 
-  const label=menu?.kind==='table'?'표 메뉴':menu?.kind==='footnote'?'각주 메뉴':menu?.kind==='reference'?'참조 메뉴':menu?.kind==='web-link'?'웹 링크 메뉴':'문단 메뉴';
+  const label={paragraph:'문단 메뉴',table:'표 메뉴',footnote:'각주 메뉴',reference:'참조 메뉴','web-link':'웹 링크 메뉴','wiki-link':note?'노트 링크 메뉴':'설정 링크 메뉴',image:'이미지 메뉴'}[menu?.kind||'paragraph'];
+
+  function saveAlt(){
+    if(!alt||editor.isDestroyed||!editor.isEditable||!editor.state.doc.eq(alt.document)){setAlt(null);setNotice('글이 바뀌었습니다. 다시 열어주세요.');
+
+return;}
+
+    editor.view.dispatch(closeHistory(editor.state.tr.setNodeAttribute(alt.pos,'alt',alt.value.trim().slice(0,300))));setAlt(null);editor.view.focus();
+  }
+
   const actionButton=(action:Action)=><button type="button" role="menuitem" className="menu-item" key={action.label} disabled={!menu||!current(menu)||!action.apply(editor.can().chain()).run()} onClick={()=>run(action.apply)}><action.icon size={15}/>{action.label}</button>;
 
   return <>
@@ -222,10 +244,25 @@ if(action&&!editor.isDestroyed){editor.view.focus();action();}}}>
 if(href)window.open(href,'_blank','noopener,noreferrer');close(true);}}><ExternalLink size={15}/>새 탭에서 열기</button>
             {actionButton({label:'링크 해제',icon:Unlink,apply:c=>c.setTextSelection({from:menu.pos,to:menu.to}).unsetLink()})}
           </>}
+          {menu?.kind==='wiki-link'&&<>
+            <button type="button" role="menuitem" className="menu-item" disabled={!onWiki||!menu.targetId} onClick={()=>{const id=menu.targetId;close();onWiki?.(id);}}><FileText size={15}/>{note?'노트 열기':'설정 열기'}</button>
+            {actionButton({label:'연결 해제',icon:Unlink,apply:c=>c.setTextSelection({from:menu.pos,to:menu.to}).unsetMark('wikiLink')})}
+          </>}
+          {menu?.kind==='image'&&<>
+            {onImage&&<button type="button" role="menuitem" className="menu-item" onClick={()=>{if(menu&&restore(menu)){close(true);onImage();}}}><ImagePlus size={15}/>이미지 바꾸기</button>}
+            <button type="button" role="menuitem" className="menu-item" onClick={()=>{const target=menu;altAnchor.current.getBoundingClientRect=()=>new DOMRect(target.x,target.y,0,0);next(()=>setAlt({pos:target.pos,value:target.alt,document:editor.state.doc}));}}><TextCursorInput size={15}/>이미지 설명</button>
+            {actionButton({label:'이미지 삭제',icon:Trash2,apply:c=>c.deleteRange({from:menu.pos,to:menu.pos+1})})}
+          </>}
           {menu?.kind==='reference'&&<><button type="button" role="menuitem" className="menu-item" disabled={!onReference} onClick={()=>{const ref=menu.reference;next(()=>onReference?.(ref));}}><Link2 size={15}/>미리보기</button>{actionButton({label:'참조 제거',icon:Trash2,apply:c=>c.deleteRange({from:menu.pos,to:menu.pos+1})})}</>}
         </div>
       </Popup.Content>
     </Popup.Portal></Popup.Root>
+    <Popover open={!!alt} onOpenChange={open=>{if(!open)setAlt(null);}} anchor={altAnchor} title="이미지 설명" width={300} onReturnFocus={()=>{if(!editor.isDestroyed)editor.view.focus();}}>
+      <form className="editor-web-link-form" onSubmit={event=>{event.preventDefault();saveAlt();}}>
+        <label>설명<input autoFocus aria-label="이미지 설명" maxLength={300} value={alt?.value||''} onChange={event=>{const value=event.target.value;setAlt(current=>current&&{...current,value});}}/></label>
+        <div className="popover-actions"><button type="button" onClick={()=>setAlt(null)}>취소</button><button type="submit" className="primary">저장</button></div>
+      </form>
+    </Popover>
     {editing&&<EditorFootnotePopover key={editing} editor={editor} id={editing} readonly={false} initialEditing onClose={()=>{setEditing(null);onEditing(false);}} onStay={()=>{}} onLeave={()=>{}} onEditing={onEditing}/>}
   </>;
 }

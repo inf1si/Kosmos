@@ -15,7 +15,7 @@ export type BookOptions=z.infer<typeof bookOptionsSchema>;
 
 export type BookFormat='pdf'|'epub'|'html';
 
-export const bookFonts={maruburi:{label:'마루부리',regular:'MaruBuri-Regular.woff2',bold:'MaruBuri-Bold.woff2',fallback:'serif'},wanted:{label:'원티드 산스',regular:'WantedSans-Regular.woff2',bold:'WantedSans-Bold.woff2',fallback:'sans-serif'}};
+export const bookFonts={maruburi:{label:'마루부리',regular:'MaruBuri-Regular.woff2',bold:'MaruBuri-Bold.woff2',fallback:'serif',fallbackName:'NotoSerifKR'},wanted:{label:'원티드 산스',regular:'WantedSans-Regular.woff2',bold:'WantedSans-Bold.woff2',fallback:'sans-serif',fallbackName:'NotoSansKR'}};
 
 export const bookPapers={a5:{label:'A5 · 148 × 210mm',width:148,height:210},trade:{label:'신국판 · 152 × 225mm',width:152,height:225},a4:{label:'A4 · 210 × 297mm',width:210,height:297}};
 
@@ -23,11 +23,17 @@ export const defaultBookOptions:BookOptions={title:'',author:'',paper:'a5',orien
 
 export type BookNote={id:string;index:number;text:string};
 
-export type BookChapter={id:string;title:string;section:string;content:RichNode;notes:BookNote[]};
+/** sectionStart marks the first chapter of a run with the same section, where the section title is printed. */
+export type BookChapter={id:string;title:string;section:string;sectionStart?:boolean;content:RichNode;notes:BookNote[]};
 
 export type BookSource={id:string;chapters:BookChapter[]};
 
 export type BookSpan={text:string;bold?:boolean;italic?:boolean;underline?:boolean;strike?:boolean;highlight?:boolean;scale?:number;shift?:number;href?:string;anchor?:string};
+
+/** Page indexes shown together: page 1 (index 0) is a right-hand page alone, then 2–3, 4–5… as in a bound book. */
+export function bookSpread(page:number,count:number){const start=page===0?0:page%2?page:page-1;
+
+return start===0?[0]:[start,...start+1<count?[start+1]:[]];}
 
 export const bookEscape=(text:string)=>text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
@@ -52,7 +58,7 @@ export function makeBookSource(work:Work,selected:string[]):BookSource{
 
   if(documents.length>500||documents.reduce((sum,doc)=>sum+plainText(doc.content).length,0)>2000000)throw new Error('원고를 나누어서 내보내세요.');
 
-  const chapters=documents.map((doc,index)=>{
+  const chapters=documents.map((doc,index):BookChapter=>{
     const content=withoutInternalReferences(doc.content),notes:BookNote[]=[];
 
     function visit(node:RichNode){
@@ -65,6 +71,8 @@ export function makeBookSource(work:Work,selected:string[]):BookSource{
 
     return {id:`chapter-${index+1}`,title:doc.title.trim(),section:doc.chapter.trim(),content,notes};
   });
+
+  chapters.forEach((chapter,index)=>{chapter.sectionStart=!!chapter.section&&chapter.section!==chapters[index-1]?.section;});
 
   return {id:uid(),chapters};
 }
@@ -158,5 +166,28 @@ return `<${tag}${style?` style="list-style-type:${style}"`:''}${tag==='ol'?` sta
 
   const notes=chapter.notes.length?`<section epub:type="endnotes"><h2>각주</h2>${chapter.notes.map(note=>`<aside epub:type="footnote" id="${note.id}"><p><a href="#ref-${note.id}">[${note.index}]</a> ${bookEscape(note.text).replace(/\n/g,'<br />')}</p></aside>`).join('')}</section>`:'';
 
-  return `${chapter.section?`<p class="section">${bookEscape(chapter.section)}</p>`:''}${chapter.title?`<h1>${bookEscape(chapter.title)}</h1>`:''}${render(chapter.content)}${notes}`;
+  return `${chapter.sectionStart?`<p class="section">${bookEscape(chapter.section)}</p>`:''}${chapter.title?`<h1>${bookEscape(chapter.title)}</h1>`:''}${render(chapter.content)}${notes}`;
+}
+
+const BOOK_PRESET_KEY='kosmos-book-export';
+
+const bookPresetSchema=z.object({options:bookOptionsSchema.partial(),format:z.enum(['pdf','epub','html']).optional(),ids:z.array(z.string().max(100)).max(1000).optional()});
+
+/** Last book settings per work, kept on this device only. Title, author and selection are kept only when changed from their defaults. */
+export type BookPreset=z.infer<typeof bookPresetSchema>;
+
+const bookPresetsSchema=z.record(z.string().max(100),bookPresetSchema);
+
+function bookPresets():Record<string,BookPreset>{
+  try{const parsed=bookPresetsSchema.safeParse(JSON.parse(localStorage.getItem(BOOK_PRESET_KEY)||'{}'));
+
+return parsed.success?parsed.data:{};}catch{return {};}
+}
+
+export function readBookPreset(workId:string):BookPreset|null{return bookPresets()[workId]??null;}
+
+export function saveBookPreset(workId:string,preset:BookPreset){
+  const all=bookPresets();delete all[workId];
+
+  try{localStorage.setItem(BOOK_PRESET_KEY,JSON.stringify(Object.fromEntries([...Object.entries(all).slice(-49),[workId,preset]])));}catch{/* The next export starts from the defaults. */}
 }
