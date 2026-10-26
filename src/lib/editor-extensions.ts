@@ -11,6 +11,7 @@ import { uid, type RichAttributes } from './model';
 import { z } from 'zod';
 import { htmlParagraphAttrs,paragraphCss,inlineFontSize,listStyleType,validListStyle } from './manuscript-format';
 import { searchPlugin,searchJumpPlugin } from './editor-search';
+import { explicitWebAddress } from './editor-web-links';
 
 const Note=Node.create({name:'footnote',priority:1000,group:'inline',inline:true,atom:true,
   addAttributes(){return {noteId:{default:null},text:{default:''}};},parseHTML(){return [{tag:'sup[data-note-id]'}];},
@@ -68,7 +69,7 @@ export function trailingParagraphPlugin(){return new Plugin({appendTransaction:(
 
 const TrailingParagraph=Extension.create({name:'trailingParagraph',addProseMirrorPlugins(){return [trailingParagraphPlugin()];}});
 
-export const editorExtensions=[StarterKit.configure({trailingNode:false,link:{openOnClick:false,defaultProtocol:'https'}}),TrailingParagraph,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];
+export const editorExtensions=[StarterKit.configure({trailingNode:false,link:{openOnClick:false,defaultProtocol:'https',shouldAutoLink:explicitWebAddress}}),TrailingParagraph,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];
 
 /** Personal notes add checklists and in-body images. Works keep the base set so their documents never hold these nodes. */
 export const noteExtensions=[TaskList,TaskItem.configure({nested:true})];

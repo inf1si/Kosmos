@@ -18,6 +18,9 @@ export function normalizeWebLink(value:string):string|null{
   }catch{return null;}
 }
 
+/** Typing or pasting links text only when it is written as a web address, so names such as Mr.Kim or readme.md stay text. */
+export function explicitWebAddress(value:string){return /^(?:https?:\/\/|www\.)/i.test(value)&&!!normalizeWebLink(value);}
+
 export type WebLinkTarget={document:PMNode;from:number;to:number;href:string;inserting:boolean;linked:boolean};
 
 export function captureWebLink(state:EditorState):WebLinkTarget{

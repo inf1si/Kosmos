@@ -4,7 +4,7 @@ import {getSchema} from '@tiptap/core';
 import {EditorState,TextSelection} from '@tiptap/pm/state';
 import {history,undo} from '@tiptap/pm/history';
 import {editorExtensions} from '../src/lib/editor-extensions';
-import {captureWebLink,normalizeWebLink,webLinkTransaction} from '../src/lib/editor-web-links';
+import {captureWebLink,explicitWebAddress,normalizeWebLink,webLinkTransaction} from '../src/lib/editor-web-links';
 import {isRichDocument,makePublication,plainText,uid} from '../src/lib/model';
 import {InternalReferenceNode} from '../src/components/internal-reference-node';
 import {seedWorkspace} from '../src/lib/seed';
@@ -57,4 +57,10 @@ test('웹 링크는 원본·판본·전체 백업과 HTML 교환에 보존된다
   assert.deepEqual(makePublication(work,[scene.id]).scenes[0].content,scene.content);assert.equal(plainText(scene.content),'연결 문장');
   const exported=await exportInterchange(work,[scene.id],[],[],'html');const imported=await readInterchange([new File([exported.blob],exported.name)]);
   assert(JSON.stringify(imported).includes('https://example.com/source'));
+});
+
+test('입력·붙여넣기 자동 링크는 http(s):// 또는 www.로 쓴 주소만 만든다',()=>{
+  for(const value of ['https://example.com/a','http://example.com','www.example.com','HTTPS://Example.com'])assert.equal(explicitWebAddress(value),true,value);
+
+  for(const value of ['Mr.Kim','readme.md','naver.com','a@b.com','mailto:a@b.com','javascript:alert(1)','https://name:secret@example.com'])assert.equal(explicitWebAddress(value),false,value);
 });
