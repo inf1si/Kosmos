@@ -21,6 +21,7 @@ import { EditorSearch } from './editor-search';
 import type { EditorAIScope } from '@/lib/ai-conversation';
 import { EditorCommands } from './editor-commands';
 import { EditorPositionMenu } from './editor-position-menu';
+import { EditorWebLink } from './editor-web-link';
 import { captureEditorTarget,targetIsCurrent } from '@/lib/editor-target';
 import { EditorFootnotePopover } from './editor-footnote-popover';
 import { InternalReferenceNode } from './internal-reference-node';
@@ -162,6 +163,7 @@ if(!file||!editor)return;const position=captureEditorTarget(editor),imageSelecti
       <span className="toolbar-divider"/>
       <IconButton label="각주 추가" disabled={readonly} onClick={e=>openDialog('note',e.currentTarget)}><MessageSquareText size={16}/></IconButton>
       <IconButton label={linkCopy.tool} disabled={readonly||!wiki.length} onClick={e=>openDialog('wiki',e.currentTarget)}><Link2 size={16}/></IconButton>
+      <EditorWebLink editor={editor} readonly={readonly}/>
       <EditorSearch editor={editor} readonly={readonly} seed={findSeed}/>
       {references&&<button type="button" className="toolbar-text-button" aria-pressed={references.open} aria-label="글 참조와 백링크" onClick={references.onConnections}><AtSign size={15}/>참조</button>}
       {(toolbarEnd||renderToolbarEnd)&&<div className="toolbar-end">{renderToolbarEnd?renderToolbarEnd(editor?statisticsSelection(editor.state.doc,editor.state.selection.from,editor.state.selection.to):null):toolbarEnd}</div>}

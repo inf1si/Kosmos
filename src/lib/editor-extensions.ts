@@ -68,7 +68,7 @@ export function trailingParagraphPlugin(){return new Plugin({appendTransaction:(
 
 const TrailingParagraph=Extension.create({name:'trailingParagraph',addProseMirrorPlugins(){return [trailingParagraphPlugin()];}});
 
-export const editorExtensions=[StarterKit.configure({trailingNode:false}),TrailingParagraph,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];
+export const editorExtensions=[StarterKit.configure({trailingNode:false,link:{openOnClick:false,defaultProtocol:'https'}}),TrailingParagraph,TextAlign.configure({types:['heading','paragraph']}),TableKit.configure({table:{resizable:true,renderWrapper:true,cellMinWidth:60}}),Superscript.extend({excludes:'subscript'}),Subscript.extend({excludes:'superscript'}),Highlight,FontSize,Note,WikiLink,StableBlocks,ParagraphFormat,ListStyle,SearchMarks];
 
 /** Personal notes add checklists and in-body images. Works keep the base set so their documents never hold these nodes. */
 export const noteExtensions=[TaskList,TaskItem.configure({nested:true})];

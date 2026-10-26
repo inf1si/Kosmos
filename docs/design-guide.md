@@ -270,6 +270,8 @@ Ultra Violet·Very Peri 원색은 어두운 바탕에서 대비가 2.4:1 수준�
 
 **선택 입력.** 설정의 분류·원고의 시점 인물은 직접 입력 가능한 combobox다. 화살표를 누르면 이미 값이 채워져 있어도 작품의 기존 항목 전체를 펼친다. 입력 중에는 항목을 거르고 위·아래·Enter로 선택, Esc·바깥 클릭으로 닫는다. 새 값도 그대로 저장한다. 목록은 `--pop`·`--line`·`--sel`, 모양은 `--ctl-r`·`--r-in`을 쓴다.
 
+**웹 링크.** 공용 Popover에 13px 기본 label/input과 popover-actions를 쓴다. 삽입 창은 주소·표시할 글, 수정 창은 주소·링크 해제·새 탭 버튼이다. 도구 모음과 입력 명령/삽입 메뉴 아이콘은 Globe, 새 탭은 ExternalLink, 해제는 Unlink를 쓴다. 본문 링크는 기존 editor-wiki-link의 `--link` 색·`--soft` 밑줄을 재사용한다. 새 색·모양·고정 줄은 없다. [사용 계약](editor-web-links.md).
+
 **본문 우클릭.** 선택 글 메뉴를 유지하고 선택 없는 본문·표·각주·참조에는 같은 `.menu.note-command-menu`·`.menu-item`·`.menu-separator`와 Radix Popover 위치 관리를 쓴다. 문단 스타일·삽입은 같은 창 안에서 목록을 바꾸고 ArrowLeft **뒤로**로 돌아간다. 삽입은 Plus, 표 동작은 Table2·삭제는 Trash2, 본문·제목·목록·각주·링크는 기존 도구 아이콘을 재사용한다. 새 색/모양/고정 줄은 없다. [우클릭 계약](editor-context-menu.md).
 
 **전체 검색.** 집필실·노트의 사이드바 Search `nav-item`과 Ctrl/Cmd+K가 같은 `Modal`(`modal-wide`)을 연다. 많은 결과와 범위 선택을 집중해서 탐색하는 작업이므로 8절의 대화상자를 재사용한다. 기존 `sidebar-search` 입력·범위 select(둘 다 `sidebar-search`의 32px 높이, select 13px), 12px `field-help` 개수, `reference-card` 결과를 쓴다. 제목/경로는 말줄임, 본문은 12px 두 줄 발췌다. 본문 일치 개수 **N곳**은 행 오른쪽 12px `--muted` small(줄바꿈 없음)이다. 선택은 기존 `--sel`·`--link`, 일치 강조는 `editor-search-match`의 `--soft`·`--soft-ink`다. DocIcon과 노트 StickyNote를 유지한다. 창 안 결과만 스크롤하고 620px 이하에서는 검색/범위를 세로로 놓는다. 새로운 고정 막대·색·모양 토큰을 만들지 않는다. [전체 검색 계약](workspace-search.md).
