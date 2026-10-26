@@ -9,10 +9,12 @@ import { searchKey,searchJumpKey,searchMatches } from '@/lib/editor-search';
 import { IconButton,Popover } from './primitives';
 import styles from './editor-tools.module.css';
 
-export function EditorSearch({editor,readonly}:{editor:Editor|null;readonly:boolean}){
+/** seed: words found by the global search; it fills the next find so the following match is one Enter away. */
+export function EditorSearch({editor,readonly,seed=''}:{editor:Editor|null;readonly:boolean;seed?:string}){
   const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[replacement,setReplacement]=useState(''),[caseSensitive,setCaseSensitive]=useState(false),[wholeWord,setWholeWord]=useState(false);
   const options={query:open?query:'',caseSensitive,wholeWord},matches=editor?searchMatches(editor.state.doc,options):[],selection=editor?.state.selection,index=matches.findIndex(m=>m.from===selection?.from&&m.to===selection?.to);
   const ref=useRef<HTMLInputElement>(null),triggerId=useId();
+  useEffect(()=>{if(seed)setQuery(seed);},[seed]);
   useEffect(()=>{if(editor&&!editor.isDestroyed)editor.view.dispatch(editor.state.tr.setMeta(searchKey,{query:open?query:'',caseSensitive,wholeWord}).setMeta(searchJumpKey,open?null:undefined).setMeta('addToHistory',false));},[editor,query,caseSensitive,wholeWord,open]);
   useEffect(()=>{if(!editor)return;const key=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&['f','h'].includes(e.key.toLowerCase())){e.preventDefault();document.getElementById(triggerId)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});setOpen(true);}};
 

@@ -99,11 +99,19 @@ return node?.type==='folder'?node.title:null;}
   return doc?documentTitle(doc):null;
 }
 
-export function searchReferences(targets:ReferenceTarget[],sourceId:string,query:string):ReferenceTarget[]{
-  const words=query.trim().normalize('NFC').toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const found=targets.filter(target=>target.targetId!==sourceId&&words.every(word=>`${target.label} ${target.path} ${target.category}`.normalize('NFC').toLocaleLowerCase().includes(word)));
+/** Title matches first so a word shared with a work or folder name does not bury the item named by it. */
+function titleRank(label:string,phrase:string,words:string[]){
+  const title=label.normalize('NFC').toLocaleLowerCase();
 
-  return referenceGroups.flatMap(group=>found.filter(target=>referenceGroup(target)===group.id).slice(0,30));
+  return !words.length?0:title===phrase?0:title.startsWith(phrase)?1:words.every(word=>title.includes(word))?2:words.some(word=>title.includes(word))?3:4;
+}
+
+export function searchReferences(targets:ReferenceTarget[],sourceId:string,query:string):ReferenceTarget[]{
+  const phrase=query.trim().normalize('NFC').toLocaleLowerCase(),words=phrase.split(/\s+/).filter(Boolean);
+  const found=targets.filter(target=>target.targetId!==sourceId&&words.every(word=>`${target.label} ${target.path} ${target.category}`.normalize('NFC').toLocaleLowerCase().includes(word)));
+  const rank=new Map(found.map(target=>[target,titleRank(target.label,phrase,words)]));
+
+  return referenceGroups.flatMap(group=>found.filter(target=>referenceGroup(target)===group.id).sort((a,b)=>rank.get(a)!-rank.get(b)!).slice(0,30));
 }
 
 export function referenceChildren(targets:ReferenceTarget[],ref:InternalReference){return targets.filter(target=>target.parentKey===referenceKey(ref)).sort((a,b)=>a.order-b.order);}
