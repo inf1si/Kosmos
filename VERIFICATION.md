@@ -7,7 +7,8 @@
 - 브라우저(최적화, Chromium/WebKit): 1280/360px·27계열×라이트/다크에서 삽입/수정 창·웹 링크 메뉴의 경계·테마 바탕·13px·가로 넘침·링크 해제 아이콘/글자 같은 줄을 확인했다. 실제 드래그→도구 모음 추가/기존 선택 메뉴 유지, 위험 주소 입력 거절, 주소 수정/해제/한 번의 undo, HTML 모양 라벨의 문자 삽입/후속 일반 입력, 슬래시·우클릭 삽입, 노트·분할 대상 분리, 합성 저장/새로고침이 통과했다. 수정 창의 새 탭 버튼·우클릭 새 탭의 URL/opener 분리, Ctrl+클릭도 확인했다.
 - UI 발견/수정: 링크 드래그를 클릭 편집과 구분하고 실제 클릭에서는 커서를 동기화했다. raw 버튼의 SVG가 글자 위로 올라가던 것을 기존 button ghost로 고치고 실제 같은 줄 단언을 추가했다. 잘못된 주소 입력 후 취소하면 안내가 도구 줄에 남는 현상은 이전 최적화 빌드에서 1≠0 실패를 확인했고, 닫기에서 오류를 지운 뒤 최종 두 브라우저·두 폭·첫 색 계열의 추가 기능 검사로 통과했다(54조합 표시 검사와 구분).
 - 기존 우클릭 검사(Chromium 두 폭·첫 색 계열)와 studio-inline-commands(7회 합성 AI·12개 배치)/note-inline-commands(4회·12개 배치)의 슬래시/AI 회귀도 통과했다. 합성 인증·저장·외부 링크 목적지만 사용했고 실제 계정/원고/외부 링크 접속은 없다. 읽기 전용은 버튼과 적용 직전 둘 다 막는다.
-- 증거: tests/browser/editor-web-links.mjs, test-results/editor-web-links/{chromium,webkit}/ 및 최종 닫기 재검사 test-results/web-links-final/. CI·운영은 후속 기록한다. 실제 기기 터치·macOS Cmd+클릭·OS별 외부 브라우저/클립보드는 별도다.
+- 증거: tests/browser/editor-web-links.mjs, test-results/editor-web-links/{chromium,webkit}/ 및 최종 닫기 재검사 test-results/web-links-final/. [PR #93](https://github.com/inf1si/Kosmos/pull/93)의 `e6ee67e7acf094df3f383b800383400d389d46e2`을 main `379aec2b3f84c3d631630a8a9b2c1974f35fdb03`에 반영했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/40319777095)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/40320009711)가 첫 실행에 240개 검사·빌드·age 왕복·241파일/19규칙/0건을 통과했다.
+- 운영: 정확한 main SHA의 `dpl_3i4B1mE6bcnyZsCFee7ttnZGsTfN` READY와 www/root/기존 Vercel 별칭을 확인했다. 실제 www의 Chromium/WebKit 모두 1280/360px·첫 색 계열×라이트/다크에서 같은 기능 흐름(드래그/취소/주소 수정/해제/새 탭/opener/실행 취소/노트·분할/저장·새로고침)을 통과했다. 페이지 오류 0, 실제 계정 쓰기 없음이다. 이번 운영 검사는 quick 모드이므로 54조합으로 기록하지 않는다. test-results/web-links-production/{chromium,webkit}/에 합성 증거를 남겼고 로컬 서버는 종료했다. 이전 우클릭 작업의 운영 WebKit 프록시 실패 기록과 이번 통과를 구분한다. 실제 기기 터치·macOS Cmd+클릭·OS별 외부 브라우저/클립보드는 별도다.
 
 ## 2026-10-26 — 문단·요소 우클릭 편집
 

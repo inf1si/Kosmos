@@ -13,3 +13,5 @@
 웹 링크는 기존 본문 `link` 서식이다. 원본·기기 저장·계정 동기화·전체 백업·공개 판본·HTML/Markdown 교환에 들어가며 비공개 참조처럼 발행 때 감추지 않는다. 게시된 판본은 다시 게시해야 바뀐다. DB·작업 공간 형식은 바꾸지 않는다.
 
 [단위 검사](../tests/editor-web-links.test.ts)·[브라우저 검사](../tests/browser/editor-web-links.mjs)·[검증 기록](../VERIFICATION.md). 브라우저 검사는 기존 합성 Supabase 환경과 `KOSMOS_TEST_BASE_URL`·`KOSMOS_PLAYWRIGHT_MODULE`·`KOSMOS_CHROMIUM_PATH`·`KOSMOS_BROWSER_ENGINE`·`KOSMOS_BROWSER_OUTPUT`을 사용한다. `KOSMOS_LINK_QUICK=1`은 첫 색 계열만 검사한다.
+
+2026-10-26 PR #93으로 main·운영에 반영했다. 로컬 두 브라우저·54개 테마와 운영 두 브라우저의 1280/360px 기능 검사가 통과했다. 상세 범위는 [검증 기록](../VERIFICATION.md)을 따른다.
