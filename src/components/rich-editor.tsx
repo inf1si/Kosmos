@@ -43,6 +43,7 @@ export type NoteTools={extensions:AnyExtension[];onImage:(file:File)=>Promise<st
 export function RichEditor({doc,onChange,wiki,onWikiClick,readonly=false,heading,toolbarEnd,renderToolbarEnd,appearances,autofocus=false,contentLabel,linkCopy=SETTING_LINK_COPY,noteTools,aiTools,references,searchJump,onSearchJump}:{doc:NovelDocument;onChange:(content:RichNode)=>void;wiki:NovelDocument[];onWikiClick:(id:string)=>void;readonly?:boolean;heading?:ReactNode;toolbarEnd?:ReactNode;renderToolbarEnd?:(selection:RichNode|null)=>ReactNode;appearances?:Record<string,number>;autofocus?:boolean;contentLabel?:string;linkCopy?:LinkCopy;noteTools?:NoteTools;aiTools?:{scope:EditorAIScope;onContinue:()=>void};searchJump?:WorkspaceSearchJump|null;onSearchJump?:()=>void;references?:{onPreview:(ref:InternalReference)=>void;onConnections:()=>void;open:boolean}}){
   const [{font,size},setPreferences]=useEditorPreferences();const [appPreferences]=useAppPreferences();const selectedFont=manuscriptFonts.find(f=>f.id===font)!;
   const toolbarRef=useRef<HTMLDivElement>(null);const [overflow,setOverflow]=useState({before:false,after:false});
+  const [findSeed,setFindSeed]=useState('');
   const [dialog,setDialog]=useState<'note'|'wiki'|null>(null);const [note,setNote]=useState('');const [target,setTarget]=useState(wiki[0]?.id||'');
   const [selection,setSelection]=useState<{from:number;to:number}>({from:0,to:0});const [,render]=useState(0);
   const scrollRef=useRef<HTMLDivElement>(null);const hideTimer=useRef<number|undefined>(undefined);const [preview,setPreview]=useState<{kind:'wiki'|'note'|'reference';id:string;top:number;left:number;reference?:InternalReference}|null>(null);
@@ -79,6 +80,10 @@ if(lastContent.current===source)return;
       if(editor.isDestroyed)return;
       const range=firstBodyMatch(editor.getJSON(),searchJump.terms),selection=range?TextSelection.create(editor.state.doc,range.from,range.to):Selection.atStart(editor.state.doc);
       editor.view.dispatch(editor.state.tr.setSelection(selection).setMeta(searchJumpKey,range).setMeta('addToHistory',false));editor.view.focus();
+
+      // Ctrl/Cmd+F continues from the found words in this document.
+      if(range)setFindSeed(editor.state.doc.textBetween(range.from,range.to));
+
       const box=scrollRef.current;
 
       if(box){if(range){const caret=editor.view.coordsAtPos(range.from);box.scrollTop+=caret.top-box.getBoundingClientRect().top-box.clientHeight/3;}else box.scrollTop=0;}
@@ -154,7 +159,7 @@ if(!file||!editor)return;const position=captureEditorTarget(editor),imageSelecti
       <span className="toolbar-divider"/>
       <IconButton label="각주 추가" disabled={readonly} onClick={e=>openDialog('note',e.currentTarget)}><MessageSquareText size={16}/></IconButton>
       <IconButton label={linkCopy.tool} disabled={readonly||!wiki.length} onClick={e=>openDialog('wiki',e.currentTarget)}><Link2 size={16}/></IconButton>
-      <EditorSearch editor={editor} readonly={readonly}/>
+      <EditorSearch editor={editor} readonly={readonly} seed={findSeed}/>
       {references&&<button type="button" className="toolbar-text-button" aria-pressed={references.open} aria-label="글 참조와 백링크" onClick={references.onConnections}><AtSign size={15}/>참조</button>}
       {(toolbarEnd||renderToolbarEnd)&&<div className="toolbar-end">{renderToolbarEnd?renderToolbarEnd(editor?statisticsSelection(editor.state.doc,editor.state.selection.from,editor.state.selection.to):null):toolbarEnd}</div>}
     </div>

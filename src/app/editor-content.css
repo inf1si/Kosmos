@@ -31,3 +31,4 @@
 .internal-reference-option small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .internal-reference-empty{margin:10px}
 .internal-reference-preview h3{overflow-wrap:anywhere}
+.internal-reference-preview>.muted{margin:0 0 12px}

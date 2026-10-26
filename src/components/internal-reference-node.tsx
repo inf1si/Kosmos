@@ -23,6 +23,7 @@ export const InternalReferenceNode=Node.create({
 
 return parsed.success?parsed.data:false;}catch{return false;}}}];},
   renderHTML({node,HTMLAttributes}){return ['span',mergeAttributes(HTMLAttributes,{'data-internal-reference':JSON.stringify(node.attrs),class:'chip soft internal-reference'}),`@${node.attrs.label}`];},
-  renderText(){return '';},
+  // Only the clipboard reads this: copied prose keeps the name. Counts, search and AI text read the stored JSON or pass their own leaf text.
+  renderText({node}){return `@${node.attrs.label}`;},
   addNodeView(){return ReactNodeViewRenderer(ReferenceNodeView,{as:'span'});},
 });

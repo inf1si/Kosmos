@@ -6,7 +6,7 @@ import { Plugin,PluginKey } from '@tiptap/pm/state';
 import { closeHistory } from '@tiptap/pm/history';
 import * as Popup from '@radix-ui/react-popover';
 import { internalReferenceType } from '@/lib/internal-reference-node';
-import { referenceGroup,referenceGroups,referenceKey,referenceTargets,searchReferences,type ReferenceTarget } from '@/lib/internal-references';
+import { referenceGroup,referenceGroups,referenceKey,referencePlace,referenceTargets,searchReferences,type ReferenceTarget } from '@/lib/internal-references';
 import { ReferenceIcon } from './internal-reference-icon';
 import { useStudio } from './studio-provider';
 
@@ -127,7 +127,7 @@ return new DOMRect(pos.left,pos.top,1,pos.bottom-pos.top);}catch{return editor.v
     <div role="listbox" id={listId} aria-label="참조할 항목">{referenceGroups.map(group=>{
       const items=rows.flatMap((row,i)=>('target' in row?referenceGroup(row.target):row.more)===group.id?[{row,i}]:[]);
 
-      return items.length>0&&<div role="group" aria-label={group.label} key={group.id}><div className="note-command-caption" aria-hidden="true">{group.label}</div>{items.map(({row,i})=><button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} aria-selected={chosen===i} className={`menu-item${'target' in row?' internal-reference-option':''}`} data-highlighted={chosen===i?'':undefined} key={'target' in row?referenceKey(row.target):`more:${row.more}`} onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} onClick={()=>choose(row)}>{'target' in row?<><ReferenceIcon kind={row.target.kind} size={15}/><span><strong>{row.target.label}</strong><small title={row.target.path}>{row.target.path===row.target.category?row.target.category:`${row.target.category} · ${row.target.path}`}</small></span></>:row.label}</button>)}</div>;
+      return items.length>0&&<div role="group" aria-label={group.label} key={group.id}><div className="note-command-caption" aria-hidden="true">{group.label}</div>{items.map(({row,i})=><button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} aria-selected={chosen===i} className={`menu-item${'target' in row?' internal-reference-option':''}`} data-highlighted={chosen===i?'':undefined} key={'target' in row?referenceKey(row.target):`more:${row.more}`} onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} onClick={()=>choose(row)}>{'target' in row?<><ReferenceIcon kind={row.target.kind} size={15}/><span><strong>{row.target.label}</strong><small title={row.target.path}>{referencePlace(row.target)}</small></span></>:row.label}</button>)}</div>;
     })}</div>
     {!found.length&&<p className="muted internal-reference-empty">일치하는 항목이 없습니다.</p>}
   </Popup.Content></Popup.Portal></Popup.Root>;
