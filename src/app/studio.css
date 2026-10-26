@@ -409,8 +409,8 @@ html:has(.studio){background:var(--ground)}
 
 .workspace-search-dialog{height:min(640px,calc(100dvh - 50px));display:flex;flex-direction:column}
 .workspace-search-controls{display:flex;gap:8px;margin-bottom:12px;flex-shrink:0}
-.workspace-search-controls .sidebar-search{flex:1;min-width:0;margin:0}
-.workspace-search-controls select{width:200px;min-width:0;max-width:40%}
+.workspace-search-controls .sidebar-search{flex:1 1 auto;min-width:0;margin:0}
+.workspace-search-controls select{width:200px;min-width:0;max-width:40%;height:32px;padding-block:0;font-size:13px}
 .workspace-search-dialog>.field-help{margin:0 0 10px}
 .workspace-search-results{flex:1;min-height:0;overflow:auto;padding:3px}
 .workspace-search-results .reference-card{align-items:flex-start}

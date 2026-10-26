@@ -5,7 +5,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { seedWorkspace } from '../src/lib/seed';
 import { documentSchema,fromText,isRichDocument,makePublication,newDocument,plainText,publicationSchema,uid,workspaceSchema,type RichNode } from '../src/lib/model';
 import { internalReferenceSchema,internalReferenceType,internalReferences,withoutInternalReferences } from '../src/lib/internal-reference-node';
-import { referenceBacklinks,referenceChildren,referenceConnections,referenceGroup,referenceKey,referenceLabel,referenceTargets,searchReferences } from '../src/lib/internal-references';
+import { referenceBacklinks,referenceChildren,referenceConnections,referenceGroup,referenceKey,referenceLabel,referencePlace,referenceTargets,searchReferences } from '../src/lib/internal-references';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { createBackup,readBackup } from '../src/lib/backup';
 import { textStatistics } from '../src/lib/text-statistics';
@@ -195,4 +195,12 @@ test('PostgreSQL publisher removes every private reference before storage/respon
     await pg.exec('set role anon');const rows=await pg.query<{payload:unknown}>('select payload from public.publications where active');assert.equal(JSON.stringify(rows.rows[0].payload),snapshot);
     await assert.rejects(()=>pg.query('select public.publish_work($1,$2,$3::uuid[])',[id,state.works[0].id,[source.id]]),/permission/);
   }finally{await pg.close();}
+});
+
+test('reference place lines do not repeat a kind that already starts the path',()=>{
+  assert.equal(referencePlace({category:'노트',path:'노트'}),'노트');
+  assert.equal(referencePlace({category:'노트',path:'노트 / 자료 폴더 / 하위 자료'}),'노트 / 자료 폴더 / 하위 자료');
+  assert.equal(referencePlace({category:'노트 폴더',path:'노트 / 자료 폴더'}),'노트 폴더 · 노트 / 자료 폴더');
+  assert.equal(referencePlace({category:'원고',path:'먼 별의 항구 / 원고 / 제1부'}),'원고 · 먼 별의 항구 / 원고 / 제1부');
+  assert.equal(referencePlace({category:'노트',path:'노트북 / 자료'}),'노트 · 노트북 / 자료');
 });

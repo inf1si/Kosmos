@@ -16,6 +16,9 @@ export const referenceGroups=[
 
 export function referenceGroup(ref:InternalReference){return ref.kind.endsWith('-folder')?'folder':ref.kind;}
 
+/** Kind and place on one line without repeating a path that already starts with the kind, such as 노트 / 폴더. */
+export function referencePlace(target:Pick<ReferenceTarget,'path'|'category'>){return target.path===target.category||target.path.startsWith(`${target.category} / `)?target.path:`${target.category} · ${target.path}`;}
+
 export function referenceKey(ref:Pick<InternalReference,'kind'|'targetId'|'workId'>){return `${ref.kind}:${ref.workId||''}:${ref.targetId}`;}
 
 export function referenceTargets(state:Workspace):ReferenceTarget[]{

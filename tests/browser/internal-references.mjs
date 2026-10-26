@@ -114,6 +114,7 @@ if(cloudSeen)await until(page,()=>check(data),'cloud save');};
    await page.evaluate(([p,m])=>{document.documentElement.dataset.palette=p;document.documentElement.dataset.theme=m;},[palette,mode]);
    const b=await panel.boundingBox();assert(b.x>=0&&b.x+b.width<=width+1,`${palette}/${mode}/${width} preview bounds`);
    assert.equal(await panel.getByRole('button',{name:'원문 열기',exact:true}).isVisible(),true);
+   assert.deepEqual(await panel.locator('.internal-reference-preview>h3').first().evaluate(el=>[getComputedStyle(el).fontSize,getComputedStyle(el).fontWeight]),['15px','600'],`${palette}/${mode}/${width} preview title matches the note preview title`);
    await panel.screenshot({path:resolve(output,`preview-${palette}-${mode}-${width}.png`)});
   }
 

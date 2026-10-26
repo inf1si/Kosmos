@@ -93,6 +93,7 @@ tx.onerror=()=>reject(tx.error);};}),data);
    await page.evaluate(([p,m])=>{document.documentElement.dataset.palette=p;document.documentElement.dataset.theme=m;},[palette,mode]);
    const bounds=await dialog.boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=width+1,`${palette}/${mode}/${width} dialog bounds`);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth),false);
+   const heights=await dialog.evaluate(el=>[...el.querySelectorAll('.workspace-search-controls .sidebar-search,.workspace-search-controls select')].map(child=>Math.round(child.getBoundingClientRect().height)));assert.equal(heights.length,2);assert(heights[0]>=30&&heights[0]===heights[1],`${palette}/${mode}/${width} search box and scope share one height: ${heights}`);
    const styles=await list.getByRole('option').last().locator('.workspace-search-snippet').evaluate(el=>({clamp:getComputedStyle(el).webkitLineClamp,size:getComputedStyle(el).fontSize}));assert.equal(styles.clamp,'2');assert.equal(styles.size,'12px');
    await dialog.screenshot({path:resolve(output,`${palette}-${mode}-${width}.png`)});
   }
