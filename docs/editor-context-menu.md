@@ -21,3 +21,5 @@
 공개 Supabase 설정이 있는 테스트 서버에서 검사한다(로컬은 합성 anon key 사용 가능). 인증·REST·API 요청을 가로채므로 실제 계정이나 저장소를 쓰지 않는다.
 
 검사: [합성 브라우저 시나리오](../tests/browser/editor-position-menu.mjs). `KOSMOS_TEST_BASE_URL`, `KOSMOS_PLAYWRIGHT_MODULE`, `KOSMOS_CHROMIUM_PATH`, `KOSMOS_BROWSER_ENGINE`, `KOSMOS_BROWSER_OUTPUT`을 기존 편집기 검사와 같이 사용한다. `KOSMOS_CONTEXT_QUICK=1`은 첫 색 계열만 확인하므로 54조합 검사로 기록하지 않는다. [검증 기록](../VERIFICATION.md).
+
+2026-10-26 PR #92로 main·운영에 반영했다. 로컬 Chromium/WebKit과 운영 Chromium 두 폭·54개 테마 검사를 통과했다. 운영 WebKit 접속 제한을 포함한 상세 범위는 [검증 기록](../VERIFICATION.md)을 따른다.

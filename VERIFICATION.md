@@ -8,7 +8,9 @@
 - 표의 앞뒤 행·좌우 열 추가, 행/열/표 삭제, 첫 제목 행 전환, 비활성 병합/분할과 실제 셀 드래그 병합→합성 저장→분할/실행 취소를 확인했다. 각주 수정/삭제·취소, 참조 미리보기/칩 제거와 원문 보존, 위키·메모·분할·노트의 문단 변경, 노트 체크리스트/파일 선택 창, 원고 제목 서식·노트 각주의 저장/새로고침도 통과했다.
 - 기존 studio-inline-commands(7회 합성 AI·12개 배치)·note-inline-commands(4회·12개 배치)의 슬래시·AI/선택 메뉴 회귀도 통과했다. 입력 시간에 따라 네이티브 undo 묶음 수가 달라지는 합성 정리 단계는 정해진 세 번 대신 표 삽입까지 최대 여덟 번 UI로 되돌리게 했다. 실제 내용 보존 단언은 유지한다.
 - 발견/수정: 우클릭 mouseup이 각주를 다시 선택해 메뉴 초점을 빼앗던 처리, React 참조 노드가 PM contextmenu 전달을 막는 경로, 네이티브 선택 관찰 지연을 처리했다. 각주/참조 호버 카드는 메뉴 동안 잠그며 이미지 선택기는 기존 도구 모음처럼 클릭 이벤트 안에서 input.click을 호출한다(WebKit 확인).
-- 증거: test-results/editor-position-menu/{chromium,webkit}/의 합성 화면/결과와 브라우저 스크립트. 인증·REST·API·실시간 연결은 모두 가로챘고 실제 작가 계정/원고는 사용하지 않았다. OS별 클립보드 권한·실제 터치/IME·실제 다중 기기 동기화는 미확인이다. CI·운영 확인은 후속 기록한다.
+- 증거: test-results/editor-position-menu/{chromium,webkit}/의 합성 화면/결과와 브라우저 스크립트. 인증·REST·API·실시간 연결은 모두 가로챘고 실제 작가 계정/원고는 사용하지 않았다. OS별 클립보드 권한·실제 터치/IME·실제 다중 기기 동기화는 미확인이다. [PR #92](https://github.com/inf1si/Kosmos/pull/92)의 `b6ee4579fb3e278d4ddfa30b974b29e3d5eedb7d`을 main `75914cf3409a24360820c44ef66cdda0385e8c04`에 반영했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/40308473705)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/40308803762)가 첫 실행에 235개 검사·빌드·age 왕복·237파일/19규칙/0건을 통과했다.
+- 운영: 정확한 main SHA의 `dpl_CZZv2vNGdEup6r3fM9rHjsXBFqB2` READY와 www/root/기존 Vercel 별칭을 확인했다. 실제 www의 Chromium은 1280/360px·54개 테마 및 같은 편집·합성 저장/새로고침 흐름 전체를 통과했다(페이지 오류 0, 실제 계정 쓰기 없음).
+- 운영 WebKit 한계: 1280px에서 네 메뉴 조작·테마 검사까지 진행했지만 새로고침 후 로딩에서 중단됐다. 재시도는 초기 로딩도 실패했다. 진단에서 JS/CSS 요청이 Envoy 503을 받았고, 명시적으로 같은 허용 프록시를 쓴 익명 요청의 본문은 `upstream connect error ... Invalid argument ... envoy://cloudflare_https_tunnel/`였다. 같은 파일의 curl 요청은 200이다. 실행 환경 프록시 연결 실패를 확인했으며 운영 WebKit 전체 통과로 기록하지 않는다. 로컬 최적화 WebKit 두 폭·54개 테마 통과와 구분한다. 운영 Chromium 결과는 test-results/editor-position-menu-production/chromium/, 관련 실패·네트워크 진단은 비공개 실행 로그에 남긴다. 로컬 서버는 종료했다.
 
 ## 2026-10-26 — 드롭다운 모양 통일
 
