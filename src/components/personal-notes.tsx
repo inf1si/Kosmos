@@ -18,6 +18,7 @@ import { useStudio } from './studio-provider';
 import { GoogleAccountControl } from './studio-auth';
 import { IconButton, Popover, TooltipProvider } from './primitives';
 import { RichEditor, type NoteTools } from './rich-editor';
+import type { WorkspaceSearchJump } from '@/lib/workspace-search';
 import { InternalReferencePanel } from './internal-reference-panel';
 import type { InternalReference } from '@/lib/internal-reference-node';
 import type { ReferenceTarget } from '@/lib/internal-references';
@@ -41,9 +42,9 @@ const NOTE_EXTENSIONS=[...noteExtensions,NoteImageView];
 
 const NOTE_LINK_COPY={tool:'노트 링크 추가',title:'노트 연결',description:'선택한 단어를 다른 노트에 연결합니다. Ctrl+클릭으로 엽니다.',select:'연결할 노트',open:'열기'};
 
-type Props={activeId:string;captureId:string;importRequested:boolean;onImportOpened:()=>void;onImportBack:()=>void;onSelect:(id:string)=>void;onReturn:()=>void;onNew:(to?:NoteDestination,template?:string)=>void;onOpenWork:(workId:string,docId?:string)=>void};
+type Props={searchJump:WorkspaceSearchJump|null;onSearchJump:()=>void;onSearch:()=>void;activeId:string;captureId:string;importRequested:boolean;onImportOpened:()=>void;onImportBack:()=>void;onSelect:(id:string)=>void;onReturn:()=>void;onNew:(to?:NoteDestination,template?:string)=>void;onOpenWork:(workId:string,docId?:string)=>void};
 
-export function PersonalNotes({activeId,captureId,importRequested,onImportOpened,onImportBack,onSelect,onReturn,onNew,onOpenWork}:Props){
+export function PersonalNotes({searchJump,onSearchJump,onSearch,activeId,captureId,importRequested,onImportOpened,onImportBack,onSelect,onReturn,onNew,onOpenWork}:Props){
   const s=useStudio(),notes=s.state?.notes||EMPTY_NOTES;
   const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);
   const [referencePreview,setReferencePreview]=useState<InternalReference|null>(null);
@@ -73,11 +74,9 @@ return()=>window.removeEventListener('studio-modal',listener);},[]);
 media.addEventListener('change',change);
 
 return()=>media.removeEventListener('change',change);},[]);
-  useEffect(()=>{const key=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.code==='KeyK'){event.preventDefault();setSide(null);setSidebar(true);setTimeout(()=>document.getElementById('notes-search')?.focus(),30);}};
+  useEffect(()=>{if(searchJump){setSide(null);
 
-window.addEventListener('keydown',key);
-
-return()=>window.removeEventListener('keydown',key);},[]);
+if(compact)setSidebar(false);}},[searchJump,compact]);
   const linkTargets=useMemo(()=>notes.filter(n=>n.id!==activeId).map(n=>({...noteDocument(n),category:'노트'})),[notes,activeId]);
 
   const noteLinkCount=useMemo(()=>{const a=notes.find(n=>n.id===activeId);
@@ -133,6 +132,7 @@ if(compact)setSidebar(false);}
       <nav className="studio-tools notes-tools" aria-label="노트 도구">
         <button type="button" className="nav-item" aria-pressed={!active} onClick={()=>select('')}><House size={16}/><span>노트 홈</span></button>
         <button type="button" className="nav-item" disabled={readonly} onClick={()=>create()}><Plus size={16}/><span>새 노트</span></button>
+        <button type="button" className="nav-item" data-workspace-search-opener onClick={onSearch}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
         <div className="notes-search-row"><div className="sidebar-search"><Search size={15}/><input id="notes-search" aria-label="전체 노트 검색" placeholder="제목 · 본문 · 태그 · 폴더 검색" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<IconButton label="노트 검색 지우기" onClick={()=>setQuery('')}><X size={14}/></IconButton>}</div>
         <Popover open={filterOpen} onOpenChange={setFilterOpen} title="노트 필터" width={280} align="end" trigger={<IconButton label={filters?`노트 필터 · ${filters}개 적용`:'노트 필터'} aria-pressed={!!filters} className="icon-button notes-filter"><SlidersHorizontal size={15}/>{filters>0&&<i className="notes-filter-dot" aria-hidden="true"/>}</IconButton>}>
           <label>태그<select aria-label="태그로 노트 찾기" value={tag} onChange={e=>setTag(e.target.value)}><option value="">모든 태그</option>{allTags.map(value=><option key={value}>{value}</option>)}</select></label>
@@ -150,7 +150,7 @@ if(compact)setSidebar(false);}
     <main className="studio-panel">
       <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {active?<RichEditor key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} references={{onPreview:previewReference,onConnections:()=>{setReferencePreview(null);setSide(value=>value==='links'&&!referencePreview?null:'links');
+      {active?<RichEditor searchJump={searchJump} onSearchJump={onSearchJump} key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} references={{onPreview:previewReference,onConnections:()=>{setReferencePreview(null);setSide(value=>value==='links'&&!referencePreview?null:'links');
 
 if(compact)setSidebar(false);},open:side==='links'}} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');
 

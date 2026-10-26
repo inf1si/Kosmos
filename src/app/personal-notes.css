@@ -21,7 +21,6 @@
 .notes-reference{display:flex;flex-direction:column}.notes-reference .popover-actions{margin:8px 0 4px}.notes-reference .quick-note-input{margin:0}.notes-reference-search{margin:20px 0 4px}.notes-reference>h3:not(:first-child){margin-top:20px}
 .notes-reference-bar{display:flex;align-items:center;gap:8px;margin:-6px 0 12px}.notes-reference-bar>span{flex:1;font-size:12px;color:var(--muted)}.notes-reference-bar .button{min-height:30px;height:30px;padding:0 10px;font-size:13px}
 .notes-reference .notes-reference-title{margin:0 0 10px;font-size:15px;font-weight:600;color:var(--ink)}.notes-reference .doc-chips{margin-bottom:12px}.notes-reference-body{font-size:13px;line-height:1.8;color:var(--ink2);overflow-wrap:anywhere}.notes-reference-body p{margin:0 0 .5em}
-.workspace-note-results{padding:8px 5px 12px;border-top:1px solid var(--line);margin-top:8px}.workspace-note-results h3{margin:4px 6px 8px;font-size:12px;font-weight:600;color:var(--muted)}.workspace-note-results .note-card{margin:0 0 2px;padding:6px 8px;border-color:transparent;background:none}.workspace-note-results .note-card:hover{background:var(--hover)}.workspace-note-results p{padding:0 6px;font-size:12px}
 /* 노트 전용 본문 요소: 체크리스트와 본문 이미지 */
 .notes-workspace .manuscript ul[data-type=taskList]{list-style:none;padding-left:2px}
 .notes-workspace .manuscript ul[data-type=taskList] li{display:flex;align-items:flex-start;gap:9px}

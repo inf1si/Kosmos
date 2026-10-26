@@ -8,6 +8,8 @@ export type SearchMatch={from:number;to:number};
 
 export const searchKey=new PluginKey<SearchOptions>('manuscriptSearch');
 
+export const searchJumpKey=new PluginKey<SearchMatch|null>('workspaceSearchJump');
+
 const empty:SearchOptions={query:'',caseSensitive:false,wholeWord:false};
 
 const cache=new WeakMap<ProseMirrorNode,{key:string;matches:SearchMatch[]}>();
@@ -41,3 +43,13 @@ export function searchPlugin(){return new Plugin<SearchOptions>({key:searchKey,s
 
 return DecorationSet.create(state.doc,matches.map(m=>Decoration.inline(m.from,m.to,{class:state.selection.from===m.from&&state.selection.to===m.to?'editor-search-match current':'editor-search-match'})));
 }}});}
+
+export function searchJumpPlugin(){return new Plugin<SearchMatch|null>({key:searchJumpKey,state:{init:()=>null,apply:(tr,value,old)=>{
+  const next:SearchMatch|null|undefined=tr.getMeta(searchJumpKey);
+
+  return next!==undefined?next:tr.docChanged||tr.selectionSet&&!tr.selection.eq(old.selection)?null:value;
+}},props:{decorations(state){const range=searchJumpKey.getState(state);
+
+return range?DecorationSet.create(state.doc,[Decoration.inline(range.from,range.to,{class:'editor-search-match current'})]):null;},handleKeyDown(view,event){if(event.key!=='Escape'||!searchJumpKey.getState(view.state))return false;view.dispatch(view.state.tr.setMeta(searchJumpKey,null).setMeta('addToHistory',false));
+
+return true;}}});}

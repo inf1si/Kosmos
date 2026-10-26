@@ -119,7 +119,7 @@ if(minutes)update({checkpointMinutes:minutes});}}>{checkpointIntervals.map(n=><o
 }
 
 const shortcuts:[string,string][]=[
-  ['작품과 노트 검색','Ctrl/⌘ K'],
+  ['전체 검색','Ctrl/⌘ K'],
   ['빠른 메모 · 노트 공간에서는 새 노트','Alt/Option N'],
   ['빠른 메모를 수집함에 넣기','Ctrl/⌘ Enter'],
   ['AI 질문 · 선택 글 또는 현재 문단','Alt/Option Enter'],
