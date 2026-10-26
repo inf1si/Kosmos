@@ -4,7 +4,7 @@ import { documentTitle } from '@/lib/model';
 
 import { documentSchema } from '@/lib/model';
 import { useEffect, useRef, useState } from 'react';
-import { Check, Download, Upload, FileText } from 'lucide-react';
+import { Check, Download, Upload, FileText, BookOpen } from 'lucide-react';
 import { Modal } from './primitives';
 import { DownloadLink } from './download-link';
 import { useStudio } from './studio-provider';
@@ -21,7 +21,7 @@ const transferFileTypes='.zip,.enex,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rt
 // Browsers expose folder picking only through this non-standard attribute.
 const folderPicker={webkitdirectory:'',directory:''};
 
-export function InterchangeDialog({workId,onBack,onReturnFocus}:{workId:string;onBack?:()=>void;onReturnFocus?:()=>void}){
+export function InterchangeDialog({workId,onBack,onReturnFocus,onBook}:{workId:string;onBack?:()=>void;onReturnFocus?:()=>void;onBook?:()=>void}){
   const s=useStudio();const [open,setOpen]=useState(false),[mode,setMode]=useState<'import'|'export'>('import');
   const [bundle,setBundle]=useState<ImportBundle|null>(null),[choices,setChoices]=useState<ImportChoice[]>([]),[target,setTarget]=useState('new'),[title,setTitle]=useState('');
   const [ids,setIds]=useState<string[]>([]),[format,setFormat]=useState<ExportFormat>('markdown'),[download,setDownload]=useState<TransferDownload|null>(null);
@@ -71,6 +71,7 @@ return <div className="transfer-row" key={p.key}><input aria-label={`${p.title} 
       </>}
     </>:work&&<>
       <div className="transfer-guide"><p><strong>{work.title}</strong> · 비공개 문서도 내보내기에 포함됩니다.</p></div>
+      {onBook&&<button type="button" className="button" disabled={busy} onClick={()=>{close();onBook();}}><BookOpen size={15}/>책으로 내보내기 · PDF / EPUB / HTML</button>}
       <label className="transfer-format">내보내기 형식<Select aria-label="외부 문서 내보내기 형식" value={format} disabled={busy} onChange={value=>{setFormat(exportFormats.find(format=>format===value)||'markdown');setDownload(null);}}><option value="markdown">Markdown ZIP · Notion / Obsidian / 일반 편집기</option><option value="html">HTML ZIP · Notion / 웹 문서</option><option value="enex">Evernote ENEX · Evernote 가져오기</option></Select></label>
       <div className="transfer-bulk"><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.map(d=>d.id));setDownload(null);}}>전체 선택</button><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.filter(d=>d.kind==='scene').map(d=>d.id));setDownload(null);}}>원고만</button><button className="button" disabled={busy} onClick={()=>{setIds(work.documents.filter(d=>d.kind==='wiki').map(d=>d.id));setDownload(null);}}>설정집만</button></div>
       <div className="transfer-list">{work.documents.map(d=><label className="transfer-export-row" key={d.id}><input type="checkbox" checked={ids.includes(d.id)} disabled={busy} onChange={e=>{setIds(v=>e.target.checked?[...v,d.id]:v.filter(id=>id!==d.id));setDownload(null);}}/><span>{documentTitle(d)}</span><small>{kinds[d.kind]}</small></label>)}</div>

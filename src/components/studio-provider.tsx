@@ -33,6 +33,7 @@ type StudioContextValue={
   exportBackup:()=>Promise<TransferDownload&{revisions:number;omitted:number}>;importBackup:(file:File)=>Promise<void>;
   importDocuments:(bundle:ImportBundle,choices:ImportChoice[],target:{workId:string}|{title:string;form:Work['form']})=>Promise<string>;
   exportDocuments:(workId:string,documentIds:string[],format:ExportFormat)=>Promise<TransferDownload>;
+  captureBookWork:(workId:string)=>Promise<Work>;
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;unpublish:(workId:string)=>Promise<void>;
   libraryPublications:()=>Promise<LibraryItem[]>;setLibraryOrder:(ids:string[])=>Promise<LibraryItem[]>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
@@ -349,6 +350,14 @@ if(JSON.stringify(dataRef.current)!==JSON.stringify(before))throw new Error('가
 return prepared.workId;
   }
 
+  async function captureBookWork(workId:string){
+    await flush();const work=dataRef.current?.works.find(work=>work.id===workId);
+
+    if(!work)throw new Error('작품을 찾지 못했습니다.');
+
+    return structuredClone(work);
+  }
+
   async function exportDocuments(workId:string,documentIds:string[],format:ExportFormat){
     await flush();const current=structuredClone(dataRef.current!);const work=current.works.find(w=>w.id===workId);
 
@@ -642,7 +651,7 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
   }
 
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
-    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,serverRevisions,restoreServerRevision,exportBackup,importBackup,importDocuments,exportDocuments,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
+    snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,serverRevisions,restoreServerRevision,exportBackup,importBackup,importDocuments,exportDocuments,captureBookWork,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
     libraryPublications,setLibraryOrder,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});
 
