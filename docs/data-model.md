@@ -2,7 +2,7 @@
 
 ## 비공개 글 참조 (2026-10-25)
 
-노트·작품의 RichNode는 `internalReference` 인라인 원자 노드 `{kind:'note'|'document',targetId:uuid,workId:uuid|null,label:string(최대 300)}`를 받는다. document에는 작품 ID가 필수, note에는 null이며 text/content/marks를 허용하지 않는다. 공개 원고 스키마는 이 노드를 거부한다. JSON 형식 버전 1과 기존 RPC 인수는 유지한다. 서버 발행 함수는 노드를 제거하고 공개 테이블 제약도 적용한다. [저장·ID·복제 계약](internal-references.md#저장발행내보내기).
+노트·작품의 RichNode는 `internalReference` 인라인 원자 노드 `{kind:'note'|'document'|'note-folder'|'document-folder'|'work'|'shelf',targetId:uuid|'default',workId:uuid|null,label:string(최대 300)}`를 받는다. `document`·`document-folder`에는 작품 ID가 필수, 나머지는 null이다. targetId의 `default`는 기본 책장(`shelf`)에만 허용한다. text/content/marks를 허용하지 않는다. 공개 원고 스키마는 이 노드를 거부한다. JSON 형식 버전 1과 기존 RPC 인수는 유지한다. 서버 발행 함수는 노드를 제거하고 공개 테이블 제약도 적용한다. [저장·ID·복제 계약](internal-references.md#저장발행내보내기).
 
 ## 개인 자기소개 (2026-10-09)
 
