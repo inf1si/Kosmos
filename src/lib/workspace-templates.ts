@@ -37,7 +37,10 @@ function copyContent(content:RichNode,ids:Map<string,string>,assets:Map<string,s
   function visit(node:RichNode){
     if(node.type===internalReferenceType){const parsed=internalReferenceSchema.safeParse(node.attrs),id=parsed.success?ids.get(parsed.data.targetId):undefined;
 
-      if(parsed.success&&id)node.attrs={...parsed.data,targetId:id,...(owner.workId?{kind:'document',workId:owner.workId}:owner.noteId?{kind:'note',workId:null}:{})};
+      if(parsed.success&&id&&parsed.data.kind!=='work'&&parsed.data.kind!=='shelf'){
+        const folder=parsed.data.kind.endsWith('-folder');
+        node.attrs={...parsed.data,targetId:id,...(owner.workId?{kind:folder?'document-folder':'document',workId:owner.workId}:owner.noteId?{kind:folder?'note-folder':'note',workId:null}:{})};
+      }
     }
 
     if(node.attrs?.blockId)node.attrs.blockId=uid();

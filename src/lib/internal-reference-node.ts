@@ -4,8 +4,12 @@ import type { RichNode } from './model';
 export const internalReferenceType='internalReference';
 
 export const internalReferenceSchema=z.object({
-  kind:z.enum(['note','document']),targetId:z.uuid(),workId:z.uuid().nullable(),label:z.string().max(300),
-}).superRefine((value,ctx)=>{if(value.kind==='document'&&!value.workId||value.kind==='note'&&value.workId!==null)ctx.addIssue({code:'custom',message:'참조 대상을 확인하세요.'});});
+  kind:z.enum(['note','document','note-folder','document-folder','work','shelf']),targetId:z.union([z.uuid(),z.literal('default')]),workId:z.uuid().nullable(),label:z.string().max(300),
+}).superRefine((value,ctx)=>{
+  const scoped=value.kind==='document'||value.kind==='document-folder';
+
+  if(scoped&&!value.workId||!scoped&&value.workId!==null||value.targetId==='default'&&value.kind!=='shelf')ctx.addIssue({code:'custom',message:'참조 대상을 확인하세요.'});
+});
 
 export type InternalReference=z.infer<typeof internalReferenceSchema>;
 
