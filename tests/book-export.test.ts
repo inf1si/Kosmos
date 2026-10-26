@@ -8,7 +8,7 @@ import {XMLValidator} from 'fast-xml-parser';
 import {bookFixture} from './fixtures/book-work';
 import {bookDocuments,bookChapterXhtml,bookHref,bookFonts,makeBookSource,defaultBookOptions,type BookOptions} from '../src/lib/book-content';
 import {prepareBook,exportBook,bookHtml,type BookFontData} from '../src/lib/book-export';
-import {wrapBookText,mm} from '../src/lib/book-layout';
+import {layoutBook,wrapBookText,mm} from '../src/lib/book-layout';
 import {fromText} from '../src/lib/model';
 
 async function fonts(font:BookOptions['font']='maruburi'):Promise<BookFontData>{const names=bookFonts[font];
@@ -128,4 +128,16 @@ test('PDF용 압축 묶음도 원본 TTF와 라이선스 전문을 그대로 제
   assert.deepEqual(await zip.file(names.bold.replace('.woff2','.ttf'))!.async('uint8array'),new Uint8Array(data.pdf!.bold));
   assert.equal(await zip.file('fonts.txt')!.async('string'),data.license);
  }
+});
+
+test('큰 글자가 섞인 문단과 표는 글리프가 줄·셀 위로 침범하지 않는다',()=>{
+ const {work,first}=bookFixture();first.title='';first.chapter='';
+ const large={type:'text',text:'큰 글자',marks:[{type:'fontSize',attrs:{size:72}}]};
+ first.content={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'작은 글자 '},large]},{type:'table',content:[{type:'tableRow',content:[{type:'tableCell',content:[{type:'paragraph',content:[large]}]}]}]}]};
+ const result=layoutBook(makeBookSource(work,[first.id]),{...options,cover:false,toc:false,pageNumbers:false},{width:(text,size)=>Array.from(text).length*size*.5}),commands=result.pages[0].commands;
+ const paragraph=commands.find(c=>c.kind==='text'&&c.size===44),cell=commands.find(c=>c.kind==='text'&&c.size===40),border=commands.find(c=>c.kind==='rect');
+ assert(paragraph?.kind==='text');assert(cell?.kind==='text');assert(border?.kind==='rect');
+ assert(paragraph.y-paragraph.size*.9>=options.margin*mm,'paragraph ascenders fit within the line');
+ assert(cell.y-cell.size*.9>=border.y+4,'table ascenders fit within cell padding');
+ assert(cell.y+cell.size*.25<=border.y+border.height-4,'table descenders fit within cell padding');
 });

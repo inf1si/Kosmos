@@ -68,6 +68,7 @@ export function layoutBook(source:BookSource,options:BookOptions,metrics:BookMet
   function anchor(id:string){page.anchors.push({id,x:x(),y});chapterAnchors[id]={page:pages.length-1,x:x(),y};}
 
   function drawLine(glyphs:Glyph[],left:number,top:number,lineWidth:number,size:number,align:Align,last:boolean){
+    const baseline=top+size*Math.max(1,...glyphs.map(g=>g.scale||1));
     const actual=glyphs.reduce((sum,g)=>sum+g.width,0),spaceCount=glyphs.filter(g=>g.text===' ').length;
     const extra=align==='justify'&&!last?Math.max(0,lineWidth-actual):0,tracking=extra&&!spaceCount&&glyphs.length>1?extra/(glyphs.length-1):0;
     let at=left+(align==='center'?(lineWidth-actual)/2:align==='right'?lineWidth-actual:0),run:Glyph[]=[];
@@ -78,7 +79,7 @@ export function layoutBook(source:BookSource,options:BookOptions,metrics:BookMet
 
       if(first.anchor&&!chapterAnchors[first.anchor]){page.anchors.push({id:first.anchor,x:at,y:top});chapterAnchors[first.anchor]={page:pages.length-1,x:at,y:top};}
 
-      page.commands.push({...first,kind:'text',text,x:at,y:top+size-(first.shift||0)*size,size:size*(first.scale||1),width:w,tracking});
+      page.commands.push({...first,kind:'text',text,x:at,y:baseline-(first.shift||0)*size,size:size*(first.scale||1),width:w,tracking});
       at+=base+tracking*run.length+(extra&&spaceCount?run.filter(g=>g.text===' ').length*extra/spaceCount:0);run=[];
     };
 
@@ -93,7 +94,7 @@ export function layoutBook(source:BookSource,options:BookOptions,metrics:BookMet
   }
 
   function paragraph(spans:BookSpan[],{size=options.size,indent=0,first=0,before=0,after=options.size*.65,align=options.align,keep=false,id}:{size?:number;indent?:number;first?:number;before?:number;after?:number;align?:Align;keep?:boolean;id?:string}={}){
-    const lineHeight=size*options.lineHeight,maxScale=Math.max(1,...spans.map(span=>span.scale||1)),step=Math.max(lineHeight,size*maxScale*1.15);
+    const lineHeight=size*options.lineHeight,maxScale=Math.max(1,...spans.map(span=>span.scale||1)),step=Math.max(lineHeight,size*(maxScale*1.35+Math.max(0,...spans.map(span=>-(span.shift||0)))));
     const largest=Math.max(size,...spans.flatMap(span=>Array.from(segmenter.segment(span.text),g=>metrics.width(g.segment==='\n'?'':g.segment,size*(span.scale||1),!!span.bold))));
     indent=Math.min(indent,Math.max(0,columnWidth-largest));first=Math.min(first,Math.max(0,columnWidth-indent-largest));
     const lines=wrapBookText(spans,size,Math.max(20,columnWidth-indent),metrics,Math.max(20,columnWidth-indent-first));
@@ -142,7 +143,7 @@ for(let cc=col;cc<col+colspan;cc++)occupied[rr][cc]=1;}
       const availableWidth=cw*entry.colspan-padding*2;
 
       if(spans.some(span=>Array.from(segmenter.segment(span.text),g=>metrics.width(g.segment==='\n'?'':g.segment,size*(span.scale||1),!!span.bold)).some(width=>width>availableWidth)))throw new Error('표의 열이 너무 좁습니다. 단수를 줄이거나 EPUB으로 저장하세요.');
-      entry.step=Math.max(step,size*Math.max(1,...spans.map(span=>span.scale||1))*1.15);
+      entry.step=Math.max(step,size*(Math.max(1,...spans.map(span=>span.scale||1))*1.35+Math.max(0,...spans.map(span=>-(span.shift||0)))));
       entry.lines=wrapBookText(spans,size,Math.max(10,availableWidth),metrics);
       const needed=entry.lines.length*entry.step+padding*2,available=heights.slice(entry.row,entry.row+entry.rowspan).reduce((sum,h)=>sum+h,0);
 
