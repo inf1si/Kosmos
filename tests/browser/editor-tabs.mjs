@@ -15,7 +15,7 @@ await mkdir(output,{recursive:true});
 
 const browser=await playwright[engine].launch(engine==='chromium'?{headless:true,executablePath:process.env.KOSMOS_CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']}:{headless:true});
 
-const results=[],errors=[],palettes=process.env.KOSMOS_TABS_QUICK==='1'?PALETTES.slice(0,1):PALETTES;
+const results=[],errors=[],failedRequests=[],palettes=process.env.KOSMOS_TABS_QUICK==='1'?PALETTES.slice(0,1):PALETTES;
 
 let activePage;
 
@@ -53,7 +53,7 @@ try{
   await context.route('**/api/**',route=>route.fulfill({status:200,contentType:'application/json',body:'{"connected":false,"configured":false,"providers":[],"storageAvailable":true}'}));
 
   if(context.routeWebSocket)await context.routeWebSocket('**/realtime/**',ws=>ws.close());
-  const page=await context.newPage();activePage=page;page.setDefaultTimeout(20000);page.on('pageerror',error=>errors.push(error.message));
+  const page=await context.newPage();activePage=page;page.setDefaultTimeout(20000);page.on('pageerror',error=>errors.push(error.message));page.on('requestfailed',request=>{const url=new URL(request.url());failedRequests.push({url:url.origin+url.pathname,error:request.failure()?.errorText});});
   await page.goto(`${base}/studio`,{waitUntil:'networkidle'});await page.locator('.manuscript[contenteditable=true]').first().waitFor();
 
   if(!cloudSeen){
@@ -90,7 +90,12 @@ if(await toggle.getAttribute('aria-pressed')!=='true')await toggle.click();};
 return {x,y};
   }
 
-  async function edge(side){const b=await tabs().boundingBox();await page.mouse.move(side==='end'?b.x+b.width-2:b.x+2,b.y+b.height/2,{steps:8});await tabs().locator('.doc-tab[data-tab-dragging=true]').waitFor();await page.waitForFunction(({side})=>{const el=document.querySelector('[data-editor-tabs]');
+  // Cross the 6px drag threshold even when the authenticated mobile toolbar leaves a narrow tab list.
+  async function enterEdge(side){const b=await tabs().boundingBox();await page.mouse.move(side==='end'?b.x+b.width+12:b.x-12,b.y+b.height/2,{steps:8});await page.mouse.move(side==='end'?b.x+b.width-2:b.x+2,b.y+b.height/2);
+
+return b;}
+
+  async function edge(side){const b=await enterEdge(side);await tabs().locator('.doc-tab[data-tab-dragging=true]').waitFor();await page.waitForFunction(({side})=>{const el=document.querySelector('[data-editor-tabs]');
 
 return side==='end'?el.scrollLeft>=el.scrollWidth-el.clientWidth-2:el.scrollLeft<=1;},{side});await page.mouse.move(side==='end'?b.x+b.width-2:b.x+2,b.y+b.height/2);}
 
@@ -98,8 +103,8 @@ return side==='end'?el.scrollLeft>=el.scrollWidth-el.clientWidth-2:el.scrollLeft
   await start();await edge('end');await page.mouse.up();assert.deepEqual(await ids(),[...original.slice(1),original[0]]);assert.equal(await active(),selected);assert.deepEqual(await page.locator('.editor-panes .manuscript').allTextContents(),body);
   await start(original.length-1);await edge('start');await page.mouse.up();assert.deepEqual(await ids(),original);assert.equal(await active(),selected);
   // A cancelled drag and an outside release do not navigate or reorder.
-  await start();let r=await tabs().boundingBox();await page.mouse.move(r.x+r.width-2,r.y+r.height/2,{steps:6});await page.keyboard.press('Escape');await page.mouse.up();assert.deepEqual(await ids(),original);assert.equal(await active(),selected);
-  await start();r=await tabs().boundingBox();await page.mouse.move(r.x+r.width-2,r.y+r.height+55,{steps:6});await page.mouse.up();assert.deepEqual(await ids(),original);assert.equal(await active(),selected);
+  await start();let r=await enterEdge('end');await page.keyboard.press('Escape');await page.mouse.up();assert.deepEqual(await ids(),original);assert.equal(await active(),selected);
+  await start();r=await enterEdge('end');await page.mouse.move(r.x+r.width-2,r.y+r.height+55,{steps:6});await page.mouse.up();assert.deepEqual(await ids(),original);assert.equal(await active(),selected);
   // Reordering by keyboard leaves the focused/selected document intact.
   await labels().first().focus();await page.keyboard.press('Alt+ArrowRight');assert.deepEqual(await ids(),[original[1],original[0],...original.slice(2)]);await page.keyboard.press('Alt+ArrowLeft');assert.deepEqual(await ids(),original);
   const smallTitle=await labels().nth(1).innerText(),small=await start(1);await page.mouse.move(small.x+3,small.y);await page.mouse.up();assert.equal(await active(),smallTitle);assert.deepEqual(await ids(),original);
@@ -118,7 +123,7 @@ return side==='end'?el.scrollLeft>=el.scrollWidth-el.clientWidth-2:el.scrollLeft
   for(const palette of palettes)for(const mode of ['light','dark']){
    await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});
    await page.evaluate(()=>document.fonts.ready);
-   await start();r=await tabs().boundingBox();await page.mouse.move(r.x+r.width-2,r.y+r.height/2,{steps:6});await tabs().locator('[data-drop-edge]').first().waitFor();
+   await start();r=await enterEdge('end');await tabs().locator('[data-drop-edge]').first().waitFor();
 
    const metrics=await tabs().evaluate(root=>{const row=root.querySelector('[data-drop-edge]'),source=root.querySelector('[data-tab-dragging]'),style=getComputedStyle(row,'::after'),bounds=root.getBoundingClientRect();
 
@@ -165,9 +170,9 @@ for(const name of ['탭 닫기','다른 탭 닫기','오른쪽 탭 닫기','왼�
  }
 
  assert.deepEqual(errors,[]);await writeFile(resolve(output,'results.json'),JSON.stringify({base,engine,results,errors},null,2));console.log(JSON.stringify({engine,base,cases:results.length,sourceUnchanged:true}));
-}catch(error){if(activePage&&!activePage.isClosed()){await activePage.screenshot({path:resolve(output,'failure.png'),fullPage:true});await writeFile(resolve(output,'failure.json'),JSON.stringify(await activePage.evaluate(()=>{const root=document.querySelector('[data-editor-tabs]');
+}catch(error){if(activePage&&!activePage.isClosed()){await activePage.screenshot({path:resolve(output,'failure.png'),fullPage:true});await writeFile(resolve(output,'failure.json'),JSON.stringify({errors,failedRequests,page:await activePage.evaluate(()=>{const root=document.querySelector('[data-editor-tabs]');
 
-return {palette:document.documentElement.dataset.palette,mode:document.documentElement.dataset.theme,scroll:root?.scrollLeft,bounds:root?.getBoundingClientRect().toJSON(),rows:[...root?.querySelectorAll('[data-tab-id]')||[]].map(row=>({id:row.dataset.tabId,drag:row.dataset.tabDragging,edge:row.dataset.dropEdge,rect:row.getBoundingClientRect().toJSON()}))};}),null,2));}
+return {palette:document.documentElement.dataset.palette,mode:document.documentElement.dataset.theme,scroll:root?.scrollLeft,bounds:root?.getBoundingClientRect().toJSON(),rows:[...root?.querySelectorAll('[data-tab-id]')||[]].map(row=>({id:row.dataset.tabId,drag:row.dataset.tabDragging,edge:row.dataset.dropEdge,rect:row.getBoundingClientRect().toJSON()}))};})},null,2));}
 
 throw error;}
 finally{await browser.close();}
