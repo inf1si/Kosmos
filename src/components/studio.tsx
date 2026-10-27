@@ -8,6 +8,7 @@ import { ArrowDown, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUp
 import { useStudio } from './studio-provider';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
+import { EditorTabs } from './editor-tabs';
 import { WorkspaceSearch,openWorkspaceSearch } from './workspace-search';
 import type { WorkspaceSearchJump,WorkspaceSearchHit } from '@/lib/workspace-search';
 import { InternalReferencePanel } from './internal-reference-panel';
@@ -217,9 +218,14 @@ if(!previous)return;setBack(b=>b.slice(0,-1));setForward(f=>[view,...f]);show(pr
 
 if(!next)return;setForward(f=>f.slice(1));setBack(b=>[...b,view]);show(next);}
 
-  function closeTab(id:string){const remaining=openTabs.filter(v=>v!==id);setTabs(remaining);
+  function closeTabs(ids:string[],preferred?:string){const remaining=openTabs.filter(id=>!ids.includes(id));
 
-if(id===view){const next=remaining.at(-1)!;show(next);setTabs(remaining);}}
+    if(!remaining.length)return;
+    setTabs(remaining);
+
+    if(!remaining.includes(view)){show(preferred&&remaining.includes(preferred)?preferred:remaining.at(-1)!);setTabs(remaining);}}
+
+  function closeTab(id:string){closeTabs([id]);}
 
   function openDoc(id:string,beside=false){if(beside&&!onOverview){setSplitId(id===active.id?null:id);
 
@@ -320,9 +326,9 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
 if(focus){setFocus(false);setSidebar(true);}else setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton>
         <IconButton label="뒤로" className="icon-button history-button" disabled={!back.length} onClick={goBack}><ChevronLeft size={16}/></IconButton>
         <IconButton label="앞으로" className="icon-button history-button" disabled={!forward.length} onClick={goForward}><ChevronRight size={16}/></IconButton>
-        <div className="tab-list" role="tablist" aria-label="열린 문서">{openTabs.map(id=>{const d=docs.find(x=>x.id===id);const title=d?documentTitle(d):(id===HOME?'집필실 홈':id===GRAPH?'문서 그래프':'플롯보드');
+        <EditorTabs key={work.id} items={openTabs.map(id=>{const doc=docs.find(doc=>doc.id===id);
 
-return <div className={`doc-tab ${id===view?'active':''}`} key={id}>{d?<DocIcon doc={d}/>:id===HOME?<House size={14}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>}<button type="button" role="tab" aria-selected={id===view} onClick={()=>go(id)}>{title}</button>{openTabs.length>1&&<button type="button" className="tab-close" aria-label={`${title} 탭 닫기`} onClick={()=>closeTab(id)}><X size={12}/></button>}</div>;})}</div>
+return {id,canSplit:doc?!onOverview&&doc.id!==active.id:undefined,title:doc?documentTitle(doc):id===HOME?'집필실 홈':id===GRAPH?'문서 그래프':'플롯보드',icon:doc?<DocIcon doc={doc}/>:id===HOME?<House size={14}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>};})} activeId={view} onSelect={go} onClose={closeTab} onCloseMany={closeTabs} onSplit={id=>openDoc(id,true)} onReorder={setTabs}/>
         <span className="tab-spacer"/>
         <QuickNote open={quickNote} onOpenChange={setQuickNote} disabled={readonly} onOpenNote={id=>{setCaptureId(id);openNotes(id);}}/>
         <GoogleAccountControl/>
