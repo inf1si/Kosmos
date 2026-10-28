@@ -92,7 +92,7 @@ export function EditorTabs({items,activeId,onSelect,onClose,onCloseMany,onSplit,
 
   return <><div ref={root} className={`tab-list ${drag?.active?'is-reordering':''}`} role="tablist" aria-label="열린 문서" data-editor-tabs="" onPointerDownCapture={()=>{blockClick.current=false;}} onMouseDownCapture={event=>{if(blockClick.current&&event.button===0)event.preventDefault();}} onClickCapture={event=>{if(blockClick.current&&event.detail>0){event.preventDefault();event.stopPropagation();blockClick.current=false;}}}>
     {items.map((item,index)=><ContextMenu.Root key={item.id} modal={false} onOpenChange={open=>{if(open){finish(true);blockClick.current=true;}}}><ContextMenu.Trigger asChild><div className={`doc-tab ${item.id===activeId?'active':''}`} data-tab-id={item.id} data-tab-dragging={drag?.active&&drag.id===item.id||undefined} data-drop-edge={drag?.active&&drag.drop?.id===item.id?drag.drop.edge:undefined}>
-      {item.icon}<button type="button" role="tab" aria-selected={item.id===activeId} aria-description="드래그 또는 Alt와 좌우 방향키로 탭 순서 변경, Shift+F10으로 탭 메뉴" title={`${item.title} · 드래그로 탭 순서 변경 · Alt+←/→`} onClick={()=>onSelect(item.id)}
+      {item.icon}<button type="button" role="tab" aria-selected={item.id===activeId} aria-description="드래그 또는 Alt와 좌우 방향키로 탭 순서 변경, Shift+F10으로 탭 메뉴" title={item.title} onClick={()=>onSelect(item.id)}
         onPointerDown={event=>{if(event.button!==0||!event.isPrimary||pending.current)return;
 
 if(event.pointerType!=='touch')event.currentTarget.setPointerCapture(event.pointerId);const next={id:item.id,pointerId:event.pointerId,touch:event.pointerType==='touch',startX:event.clientX,x:event.clientX,y:event.clientY,active:false};pending.current=next;}}
