@@ -165,6 +165,13 @@ await touch('touchEnd');
 
 for(const name of ['탭 닫기','다른 탭 닫기','오른쪽 탭 닫기','왼쪽으로 이동','오른쪽으로 이동'])assert.equal(await action(name).isDisabled(),true,name);await page.keyboard.press('Escape');
   await openDoc(fixture.first);await right(1);await action('탭 닫기').click();assert.deepEqual(await ids(),[onlyId]);assert.equal(await active(),only);
+
+  // A middle click closes that tab only; tabs and their order come back after a reload.
+  for(const title of ['다','라','마'])await openDoc(fixture.work.documents.find(doc=>doc.title===title));
+
+  const beforeMiddle=await ids();assert(beforeMiddle.length>=3);await labels().last().scrollIntoViewIfNeeded();await labels().last().click({button:'middle'});assert.deepEqual(await ids(),beforeMiddle.slice(0,-1),'middle click closes that tab');
+  await labels().first().focus();await page.keyboard.press('Alt+ArrowRight');const kept=await ids(),keptActive=await active();
+  await page.reload({waitUntil:'networkidle'});await page.locator('.manuscript[contenteditable=true]').first().waitFor();assert.deepEqual(await ids(),kept,'tab order survives a reload');assert.equal(await active(),keptActive);
   await sidebar();await page.getByTitle('작품 전환',{exact:true}).click();await page.locator('#work-menu').getByRole('button',{name:/다른 작품/}).click();assert((await ids()).every(id=>id==='home'||id===other.documents[0].id),'work changes reset tabs');
   assert.equal(JSON.stringify(await stored()),before,'tab movement must not alter source/navigation/backup payload');assert.equal(writes,0);
   await page.reload({waitUntil:'networkidle'});assert.equal(JSON.stringify(await stored()),before);

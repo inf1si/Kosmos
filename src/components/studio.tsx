@@ -42,7 +42,7 @@ import { descendantsOf, childrenOf, insertDocument, moveNavigation, resolveNavig
 import { cloudConfigured, cloud } from '@/lib/cloud';
 import { db } from '@/lib/database';
 import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences';
-import { openingDocument, readStudioPosition, rememberStudioPosition } from '@/lib/studio-position';
+import { openingDocument, readStudioPosition, readStudioTabs, rememberStudioPosition, rememberStudioTabs } from '@/lib/studio-position';
 import { workShelves, workShelfTitle } from '@/lib/work-shelves';
 import { Select } from './select';
 
@@ -67,7 +67,7 @@ function studioEntry(){
 
   try{home=parseAppPreferences(localStorage.getItem(APP_PREFERENCES_KEY)).studioStart==='home';}catch{/* Server render or blocked storage: start on the home. */}
 
-  return {workId:position.workId,docId:position.docs[position.workId]||'',home};
+  return {workId:position.workId,docId:position.docs[position.workId]||'',home,tabs:readStudioTabs(position.workId)};
 }
 
 /** Closes a popover on a click outside it or Escape, returning focus to its toggle. */
@@ -108,7 +108,7 @@ window.addEventListener('keydown',key);
 
 return()=>window.removeEventListener('keydown',key);},[createNote,notesOpen,s.canUse,s.conflict]);
   const [entry]=useState(studioEntry);
-  const [workId,setWorkId]=useState(entry.workId);const [current,setCurrent]=useState(entry.home?HOME:entry.docId);const [lastDoc,setLastDoc]=useState(entry.docId);const [tabs,setTabs]=useState<string[]>(entry.home?[HOME]:[]);
+  const [workId,setWorkId]=useState(entry.workId);const [current,setCurrent]=useState(entry.home?HOME:entry.docId);const [lastDoc,setLastDoc]=useState(entry.docId);const [tabs,setTabs]=useState<string[]>(entry.tabs.length?entry.tabs:entry.home?[HOME]:[]);
   const [back,setBack]=useState<string[]>([]);const [forward,setForward]=useState<string[]>([]);const [splitId,setSplitId]=useState<string|null>(null);const [splitWidth,setSplitWidth]=useState(50);
   const [focus,setFocus]=useState(false);const [sidebar,setSidebar]=useState(true);const [reference,setReference]=useState<Reference|null>(null);const [properties,setProperties]=useState(false);
   const [referencePreview,setReferencePreview]=useState<InternalReference|null>(null),[referenceSource,setReferenceSource]=useState('');
@@ -155,6 +155,10 @@ return()=>observer.disconnect();},[current,compact,s.loading]);
   useEffect(()=>{const works=s.state?.works;
 
 if(!works)return;const w=works.find(item=>item.id===workId)||works[0];rememberStudioPosition(w.id,openingDocument(w.documents,current,lastDoc).id);},[s.state?.works,workId,current,lastDoc]);
+  // Open tabs and their order come back after a reload or when returning to the work; deleted documents drop out.
+  useEffect(()=>{const works=s.state?.works;
+
+if(!works)return;const w=works.find(item=>item.id===workId)||works[0];rememberStudioTabs(w.id,tabs.filter(id=>id===HOME||id===BOARD||id===GRAPH||w.documents.some(d=>d.id===id)));},[s.state?.works,workId,tabs]);
 
   if(s.loading)return <div className="loading-screen"><NotebookPen size={28}/><p>집필실을 여는 중입니다.</p></div>;
 
@@ -165,7 +169,7 @@ if(!works)return;const w=works.find(item=>item.id===workId)||works[0];rememberSt
 
   function returnToWork(id?:string,docId?:string){setNotesOpen(false);window.history.replaceState(null,'',`${window.location.pathname}${window.location.search}`);
 
-if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(docId?[docId]:[]);setBack([]);setForward([]);setSplitId(null);setReference(null);}}
+if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(readStudioTabs(id));setBack([]);setForward([]);setSplitId(null);setReference(null);}}
 
   function openSearchResult(hit:WorkspaceSearchHit,jump:WorkspaceSearchJump){
     const target=hit.document;setFocus(false);setReference(null);
@@ -234,7 +238,9 @@ return;}
 if(id===splitId)setSplitId(active.id);go(id);}
 
   // A work reopens on the document last open in it on this device. The home tab spans works, so it stays open.
-  function switchWork(id:string,docId?:string){const doc=docId??readStudioPosition().docs[id]??'';setWorkId(id);setCurrent(doc);setLastDoc(doc);setTabs(t=>t.includes(HOME)?[HOME]:[]);setBack(view===HOME?[HOME]:[]);setForward([]);setSplitId(null);setReference(null);setProperties(false);setWorkMenu(false);
+  function switchWork(id:string,docId?:string){const doc=docId??readStudioPosition().docs[id]??'';setWorkId(id);setCurrent(doc);setLastDoc(doc);setTabs(t=>{const saved=readStudioTabs(id);
+
+return t.includes(HOME)&&!saved.includes(HOME)?[HOME,...saved]:saved;});setBack(view===HOME?[HOME]:[]);setForward([]);setSplitId(null);setReference(null);setProperties(false);setWorkMenu(false);
 
 if(narrow())setSidebar(false);}
 
@@ -246,7 +252,7 @@ if(narrow())setSidebar(false);}
   function leaveWork(id:string){
     if(id!==work.id)return;const next=s.state!.works.find(w=>w.id!==id)!;
 
-    if(onHome){setWorkId(next.id);setLastDoc(readStudioPosition().docs[next.id]??'');setTabs([HOME]);setBack([]);setForward([]);setSplitId(null);}
+    if(onHome){const saved=readStudioTabs(next.id);setWorkId(next.id);setLastDoc(readStudioPosition().docs[next.id]??'');setTabs(saved.includes(HOME)?saved:[HOME,...saved]);setBack([]);setForward([]);setSplitId(null);}
     else switchWork(next.id);
   }
 
