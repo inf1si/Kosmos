@@ -108,6 +108,8 @@ return side==='end'?el.scrollLeft>=el.scrollWidth-el.clientWidth-2:el.scrollLeft
   // Reordering by keyboard leaves the focused/selected document intact.
   await labels().first().focus();await page.keyboard.press('Alt+ArrowRight');assert.deepEqual(await ids(),[original[1],original[0],...original.slice(2)]);await page.keyboard.press('Alt+ArrowLeft');assert.deepEqual(await ids(),original);
   const smallTitle=await labels().nth(1).innerText(),small=await start(1);await page.mouse.move(small.x+3,small.y);await page.mouse.up();assert.equal(await active(),smallTitle);assert.deepEqual(await ids(),original);
+  // The hover title names the tab only; how to move tabs belongs in the guide, not a tooltip on every tab.
+  assert.equal(await labels().first().getAttribute('title'),await labels().first().innerText());
   const first=await labels().first().innerText();await labels().first().click();assert.equal(await active(),first);assert.deepEqual(await ids(),original);
   const menu=()=>page.getByRole('menu',{name:/탭 메뉴$/}),action=name=>menu().getByRole('menuitem',{name,exact:true});
 
