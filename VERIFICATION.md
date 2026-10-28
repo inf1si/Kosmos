@@ -1,5 +1,11 @@
 # 구현 검증
 
+## 2026-10-28 — 탭 가운데 클릭·순서 기억
+
+- 기준 main `1ce95c5`. 탭 행의 가운데 클릭 닫기와 작품별 열린 탭 기억(`kosmos-studio-tabs`, 기기 localStorage, ID만)을 추가했다. DB·작업 공간·백업 형식은 그대로다.
+- 단위: `studio-position.test.ts`에 작품별 저장·30개/50작품 제한·깨진 값 무시 검사를 추가했다. 전체 263개·타입·변경 파일 린트 통과.
+- 브라우저(개발 실행 webpack, 합성 Supabase, Chromium): `editor-tabs.mjs`에 가운데 클릭 닫기와 순서 변경 후 새로고침 복원 단계를 넣었다. 기능 없이 각각 "middle click closes that tab"·"tab order survives a reload"로 실패하고, 넣은 뒤 1280/360px × 54조합 108개 경우와 기존 드래그·메뉴·분할·닫기·작품 전환·원고 불변 흐름이 통과했다. `studio-home.mjs`·`note-quick-capture.mjs` 회귀도 통과. WebKit·실제 Safari·CI·운영은 미확인.
+
 ## 2026-10-28 — main 리뷰: 탭 툴팁
 
 - 기준 main `58f8075`(#98 탭 드래그·우클릭 리뷰). 코드 검토와 로컬 개발 실행(webpack, 합성 Supabase) Chromium `editor-tabs.mjs`에서 기능 결함은 찾지 못했다. 탭 hover title이 조작법을 함께 띄우는 것을 가이드 7절 위반으로 보고 제목만 남겼다.

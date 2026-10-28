@@ -26,6 +26,28 @@ if(current.workId===workId&&current.docs[workId]===docId)return;
   try{localStorage.setItem(STUDIO_POSITION_KEY,JSON.stringify({workId,docs:{...current.docs,[workId]:docId}}));}catch{/* Only the next visit loses its place. */}
 }
 
+/** Open tabs per work on this device, in their tab-bar order. IDs only; recent 50 works, 30 tabs each. */
+export const STUDIO_TABS_KEY='kosmos-studio-tabs';
+
+const tabsSchema=z.record(z.string().max(100),z.array(z.string().max(100)).max(30));
+
+function studioTabs():Record<string,string[]>{
+  try{const parsed=tabsSchema.safeParse(JSON.parse(localStorage.getItem(STUDIO_TABS_KEY)||'{}'));
+
+return parsed.success?parsed.data:{};}catch{return {};}
+}
+
+export function readStudioTabs(workId:string):string[]{return studioTabs()[workId]??[];}
+
+export function rememberStudioTabs(workId:string,ids:string[]){
+  const all=studioTabs(),next=ids.slice(0,30);
+
+  if(JSON.stringify(all[workId])===JSON.stringify(next))return;
+  delete all[workId];
+
+  try{localStorage.setItem(STUDIO_TABS_KEY,JSON.stringify(Object.fromEntries([...Object.entries(all).slice(-49),[workId,next]])));}catch{/* Only the next visit loses its tabs. */}
+}
+
 /** The document a work opens on: the requested one, the remembered one, its first scene, or its first document. */
 export function openingDocument(docs:NovelDocument[],...preferred:string[]):NovelDocument{
   for(const id of preferred){const found=id&&docs.find(d=>d.id===id);
