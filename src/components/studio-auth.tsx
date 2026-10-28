@@ -6,7 +6,7 @@ import { LogOut, User } from 'lucide-react';
 import { cloud,cloudConfigured } from '@/lib/cloud';
 import { startGoogleAuth,googleAuthClient } from '@/lib/google-auth';
 import { useStudio } from './studio-provider';
-import { IconButton,Popover } from './primitives';
+import { IconButton,Popover,type PopoverAnchor } from './primitives';
 
 async function googleEnabled(){
   const response=await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`,{headers:{apikey:process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!},cache:'no-store'});
@@ -44,8 +44,9 @@ try{await action();}catch(e){setError(e instanceof Error?e.message:'로그인하
   </>:<p>작가용 클라우드 연결을 설정한 뒤 이용할 수 있습니다.</p>}<Link href="/library">공개 서재</Link></div>;
 }
 
-export function GoogleAccountControl(){
-  const s=useStudio();const [open,setOpen]=useState(false);const [linked,setLinked]=useState<boolean|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState<'link'|'logout'|null>(null);
+/** With an anchor (phones, where the header button moves into the 더 보기 menu) the caller opens it and focus returns to that menu's button. */
+export function GoogleAccountControl({anchor,open:shown,onOpenChange}:{anchor?:PopoverAnchor;open?:boolean;onOpenChange?:(open:boolean)=>void}={}){
+  const s=useStudio();const [own,setOwn]=useState(false),open=shown??own,setOpen=onOpenChange??setOwn;const [linked,setLinked]=useState<boolean|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState<'link'|'logout'|null>(null);
   useEffect(()=>{
     if(!open)return;let disposed=false;setError('');setLinked(null);
     void cloud().auth.getUser().then(({data,error})=>{if(disposed)return;
@@ -65,7 +66,7 @@ try{await s.flush();await s.syncNow();await redirectToGoogle('link');}catch(e){s
 
 try{await s.logout();}catch(e){setError(e instanceof Error?e.message:'로그아웃하지 못했습니다. 다시 시도하세요.');setBusy(null);}}
 
-  return <Popover open={open} onOpenChange={setOpen} title="로그인 계정" width={300} align="end" trigger={<IconButton label="로그인 계정"><User size={16}/></IconButton>}>
+  return <Popover open={open} onOpenChange={setOpen} title="로그인 계정" width={300} align="end" anchor={anchor} onReturnFocus={anchor?()=>document.getElementById('more-toggle')?.focus():undefined} trigger={anchor?undefined:<IconButton label="로그인 계정"><User size={16}/></IconButton>}>
     <div className="account-login"><p>{linked===null?'연결 상태 확인 중':linked?'Google 연결됨':'Google 미연결'}</p>
       {linked===false&&<><button type="button" className="button" disabled={!!busy||!!s.conflict} onClick={()=>void connect()}>{busy==='link'?'연결 중…':'Google 계정 연결'}</button></>}
       <button type="button" className="button" disabled={!!busy} onClick={()=>void logout()}><LogOut size={15}/>{busy==='logout'?'로그아웃 중…':'로그아웃'}</button>

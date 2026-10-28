@@ -140,7 +140,14 @@ try {
                 document.documentElement.dataset.theme = theme;
             }, { palette, theme });
 
-            await account().click();
+            // Phones move the studio's account button into 더 보기 to leave the tab strip room.
+            const phone = consumer === 'studio' && width === 360;
+
+            if (phone) {
+                await page.getByRole('button', { name: '더 보기', exact: true }).click();
+                await page.locator('#more-menu').getByRole('button', { name: '로그인 계정', exact: true }).click();
+            }
+            else await account().click();
             await logout().waitFor();
 
             const style = await logout().evaluate(button => {
@@ -156,7 +163,7 @@ try {
             layouts.push({ consumer, width, palette, theme, ...style });
             await page.screenshot({ path: resolve(output, `${consumer}-${palette}-${theme}-${width}.png`) });
             await page.keyboard.press('Escape');
-            await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === '로그인 계정');
+            await page.waitForFunction(label => document.activeElement?.getAttribute('aria-label') === label, phone ? '더 보기' : '로그인 계정');
         }
     }
 
@@ -204,7 +211,7 @@ try {
     await page.keyboard.insertText(' 서버 장애 중 입력.');
     saveFailure = true;
     await account().click();
-    await page.getByText('Google 계정이 연결되어 있습니다.', { exact: true }).waitFor();
+    await page.getByText('Google 연결됨', { exact: true }).waitFor();
     await logout().click();
     await page.getByRole('button', { name: '집필실 열기', exact: true }).waitFor();
     const pending = await stored();

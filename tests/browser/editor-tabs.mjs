@@ -112,15 +112,32 @@ return side==='end'?el.scrollLeft>=el.scrollWidth-el.clientWidth-2:el.scrollLeft
   assert.equal(await labels().first().getAttribute('title'),await labels().first().innerText());
   const first=await labels().first().innerText();await labels().first().click();assert.equal(await active(),first);assert.deepEqual(await ids(),original);
   const menu=()=>page.getByRole('menu',{name:/탭 메뉴$/}),action=name=>menu().getByRole('menuitem',{name,exact:true});
+  // Phones keep the tab strip wide: quick note, account, split and reference live in 더 보기 instead of the header.
+  const more=()=>page.locator('#more-menu'),openMore=async()=>{await page.getByRole('button',{name:'더 보기',exact:true}).click();await more().waitFor();};
+
+  async function toggleSplit(){if(width===360){await openMore();await more().getByRole('button',{name:/^(옆에 열기|옆 창 닫기)$/}).click();}else await page.getByRole('button',{name:'옆에 열기',exact:true}).click();}
+
+  if(width===360){
+   const header=page.locator('.panel-tabs');
+
+   for(const name of ['빠른 메모 (Alt+N)','로그인 계정','옆에 열기','참고 패널'])assert.equal(await header.getByRole('button',{name,exact:true}).count(),0,`${name} is not a header button on phones`);
+   assert((await tabs().boundingBox()).width>=150,'the tab strip keeps room for several titles');
+   await openMore();assert.deepEqual(await more().getByRole('button').evaluateAll(items=>items.slice(0,4).map(item=>item.textContent)),['빠른 메모','로그인 계정','옆에 열기','참고 패널']);
+   await more().getByRole('button',{name:'빠른 메모',exact:true}).click();const note=page.getByRole('dialog',{name:'빠른 메모'});await note.waitFor();await page.waitForFunction(()=>document.activeElement?.getAttribute('aria-label')==='빠른 메모 내용');
+   let box=await note.boundingBox();assert(box.x>=0&&box.x+box.width<=361&&box.y>=40,'quick note opens under 더 보기 inside the screen');await page.keyboard.press('Escape');await note.waitFor({state:'hidden'});
+   await openMore();await more().getByRole('button',{name:'로그인 계정',exact:true}).click();const accountBox=page.getByRole('dialog',{name:'로그인 계정'});await accountBox.waitFor();box=await accountBox.boundingBox();assert(box.x>=0&&box.x+box.width<=361&&box.y>=40);
+   await page.keyboard.press('Escape');await accountBox.waitFor({state:'hidden'});await page.waitForFunction(()=>document.activeElement?.id==='more-toggle');
+  }
+
 
   async function right(index){const button=labels().nth(index);await button.scrollIntoViewIfNeeded();await button.click({button:'right'});await menu().waitFor();}
 
   await right(0);assert.equal(await action('왼쪽으로 이동').isDisabled(),true);await action('오른쪽으로 이동').click();assert.deepEqual(await ids(),[original[1],original[0],...original.slice(2)]);assert.equal(await active(),first);
   await right(1);await action('왼쪽으로 이동').click();assert.deepEqual(await ids(),original);
-  await right(1);assert.equal(await active(),first);await action('옆에 열기').click();assert.equal(await page.locator('.editor-panes .manuscript').count(),2);assert.equal(await active(),first);await page.getByRole('button',{name:'옆에 열기',exact:true}).click();
+  await right(1);assert.equal(await active(),first);await action('옆에 열기').click();assert.equal(await page.locator('.editor-panes .manuscript').count(),2);assert.equal(await active(),first);await toggleSplit();
   await labels().first().focus();await page.keyboard.press('Shift+F10');await menu().waitFor();await page.keyboard.press('Escape');await page.waitForFunction(()=>document.activeElement===document.querySelector('[data-editor-tabs] [role=tab]'));
   // Split panes and close buttons keep their existing targets.
-  await page.getByRole('button',{name:'옆에 열기',exact:true}).click();assert.equal(await page.locator('.editor-panes .manuscript').count(),2);const splitBody=await page.locator('.editor-panes .manuscript').allTextContents();await labels().first().focus();await page.keyboard.press('Alt+ArrowRight');assert.deepEqual(await page.locator('.editor-panes .manuscript').allTextContents(),splitBody);await page.keyboard.press('Alt+ArrowLeft');await page.getByRole('button',{name:'옆에 열기',exact:true}).click();
+  await toggleSplit();assert.equal(await page.locator('.editor-panes .manuscript').count(),2);const splitBody=await page.locator('.editor-panes .manuscript').allTextContents();await labels().first().focus();await page.keyboard.press('Alt+ArrowRight');assert.deepEqual(await page.locator('.editor-panes .manuscript').allTextContents(),splitBody);await page.keyboard.press('Alt+ArrowLeft');await toggleSplit();
 
   for(const palette of palettes)for(const mode of ['light','dark']){
    await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});
