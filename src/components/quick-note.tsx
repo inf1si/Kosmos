@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { StickyNote } from 'lucide-react';
-import { IconButton, Popover } from './primitives';
+import { IconButton, Popover, type PopoverAnchor } from './primitives';
 import { useStudio } from './studio-provider';
 import { addNote, newNote, noteFromText } from '@/lib/personal-notes';
 
@@ -39,10 +39,11 @@ if(id)onOpenNote(id);}
 }
 
 /** 집필실을 떠나지 않고 한두 줄을 수집함에 넣는다. Alt+N은 Studio가 open으로 연다. */
-export function QuickNote({open,onOpenChange,disabled,onOpenNote}:{open:boolean;onOpenChange:(open:boolean)=>void;disabled:boolean;onOpenNote:(id:string)=>void}){
+/** On phones the header button moves into the 더 보기 menu; the popover is then placed under that menu's button. */
+export function QuickNote({open,onOpenChange,disabled,onOpenNote,anchor}:{open:boolean;onOpenChange:(open:boolean)=>void;disabled:boolean;onOpenNote:(id:string)=>void;anchor?:PopoverAnchor}){
   return <Popover open={open} onOpenChange={onOpenChange} title="빠른 메모" width={340} align="end"
     onReturnFocus={()=>document.querySelector<HTMLElement>('.studio-panel .manuscript')?.focus()}
-    trigger={<IconButton label="빠른 메모 (Alt+N)" disabled={disabled}><StickyNote size={16}/></IconButton>}>
+    anchor={anchor} trigger={anchor?undefined:<IconButton label="빠른 메모 (Alt+N)" disabled={disabled}><StickyNote size={16}/></IconButton>}>
     {open&&<QuickNoteForm disabled={disabled} autoFocus onOpenNote={id=>{onOpenChange(false);onOpenNote(id);}}/>}
   </Popover>;
 }

@@ -126,11 +126,15 @@ window.addEventListener('studio-modal',listener);
 
 return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openNotes,selectedNote]);
   const [searchJump,setSearchJump]=useState<WorkspaceSearchJump|null>(null);
-  const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [paperId,setPaperId]=useState<string|null>(null);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
+  const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [phone,setPhone]=useState(false);const [account,setAccount]=useState(false);const [paperId,setPaperId]=useState<string|null>(null);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const sidebarStyle=useSidebarStyle();const referenceRef=useRef<HTMLElement>(null);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
   useDrawerFocus(!notesOpen&&compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
-  useDrawerFocus(!notesOpen&&compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,'reference-toggle');
+  useDrawerFocus(!notesOpen&&compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,phone?'more-toggle':'reference-toggle');
+  // On phones the tab strip needs the header's room: quick note, account, split and reference move into 더 보기.
+  useEffect(()=>{const media=window.matchMedia('(max-width: 620px)'),update=()=>setPhone(media.matches);update();media.addEventListener('change',update);
+
+return()=>media.removeEventListener('change',update);},[]);
   const workMenuRef=useDismiss(workMenu,setWorkMenu);const moreMenuRef=useDismiss(moreMenu,setMoreMenu);
 
   function openSearch(){openWorkspaceSearch();}
@@ -230,6 +234,10 @@ if(!next)return;setForward(f=>f.slice(1));setBack(b=>[...b,view]);show(next);}
     if(!remaining.includes(view)){show(preferred&&remaining.includes(preferred)?preferred:remaining.at(-1)!);setTabs(remaining);}}
 
   function closeTab(id:string){closeTabs([id]);}
+
+  function toggleSplit(){setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null);}
+
+  function toggleReference(){setFocus(false);setReference(r=>r&&!focus?null:'links');}
 
   function openDoc(id:string,beside=false){if(beside&&!onOverview){setSplitId(id===active.id?null:id);
 
@@ -336,12 +344,21 @@ if(focus){setFocus(false);setSidebar(true);}else setSidebar(v=>!v);}}><PanelLeft
 
 return {id,canSplit:doc?!onOverview&&doc.id!==active.id:undefined,title:doc?documentTitle(doc):id===HOME?'집필실 홈':id===GRAPH?'문서 그래프':'플롯보드',icon:doc?<DocIcon doc={doc}/>:id===HOME?<House size={14}/>:id===GRAPH?<Network size={14}/>:<LayoutGrid size={14}/>};})} activeId={view} onSelect={go} onClose={closeTab} onCloseMany={closeTabs} onSplit={id=>openDoc(id,true)} onReorder={setTabs}/>
         <span className="tab-spacer"/>
-        <QuickNote open={quickNote} onOpenChange={setQuickNote} disabled={readonly} onOpenNote={id=>{setCaptureId(id);openNotes(id);}}/>
-        <GoogleAccountControl/>
-        <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onOverview} onClick={()=>setSplitId(split?null:(wiki.find(d=>d.id!==active.id)||docs.find(d=>d.id!==active.id))?.id||null)}><Columns2 size={16}/></IconButton>
-        <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onOverview} onClick={()=>{setFocus(false);setReference(r=>r&&!focus?null:'links');}}><PanelRight size={16}/></IconButton>
-        <div className="menu-anchor" ref={moreMenuRef}><IconButton label="더 보기" aria-expanded={moreMenu} aria-controls="more-menu" onClick={()=>setMoreMenu(v=>!v)}><MoreHorizontal size={16}/></IconButton>
+        <QuickNote open={quickNote} onOpenChange={setQuickNote} disabled={readonly} anchor={phone?moreMenuRef:undefined} onOpenNote={id=>{setCaptureId(id);openNotes(id);}}/>
+        {phone?<GoogleAccountControl anchor={moreMenuRef} open={account} onOpenChange={setAccount}/>:<>
+          <GoogleAccountControl/>
+          <IconButton label="옆에 열기" aria-pressed={!!split} disabled={onOverview} onClick={toggleSplit}><Columns2 size={16}/></IconButton>
+          <IconButton id="reference-toggle" label="참고 패널" aria-pressed={!!reference&&!focus} disabled={onOverview} onClick={toggleReference}><PanelRight size={16}/></IconButton>
+        </>}
+        <div className="menu-anchor" ref={moreMenuRef}><IconButton id="more-toggle" label="더 보기" aria-expanded={moreMenu} aria-controls="more-menu" onClick={()=>setMoreMenu(v=>!v)}><MoreHorizontal size={16}/></IconButton>
           {moreMenu&&<div id="more-menu" className="popover-menu more-menu">
+            {phone&&<>
+              <button type="button" disabled={readonly} onClick={()=>{setMoreMenu(false);setQuickNote(true);}}><StickyNote size={15}/>빠른 메모</button>
+              {cloudConfigured&&s.user&&<button type="button" onClick={()=>{setMoreMenu(false);setAccount(true);}}><User size={15}/>로그인 계정</button>}
+              <button type="button" aria-pressed={!!split} disabled={onOverview} onClick={()=>{setMoreMenu(false);toggleSplit();}}><Columns2 size={15}/>{split?'옆 창 닫기':'옆에 열기'}</button>
+              <button type="button" aria-pressed={!!reference&&!focus} disabled={onOverview} onClick={()=>{setMoreMenu(false);toggleReference();}}><PanelRight size={15}/>{reference&&!focus?'참고 패널 닫기':'참고 패널'}</button>
+              <span className="menu-divider"/>
+            </>}
             <button type="button" aria-pressed={focus} onClick={()=>{setMoreMenu(false);setFocus(v=>!v);}}><Maximize2 size={15}/>{focus?'집중 모드 끝내기':'집중 모드'}</button>
             <button type="button" disabled={onOverview} onClick={()=>{setMoreMenu(false);setPaperId(active.id);}}><Grid3x3 size={15}/>원고지 보기</button>
             <button type="button" disabled={readonly||onOverview||position<=0} onClick={()=>moveDoc(-1)}><ArrowUp size={15}/>문서 위로 옮기기</button>
