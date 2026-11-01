@@ -328,7 +328,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
         <button type="button" className="nav-item" data-settings-opener onClick={()=>modal('settings')}><Settings size={16}/><span>설정</span></button>
       </nav>
       <div className="sidebar-scroll">
-        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query="" activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onTrash={trashDocument} onTrashFolder={trashFolder} onTemplate={setTemplateRequest}/>
+        <DocumentTree key={`${work.id}-${s.epoch}`} work={work} query="" activeId={view} readonly={readonly} onOpen={openDoc} onChange={organizeWork} onRenameDocument={(id,title)=>patchDoc(id,{title})} onTrash={trashDocument} onTrashFolder={trashFolder} onTemplate={setTemplateRequest}/>
       </div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
