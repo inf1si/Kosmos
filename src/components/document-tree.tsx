@@ -30,7 +30,7 @@ const menuClose=(keep:{current:boolean})=>(e:Event)=>{if(keep.current){e.prevent
 
 type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void;onFolderWork?:(folderId:string,at:HTMLElement|null)=>void};
 
-export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onTrash,onTrashFolder,onTemplate,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onTrash?:(id:string)=>Promise<void>;onTrashFolder?:(id:string)=>Promise<void>;onTemplate?:(request:TemplateDialogRequest)=>void;noteView?:NoteView}){
+export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onRenameDocument,onTrash,onTrashFolder,onTemplate,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onRenameDocument?:(id:string,title:string)=>void;onTrash?:(id:string)=>Promise<void>;onTrashFolder?:(id:string)=>Promise<void>;onTemplate?:(request:TemplateDialogRequest)=>void;noteView?:NoteView}){
   const noun=noteView?'노트':'문서',filtered=noteView?noteView.filtered:!!query.trim();
   const nav=useMemo(()=>resolveNavigation(work),[work]);const root=useRef<HTMLDivElement>(null);
   const [closed,setClosed]=useState<Set<string>>(new Set());const [dialog,setDialog]=useState<FormState|null>(null);
@@ -50,6 +50,9 @@ for(const n of nav.nodes){const key=`${n.sectionId}/${n.parentId||''}`;branches.
   const childNodes=(parentId:string|null,sectionId:string)=>branches.get(`${sectionId}/${parentId||''}`)||[];
   const title=(n:NavigationNode)=>n.type==='folder'?n.title:documents.has(n.id)?documentTitle(documents.get(n.id)!):'문서';
   const targetTitle=(t:Target)=>(t.section?nav.sections.find(s=>s.id===t.id)?.title:nodes.get(t.id)?title(nodes.get(t.id)!):'')||'';
+  /** 문서 제목은 비워 둘 수 있으므로 '제목 없음' 대신 저장된 제목을 편집한다. */
+  const renameSource=(t:Target)=>!t.section&&nodes.get(t.id)?.type==='document'?documents.get(t.id)?.title??'':targetTitle(t);
+  const docIcon=(doc:NovelDocument|undefined)=>doc?.kind==='wiki'?<WikiIcon category={doc.category} size={14}/>:doc?.kind==='memo'?<StickyNote size={14}/>:<FileText size={14}/>;
   const eligible=noteView?new Set(noteView.eligibleIds):null;
   const matching=new Set(noteView?noteView.matchingIds:work.documents.filter(d=>!query.trim()||`${d.title} ${plainText(d.content)}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map(d=>d.id));
 
@@ -98,20 +101,21 @@ if(next.type==='document')setKind(next.kind);
   /** 메뉴 항목에서 폼·이름 변경을 열 때는 메뉴가 닫히고 초점이 정리된 다음에 연다. */
   function afterMenu(fn:()=>void){keepMenuFocus.current=true;window.setTimeout(fn,0);}
 
-  function startRename(t:Target){setDialog(null);setError('');setName(targetTitle(t));setRenaming(t);}
+  function startRename(t:Target){setDialog(null);setError('');setName(renameSource(t));setRenaming(t);}
 
   function finishRename(save:boolean){
     const t=renaming;
 
-if(!t)return;const value=name.trim();
+if(!t)return;const value=name.trim(),isDocument=!t.section&&nodes.get(t.id)?.type==='document';
 
-    if(save&&!value){setError('이름을 입력하세요.');
+    if(save&&!value&&!isDocument){setError('이름을 입력하세요.');
 
 return;}
 
     setRenaming(null);setError('');
 
-    if(save&&value!==targetTitle(t))mutate(latest=>{const next=resolveNavigation(latest);
+    if(isDocument){if(save&&!readonly&&value!==renameSource(t))onRenameDocument?.(t.id,value);}
+    else if(save&&value!==targetTitle(t))mutate(latest=>{const next=resolveNavigation(latest);
 
 if(t.section)next.sections=next.sections.map(s=>s.id===t.id?{...s,title:value}:s);else next.nodes=next.nodes.map(n=>n.id===t.id&&n.type==='folder'?{...n,title:value}:n);
 
@@ -242,7 +246,7 @@ return next?moveNavigation(latest,node.id,next):latest;});}});
       entries.push({key:'template-apply',label:'템플릿으로 만들기',icon:<Files size={15}/>,disabled:readonly,run:()=>afterMenu(()=>onTemplate({destination:to}))});
     }
 
-    if(section||node?.type==='folder')entries.push({key:'rename',label:'이름 변경',icon:<Pencil size={15}/>,disabled:readonly,divider:!!section,run:()=>afterMenu(()=>startRename(t))});
+    if(section||node?.type==='folder'||node?.type==='document'&&onRenameDocument)entries.push({key:'rename',label:'이름 변경',icon:<Pencil size={15}/>,disabled:readonly,divider:!!section,run:()=>afterMenu(()=>startRename(t))});
 
     if(section){const index=nav.sections.findIndex(s=>s.id===section.id);
 
@@ -281,7 +285,7 @@ return applyNavigation(latest,next);});}});
     <ContextMenu.Portal><ContextMenu.Content className="menu" collisionPadding={12} onCloseAutoFocus={menuClose(keepMenuFocus)}>{renderEntries(t,ContextMenu.Item,ContextMenu.Separator)}</ContextMenu.Content></ContextMenu.Portal>
   </ContextMenu.Root>;
 
-  const renameInput=(label:string)=><input className={styles.rename} aria-label={`${label} 새 이름`} autoFocus value={name} maxLength={renaming?.section?200:300} onChange={e=>setName(e.target.value)} onFocus={e=>e.currentTarget.select()} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();finishRename(true);}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finishRename(false);}}} onBlur={()=>finishRename(true)}/>;
+  const renameInput=(label:string,placeholder?:string)=><input className={styles.rename} aria-label={`${label} 새 이름`} autoFocus value={name} placeholder={placeholder} maxLength={renaming?.section?200:300} onChange={e=>setName(e.target.value)} onFocus={e=>e.currentTarget.select()} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();finishRename(true);}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finishRename(false);}}} onBlur={()=>finishRename(true)}/>;
 
   function formSubmit(){
     if(!dialog||readonly)return;const titleValue=name.trim();
@@ -322,7 +326,7 @@ return applyNavigation(latest,next);});}
 
 if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openForm({type:'move',id:n.id},rowOf(t),e.currentTarget);}}><GripVertical size={13}/></button>
         {children.length||n.type==='folder'?<button type="button" className={styles.caret} aria-label={`${title(n)} ${isClosed?'펼치기':'접기'}`} aria-expanded={!isClosed} onClick={()=>toggle(n.id)}>{isClosed?<ChevronRight size={13}/>:<ChevronDown size={13}/>}</button>:<span className={styles.caret}/>}
-        {isRenaming?<span className={styles.open}><Folder size={14}/>{renameInput(title(n))}</span>:<button type="button" className={styles.open} title={title(n)} aria-current={n.id===activeId?'page':undefined} onClick={()=>doc?onOpen(doc.id):toggle(n.id)}>{n.type==='folder'?<Folder size={14}/>:doc?.kind==='wiki'?<WikiIcon category={doc.category} size={14}/>:doc?.kind==='memo'?<StickyNote size={14}/>:<FileText size={14}/>}<span className="tree-label">{title(n)}</span>{doc?.kind==='scene'&&<i className={`status-dot ${doc.status}`} role="img" aria-label={statuses[doc.status]}/>}</button>}
+        {isRenaming?<span className={styles.open}>{n.type==='folder'?<Folder size={14}/>:docIcon(doc)}{renameInput(title(n),doc?'제목 없음':undefined)}</span>:<button type="button" className={styles.open} title={title(n)} aria-current={n.id===activeId?'page':undefined} onClick={()=>doc?onOpen(doc.id):toggle(n.id)}>{n.type==='folder'?<Folder size={14}/>:docIcon(doc)}<span className="tree-label">{title(n)}</span>{doc?.kind==='scene'&&<i className={`status-dot ${doc.status}`} role="img" aria-label={statuses[doc.status]}/>}</button>}
         {rowMenu(t,`${title(n)} 메뉴`)}
       </div>)}{!isClosed&&children.length>0&&renderNodes(sectionId,n.id,depth+1)}</li>;
     })}</ul>;
