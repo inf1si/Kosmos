@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 2026-11-02 — Vercel 세 CLI 설치 시험
+
+- Kosmos 프로젝트의 Vercel Sandbox에 Claude Code·Codex CLI·Gemini CLI를 함께 설치하고 버전 실행을 확인했다. 시험 환경은 종료했다. 별도 VM 대신 필요할 때 재개하는 Sandbox로 [실행 환경 설계](docs/ai-runtime-design.md)를 조정하고 로그인 프로필 보관·종료/재개·비용 경계를 명시했다. 앱·기존 API·DB·배포 설정은 변경하지 않았다.
+
 ## 2026-11-01 — API 유지·세 CLI 개인 실행 서버 설계
 
 - 기존 API 세 연결을 유지하면서 Claude Code·Codex CLI·Gemini CLI를 같은 개인 서버에 동시 설치·독립 로그인하는 [통합 설계](docs/ai-runtime-design.md)를 작성했다. CLI 작업은 기존 API 호출 수를 차감하지 않으며 웹 구독 직접 연결의 조건을 별도로 정리했다. 문서만 변경했다.

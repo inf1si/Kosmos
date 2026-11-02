@@ -1,5 +1,7 @@
 # 구현 상태와 확인 범위
 
+2026-11-02 **Vercel에서 세 CLI 설치 시험**: Kosmos 프로젝트의 서울 Sandbox 한 곳에 Claude Code `2.1.312`·Codex CLI `0.165.0`·Gemini CLI `0.66.0`을 함께 설치하고 버전 실행을 확인했다. 시험 세션은 약 99초 뒤 종료했다. 별도 VM 대신 필요할 때 재개하는 Vercel Sandbox로 설계를 조정했다. 실제 계정 로그인·인증 유지·모델 호출·작업 API/DB/UI 연결은 미완료다. [통합 설계](ai-runtime-design.md)·[검증 범위](../VERIFICATION.md).
+
 2026-11-01 **API 유지·세 CLI 개인 실행 서버 설계**: 기존 API 세 연결·키·모델·호출 한도를 유지하고 Claude Code·Codex CLI·Gemini CLI를 같은 서버에 동시 설치/독립 로그인하는 검토안이다. 원본 CLI별 어댑터·대기열·취소·복구와 웹 구독 직접 연결의 공식 조건을 구분했다. 설치·로그인·실제 호출·DB/API/UI 변경·배포는 미구현이다. [통합 설계](ai-runtime-design.md)·[검증 범위](../VERIFICATION.md).
 
 2026-11-01 **사이드바에서 문서 이름 바꾸기**: 집필실·노트 트리의 문서·노트 행 `…`·우클릭에서 **이름 변경**으로 행 안에서 제목을 바꾼다(탭·편집기 제목 함께 변경, 빈 이름은 제목 없음). 로컬 Chromium 개발 실행 두 폭 × 54조합 검사 통과. WebKit·CI·운영 미확인. [사용 안내](document-navigation.md)·[검증](../VERIFICATION.md).
