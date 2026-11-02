@@ -1,5 +1,9 @@
 # 다음 연결: Google Drive와 AI
 
+## 서재 다운로드 연결 (2026-11-03)
+
+[다운로드 마이그레이션](../supabase/migrations/20261102154315_library_book_downloads.sql)은 `book_downloads` 테이블과 비공개 Storage 버킷·RLS·명시적 Data API 권한을 함께 추가한다. [등록 객체 삭제 보호](../supabase/migrations/20261102161150_protect_registered_book_files.sql)도 함께 적용한다. 기존 Supabase 공개 연결값과 작가 세션을 재사용하며 service-role 키·추가 환경 변수·외부 파일 서비스를 요구하지 않는다. 익명 다운로드 API는 방문자 세션을 전달하지 않는다. 원고 백업과 등록 파일의 범위는 [책 내보내기](book-export.md#서재-다운로드)를 따른다.
+
 집필실 **Google 로그인**은 Drive 백업과 다른 연결이다. 로그인·기존 Naver 이메일 작가 계정 연결은 [Google 로그인 안내](google-login.md)를 따른다. 이 페이지의 Drive OAuth 클라이언트·refresh token은 로그인 설정으로 복사하거나 변경하지 않는다.
 
 Supabase·Vercel과 작가 로그인은 연결됐다. 외부 문서 기능은 파일만으로 바로 사용한다. Drive 연결 절차는 아래 기록을 참고하고 실제 최신 상태는 [구현 상태](status.md)와 [검증 기록](../VERIFICATION.md)을 따른다. AI는 키를 만든 제공자부터 활성화한다. 비밀번호·API 키·refresh token은 채팅에 보내지 않는다. API 키는 본인이 집필실의 AI 설정 또는 Vercel 기본 설정에 직접 넣고, 백업 비밀은 Vercel Production 변수에 넣는다.

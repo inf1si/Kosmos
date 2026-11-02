@@ -1,5 +1,9 @@
 # 데이터 모델과 권한
 
+## 서재 다운로드 (2026-11-03)
+
+`public.book_downloads`는 작품 UUID·형식(PDF/EPUB/HTML)을 기본키로 작가 UUID·파일 UUID·소유자/파일 UUID 경로·파일명·바이트 수·등록 시각을 보관한다. 파일 UUID·경로도 유일하다. 인증 작가만 자기 활성 작품에 등록·교체하며, 익명 읽기는 같은 작가·작품의 활성 판본이 있을 때만 허용한다. 소유자는 철회 뒤에도 목록 조회·해제가 가능하다. 별도 private `book-downloads` 버킷은 50MiB·허용 MIME·소유자 경로·현재 등록 파일에 대한 RLS를 사용한다. 객체는 덮어쓰지 않으며 파일 ID로 낙관적 교체/해제를 검사한다. RLS 비교를 위해 활성 publications의 owner_id 열 읽기를 허용한다(인증 비밀이 아닌 작가 식별자). Workspace·Publication JSON과 백업 버전은 바뀌지 않는다. [사용·저장 계약](book-export.md#서재-다운로드).
+
 ## 비공개 글 참조 (2026-10-25)
 
 노트·작품의 RichNode는 `internalReference` 인라인 원자 노드 `{kind:'note'|'document'|'note-folder'|'document-folder'|'work'|'shelf',targetId:uuid|'default',workId:uuid|null,label:string(최대 300)}`를 받는다. `document`·`document-folder`에는 작품 ID가 필수, 나머지는 null이다. targetId의 `default`는 기본 책장(`shelf`)에만 허용한다. text/content/marks를 허용하지 않는다. 공개 원고 스키마는 이 노드를 거부한다. JSON 형식 버전 1과 기존 RPC 인수는 유지한다. 서버 발행 함수는 노드를 제거하고 공개 테이블 제약도 적용한다. [저장·ID·복제 계약](internal-references.md#저장발행내보내기).

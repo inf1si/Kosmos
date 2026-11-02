@@ -61,3 +61,5 @@
 .book-export-empty p{margin:0;line-height:1.7}
 .book-preview-pages{display:flex;align-items:center;justify-content:center;gap:12px;color:var(--muted);font-size:12px}
 @media(max-width:700px){.book-export{grid-template-columns:minmax(0,1fr);gap:20px}.book-export-preview{position:static}.book-export-preview iframe{max-height:480px}.book-export-empty{min-height:160px}}
+
+.book-export-sharing{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px;margin-top:14px}.book-export-sharing .book-export-checks{margin:0}.book-export-sharing .field-help{margin:0}.book-shared-file{display:flex;align-items:center;gap:8px;min-width:0}.book-shared-file>span{display:flex;flex:1;min-width:0;flex-wrap:wrap;gap:4px 8px}.book-shared-file strong{font-size:13px;font-weight:500}.book-shared-file small{font-size:12px;color:var(--muted)}.book-shared-file>span>span{width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)}.book-shared-file .button{flex-shrink:0}

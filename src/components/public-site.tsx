@@ -16,12 +16,27 @@ import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './t
 import { manuscriptFonts, fontSizes, validFontSize } from '@/lib/editor-preferences';
 import { LIBRARY_SORT_KEY, librarySort, librarySorts, previewPublications, sortPublications, type LibrarySort } from '@/lib/library-order';
 import { Select } from './select';
+import {bookDownloadSchema,type BookDownload} from '@/lib/book-downloads';
+import {BookDownloadMenu} from './book-download-menu';
 
 function usePublicData(initial:Publication[],localPreview:boolean,initialAuthor=''){
   const [data,setData]=useState(initial);const [loading,setLoading]=useState(localPreview);const [author,setAuthor]=useState(initialAuthor);
+  const [downloads,setDownloads]=useState<BookDownload[]>([]);
+  useEffect(()=>{
+    if(localPreview)return;
+    const controller=new AbortController();
+    void fetch('/api/books',{cache:'no-store',signal:controller.signal}).then(async response=>{
+      if(!response.ok)return;
+      const parsed=z.array(bookDownloadSchema).safeParse(await response.json());
+
+      if(parsed.success)setDownloads(parsed.data);
+    }).catch(()=>{});
+
+    return()=>controller.abort();
+  },[localPreview]);
   useEffect(()=>{if(!localPreview)return;void db.workspaces.get('preview').then(row=>{const state=row?.data||seedWorkspace();setData(previewPublications(state));setAuthor(state.authorProfile?.name.trim()||'');}).finally(()=>setLoading(false));},[localPreview]);
 
-return{data,loading,author};
+return{data,loading,author,downloads};
 }
 
 /** The author's copyright line, dated from the earliest to the latest publication shown on the page. */
@@ -62,7 +77,7 @@ function PublicHeader({children,reading=false}:{children?:ReactNode;reading?:boo
 function BookCover({pub,onOpen}:{pub:Publication;onOpen:()=>void}){return <Link className="book-cover" href={`/read/${pub.workId}`} onNavigate={onOpen} tabIndex={-1} aria-hidden="true"><svg width="170" height="170" viewBox="0 0 170 170"><circle cx="85" cy="85" r="70" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="1.5 7" strokeLinecap="round"/><circle cx="85" cy="85" r="44" fill="none" stroke="currentColor" strokeOpacity=".5"/></svg><span className="book-cover-series">ORBIS TERTIUS</span><span><strong>{pub.title}</strong><small>소설</small></span></Link>;}
 
 export function Library({initial,localPreview,error,author:initialAuthor}:{initial:Publication[];localPreview:boolean;error?:string;author?:string}){
-  const {data,loading,author}=usePublicData(initial,localPreview,initialAuthor);
+  const {data,loading,author,downloads}=usePublicData(initial,localPreview,initialAuthor);
   const [sort,setSort]=useState<LibrarySort>('author');
   const [ready,setReady]=useState(false);
   const returnLocation=useRef<ReturnType<typeof libraryLocation>>(null);
@@ -106,7 +121,7 @@ export function Library({initial,localPreview,error,author:initialAuthor}:{initi
     {!error&&<div className="library-sort"><label>정렬<Select aria-label="서재 정렬" value={sort} onChange={value=>{const next=librarySort(value);setSort(next);
 
 try{localStorage.setItem(LIBRARY_SORT_KEY,next);}catch{}}}>{Object.entries(librarySorts).map(([key,label])=><option key={key} value={key}>{label}</option>)}</Select></label></div>}
-    {loading?<p className="muted">서재를 여는 중입니다.</p>:data.length?<div className="book-list">{ordered.map((p,i)=><article className="book-entry" key={p.id} id={`library-work-${p.workId}`}><BookCover pub={p} onOpen={()=>rememberLocation(p.workId)}/><div className="book-info"><span className="book-category"><span className="book-no">{String(i+1).padStart(2,'0')}</span><span className="book-dot"> · </span><span className="book-kind">소설</span></span><Link href={`/read/${p.workId}`} onNavigate={()=>rememberLocation(p.workId)}><h2>{p.title}</h2></Link><p className="book-subtitle">{p.subtitle}</p><p className="book-description">{p.description}</p><div className="book-actions"><Link className="book-read" href={`/read/${p.workId}`} onNavigate={()=>rememberLocation(p.workId)}>작품 읽기<span aria-hidden="true">→</span></Link><Link className="book-wiki" href={`/wiki/${p.workId}`}>설정집</Link><span>{new Date(p.publishedAt).toLocaleDateString('ko-KR')}</span></div></div><div className="book-excerpt"><span>본문 미리보기</span><p>{plainText(p.scenes[0].content).split('\n\n').find(text=>text.trim())?.replace(/\s+/g,' ').trim()}</p></div></article>)}</div>:!error&&<div className="empty-library"><h2>공개한 작품이 없습니다.</h2></div>}
+    {loading?<p className="muted">서재를 여는 중입니다.</p>:data.length?<div className="book-list">{ordered.map((p,i)=><article className="book-entry" key={p.id} id={`library-work-${p.workId}`}><BookCover pub={p} onOpen={()=>rememberLocation(p.workId)}/><div className="book-info"><span className="book-category"><span className="book-no">{String(i+1).padStart(2,'0')}</span><span className="book-dot"> · </span><span className="book-kind">소설</span></span><Link href={`/read/${p.workId}`} onNavigate={()=>rememberLocation(p.workId)}><h2>{p.title}</h2></Link><p className="book-subtitle">{p.subtitle}</p><p className="book-description">{p.description}</p><div className="book-actions"><Link className="book-read" href={`/read/${p.workId}`} onNavigate={()=>rememberLocation(p.workId)}>작품 읽기<span aria-hidden="true">→</span></Link><Link className="book-wiki" href={`/wiki/${p.workId}`}>설정집</Link><BookDownloadMenu files={downloads.filter(file=>file.work_id===p.workId)}/><span>{new Date(p.publishedAt).toLocaleDateString('ko-KR')}</span></div></div><div className="book-excerpt"><span>본문 미리보기</span><p>{plainText(p.scenes[0].content).split('\n\n').find(text=>text.trim())?.replace(/\s+/g,' ').trim()}</p></div></article>)}</div>:!error&&<div className="empty-library"><h2>공개한 작품이 없습니다.</h2></div>}
     <footer className="public-footer"><span>Orbis Tertius</span>{!loading&&author&&<span>{copyrightNotice(author,data.map(p=>p.publishedAt))}</span>}</footer></main></div>;
 }
 
@@ -184,7 +199,7 @@ return <div className="reader-table" key={key}><table aria-label="본문 표" st
 }
 
 export function Reader({workId,initial,localPreview,fontClassName='',author:initialAuthor}:{workId:string;initial:Publication[];localPreview:boolean;fontClassName?:string;author?:string}){
-  const {data,loading,author}=usePublicData(initial,localPreview,initialAuthor);const pub=data.find(p=>p.workId===workId);
+  const {data,loading,author,downloads}=usePublicData(initial,localPreview,initialAuthor);const pub=data.find(p=>p.workId===workId);
   const [settings,setSettings]=useState(false);const [toc,setToc]=useState(false);const [wikiId,setWikiId]=useState<string|null>(null);const wikiAnchor:PopoverAnchor=useRef(null);
   const [font,setFont]=useState('gowun');const [size,setSize]=useState(19);const [sizeDraft,setSizeDraft]=useState('19');const [width,setWidth]=useState(680);const [theme,setTheme]=useSiteTheme();const [palette,setPalette]=useSitePalette();const [progress,setProgress]=useState(0);
   const restored=useRef(false);
@@ -253,7 +268,7 @@ if(!next)setSizeDraft(String(size));}} align="end" width={340} title="읽기 설
     {toc&&<aside className="reading-toc"><div><h2>목차</h2><button aria-label="목차 닫기" onClick={()=>setToc(false)}><X size={18}/></button></div>{pub.scenes.map(scene=><a key={scene.id} href={`#scene-${scene.id}`} onClick={()=>setToc(false)}>{documentTitle(scene)}</a>)}</aside>}
     <main className="reading-page"><header className="reading-title"><span>소설</span><h1>{pub.title}</h1><p>{pub.subtitle}</p></header>{pub.scenes.map(scene=><section key={scene.id} className="reading-scene" id={`scene-${scene.id}`}><div className="reading-scene-title"><span>{scene.chapter}</span><h2>{documentTitle(scene)}</h2></div><div className="reading-body"><RichReader content={scene.content} publication={pub} onWiki={(id,link)=>{wikiAnchor.current=link;setWikiId(id);}}/></div></section>)}
       {notes.length>0&&<section className="reading-notes"><h2>주석</h2><ol>{notes.map((note,i)=><li id={`note-${note.id}`} key={note.id}><a href={`#ref-${note.id}`} aria-label={`각주 ${i+1} 본문으로 돌아가기`}>{i+1}</a><p>{note.text}</p></li>)}</ol></section>}
-      <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><LibraryReturnLink workId={workId}>작품 목록</LibraryReturnLink><Link href={`/wiki/${workId}`}>설정집 읽기</Link></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small>{author&&<small className="reading-copyright">{copyrightNotice(author,[pub.publishedAt])}</small>}</footer>
+      <footer className="reading-end"><span>여기까지 공개되었습니다.</span><div><LibraryReturnLink workId={workId}>작품 목록</LibraryReturnLink><Link href={`/wiki/${workId}`}>설정집 읽기</Link><BookDownloadMenu files={downloads.filter(file=>file.work_id===workId)}/></div><small>공개 판본 · {new Date(pub.publishedAt).toLocaleDateString('ko-KR')}</small>{author&&<small className="reading-copyright">{copyrightNotice(author,[pub.publishedAt])}</small>}</footer>
     </main>
     
     <Popover open={!!wiki} onOpenChange={open=>{if(!open)setWikiId(null);}} anchor={wikiAnchor} width={320} className="wiki-card" title={wiki?.title||'설정'} onReturnFocus={()=>wikiAnchor.current instanceof HTMLElement&&wikiAnchor.current.focus()}>{wiki&&<><span className="wiki-category">{wiki.category}</span><p className="wiki-summary">{wiki.summary}</p><Link className="button" href={`/wiki/${workId}?doc=${wiki.id}`}>설정 문서 열기</Link></>}</Popover>
