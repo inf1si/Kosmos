@@ -1,5 +1,9 @@
 # 변경 기록
 
+## 2026-11-02 — 일반 AI 연결 우선순위 정정
+
+- 집필용 일반 모델을 우선하고 코드 에이전트 CLI는 예비용으로 두도록 [설계](docs/ai-runtime-design.md)를 바로잡았다. ChatGPT 구독 직접 연결의 원격 앱 적용 조건과 Claude 구독 직접 연결의 공식 제한을 명시했다. CLI 설치 시험을 일반 구독 연결 성공으로 보고하지 않으며 앱 코드는 변경하지 않았다.
+
 ## 2026-11-02 — Vercel 세 CLI 설치 시험
 
 - Kosmos 프로젝트의 Vercel Sandbox에 Claude Code·Codex CLI·Gemini CLI를 함께 설치하고 버전 실행을 확인했다. 시험 환경은 종료했다. 별도 VM 대신 필요할 때 재개하는 Sandbox로 [실행 환경 설계](docs/ai-runtime-design.md)를 조정하고 로그인 프로필 보관·종료/재개·비용 경계를 명시했다. 앱·기존 API·DB·배포 설정은 변경하지 않았다.

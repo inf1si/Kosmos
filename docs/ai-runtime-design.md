@@ -1,10 +1,25 @@
-# 기존 API 유지와 Vercel AI 실행 환경 설계
+# 일반 AI 연결과 예비 CLI 실행 환경 설계
 
 2026-11-02 · 검토안 · 기준 main `5c182fc856434489ed2d94a3e797f15603d328e2`
 
-상태: Kosmos의 Vercel Sandbox에서 세 CLI 동시 설치·버전 실행을 확인했다. 시험 환경은 종료했으며 운영 설치, 계정 로그인, 로그인 유지, 모델 호출, 작업 API·DB·UI 연결은 아직 구현·검증하지 않았다. 현재 동작은 [AI 기능](ai.md), 화면 기준은 [디자인 가이드](design-guide.md)를 따른다.
+상태: 일반 모델을 기본으로, 코드 에이전트 CLI를 예비용으로 쓰려는 사용자 요청에 맞춰 우선순위를 정정했다. ChatGPT 구독 직접 연결의 원격 앱 적용 자격은 미확인이고 Claude 구독 직접 연결은 공식 제공 경로가 없다. Kosmos의 Vercel Sandbox에서 확인한 것은 세 CLI 설치·버전 실행뿐이며 시험 환경은 종료했다. 현재 동작은 [AI 기능](ai.md), 화면 기준은 [디자인 가이드](design-guide.md)를 따른다.
 
-## 결정과 전제
+## 우선순위 정정 — 일반 모델이 기본, CLI는 예비
+
+사용자는 집필용 일반 AI를 원하며 Claude Code·Codex·Gemini CLI는 예비 연결로 둔다. 코드 에이전트의 기본 지침과 도구가 있는 실행을 프롬프트 변경만으로 일반 ChatGPT·Claude와 동일하다고 설명하지 않는다. 아래 CLI 작업 대기열 설계는 예비 실행 경로의 검토 자료이며 일반 모델 연결을 대신하거나 우선하는 구현 계획이 아니다.
+
+| 연결 | 현재 가능한 범위 | 남은 조건 |
+|---|---|---|
+| 기존 OpenAI·Claude·Gemini API | CLI 없이 일반 모델에 집필실 지침을 직접 전달하는 기존 경로 | 기존 키·모델 설정과 API 사용료 유지. 웹 구독 연결 완료로 표시하지 않음 |
+| ChatGPT 구독 직접 연결 | 공식 Sign in with ChatGPT의 plan usage로 계정에 허용된 모델을 조회하고 Responses API 직접 호출 | 원격 호스팅 앱은 별도 신청 안내 대상. Kosmos 적용 자격·클라이언트 등록·권한 부여·실제 호출 미확인 |
+| Claude 구독 직접 연결 | 자체 앱의 Claude.ai 구독 OAuth를 허용하는 일반 연동 경로는 공식 제공하지 않음 | 별도 합의가 확인되지 않은 상태에서 구현 가능·사용 가능으로 표시하지 않음. 기존 Claude API는 별개 |
+| 세 원본 CLI | 예비용 실행 환경 설치 시험만 통과 | 공식 로그인·인증 유지·도구 격리·실제 호출·집필실 연결 미완료 |
+
+ChatGPT 직접 연결에는 코딩 에이전트나 Sandbox가 필수가 아니다. 승인된 OAuth 권한으로 일반 모델의 응답을 직접 받아 집필실 대화에 표시하는 구성을 우선 검토한다. 계정별 모델 목록을 사용하며 ChatGPT 웹의 내부 프롬프트·기억·프로젝트·과거 대화가 함께 제공된다고 가정하지 않는다. ChatGPT 로그인으로 신원만 받는 것과 plan usage 권한으로 추론하는 것도 구분한다.
+
+2026-11-02 공식 문서를 다시 확인했다. [OpenAI 개요](https://developers.openai.com/siwc/token-sharing-open-source)는 오픈소스·로컬 앱 범위와 [원격 호스팅 앱 신청](https://openai.com/form/sign-in-with-chatgpt-interest/)을 구분하며, [모델·추론](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference)은 CLI 없이 공개 Responses endpoint를 사용하는 계약을 설명한다. [Anthropic 조건](https://code.claude.com/docs/en/legal-and-compliance)은 자체 앱의 Claude.ai 구독 연결과 원본 Claude Code 호스팅을 구분한다. 이 조건을 해결하지 않고 즉시 일반 구독 연동을 완성할 수 있다고 약속하지 않는다.
+
+## 예비 CLI 경로의 결정과 전제
 
 **현재 OpenAI·Claude·Gemini API 연결을 유지하고, 같은 본인 전용 Vercel Sandbox에 Claude Code·Codex CLI·Gemini CLI를 모두 설치한다.** 별도 PC나 VM 구매를 전제하지 않는다. 각각 공식 로그인과 독립된 실행 어댑터를 가지며 요청에서 명시적으로 고른 연결만 호출한다.
 
@@ -30,7 +45,7 @@ GPT·Claude·Gemini **모델 사용**, ChatGPT·Claude **웹 서비스 구독**,
 - **ChatGPT 구독 직접 연결:** 공식 Sign in with ChatGPT에는 승인된 구독 권한으로 모델 목록을 조회하고 Responses API를 호출하는 경로가 있다. Codex CLI가 필수는 아니다. 다만 현재 안내의 일반 범위는 오픈소스/로컬 앱이며 유료·원격 호스팅 앱은 별도 신청 안내 대상이다. 집필실에서 이 권한을 받았다고 가정하지 않는다. ChatGPT의 기존 대화·프로젝트 등 웹 서비스 전체가 함께 들어오는 기능도 아니다. [공식 범위](https://developers.openai.com/siwc/token-sharing-open-source)·[모델과 추론](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference).
 - **Claude 웹 구독 직접 연결:** 자체 앱에서 Claude.ai 로그인·구독 자격 증명을 중계하는 일반 연동과, 원본 Claude Code를 본인이 로그인해 실행하는 호스팅은 조건이 다르다. 현재 설계가 자체 Claude 구독 OAuth를 허용받았다는 뜻은 아니다. [공식 조건](https://code.claude.com/docs/en/legal-and-compliance).
 
-직접 ChatGPT 플랜 연동은 자격과 지원 모델을 확인한 뒤 별도 connection으로 추가할 수 있다. 이 검토가 기존 API 세 연결이나 요청한 세 CLI의 설치 구성을 대체하지 않는다. CLI를 웹 ChatGPT·Claude와 같은 상품이라고 표시하지 않는다.
+직접 ChatGPT 플랜 연동은 자격과 지원 모델을 먼저 확인하는 우선 검토 대상이다. 기존 API 세 연결과 예비 CLI 세 연결은 유지하되, CLI 설치 성공을 일반 구독 연동 성공으로 대신 보고하지 않는다. CLI를 웹 ChatGPT·Claude와 같은 상품이라고 표시하지 않는다.
 
 ### 원본 CLI와 자격 증명
 
@@ -284,7 +299,7 @@ AI 설정과 대화의 기존 Select에 **OpenAI API·Claude API·Gemini API / C
 
 원고·질문·모델 원본 출력·자격 증명은 일반 운영 로그에 남기지 않는다. CLI마다 원본 세션/로그 보관과 정리 방법을 실험한다. Claude의 `--no-session-persistence`나 Codex의 `--ephemeral`이 세 실행기의 모든 로그를 없앤다고 가정하지 않는다. 실제 전송·보관 경계는 구현과 함께 개인정보 안내와 운영/복구 문서에 반영한다.
 
-## 구현 순서와 통과 조건
+## 예비 CLI 경로의 구현 순서와 통과 조건
 
 1. **세 실행기의 설치·인증 실험:** 같은 Sandbox에 세 원본 버전을 고정 설치하고 각자 공식 로그인한다. 설치·버전 실행만 위 시험에서 통과했다. 독립 프로필·공식 로그인·유휴 종료/재개 뒤 인증 유지와 세 CLI에서 같은 합성 문장의 실제 인증/모델·도구 차단·출력 검증·종료·로그를 확인한다. 세 개를 첫 설치/검증 대상으로 포함한다. 각 연결의 성공 상태는 개별 검증 뒤 표시한다.
 2. **작업 API와 실행 서버:** 테스트 DB에 jobs/RLS/RPC를 만들고 실행기별 라우팅·중복 접수·대기열 수락 원자성·임대·취소·결과 검증을 시험한다. 자식 프로세스는 먼저 모의 CLI로 제어하고 실계정 호출 횟수를 최소화한다.
@@ -305,4 +320,4 @@ AI 설정과 대화의 기존 Select에 **OpenAI API·Claude API·Gemini API / C
 - API 세 제공자와 기존 호출 한도 회귀, 정상 대화의 ZIP/Drive/DB 왕복·공개 제외.
 - 새 화면의 54개 테마·360px·키보드/초점·중지/재접속 실제 조작.
 
-후속은 작가가 고른 문서·노트만 조회하는 제한된 도구, 명시적인 여러 모델 비교 요청, 자격을 확인한 ChatGPT 플랜 직접 연결을 검토한다. 전체 작업 공간 검색·여러 문서 수정·원고 자동 적용·다른 사용자의 구독 중계는 첫 연결에 포함하지 않는다. 세 CLI의 설치·로그인·선택 실행은 첫 범위다.
+예비 CLI의 후속은 작가가 고른 문서·노트만 조회하는 제한된 도구와 명시적인 여러 모델 비교 요청을 검토한다. 전체 작업 공간 검색·여러 문서 수정·원고 자동 적용·다른 사용자의 구독 중계는 포함하지 않는다. ChatGPT 플랜 직접 연결은 이 CLI 후속으로 미루지 않고 위 일반 모델 연결의 자격 확인부터 우선한다.

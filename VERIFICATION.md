@@ -1,5 +1,11 @@
 # 구현 검증
 
+## 2026-11-02 — 일반 모델과 예비 CLI 범위 정정
+
+- OpenAI 공식 SIWC 개요·Models and inference와 Anthropic Legal and compliance를 다시 읽었다. CLI 없는 ChatGPT plan usage의 공개 Responses 경로는 존재하지만 원격 호스팅 앱에는 별도 신청 안내가 있다. Kosmos의 자격·권한을 확인한 상태가 아니다. Claude의 자체 앱 구독 OAuth 연결과 원본 Claude Code 호스팅을 구분했다.
+- 일반 모델을 우선하고 CLI는 예비용이라는 사용자 요구를 설계·AI 안내·로드맵·상태에 반영했다. 문서만 변경했으며 계정 연결·원격 앱 승인·일반 구독 추론·앱 기능 구현을 완료했다고 해석하지 않는다.
+- 로컬 문서 검사(52개 문서·1,174개 내부 링크)와 diff 공백 검사를 통과했다. 앱 코드를 바꾸지 않아 기능 검사·빌드를 다시 실행하지 않았다.
+
 ## 2026-11-02 — Vercel 세 CLI 설치 시험
 
 - 현재 main `5c182fc`를 fetch해 이후 변경이 없음을 확인했다. 기존 Next.js 앱과 별도로 같은 Kosmos Vercel 프로젝트에서 서울 `icn1`·1vCPU·2GiB·최대 10분·비영속 Sandbox를 만들었다. 기본 이미지에 Claude/Codex가 있었으나 별도 prefix에 세 원본 npm 패키지를 정확한 버전으로 함께 설치했다. `claude --version`은 `2.1.312`, `codex --version`은 `0.165.0`, `gemini --version`은 `0.66.0`을 반환했다.

@@ -1,8 +1,10 @@
 # OpenAI·Claude·Gemini 대화
 
-## API·Vercel 실행 환경 연결 검토안 (2026-11-02)
+## 일반 모델 우선·예비 CLI 연결 검토안 (2026-11-02)
 
-기존 API 세 연결을 유지하고 같은 본인 전용 Vercel Sandbox에서 Claude Code·Codex CLI·Gemini CLI를 선택하는 [통합 설계](ai-runtime-design.md)를 작성했다. Kosmos 프로젝트의 시험 환경에서 세 CLI 설치·버전 실행을 확인하고 세션을 종료했다. 실제 로그인·로그인 유지·모델 호출·집필실 연결은 아직 미구현이다. 아래 API 키·모델·현재 엔드포인트와 API 하루 10회 제한은 그대로이며, CLI는 별도 경로/대기열로 설계했다. 별도 PC·VM 구매를 전제하지 않는다.
+일반 집필용 AI를 기본으로 쓰고 Claude Code·Codex·Gemini CLI는 예비용으로 두는 [통합 설계](ai-runtime-design.md)다. 기존 API 세 연결은 CLI 없이 일반 모델을 호출한다. ChatGPT 구독 직접 연결은 공식 plan usage의 원격 호스팅 앱 적용 자격을 먼저 확인해야 하며, Claude 구독의 자체 앱 직접 연결은 공식 제공 경로가 없다. 일반 구독 연결이 지금 사용 가능하다고 표시하지 않는다.
+
+Vercel Sandbox에서 확인한 것은 예비 CLI 세 개의 설치·버전 실행뿐이며 시험 환경은 종료했다. 실제 로그인·로그인 유지·모델 호출·집필실 연결은 미완료다. 아래 API 키·모델·현재 엔드포인트와 API 하루 10회 제한은 그대로다.
 
 ## 화면 문구 (2026-10-10)
 
