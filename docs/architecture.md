@@ -74,7 +74,7 @@ flowchart LR
 | `/read/[workId]` | 작품의 현재 공개 판본 |
 | `/wiki/[workId]` | 해당 작품의 공개 설정 설명·등장 위치 |
 | `POST /api/review` | 인증·저장 판본 검사 후 AI 검토 |
-| `POST /api/ai/chat` | 인증·원고 버전·선택 자료·이전 대화·하루 한도 검사 후 대화 |
+| `POST /api/ai/chat` | 인증·원고 버전·선택 자료·이전 대화 검사 후 대화 |
 | `GET /api/ai/providers` | 인증 후 제공자 연결 상태·모델·브라우저 키 보관 가능 여부, 비밀값 제외 |
 | `POST/DELETE /api/ai/settings` | 같은 Origin·작가 인증 후 개인 연결의 암호화 쿠키 설정·해제 |
 

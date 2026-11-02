@@ -414,7 +414,7 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
     <TitleInput key={doc.id} value={doc.title} disabled={readonly} onCommit={title=>onPatch({title})}/>
     <div className="doc-chips">
       <label className="chip chip-status"><i className={`status-dot ${doc.status}`} aria-hidden="true"/><Select aria-label="진행 상태" value={doc.status} disabled={readonly} onChange={value=>onPatch({status:documentSchema.shape.status.parse(value)})}>{Object.entries(statuses).map(([v,l])=><option key={v} value={v}>{l}</option>)}</Select></label>
-      {doc.kind==='scene'&&doc.pov.trim()&&(person?<button type="button" className="chip soft" title={`${person.title} 설정을 옆에서 엽니다`} onClick={()=>onOpenBeside(person.id)}><User size={13}/>{doc.pov} 시점</button>:<button type="button" className="chip" onClick={onToggle}><User size={13}/>{doc.pov} 시점</button>)}
+      {doc.kind==='scene'&&doc.pov.trim()&&(person?<button type="button" className="chip soft" title={person.title} onClick={()=>onOpenBeside(person.id)}><User size={13}/>{doc.pov} 시점</button>:<button type="button" className="chip" onClick={onToggle}><User size={13}/>{doc.pov} 시점</button>)}
       {doc.kind==='scene'&&doc.storyTime.trim()&&<button type="button" className="chip" onClick={onToggle}><Clock3 size={13}/>{doc.storyTime}</button>}
       {doc.kind==='wiki'&&<button type="button" className="chip" onClick={onToggle}>{shared?<Globe2 size={13}/>:<Lock size={13}/>}{shared?'독자 공개':doc.isPublic?'공개 설명 없음':'비공개'}</button>}
       {linked>0&&<button type="button" className="chip" onClick={()=>onReference('links')}><Link2 size={13}/>설정 {linked}</button>}
@@ -428,12 +428,11 @@ function DocHead({doc,wiki,linked,backlinks,attachments,readonly,open,onToggle,o
       <EditableCombobox label="시점 인물" value={doc.pov} options={wiki.filter(w=>w.category.trim()==='인물').map(w=>w.title)} disabled={readonly} onChange={pov=>onPatch({pov})}/>
       <label>작중 시간<input value={doc.storyTime} disabled={readonly} placeholder="예: 귀환일 · 08:40" onChange={e=>onPatch({storyTime:e.target.value})}/></label>
       <label className="wide">문서 요약<textarea rows={3} value={doc.summary} disabled={readonly} onChange={e=>onPatch({summary:e.target.value})}/></label>
-      <p className="field-help wide">독서 화면의 구분 · 폴더와 별도</p>
     </>:doc.kind==='wiki'?<>
       <EditableCombobox label="분류" value={doc.category} options={wiki.map(w=>w.category)} disabled={readonly} onChange={category=>onPatch({category})}/>
       <label className="check-label"><input type="checkbox" checked={doc.isPublic} disabled={readonly} onChange={e=>onPatch({isPublic:e.target.checked})}/>독자용 설명 공개</label>
       <label className="wide">독자용 설명<textarea rows={4} value={doc.publicSummary} disabled={readonly} onChange={e=>onPatch({publicSummary:e.target.value})}/></label>
-      <p className="field-help wide">이 설명만 공개합니다. 빈 설명은 공개하지 않습니다.</p>
+      <p className="field-help wide">설명만 공개</p>
     </>:null}<CustomPropertiesForm properties={doc.customProperties} disabled={readonly} onChange={customProperties=>onPatch({customProperties})}/></div>}
     {doc.kind==='scene'&&!open&&doc.summary.trim()&&<p className="doc-summary">요약 · {doc.summary}</p>}
     <div className="doc-divider"/>

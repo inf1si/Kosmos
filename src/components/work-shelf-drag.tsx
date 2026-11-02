@@ -120,7 +120,7 @@ export function useWorkShelfDrag({root,state,disabled,apply,expand}:{root:RefObj
     return()=>cancelAnimationFrame(frame);
   },[drag?.active,root]);
 
-  function grip(kind:Kind,id:string,title:string){return <button type="button" className={`icon-button work-drag-grip work-${kind}-grip`} aria-label={`${title} ${kind==='shelf'?'책장':'작품'} 순서 이동`} title={kind==='shelf'?'드래그 · ↑↓로 순서 변경':'드래그 · ↑↓로 순서 변경 · Alt+↑↓로 책장 이동'} disabled={disabled} aria-description={kind==='shelf'?'드래그하거나 위아래 방향키로 책장 순서를 바꿉니다.':'드래그하거나 위아래 방향키로 작품 순서를 바꿉니다. Alt와 위아래 방향키로 다른 책장에 옮깁니다.'}
+  function grip(kind:Kind,id:string,title:string){return <button type="button" className={`icon-button work-drag-grip work-${kind}-grip`} aria-label={`${title} ${kind==='shelf'?'책장':'작품'} 순서 이동`} title="순서 이동" disabled={disabled} aria-description={kind==='shelf'?'드래그하거나 위아래 방향키로 책장 순서를 바꿉니다.':'드래그하거나 위아래 방향키로 작품 순서를 바꿉니다. Alt와 위아래 방향키로 다른 책장에 옮깁니다.'}
     onPointerDown={e=>{if(e.button!==0||!e.isPrimary||disabled||dragRef.current)return;e.preventDefault();e.currentTarget.focus();e.currentTarget.setPointerCapture(e.pointerId);const next={kind,id,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false};dragRef.current=next;setDrag(next);}}
     onPointerMove={pointerMove} onPointerUp={()=>finish()} onPointerCancel={()=>finish(true)} onLostPointerCapture={()=>finish(true)}
     onKeyDown={e=>{

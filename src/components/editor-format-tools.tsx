@@ -39,10 +39,10 @@ if(value.trim()&&validFontSize(n)){if(n!==shown)apply(n);}else setValue(shown===
   const label=ranged?'선택한 글자 크기':'본문 크기';
 
   return <span className={styles.size}>
-    <input aria-label={label} title={ranged?'선택한 글자 크기 · 10–72px':'본문 크기 · 이 기기의 원고 표시 설정 · 10–72px'} inputMode="decimal" placeholder={shown===null?'–':undefined} value={value} onChange={e=>setValue(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();
+    <input aria-label={label} title={label} inputMode="decimal" placeholder={shown===null?'–':undefined} value={value} onChange={e=>setValue(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commit();
 
 if(!ranged)e.currentTarget.blur();}else if(e.key==='Escape')setValue(shown===null?'':String(shown));}}/><span>px</span>
-    <Popover open={open} onOpenChange={setOpen} width={208} title={label} description={ranged?'선택한 부분에만 적용합니다.':'글자를 선택하지 않으면 원고 전체의 표시 크기를 바꿉니다.'} onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label="글자 크기 목록" className={`icon-button ${styles.sizeToggle}`} aria-pressed={open}><ChevronDown size={14}/></IconButton>}>
+    <Popover open={open} onOpenChange={setOpen} width={208} title={label} onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label="글자 크기 목록" className={`icon-button ${styles.sizeToggle}`} aria-pressed={open}><ChevronDown size={14}/></IconButton>}>
       <div className={styles.sizeList} ref={listRef}>{fontSizes.map(n=><button key={n} type="button" aria-pressed={n===shown} onClick={()=>{apply(n);setOpen(false);}}>{n}<span>px</span></button>)}</div>
       {ranged&&<div className="popover-actions"><button type="button" className="button" disabled={selected===undefined} onClick={()=>{apply(null);setOpen(false);}}>기본 크기로</button></div>}
     </Popover>

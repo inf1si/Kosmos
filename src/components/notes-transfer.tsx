@@ -34,14 +34,14 @@ if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRel
 
   const attached=bundle?bundle.assets.filter(a=>bundle.pages.some(p=>p.assetKeys.includes(a.key))).length:0;
 
-  return <Modal open={open} onClose={close} onBack={()=>{if(!busy){close();onBack();}}} backDisabled={busy} onReturnFocus={onReturnFocus} title="노트 가져오기" description="수집함의 새 폴더에 추가합니다." wide>
-    <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion은 내보내기에서 Markdown &amp; CSV 또는 HTML, 하위 페이지 포함으로 받은 ZIP을 그대로 넣습니다. 맥의 스크리브너 프로젝트는 ZIP으로 압축합니다.</p><p className="muted">100MB · 노트 500개까지 · 이미지 PNG/JPEG/WebP 10MB 이하</p></div>
+  return <Modal open={open} onClose={close} onBack={()=>{if(!busy){close();onBack();}}} backDisabled={busy} onReturnFocus={onReturnFocus} title="노트 가져오기" wide>
+    <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion: 하위 페이지 포함 ZIP · Scrivener: 프로젝트 ZIP</p></div>
     <div className="transfer-pick">
       <label className="backup-upload">파일 선택<input type="file" aria-label="가져올 노트 파일" multiple accept={noteFileTypes} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
       <label className="backup-upload">폴더 선택<input type="file" aria-label="가져올 노트 폴더" multiple {...folderPicker} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
     </div>
     {bundle&&<>
-      <div className="transfer-summary"><strong>노트 {bundle.pages.length}개 · 첨부 {attached}개</strong><span>새 노트로 추가 · 기존 노트 유지</span></div>
+      <div className="transfer-summary"><strong>노트 {bundle.pages.length}개 · 첨부 {attached}개</strong></div>
       <div className="transfer-target"><label>새 폴더 이름<input aria-label="가져올 폴더 이름" value={folder} maxLength={300} disabled={busy} onChange={e=>setFolder(e.target.value)}/></label></div>
       <div className="transfer-list">{bundle.pages.slice(0,200).map(p=><div className="transfer-row notes-import-row" key={p.key}><FileText size={14}/><span>{p.title}<small>{[p.tags?.length?p.tags.map(t=>`#${t}`).join(' '):'',p.key].filter(Boolean).join(' · ')}</small></span></div>)}{bundle.pages.length>200&&<p className="muted">외 {bundle.pages.length-200}개</p>}</div>
       {bundle.warnings.length>0&&<details className="transfer-warnings" open><summary>변환 시 확인할 항목 {bundle.warnings.length}개</summary><ul>{bundle.warnings.slice(0,100).map(w=><li key={w}>{w}</li>)}</ul></details>}
@@ -63,7 +63,7 @@ export function FolderWorkPopover({folderId,anchor,onClose,onCreated}:{folderId:
 
 try{const id=await s.createWorkFromFolder(folderId,{title,form});onCreated(id);}catch(e){setError(e instanceof Error?e.message:'작품을 만들지 못했습니다.');}finally{setBusy(false);}}
 
-  return <Popover open onOpenChange={open=>{if(!open&&!busy)onClose();}} anchor={anchorRef} side={typeof window!=='undefined'&&window.innerWidth<700?'bottom':'right'} width={300} title="새 작품으로 만들기" description="노트를 메모로 복사합니다. 원본은 남습니다." onReturnFocus={()=>{if(anchor?.isConnected)(anchor.matches('button')?anchor:anchor.querySelector<HTMLElement>('[data-row-menu],button'))?.focus();}}>
+  return <Popover open onOpenChange={open=>{if(!open&&!busy)onClose();}} anchor={anchorRef} side={typeof window!=='undefined'&&window.innerWidth<700?'bottom':'right'} width={300} title="새 작품으로 만들기" description="메모로 복사" onReturnFocus={()=>{if(anchor?.isConnected)(anchor.matches('button')?anchor:anchor.querySelector<HTMLElement>('[data-row-menu],button'))?.focus();}}>
     <label>작품 제목<input aria-label="새 작품 제목" value={title} maxLength={300} disabled={busy} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&title.trim())void create();}}/></label>
     <label>형식<Select aria-label="새 작품 형식" value={form} disabled={busy} onChange={value=>setForm(workSchema.shape.form.parse(value))}>{(['단편','중편','장편'] as const).map(v=><option key={v}>{v}</option>)}</Select></label>
     {error&&<p className="danger" role="alert">{error}</p>}

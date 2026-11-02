@@ -61,7 +61,6 @@ try{await operation();}catch(e){setError(e instanceof Error?e.message:'템플릿
         return <Fragment key={node.id}>{heading}<label className="transfer-export-row" style={{paddingInlineStart:12+Math.min(depth,3)*12}} title={path}><input type="checkbox" aria-label={`${label(node)} 템플릿에 포함`} checked={covered.has(node.id)} disabled={readonly||inherited} onChange={e=>setSelected(ids=>e.target.checked?[...ids,node.id]:ids.filter(id=>id!==node.id))}/>{node.type==='folder'?<Folder size={15}/>:<DocIcon doc={work.documents.find(d=>d.id===node.id)!}/>}<span>{label(node)}</span></label></Fragment>;
       })}</div>
       <p className="field-help">{noun} {count}개 · 폴더 {nav.nodes.filter(n=>n.type==='folder'&&covered.has(n.id)).length}개</p>
-      <p className="field-help">본문·속성·첨부·내부 연결 포함 · 외부 연결·작품 연결·AI 대화·공개 상태 제외</p>
       <div className="modal-actions"><button type="button" className="button primary" disabled={readonly||!count||!name.trim()} onClick={()=>void run(save)}>{busy?'저장 중':'템플릿 저장'}</button></div>
     </>:templates.length?<>
       <div className="form-grid"><label>저장한 템플릿<Select aria-label="저장한 템플릿" disabled={readonly} value={templateId} onChange={value=>{setId(value);}}>{templates.map(t=><option key={t.id} value={t.id}>{t.name} · {t.scope==='work'?t.documents.length:t.notes.length}개</option>)}</Select></label><label>넣을 위치<Select aria-label="템플릿을 넣을 위치" disabled={readonly} value={destination} onChange={value=>setLocation(value)}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select></label></div>

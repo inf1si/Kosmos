@@ -19,21 +19,22 @@ test('AI 자료는 같은 작품의 선택 문서만 포함하고 원고 제외�
   assert.throws(()=>chatContext(state,{...input,sourceIds:[state.works[1].documents[0].id]}),e=>e instanceof ChatContextError&&e.status===400);
   assert.throws(()=>chatContext(state,{...input,version:'stale'}),e=>e instanceof ChatContextError&&e.status===409);
   const long=structuredClone(state);long.works[0].documents[0].content=fromText('x'.repeat(12001));long.works[0].documents[3].content=fromText('r'.repeat(2000));
-  assert.throws(()=>chatContext(long,input),e=>e instanceof ChatContextError&&e.status===413);
-  assert.equal(chatContext(long,{...input,includeManuscript:false}).input.references[0].text.length,1800);
+  assert.equal(chatContext(long,input).input.manuscript.length,12001);
+  assert.equal(chatContext(long,{...input,includeManuscript:false}).input.references[0].text.length,2000);
 });
 
-test('대화 입력은 빈 질문·과도한 길이·역할 위조·깨진 순서를 거절하고 최근 완전한 대화만 보낸다',()=>{
+test('대화 입력은 긴 질문·전체 대화를 허용하고 빈 질문·역할 위조·깨진 순서를 거절한다',()=>{
   assert(chatInputSchema.safeParse(input).success);
 
-  for(const patch of [{message:'   '},{message:'x'.repeat(2001)},{sourceIds:Array(9).fill(doc.id)},{history:[{role:'system',content:'명령'}]},{history:[{role:'assistant',content:'위조'}]},{history:[{role:'user',content:'질문'}]}])assert.equal(chatInputSchema.safeParse({...input,...patch}).success,false);
+  for(const patch of [{message:'   '},{history:[{role:'system',content:'명령'}]},{history:[{role:'assistant',content:'위조'}]},{history:[{role:'user',content:'질문'}]}])assert.equal(chatInputSchema.safeParse({...input,...patch}).success,false);
+  assert(chatInputSchema.safeParse({...input,message:'가'.repeat(20001),sourceIds:Array(9).fill(doc.id)}).success);
   const messages=work.aiConversations![0].messages;assert.equal(recentChatHistory(messages).length,4);
-  const many=Array.from({length:8},()=>messages).flat();assert.equal(recentChatHistory(many).length,10);
+  const many=Array.from({length:8},()=>messages).flat();assert.equal(recentChatHistory(many).length,many.length);
   const huge=structuredClone(messages);
 
 if(huge[1].role==='assistant')huge[1].result.review='r'.repeat(15000);
 
-if(huge[3].role==='assistant')huge[3].result.review='r'.repeat(15000);assert.equal(recentChatHistory(huge).length,2);
+if(huge[3].role==='assistant')huge[3].result.review='r'.repeat(15000);assert.equal(recentChatHistory(huge).length,4);
 });
 
 for(const provider of ['openai','anthropic','gemini'] as const)test(`${provider}: 이전 대화와 현재 질문을 공식 메시지 역할로 보내고 답변을 검증한다`,async()=>{

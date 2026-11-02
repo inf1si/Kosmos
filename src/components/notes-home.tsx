@@ -26,7 +26,7 @@ export function NotesHome({state,readonly,onOpen,onNew,onTemplate,onMove,onFolde
     :<div className="notes-home-body">
       {pinned.length>0&&<section aria-label="고정한 노트"><h3>고정한 노트 {pinned.length}</h3><div className="notes-home-grid">{pinned.map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
       <section aria-label="최근 수정"><h3>최근 수정</h3>{recent.length?<div className="notes-home-grid">{recent.slice(0,12).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div>:<p className="muted">노트가 없습니다.</p>}</section>
-      {inbox.length>0&&<section aria-label="수집함"><h3>수집함 {inbox.length} · 정리하거나 아이스박스로 옮길 노트</h3><div className="notes-home-grid">{inbox.slice(0,6).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
+      {inbox.length>0&&<section aria-label="수집함"><h3>수집함 {inbox.length}</h3><div className="notes-home-grid">{inbox.slice(0,6).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
       <section aria-label="템플릿"><h3>템플릿으로 시작</h3><div className="notes-home-grid">{noteTemplates.map(t=>{const Icon=templateIcons[t.id];
 
 return <button type="button" className="reference-card" key={t.id} disabled={readonly} onClick={()=>onTemplate(t.id)}><Icon size={16}/><span><strong>{t.title}</strong><small>{t.description}</small></span></button>;})}</div></section>

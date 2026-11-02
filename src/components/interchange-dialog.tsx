@@ -52,13 +52,13 @@ if(operation.current!==op)return;setBundle(parsed);setChoices(parsed.pages.map(p
   return <Modal open={open} onClose={close} onBack={onBack?()=>{if(!busy){close();onBack();}}:undefined} backDisabled={busy} onReturnFocus={onReturnFocus} title="문서 가져오기 · 내보내기" description="가져온 문서는 비공개로 추가됩니다." wide>
     <div className="transfer-tabs" role="tablist" aria-label="문서 이동"><button role="tab" aria-selected={mode==='import'} disabled={busy} onClick={()=>{setMode('import');setError('');setMessage('');setDownload(null);}}><Upload size={16}/>가져오기</button><button role="tab" aria-selected={mode==='export'} disabled={busy} onClick={()=>{setMode('export');setError('');setMessage('');}}><Download size={16}/>내보내기</button></div>
     {mode==='import'?<>
-      <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion은 내보내기에서 Markdown &amp; CSV 또는 HTML, 하위 페이지 포함으로 받은 ZIP을 그대로 넣습니다. 맥의 스크리브너 프로젝트는 ZIP으로 압축합니다.</p><p className="muted">100MB · 문서 500개까지 · 이미지 PNG/JPEG/WebP 10MB 이하</p></div>
+      <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion: 하위 페이지 포함 ZIP · Scrivener: 프로젝트 ZIP</p></div>
       <div className="transfer-pick">
         <label className="backup-upload">파일 선택<input type="file" aria-label="외부 문서 파일" multiple accept={transferFileTypes} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
         <label className="backup-upload">폴더 선택<input type="file" aria-label="외부 문서 폴더" multiple {...folderPicker} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
       </div>
       {bundle&&<>
-        <div className="transfer-summary"><strong>{choices.length} / {bundle.pages.length}개 문서 선택 · {bundle.assets.filter(a=>bundle.pages.some(p=>selectedKeys.has(p.key)&&p.assetKeys.includes(a.key))).length}개 첨부</strong><span>새 문서로 추가 · 기존 문서 유지</span></div>
+        <div className="transfer-summary"><strong>{choices.length} / {bundle.pages.length}개 문서 선택 · {bundle.assets.filter(a=>bundle.pages.some(p=>selectedKeys.has(p.key)&&p.assetKeys.includes(a.key))).length}개 첨부</strong></div>
         <div className="transfer-target"><label>가져올 위치<Select aria-label="가져올 작품" value={target} disabled={busy} onChange={value=>setTarget(value)}><option value="new">새 작품 만들기</option>{s.state?.works.map(w=><option key={w.id} value={w.id}>{w.title}</option>)}</Select></label>{target==='new'&&<label>새 작품 제목<input aria-label="가져올 새 작품 제목" value={title} maxLength={300} disabled={busy} onChange={e=>setTitle(e.target.value)}/></label>}</div>
         <div className="transfer-bulk"><span>전체 문서 분류</span>{Object.entries(kinds).map(([kind,label])=><button className="button" disabled={busy} key={kind} onClick={()=>selectAll(documentSchema.shape.kind.parse(kind))}>{label}</button>)}<button className="button" disabled={busy} onClick={()=>setChoices([])}>선택 해제</button></div>
         <div className="transfer-list">{bundle.pages.map(p=>{const choice=choices.find(c=>c.key===p.key);
