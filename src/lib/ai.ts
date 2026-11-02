@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { RichNode } from './model';
 
-export const reviewSchema=z.object({review:z.string().max(15000),suggestions:z.array(z.object({quote:z.string().min(1).max(2000),replacement:z.string().max(3000),reason:z.string().max(2000)})).max(5)});
+export const reviewSchema=z.object({review:z.string(),suggestions:z.array(z.object({quote:z.string().min(1),replacement:z.string(),reason:z.string()})).max(5)});
 
 export type Review=z.infer<typeof reviewSchema>;
 

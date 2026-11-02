@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { activePromptPreset,activatePromptPreset,aiPreferencesSchema,BUILTIN_PROMPTS,DEFAULT_PROMPT_ID,deletePromptPreset,deleteSkill,legacyCustomPrompt,MAX_SKILLS,preserveAIPreferences,resolveRequestPrompt,savePromptPreset,saveSkill } from '../src/lib/ai-prompt-presets';
+import { activePromptPreset,activatePromptPreset,aiPreferencesSchema,BUILTIN_PROMPTS,DEFAULT_PROMPT_ID,deletePromptPreset,deleteSkill,legacyCustomPrompt,preserveAIPreferences,resolveRequestPrompt,savePromptPreset,saveSkill } from '../src/lib/ai-prompt-presets';
 import { DEFAULT_AI_SYSTEM_PROMPT,systemPromptSchema } from '../src/lib/ai-settings';
 import { chatMessageSchema,chatInputSchema } from '../src/lib/ai-conversation';
 import { workspaceSchema,makePublication,uid } from '../src/lib/model';
@@ -32,12 +32,12 @@ for(const preset of BUILTIN_PROMPTS)assert(systemPromptSchema.safeParse(preset.p
   let prefs=activatePromptPreset(undefined,DEFAULT_PROMPT_ID,first);
 
   for(let i=0;i<20;i++)prefs=savePromptPreset(prefs,{id:uid(),title:`프리셋 ${i}`,prompt:'지침'},undefined,first);
-  assert.throws(()=>savePromptPreset(prefs,{id:uid(),title:'초과',prompt:'지침'}),/20개/);
+  assert.equal(savePromptPreset(prefs,{id:uid(),title:'추가',prompt:'지침'}).presets.length,21);
   assert(!aiPreferencesSchema.safeParse({...prefs,presets:[prefs.presets[0],prefs.presets[0]]}).success);
   assert(!aiPreferencesSchema.safeParse({...prefs,activePresetId:uid()}).success);
   assert.throws(()=>savePromptPreset(undefined,{id:DEFAULT_PROMPT_ID,title:'덮어쓰기',prompt:'지침'}));
   assert.throws(()=>savePromptPreset(undefined,{id:uid(),title:' ',prompt:'지침'}));
-  assert.throws(()=>savePromptPreset(undefined,{id:uid(),title:'길이',prompt:'x'.repeat(4001)}));
+  assert.equal(savePromptPreset(undefined,{id:uid(),title:'길이',prompt:'x'.repeat(4001)}).presets[0].prompt.length,4001);
   assert.equal(savePromptPreset(undefined,{id:uid(),title:'빈 지침',prompt:' '}).presets[0].prompt,DEFAULT_AI_SYSTEM_PROMPT);
 });
 
@@ -53,7 +53,7 @@ test('프리셋은 계정 작업본·전체 ZIP에 왕복하고 공개 판본·�
 });
 
 test('이전 브라우저 지침은 유효한 사용자 내용만 명시적 가져오기 대상으로 남긴다',()=>{
-  assert.equal(legacyCustomPrompt(null),null);assert.equal(legacyCustomPrompt(' '),null);assert.equal(legacyCustomPrompt(DEFAULT_AI_SYSTEM_PROMPT),null);assert.equal(legacyCustomPrompt('x'.repeat(4001)),null);
+  assert.equal(legacyCustomPrompt(null),null);assert.equal(legacyCustomPrompt(' '),null);assert.equal(legacyCustomPrompt(DEFAULT_AI_SYSTEM_PROMPT),null);assert.equal(legacyCustomPrompt('x'.repeat(4001)),'x'.repeat(4001));
   assert.equal(legacyCustomPrompt('  차분한 문체를 유지한다.\n시점을 확인한다.  '),'차분한 문체를 유지한다.\n시점을 확인한다.');
 });
 
@@ -68,10 +68,10 @@ test('요청은 동기화된 활성 프리셋과 일치해야 하고 답변에 �
   const reply=chatMessageSchema.parse({id:uid(),role:'assistant',createdAt:first,result:{review:'답변',suggestions:[]},provider:'openai',model:'synthetic',version:doc.updatedAt,sources:[],promptPreset:resolved.preset});assert.equal(reply.role==='assistant'&&reply.promptPreset?.title,'시점 점검');
 });
 
-test('작품 형식·시점·시간과 자료 잘림을 알리되 원고 제외·작품 경계를 지킨다',()=>{
+test('작품 형식·시점·시간과 자료 전문을 보내되 원고 제외·작품 경계를 지킨다',()=>{
   const state=aiWorkspaceFixture(),work=state.works[0],doc=work.documents[0],source=work.documents[3];source.content={type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'가'.repeat(1801)}]}]};
   const context=chatContext(state,{workId:work.id,docId:doc.id,version:doc.updatedAt,provider:'openai',message:'시간을 확인해줘',includeManuscript:false,sourceIds:[source.id],history:[]});
-  assert.equal(context.input.form,work.form);assert.equal(context.input.document.pov,doc.pov);assert.equal(context.input.manuscript,'');assert.equal(context.input.references[0].text.length,1800);assert(context.input.references[0].truncated);
+  assert.equal(context.input.form,work.form);assert.equal(context.input.document.pov,doc.pov);assert.equal(context.input.manuscript,'');assert.equal(context.input.references[0].text.length,1801);
   assert(!JSON.stringify(context.input).includes(state.works[1].title));assert(!JSON.stringify(context.input).includes(DEFAULT_AI_SYSTEM_PROMPT));
 });
 
@@ -84,7 +84,7 @@ test('세 제공자에서 집필 예시·구체적인 지침·고정 자료/출�
   }
 });
 
-test('내 스킬 저장·수정·삭제는 오래된 편집과 개수 초과를 거절하고 프리셋 변경에도 보존된다',()=>{
+test('내 스킬 저장·수정·삭제는 오래된 편집을 거절하고 개수 제한 없이 프리셋 변경에도 보존된다',()=>{
   const id=uid(),skill={id,title:'존댓말로',description:'대사 말투',prompt:'보낸 글을 존댓말로 바꿔 줘.'};
   const saved=saveSkill(undefined,skill,undefined,first);assert.equal(saved.skills?.length,1);assert.equal(saved.activePresetId,DEFAULT_PROMPT_ID);
   const changed=saveSkill(saved,{...skill,prompt:'보낸 글을 반말로 바꿔 줘.'},first,second);assert.equal(saved.skills![0].prompt,skill.prompt);assert.equal(changed.skills![0].prompt,'보낸 글을 반말로 바꿔 줘.');
@@ -96,8 +96,8 @@ test('내 스킬 저장·수정·삭제는 오래된 편집과 개수 초과를 
   const deleted=deleteSkill(changed,id,second,second);assert.equal(deleted.skills!.length,0);assert.throws(()=>saveSkill(deleted,skill,second),/삭제/);
   let many=activatePromptPreset(undefined,DEFAULT_PROMPT_ID,first);
 
-for(let i=0;i<MAX_SKILLS;i++)many=saveSkill(many,{id:uid(),title:`스킬 ${i}`,description:'',prompt:'요청'},undefined,first);
-  assert.throws(()=>saveSkill(many,{id:uid(),title:'초과',description:'',prompt:'요청'}),/30개/);
+for(let i=0;i<31;i++)many=saveSkill(many,{id:uid(),title:`스킬 ${i}`,description:'',prompt:'요청'},undefined,first);
+  assert.equal(saveSkill(many,{id:uid(),title:'추가',description:'',prompt:'가'.repeat(20001)}).skills!.length,32);
   assert(!aiPreferencesSchema.safeParse({...saved,skills:[saved.skills![0],saved.skills![0]]}).success);
   assert(aiPreferencesSchema.safeParse({version:1,activePresetId:DEFAULT_PROMPT_ID,presets:[],updatedAt:first}).success,'스킬이 없는 이전 설정도 읽는다');
 });

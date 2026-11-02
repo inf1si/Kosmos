@@ -49,7 +49,7 @@ Workspace
 
 [트리 스키마](../src/lib/document-navigation-schema.ts)는 섹션 ID·이름·새 문서의 기본 종류와, 노드의 ID·종류·섹션 ID·부모 ID를 저장한다. 노드 배열에서 같은 부모의 순서를 읽는다. 문서 노드 ID는 문서 UUID와 같고 폴더는 자체 UUID·제목을 갖는다. 중복 ID·없는 문서/부모·다른 섹션의 부모·순환·24단계를 넘는 깊이를 거절한다. `navigation`이 없는 이전 형식 1 자료는 세 기본 섹션과 연속된 부·장별 폴더로 변환한다. [전환·가져오기 계약](document-navigation.md).
 
-AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대화 ID는 중복할 수 없다. 한 대화의 최대 메시지 수는 40개다. 작가 메시지에는 질문, AI 메시지에는 답변·수정안·제공자·모델·원고 시점·참고 자료 제목과 ID를 보관한다. 대화를 저장해도 원고의 `updatedAt`을 바꾸지 않는다. 전체 백업에는 포함하고 공개 판본에는 포함하지 않는다. 새 필드는 선택적이므로 이전 형식 1 백업도 계속 읽는다. [AI 제한](ai.md).
+AI 대화는 문서별로 연결하며 같은 문서의 대화 ID는 중복할 수 없다. 대화가 있는 문서 개수와 메시지 수의 앱 제한은 없다. 작가 메시지에는 질문, AI 메시지에는 답변·수정안·제공자·모델·원고 시점·참고 자료 제목과 ID를 보관한다. 대화를 저장해도 원고의 `updatedAt`을 바꾸지 않는다. 전체 백업에는 포함하고 공개 판본에는 포함하지 않는다. 새 필드는 선택적이므로 이전 형식 1 백업도 계속 읽는다. [AI 제한](ai.md).
 
 ## 휴지통 계약
 
@@ -67,7 +67,7 @@ AI 대화는 작품당 최대 200개 문서에 연결하며 같은 문서의 대
 
 ## 계정의 AI 프리셋
 
-`Workspace.aiPreferences`는 모든 작품에서 공유하는 선택 필드다. version: 1, activePresetId, 사용자 presets[], updatedAt을 저장한다. 프리셋은 UUID id, title 1~80자, prompt 1~4,000자, updatedAt ISO 시각을 갖고 최대 20개다. 중복 ID·없는 활성 ID를 거절한다. 기본 6종은 코드의 builtin:* ID·버전으로 제공하며 편집은 사본으로 저장한다. 필드가 없으면 기본 집필 동료를 사용한다. 선택 필드 skills[]는 내 스킬로 UUID id, title 1~40자, description 0~120자, prompt 1~2,000자, updatedAt을 갖고 최대 30개이며 중복 ID를 거절한다. 없으면 스킬이 없는 것으로 읽는다.
+`Workspace.aiPreferences`는 모든 작품에서 공유하는 선택 필드다. version: 1, activePresetId, 사용자 presets[], updatedAt을 저장한다. 프리셋은 UUID id, title 1~80자, 비어 있지 않은 prompt, updatedAt ISO 시각을 갖는다. 프리셋 개수·지침 길이를 제한하지 않는다. 중복 ID·없는 활성 ID를 거절한다. 기본 6종은 코드의 builtin:* ID·버전으로 제공하며 편집은 사본으로 저장한다. 필드가 없으면 기본 집필 동료를 사용한다. 선택 필드 skills[]는 내 스킬로 UUID id, title 1~40자, description 0~120자, 비어 있지 않은 prompt, updatedAt을 갖고 개수 제한 없음이며 중복 ID를 거절한다. 없으면 스킬이 없는 것으로 읽는다.
 
 전체 ZIP·복구 이력에 포함한다. 이전 백업에 필드가 없으면 현재 라이브러리를 유지하고 있으면 백업의 설정을 복원한다. 문서 MD/HTML/ENEX 교환·공개 판본에는 프리셋을 넣지 않는다. API 키는 작업 공간에 넣지 않는다.
 
@@ -126,7 +126,7 @@ namespace는 기기 미리보기 `preview`, 로그인 작업본 `author:<UUID>`�
 | `unpublish_work` | `p_work_id` | 그 작가의 해당 작품 활성 판본을 비활성화하고 바꾼 행 수 반환(이미 없으면 0). 판본 행은 지우지 않는다. 2026-10-07 [마이그레이션](../supabase/migrations/20261007081500_work_trash_unpublish.sql) |
 | `get_author_library` | 없음 | 허용 작가의 활성 판본 ID·작품 ID·공개 제목·게시일·순위만 반환 |
 | `set_library_order` | `p_publication_ids` UUID 배열 | 자신의 현재 활성 판본 전체 목록을 검증하고 작품별 순위만 변경, 정렬 메타데이터 반환 |
-| `reserve_ai_call` | 없음 | 해당 작가의 DB 날짜별 호출 수 증가. 최대 10회 |
+| `reserve_ai_call` | 없음 | 이전 앱 호환용 호출 수 기록. 일일 상한 없음. 현재 AI 경로는 호출하지 않음 |
 
 함수는 `SECURITY DEFINER`와 고정 `search_path`를 사용하고 `auth.uid()`를 확인한다. 기본 테이블의 쓰기 권한은 클라이언트에 주지 않는다. 권한 취소와 재부여는 Supabase의 기본 권한에 의존하지 않도록 SQL에 명시한다.
 

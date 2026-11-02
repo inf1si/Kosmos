@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect,useRef,useState } from 'react';
-import { deleteSkill,MAX_SKILLS,saveSkill,type AISkill } from '@/lib/ai-prompt-presets';
+import { deleteSkill,saveSkill,type AISkill } from '@/lib/ai-prompt-presets';
 import { uid } from '@/lib/model';
 import { useStudio } from './studio-provider';
 import { Select } from './select';
@@ -59,8 +59,7 @@ return {...state,aiPreferences:next};});
     <label>스킬 이름<input aria-label="스킬 이름" maxLength={40} value={title} disabled={readonly} placeholder="예: 존댓말로 바꾸기" onChange={e=>setTitle(e.target.value)}/></label>
     <label>설명 (선택)<input aria-label="스킬 설명" maxLength={120} value={description} disabled={readonly} placeholder="검색에 사용할 설명" onChange={e=>setDescription(e.target.value)}/></label>
     <label htmlFor="ai-skill-prompt">요청</label>
-    <textarea id="ai-skill-prompt" aria-label="스킬 요청" rows={6} maxLength={2000} value={prompt} disabled={readonly} placeholder="예: 보낸 글을 인물의 존댓말 말투로 바꿔 줘. 설명 없이 바꾼 글만 답해 줘." onChange={e=>setPrompt(e.target.value)}/>
-    <p className="ai-settings-help">{prompt.length.toLocaleString()} / 2,000자 · 스킬 {skills.length} / {MAX_SKILLS}개</p>
+    <textarea id="ai-skill-prompt" aria-label="스킬 요청" rows={6} value={prompt} disabled={readonly} onChange={e=>setPrompt(e.target.value)}/>
     <div className="ai-settings-actions">{selected&&<button type="button" disabled={readonly||remoteChanged} onClick={()=>setDeleteOpen(v=>!v)}>스킬 삭제</button>}<button type="button" disabled={readonly||remoteChanged||!title.trim()||!prompt.trim()||(!dirty&&selectedId!=='new')} onClick={save}>{selectedId==='new'?'새 스킬 저장':'스킬 저장'}</button></div>
     {deleteOpen&&<div className="ai-prompt-confirm"><p>이 스킬을 삭제할까요?</p><button type="button" disabled={readonly} onClick={()=>void remove()}>삭제</button><button type="button" onClick={()=>setDeleteOpen(false)}>취소</button></div>}
     {error&&<p role="alert" className="ai-settings-error">{error}</p>}{notice&&<p role="status" className="ai-settings-notice">{notice}</p>}

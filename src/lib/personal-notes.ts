@@ -220,7 +220,6 @@ if(!note)throw new Error('대화 중 노트를 찾지 못했습니다.');
 
   if((note.aiMessages?.length||0)!==expectedCount)throw new Error('다른 창에서 대화가 바뀌었습니다. 다시 보내세요.');
 
-  if(!note.aiMessages?.length&&(state.notes||[]).filter(n=>n.aiMessages?.length).length>=200)throw new Error('노트 대화는 최대 200개입니다. 대화를 노트로 보관하고 새 대화를 시작하세요.');
   const aiMessages=[...(note.aiMessages||[]),{id:uid(),role:'user' as const,text:question,createdAt:new Date().toISOString()},answer];
 
   return {...state,notes:state.notes!.map(n=>n.id===id?noteSchema.parse({...n,aiMessages}):n)};

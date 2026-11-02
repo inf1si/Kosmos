@@ -2,7 +2,7 @@
 
 import { useRef,useState } from 'react';
 import { DEFAULT_AI_SYSTEM_PROMPT } from '@/lib/ai-settings';
-import { activePromptPreset,activatePromptPreset,deletePromptPreset,DEFAULT_PROMPT_ID,MAX_CUSTOM_PRESETS,promptCatalog,savePromptPreset,type AIPreferences,type PromptPreset } from '@/lib/ai-prompt-presets';
+import { activePromptPreset,activatePromptPreset,deletePromptPreset,DEFAULT_PROMPT_ID,promptCatalog,savePromptPreset,type AIPreferences,type PromptPreset } from '@/lib/ai-prompt-presets';
 import { uid } from '@/lib/model';
 import { useStudio } from './studio-provider';
 import { useLegacyAISystemPrompt } from './use-ai-system-prompt';
@@ -83,8 +83,7 @@ if(!next)return;
     {remoteChanged&&<div className="ai-prompt-confirm" role="status"><p>다른 창에서 프리셋이 바뀌었습니다.</p><button type="button" onClick={()=>selected?load(selected.id):load(DEFAULT_PROMPT_ID)}>최신 내용 불러오기</button></div>}
     <label>프리셋 이름<input aria-label="프리셋 이름" maxLength={80} value={name} disabled={readonly} onChange={e=>setName(e.target.value)}/></label>
     <label className="ai-settings-help" htmlFor="ai-system-prompt">시스템 프롬프트</label>
-    <textarea id="ai-system-prompt" aria-label="시스템 프롬프트" rows={9} maxLength={4000} value={draft} disabled={readonly} onChange={e=>setDraft(e.target.value)} placeholder={DEFAULT_AI_SYSTEM_PROMPT}/>
-    <p className="ai-settings-help">{draft.length.toLocaleString()} / 4,000자 · 사용자 프리셋 {preferences?.presets.length||0} / {MAX_CUSTOM_PRESETS}개</p>
+    <textarea id="ai-system-prompt" aria-label="시스템 프롬프트" rows={9} value={draft} disabled={readonly} onChange={e=>setDraft(e.target.value)} placeholder={DEFAULT_AI_SYSTEM_PROMPT}/>
     <div className="ai-settings-actions"><button type="button" disabled={readonly} onClick={()=>{if(dirty)setPendingSelection(DEFAULT_PROMPT_ID);else activate(DEFAULT_PROMPT_ID);}}>기본값으로 재설정</button><button type="button" disabled={readonly||!name.trim()} onClick={()=>save(true)}>사본으로 저장·적용</button><button type="button" disabled={readonly||!name.trim()||remoteChanged} onClick={()=>save()}>{baseline.current.builtin||selectedId==='new'?'새 프리셋으로 저장·적용':'프리셋 저장·적용'}</button></div>
     {pendingSelection===DEFAULT_PROMPT_ID&&<button type="button" className="chat-secondary" disabled={readonly} onClick={()=>activate(DEFAULT_PROMPT_ID)}>편집을 버리고 기본값 적용</button>}
     {selected&&!selected.builtin&&<div className="ai-settings-actions"><button type="button" disabled={readonly||remoteChanged} onClick={()=>setDeleteOpen(v=>!v)}>사용자 프리셋 삭제</button></div>}

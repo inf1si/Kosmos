@@ -27,7 +27,7 @@ function fixture(){const note={...newNote(),content:fromText('짧은 선택\n\n'
 
 return {note,state,input};}
 
-test('12,000자가 넘는 노트에서도 선택한 글만 제공자에게 전달한다',()=>{const {state,input}=fixture(),context=chatContext(state,input);assert.equal(context.input.manuscript,'짧은 선택');assert.deepEqual(context.input.references,[]);assert.throws(()=>chatContext(state,{...input,noteRange:undefined}),e=>e instanceof ChatContextError&&e.status===413);});
+test('12,000자가 넘는 노트에서도 선택한 글만 제공자에게 전달한다',()=>{const {state,input}=fixture(),context=chatContext(state,input);assert.equal(context.input.manuscript,'짧은 선택');assert.deepEqual(context.input.references,[]);assert(chatContext(state,{...input,noteRange:undefined}).input.manuscript.length>12000);});
 
 test('범위·원문·버전 불일치는 AI 호출 전에 거절한다',()=>{const {state,input}=fixture();
 

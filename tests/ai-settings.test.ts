@@ -77,7 +77,7 @@ test('사용자 시스템 프롬프트는 세 제공자의 지침으로 전달�
     assert(system.includes(prompt));assert(system.includes('참고 데이터'));assert(system.includes('최대 5개'));assert(!system.includes(config.key));
   }
 
-  assert.equal(effectiveSystemPrompt('   '),DEFAULT_AI_SYSTEM_PROMPT);assert.throws(()=>effectiveSystemPrompt('x'.repeat(4001)));
+  assert.equal(effectiveSystemPrompt('   '),DEFAULT_AI_SYSTEM_PROMPT);assert.equal(effectiveSystemPrompt('x'.repeat(4001)).length,4001);
   const fixture=aiWorkspaceFixture(),work=fixture.works[0],doc=work.documents[0];const input={workId:work.id,docId:doc.id,version:doc.updatedAt,provider:'openai',message:'질문',includeManuscript:true,sourceIds:[],history:[],systemPrompt:prompt};
-  assert(chatInputSchema.safeParse(input).success);assert(!chatInputSchema.safeParse({...input,systemPrompt:'x'.repeat(4001)}).success);
+  assert(chatInputSchema.safeParse(input).success);assert(chatInputSchema.safeParse({...input,systemPrompt:'x'.repeat(4001)}).success);
 });

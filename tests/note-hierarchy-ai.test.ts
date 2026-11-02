@@ -45,7 +45,7 @@ test('노트 AI는 선택한 다른 노트·연결 작품 자료만 보내고 �
   assert(!chatInputSchema.safeParse({...input,workId:work.id}).success);assert(!chatInputSchema.safeParse({...input,docId:b.id}).success);assert(!chatInputSchema.safeParse({...input,noteId:undefined}).success);
   assert.equal(chatContext(state,input).sources.length,0);assert.equal(chatContext(state,{...input,sourceIds:[b.id]}).input.references[0].kind,'note');assert.throws(()=>chatContext(state,{...input,sourceIds:[work.documents[0].id]}),e=>e instanceof ChatContextError&&e.status===400);
   const linked=patchNote(state,a.id,{linkedWorkIds:[work.id]}),updated=linked.notes!.find(n=>n.id===a.id)!;const ctx=chatContext(linked,{...input,version:updated.updatedAt,sourceIds:[b.id,work.documents[0].id]});assert.equal(ctx.sources.length,2);assert.deepEqual(ctx.sources.map(d=>d.id),[b.id,work.documents[0].id]);
-  assert.throws(()=>chatContext(state,{...input,version:'stale'}),e=>e instanceof ChatContextError&&e.status===409);const long=structuredClone(state);long.notes![0].content=fromText('x'.repeat(12001));long.notes![1].content=fromText('r'.repeat(2000));assert.throws(()=>chatContext(long,input),e=>e instanceof ChatContextError&&e.status===413);const excluded=chatContext(long,{...input,includeManuscript:false,sourceIds:[b.id]});assert.equal(excluded.input.manuscript,'');assert.equal(excluded.input.references[0].text.length,1800);
+  assert.throws(()=>chatContext(state,{...input,version:'stale'}),e=>e instanceof ChatContextError&&e.status===409);const long=structuredClone(state);long.notes![0].content=fromText('x'.repeat(12001));long.notes![1].content=fromText('r'.repeat(2000));assert.equal(chatContext(long,input).input.manuscript.length,12001);const excluded=chatContext(long,{...input,includeManuscript:false,sourceIds:[b.id]});assert.equal(excluded.input.manuscript,'');assert.equal(excluded.input.references[0].text.length,2000);
 });
 
 test('노트 AI 질문·답변은 한 쌍으로 저장하며 정확한 시점만 적용하고 명시적으로 비운다',()=>{
@@ -67,7 +67,7 @@ try{await pg.exec('create role anon; create role authenticated; create table pub
   }finally{await pg.close();}
 });
 
-test('노트 대화 API는 인증·서버 노트·선택 자료·공유 예산·제공자 응답을 연결한다',async()=>{
+test('노트 대화 API는 인증·서버 노트·선택 자료·횟수 예약 없는 제공자 응답을 연결한다',async()=>{
   const { POST }=await import('../src/app/api/ai/chat/route');
   const {state,a,b}=fixture(),environment={NEXT_PUBLIC_SUPABASE_URL:'https://synthetic.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon-key',OPENAI_API_KEY:'synthetic-key',OPENAI_MODEL:'synthetic-model'};
   const before=Object.fromEntries(Object.keys(environment).map(key=>[key,process.env[key]])),previousFetch=globalThis.fetch;
@@ -97,9 +97,9 @@ return Response.json({status:'completed',output:[{type:'message',content:[{type:
   const request=(patch={})=>new Request('http://localhost/api/ai/chat',{method:'POST',headers:{Authorization:'Bearer synthetic-token','Content-Type':'application/json'},body:JSON.stringify({...input,...patch})});
 
   try{
-    const response=await POST(request());assert.equal(response.status,200);const body=await response.json();assert.equal(body.version,a.updatedAt);assert.equal(body.sources[0].id,b.id);assert.equal(budget,1);assert.equal(captured!.form,'개인 노트');assert.equal(captured!.manuscript,'기억을 세금으로 내는 도시');assert.equal(captured!.references.length,1);
-    assert.equal((await POST(request({sourceIds:[state.works[0].documents[0].id]}))).status,400);assert.equal(budget,1);
-    const excluded=await POST(request({includeManuscript:false}));assert.equal(excluded.status,200);assert.deepEqual((await excluded.json()).result.suggestions,[]);assert.equal(captured!.manuscript,'');assert.equal(budget,2);
+    const response=await POST(request());assert.equal(response.status,200);const body=await response.json();assert.equal(body.version,a.updatedAt);assert.equal(body.sources[0].id,b.id);assert.equal(budget,0);assert.equal(captured!.form,'개인 노트');assert.equal(captured!.manuscript,'기억을 세금으로 내는 도시');assert.equal(captured!.references.length,1);
+    assert.equal((await POST(request({sourceIds:[state.works[0].documents[0].id]}))).status,400);assert.equal(budget,0);
+    const excluded=await POST(request({includeManuscript:false}));assert.equal(excluded.status,200);assert.deepEqual((await excluded.json()).result.suggestions,[]);assert.equal(captured!.manuscript,'');assert.equal(budget,0);
   }finally{globalThis.fetch=previousFetch;
 
 for(const [key,value] of Object.entries(before))if(value===undefined)delete process.env[key];else process.env[key]=value;}

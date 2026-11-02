@@ -6,7 +6,7 @@ import type { Editor } from '@tiptap/core';
 import { ArrowUp,Lightbulb,ListCollapse,MessageCircleQuestionMark,PanelRight,PenLine,Settings2,X } from 'lucide-react';
 import { applyEditorTarget,targetIsCurrent,type EditorTarget } from '@/lib/editor-target';
 import { chatMessageSchema,recentChatHistory,type EditorAIScope } from '@/lib/ai-conversation';
-import { appendEditorExchange,editorAIOrigin,editorAIMessages,editorAIIsFull } from '@/lib/editor-ai-conversation';
+import { appendEditorExchange,editorAIOrigin,editorAIMessages } from '@/lib/editor-ai-conversation';
 import { activePromptPreset,promptCatalog,activatePromptPreset,type AISkill } from '@/lib/ai-prompt-presets';
 import { cloud,cloudConfigured } from '@/lib/cloud';
 import { uid } from '@/lib/model';
@@ -37,11 +37,10 @@ return()=>{alive.current=false;editor.off('transaction',change);};},[editor]);
   useEffect(()=>{questionInput.current?.focus();},[]);
   const noun=scope.noteId?'노트':'문서',preset=activePromptPreset(s.state?.aiPreferences);
   const current=targetIsCurrent(editor,target);void revision;
-  const full=editorAIIsFull(s.state,scope);
   const configured=cloudConfigured&&currentProvider.configured;
 
   async function send(){
-    if(locked.current||!question.trim()||!configured||!current||full||s.conflict||target.text.length>12000)return;
+    if(locked.current||!question.trim()||!configured||!current||s.conflict)return;
     locked.current=true;setBusy(true);setError('');
     const prompt=question.trim(),chosen=provider;
 
@@ -51,7 +50,6 @@ return()=>{alive.current=false;editor.off('transaction',change);};},[editor]);
 
       if(!origin||!targetIsCurrent(editor,target)||live.current.conflict)throw new Error(`${noun}가 바뀌었습니다. 현재 글에서 다시 질문하세요.`);
 
-      if(editorAIIsFull(live.current.state,scope))throw new Error('대화 한도입니다. 대화를 보관하고 새 대화를 시작하세요.');
       const history=editorAIMessages(live.current.state,scope),active=activePromptPreset(live.current.state?.aiPreferences);
       const session=(await cloud().auth.getSession()).data.session;
 
@@ -98,11 +96,9 @@ if(alive.current)setBusy(false);}
     <details className="chat-context"><summary>{target.kind==='selection'?'선택한 글':'현재 문단'} · {target.text.length.toLocaleString()}자</summary><p className="note-ai-target">{target.text||'빈 문단'}</p></details>
     <div className="note-ai-settings"><label>제공자<Select aria-label="AI 질문 제공자" value={provider} disabled={busy||loadingProviders} onChange={value=>setProvider(providerSchema.parse(value))}>{providers.map(p=><option key={p.id} value={p.id} disabled={!p.configured}>{p.label}{p.configured?'':' · 연결 필요'}</option>)}</Select></label><label>프리셋<Select aria-label="AI 질문 프리셋" value={preset.id} disabled={busy||!!s.conflict} onChange={value=>s.update(state=>({...state,aiPreferences:activatePromptPreset(state.aiPreferences,value)}))}>{promptCatalog(s.state?.aiPreferences).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</Select></label><label className="note-ai-request">스킬<Select aria-label="AI 질문 스킬" value={request} disabled={busy||hasAnswer} onChange={value=>{const skill=skills.find(item=>`skill:${item.id}`===value);const next:EditorAIAction=skill?`skill:${skill.id}`:editorAIActions.find(action=>action.id===value)?.id||'ask';setRequest(next);setQuestion(editorAIQuestion(next,skills));questionInput.current?.focus();}}><option value="ask">직접 질문</option><optgroup label="기본">{editorAIActions.flatMap(a=>a.id==='ask'?[]:[<option key={a.id} value={a.id}>{a.label}</option>])}</optgroup>{skills.length>0&&<optgroup label="내 스킬">{skills.map(p=><option key={p.id} value={`skill:${p.id}`}>{p.title}</option>)}</optgroup>}{request.startsWith('skill:')&&!skills.some(p=>`skill:${p.id}`===request)&&<option value={request}>삭제된 스킬</option>}</Select></label></div>
     {!configured&&!loadingProviders&&<div className="chat-connection"><p>AI 연결이 필요합니다.</p><button onClick={e=>{settingsTrigger.current=e.currentTarget;setSettings(true);}}>AI 설정 열기</button></div>}
-    {hasAnswer?<><label className="note-ai-answer">답변<textarea aria-label="적용할 AI 답변" rows={5} value={answer} maxLength={15000} disabled={busy} onChange={e=>setAnswer(e.target.value)}/></label><div className="popover-actions"><button disabled={busy} onClick={onClose}>취소</button><button disabled={busy||!current||!answer.trim()||!!s.conflict} onClick={()=>void apply('insert')}>커서에 삽입</button><button className="primary" disabled={busy||!current||!answer.trim()||!!s.conflict} onClick={()=>void apply('replace')}>{target.kind==='selection'?'선택 부분 바꾸기':'문단 바꾸기'}</button></div><button className="chat-secondary" disabled={busy} onClick={()=>{setHasAnswer(false);setAnswer('');setError('');}}>다시 질문</button></>:<form className="chat-composer" onSubmit={e=>{e.preventDefault();void send();}}><textarea ref={questionInput} aria-label="AI에게 질문" rows={3} maxLength={2000} disabled={busy||!!s.conflict} placeholder="질문 입력" value={question} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}}}/><div><span>{busy?'답변을 준비하고 있어요…':'Enter 전송 · Shift+Enter 줄바꿈'}</span><button type="submit" className="primary" aria-label="AI 질문 보내기" disabled={busy||loadingProviders||!configured||!current||full||!question.trim()||target.text.length>12000||!!s.conflict}><ArrowUp size={16}/></button></div></form>}
+    {hasAnswer?<><label className="note-ai-answer">답변<textarea aria-label="적용할 AI 답변" rows={5} value={answer} disabled={busy} onChange={e=>setAnswer(e.target.value)}/></label><div className="popover-actions"><button disabled={busy} onClick={onClose}>취소</button><button disabled={busy||!current||!answer.trim()||!!s.conflict} onClick={()=>void apply('insert')}>커서에 삽입</button><button className="primary" disabled={busy||!current||!answer.trim()||!!s.conflict} onClick={()=>void apply('replace')}>{target.kind==='selection'?'선택 부분 바꾸기':'문단 바꾸기'}</button></div><button className="chat-secondary" disabled={busy} onClick={()=>{setHasAnswer(false);setAnswer('');setError('');}}>다시 질문</button></>:<form className="chat-composer" onSubmit={e=>{e.preventDefault();void send();}}><textarea ref={questionInput} aria-label="AI에게 질문" rows={3} disabled={busy||!!s.conflict} placeholder="질문 입력" value={question} onChange={e=>setQuestion(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}}}/><div>{busy&&<span role="status">답변 생성 중…</span>}<button type="submit" className="primary" aria-label="AI 질문 보내기" disabled={busy||loadingProviders||!configured||!current||!question.trim()||!!s.conflict}><ArrowUp size={16}/></button></div></form>}
     {!current&&<p className="chat-error" role="status">{noun}가 바뀌었습니다. 현재 글에서 다시 질문하세요.</p>}
-    {target.text.length>12000&&<p className="chat-error">12,000자 이내로 선택하세요.</p>}{full&&<p className="chat-error">AI 대화에서 기록을 보관하고 새 대화를 시작하세요.</p>}
     {(error||connectionError)&&<p className="chat-error" role="alert">{error||connectionError}</p>}
-    <small>하루 10회</small>
     {settings&&<AISettingsDialog providers={providers} providerId={provider} storageAvailable={storageAvailable} onRefresh={refreshProviders} onClose={()=>setSettings(false)} onReturnFocus={()=>settingsTrigger.current?.focus()}/>}
   </div>;
 }

@@ -4,7 +4,7 @@ import { fromText,uid,type Workspace } from '../src/lib/model';
 import { seedWorkspace } from '../src/lib/seed';
 import { chatInputSchema,type ChatMessage } from '../src/lib/ai-conversation';
 import { chatContext,ChatContextError } from '../src/lib/ai-chat-context';
-import { appendEditorExchange,editorAIIsFull,editorAIMessages } from '../src/lib/editor-ai-conversation';
+import { appendEditorExchange,editorAIMessages } from '../src/lib/editor-ai-conversation';
 
 function fixture(){
   const state=seedWorkspace(),work=state.works[0],doc=work.documents[0];
@@ -19,7 +19,7 @@ test('긴 집필실 원고·설정·메모의 선택만 전송하고 작품 정�
 
   for(const kind of ['scene','wiki','memo'] as const){doc.kind=kind;const context=chatContext(state,input);assert.equal(context.input.manuscript,'짧은 선택');assert.equal(context.input.work,work.title);assert.equal(context.input.document.kind,kind);assert.equal(context.input.document.scope,'selection');assert.deepEqual(context.input.references,[]);}
 
-  assert.throws(()=>chatContext(state,{...input,documentRange:undefined}),e=>e instanceof ChatContextError&&e.status===413);
+  assert(chatContext(state,{...input,documentRange:undefined}).input.manuscript.length>12000);
   assert.equal(chatContext(state,{...input,documentRange:{kind:'paragraph',from:1,to:1,text:''}}).input.manuscript,'');
 });
 
@@ -33,7 +33,7 @@ test('다른 작품의 문서·범위 위조·시점 불일치는 집필실 AI �
 
 const answer:Extract<ChatMessage,{role:'assistant'}>={id:uid(),role:'assistant',createdAt:'2026-10-05',provider:'openai',model:'synthetic',version:'test',sources:[],result:{review:'답변',suggestions:[]}};
 
-test('집필실 대화는 원래 문서에만 저장하고 동시 변경·삭제·20회 한도를 막는다',()=>{
+test('집필실 대화는 원래 문서에만 저장하고 동시 변경·삭제를 막고 20회 뒤에도 계속 저장한다',()=>{
   const {state,scope,work,doc}=fixture();const content=structuredClone(doc.content),version=doc.updatedAt;
   const next=appendEditorExchange(state,scope,0,'질문',answer);
   assert.equal(editorAIMessages(next,scope).length,2);assert.equal(editorAIMessages(next,{workId:work.id,docId:work.documents[1].id}).length,0);
@@ -43,5 +43,5 @@ test('집필실 대화는 원래 문서에만 저장하고 동시 변경·삭제
   let full:Workspace=next;
 
 for(let i=1;i<20;i++)full=appendEditorExchange(full,scope,i*2,'질문',answer);
-  assert(editorAIIsFull(full,scope));assert.throws(()=>appendEditorExchange(full,scope,40,'초과',answer));
+  const continued=appendEditorExchange(full,scope,40,'가'.repeat(20001),answer);assert.equal(editorAIMessages(continued,scope).length,42);
 });

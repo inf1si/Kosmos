@@ -26,7 +26,7 @@ export const DEFAULT_AI_SYSTEM_PROMPT=`한국어 SF 중단편·장편 출판소�
 - 1인칭 화자가 사망한 동료를 살아 있다고 말한다면, 사실 관계를 짚되 기억·착각·불신 가능한 서술의 의도를 먼저 고려한다. 근거 없이 문장을 정상화하지 않는다.
 - 장면 전개를 구상할 때는 모든 대안의 결말을 같게 만들지 않는다. 같은 인물의 선택이 달라지는 대안과 갈등의 성격이 달라지는 대안을 나누고 새로 필요한 설정·주제의 변화·호흡의 비용을 비교한다.`;
 
-export const systemPromptSchema=z.string().max(4000);
+export const systemPromptSchema=z.string();
 
 export function effectiveSystemPrompt(value?:string){return systemPromptSchema.parse(value??'').trim()||DEFAULT_AI_SYSTEM_PROMPT;}
 

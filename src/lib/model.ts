@@ -151,7 +151,7 @@ export const workSchema = z.object({
   id:z.uuid(),title:z.string().min(1).max(300),subtitle:z.string().max(500),description:z.string().max(10000),
   form:z.enum(['단편','중편','장편']), documents:z.array(documentSchema).min(1).max(5000),
   publications:z.array(publicationSchema).max(100),activePublicationId:z.uuid().nullable(),
-  aiConversations:z.array(conversationSchema).max(200).optional(),
+  aiConversations:z.array(conversationSchema).optional(),
   navigation:navigationSchema.optional(),
   favorite:z.boolean().optional(),
 }).superRefine((work,ctx)=>{
@@ -254,7 +254,6 @@ export const workspaceSchema = z.object({
 
   if(data.noteNavigation)for(const message of noteNavigationIssues(data.noteNavigation,(data.notes||[]).map(n=>n.id)))ctx.addIssue({code:'custom',message,path:['noteNavigation']});
 
-  if((data.notes||[]).filter(n=>n.aiMessages?.length).length>200)ctx.addIssue({code:'custom',message:'노트 대화는 최대 200개까지 보관할 수 있습니다.'});
   const assets=new Map(data.assets.map(a=>[a.id,a]));
   const workIds=new Set(data.works.map(w=>w.id));
 

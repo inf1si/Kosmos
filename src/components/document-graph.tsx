@@ -184,7 +184,7 @@ export function DocumentGraph({documents, initialDocumentId, onOpen}: {documents
     </div>}
     {visible.limited && <p className={styles.notice}>문서 {visible.documents.length} / {visible.total}개 · 연결 최대 {GRAPH_EDGE_LIMIT}개</p>}
     <div className={styles.body}>
-      <div className={styles.canvas} ref={canvas} title="빈 곳을 끌어 이동 · 휠로 확대 · 두 번 눌러 문서 열기" onPointerDown={e => startDrag(e)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={e => {endDrag(e); suppressClick.current = true;}}>
+      <div className={styles.canvas} ref={canvas} onPointerDown={e => startDrag(e)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={e => {endDrag(e); suppressClick.current = true;}}>
         <svg className={styles.svg} width="100%" height="100%" viewBox={`0 0 ${size.width} ${size.height}`} tabIndex={0} role="group" aria-label="문서 관계 지도. 방향키로 이동, 더하기와 빼기로 확대 축소, Home으로 전체 맞춤"
           onKeyDown={e => {
             if (e.key === '+' || e.key === '=') zoomBy(1.2);

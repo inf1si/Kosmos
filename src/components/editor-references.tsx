@@ -123,7 +123,7 @@ if(rows.length)dom.setAttribute('aria-activedescendant',`${listId}-${chosen}`);}
 return new DOMRect(pos.left,pos.top,1,pos.bottom-pos.top);}catch{return editor.view.dom.getBoundingClientRect();}};
 
   return <Popup.Root open={!!query} onOpenChange={open=>{if(!open)close();}}><Popup.Anchor virtualRef={anchor}/><Popup.Portal><Popup.Content ref={menu} className="menu note-command-menu internal-reference-search" side="bottom" align="start" sideOffset={6} collisionPadding={12} onOpenAutoFocus={e=>e.preventDefault()} onCloseAutoFocus={e=>e.preventDefault()} onFocusOutside={e=>{if(e.target instanceof globalThis.Node&&editor.view.dom.contains(e.target))e.preventDefault();}} onEscapeKeyDown={close}>
-    <div className="note-command-caption">참조 <kbd>↑↓ 선택 · Enter 삽입</kbd></div>
+    <div className="note-command-caption">참조</div>
     <div role="listbox" id={listId} aria-label="참조할 항목">{referenceGroups.map(group=>{
       const items=rows.flatMap((row,i)=>('target' in row?referenceGroup(row.target):row.more)===group.id?[{row,i}]:[]);
 
