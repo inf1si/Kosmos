@@ -1,5 +1,15 @@
 # 구현 검증
 
+## 2026-11-03 — 서재 책 파일 다운로드
+
+- 기준 main `114229f`. 책 내보내기의 공개·교체·해제, 서재/독서 화면의 형식 메뉴, 익명 목록/첨부 API와 비공개 Storage·RLS 마이그레이션을 추가했다. 선택 문서가 공개 대상이며 등록 파일은 원고 편집·재게시·백업 복원과 독립이다.
+- 단위/PGlite: 파일명·소유 경로·형식, 익명 API 응답/첨부/캐시/HTML 헤더, 업로드 고아 객체 비공개·다른 작가의 쓰기 차단·파일 ID 충돌·등록 해제·작품 철회 검사를 통과했다. 실제 모델·원고·작가 계정은 사용하지 않았다.
+- 전체 Node 269개·타입·전체 Anti Slop 린트·문서/기준 diff 검사를 통과했다. 공개 화면을 일반 Node SSR로 불러오는 기존 테스트가 새 CSS module import에서 실패하여 기존 글로벌 CSS 패턴으로 옮겼고 해당 회귀 14개와 전체 검사를 재실행해 통과했다.
+- Chromium은 실제 Next Webpack 개발 서버와 별도 합성 Supabase HTTP 서버로 브라우저 → 익명/작가 API → 메타데이터·파일 저장소 → 응답을 검증했다. 두 폭(1280/360px)에서 PDF·EPUB·HTML을 실제 생성·등록하고 받은 바이트와 한글 파일명을 대조했다. 업로드·등록 실패 후 기존 파일 유지/임시 파일 정리, 교체와 이전 객체 제거, 새로고침 목록 보존/옵션 기본 꺼짐, 공개/철회 API 차단, 형식별 해제와 메뉴 제거, Esc 초점 복귀를 확인했다. 공개 옵션을 끈 실제 EPUB 생성은 Storage/등록을 쓰지 않는 것도 확인했다. 54개 테마의 창·메뉴 216개 표시 경우, 등록 8회·해제 6회·원고 저장 0회·페이지 오류 0으로 통과했다. 보라/사이버/궤도 다크의 두 폭 화면과 기존 내보내기 부품 규격을 대조했다. 증거는 `test-results/book-downloads/report.json`과 같은 폴더의 생성 파일/화면이다.
+- 최초 Turbopack 개발 실행은 외부 Google 글꼴 요청 실패로 500을 반환해 Webpack 개발 실행으로 전환했다. Webpack 개발 글꼴은 외부 요청 실패 시 기존 fallback을 사용했다. 합성 HTTP 서버 CORS, 미리보기 iframe에 대한 인증 init script 제외, 개발 route 사전 컴파일과 마지막 해제 저장 대기를 보완했다. 제품의 폰트·네트워크 설정은 바꾸지 않았다.
+- 운영 DB에 `20261102154315_library_book_downloads.sql`을 적용했다. 실제 활성 판본·메타데이터를 합성 값으로 만든 transaction에서 작가 등록/익명 읽기와 철회 후 읽기 차단을 검사한 뒤 rollback했다. 기존 작품/파일을 공개하거나 수정하지 않았고 등록 파일 수는 0이다. 버킷 private·50MiB·허용 MIME을 확인했다. `20261102161150_protect_registered_book_files.sql`은 응답 유실 뒤 정리가 현재 등록 객체를 삭제하지 못하게 하며 PGlite에서 등록 중 삭제 차단·교체 뒤 삭제 허용을 확인했다. 보안 advisor는 이전과 동일한 2 INFO·8 WARN이며 새 항목은 없다([기존 보안 함수 경고](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)).
+- CI·프리뷰·운영 앱 배포는 확인 중이다. 이번 검사에 실제 작가 로그인·원고 쓰기·Storage 실제 파일 업로드는 사용하지 않았다. WebKit·실제 휴대폰·50MiB 파일 전송과 다중 실제 기기는 미검증이다.
+
 ## 2026-11-02 — AI 제한과 화면 문구
 
 - 기준 main `5c182fc`에서 별도 worktree로 구현했다. 앱 TSX 64개와 JSX 텍스트·설명 props·placeholder·기본값 hint·간접 설정/노트 링크 설명·툴팁·CSS content를 조사했다. [제거·유지 범위](docs/ui-copy-audit-2026-11-02.md). 사용자 원고·개인 소개는 변경하지 않았다.

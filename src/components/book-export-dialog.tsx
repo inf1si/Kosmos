@@ -11,6 +11,9 @@ import {Modal} from './primitives';
 import {Select} from './select';
 import {DownloadLink} from './download-link';
 import {useStudio} from './studio-provider';
+import {cloudConfigured} from '@/lib/cloud';
+import {authorBookDownloads,registerBookDownload,removeBookDownload} from '@/lib/book-download-cloud';
+import {bookDownloadUrl,bookFileSize,type BookDownload} from '@/lib/book-downloads';
 
 const sceneIds=(documents:NovelDocument[])=>documents.flatMap(doc=>doc.kind==='scene'&&plainText(doc.content).trim()?[doc.id]:[]);
 
@@ -30,10 +33,19 @@ export function BookExportDialog({workId,onClose,onBack,onReturnFocus}:{workId:s
   const [options,setOptions]=useState<BookOptions>(start.options),[ids,setIds]=useState(start.ids);
   const [format,setFormat]=useState<BookFormat>(start.format),[book,setBook]=useState<PreparedBook|null>(null),[download,setDownload]=useState<TransferDownload|null>(null);
   const [preview,setPreview]=useState(''),[page,setPage]=useState(0),[spread,setSpread]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+  const [share,setShare]=useState(false),[files,setFiles]=useState<BookDownload[]|null>(null),[shareError,setShareError]=useState(''),[reload,setReload]=useState(0);
   const operation=useRef(0);
   const toggles=[{key:'cover',label:'제목 표지'},{key:'toc',label:'목차'},{key:'pageNumbers',label:'쪽 번호'}] as const;
   useEffect(()=>()=>{operation.current++;},[]);
   useEffect(()=>{setBook(null);setDownload(null);setPreview('');setError('');},[work]);
+  useEffect(()=>{
+    let current=true;setShare(false);setFiles(null);setShareError('');
+
+    if(!cloudConfigured||!s.user)return;
+    void authorBookDownloads(s.user,target).then(files=>{if(current)setFiles(files);}).catch(error=>{if(current)setShareError(error instanceof Error?error.message:'다운로드 파일을 불러오지 못했습니다.');});
+
+    return()=>{current=false;};
+  },[target,s.user,reload]);
   useEffect(()=>{
     if(!work)return;
     const {title,author,...rest}=options,defaults=new Set(sceneIds(bookDocuments(work))),preset:BookPreset={options:rest,format};
@@ -81,8 +93,29 @@ return;}
 
       if(save){const file=await api.exportBook(prepared,format);
 
-if(operation.current===op)setDownload(file);}
+if(operation.current!==op)return;
+setDownload(file);
+
+if(share){
+  if(!s.user||!files||!work?.activePublicationId)throw new Error('작품의 공개 상태와 다운로드 목록을 확인하세요.');
+
+  try{const registered=await registerBookDownload(s.user,target,format,file,files.find(file=>file.format===format));
+
+  if(operation.current===op)setFiles(files=>[...(files||[]).filter(file=>file.format!==format),registered].sort((a,b)=>a.format.localeCompare(b.format)));
+  }catch(error){if(operation.current===op)setShareError(error instanceof Error?error.message:'파일을 등록하지 못했습니다.');}
+}}
     }catch(error){if(operation.current===op)setError(error instanceof Error?error.message:'책 파일을 만들지 못했습니다.');}
+    finally{if(operation.current===op)setBusy(false);}
+  }
+
+  async function stopSharing(file:BookDownload){
+    if(!s.user)return;
+    const op=++operation.current;setBusy(true);setShareError('');
+
+    try{await removeBookDownload(s.user,file);
+
+if(operation.current===op)setFiles(files=>files?.filter(item=>item.file_id!==file.file_id)||[]);
+    }catch(error){if(operation.current===op)setShareError(error instanceof Error?error.message:'공개를 해제하지 못했습니다.');}
     finally{if(operation.current===op)setBusy(false);}
   }
 
@@ -104,6 +137,13 @@ if(operation.current===op)setDownload(file);}
         </div>
         <div className="book-export-checks">{toggles.flatMap(({key,label})=>format==='epub'&&key==='pageNumbers'?[]:[<label key={key}><input type="checkbox" checked={options[key]} disabled={busy} onChange={e=>change({[key]:e.target.checked})}/>{label}</label>])}</div>
         <details className="book-export-documents"><summary>문서 {count}개</summary><div className="transfer-bulk"><button type="button" className="button" disabled={busy} onClick={()=>{setIds(documents.map(doc=>doc.id));invalidate();}}>전체</button><button type="button" className="button" disabled={busy} onClick={()=>{setIds(sceneIds(documents));invalidate();}}>원고만</button><button type="button" className="button" disabled={busy} onClick={()=>{setIds([]);invalidate();}}>선택 해제</button></div><div className="transfer-list">{documents.map(doc=><label className="transfer-export-row" key={doc.id}><input type="checkbox" aria-label={`${documentTitle(doc)} 책에 포함`} checked={selected.has(doc.id)} disabled={busy} onChange={e=>{setIds(ids=>e.target.checked?[...ids,doc.id]:ids.filter(id=>id!==doc.id));invalidate();}}/><span>{documentTitle(doc)}</span></label>)}</div></details>
+        <div className="book-export-sharing">
+          <div className="book-export-checks"><label><input type="checkbox" checked={share} disabled={busy||!cloudConfigured||!s.user||!work?.activePublicationId||!files} onChange={e=>setShare(e.target.checked)}/>서재에서 다운로드 허용</label></div>
+          {share&&<p className="field-help">선택한 문서 {count}개를 누구나 받을 수 있습니다.</p>}
+          {!work?.activePublicationId&&<p className="field-help">서재에 게시한 작품만 등록할 수 있습니다.</p>}
+          {files?.map(file=><div className="book-shared-file" key={file.format}><span><strong>{file.format.toUpperCase()}</strong><small>{bookFileSize(file.size)} · {new Date(file.updated_at).toLocaleDateString('ko-KR')}</small><span title={file.filename}>{file.filename}</span></span>{work?.activePublicationId&&<a className="button" href={bookDownloadUrl(file)} download>받기</a>}<button type="button" className="button" disabled={busy} aria-label={`${file.format.toUpperCase()} 다운로드 공개 해제`} onClick={()=>void stopSharing(file)}>공개 해제</button></div>)}
+          {shareError&&<p className="error-message" role="alert">{shareError} <button type="button" className="button" disabled={busy} onClick={()=>setReload(value=>value+1)}>새로 불러오기</button></p>}
+        </div>
       </section>
       <section className="book-export-preview" aria-label="책 미리보기">
         {format==='epub'?<div className="book-export-empty"><BookOpen size={24}/><p className="muted">문서 {count}개 · {bookFonts[options.font].label}</p></div>:<>
@@ -112,7 +152,7 @@ if(operation.current===op)setDownload(file);}
         </>}
       </section>
     </div>
-    <div className="modal-actions"><button type="button" className="primary" disabled={busy||!count||!options.title.trim()||!!s.conflict} onClick={()=>void create(true)}><Download size={15}/>{busy?'만드는 중…':`${format.toUpperCase()} 만들기`}</button></div>
+    <div className="modal-actions"><button type="button" className="primary" disabled={busy||!count||!options.title.trim()||!!s.conflict} onClick={()=>void create(true)}><Download size={15}/>{busy?'처리 중…':`${format.toUpperCase()} ${share?files?.some(file=>file.format===format)?'만들고 교체':'만들고 공개':'만들기'}`}</button></div>
     <DownloadLink file={download}/>{error&&<p className="error-message" role="alert">{error}</p>}
   </Modal>;
 }
