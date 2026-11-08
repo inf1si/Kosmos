@@ -429,3 +429,5 @@ html:has(.studio){background:var(--ground)}
 [data-editor-tabs] [data-drop-edge]::after{content:"";position:absolute;top:3px;bottom:3px;width:2px;background:var(--link);pointer-events:none}
 [data-editor-tabs] [data-drop-edge=before]::after{left:0}
 [data-editor-tabs] [data-drop-edge=after]::after{right:0}
+
+.notes-search-results{flex:none;overflow:visible}.notes-search-count{margin:4px 3px 8px}

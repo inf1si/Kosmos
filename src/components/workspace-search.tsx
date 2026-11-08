@@ -1,16 +1,17 @@
 'use client';
 
-import { Fragment,useDeferredValue,useEffect,useId,useMemo,useRef,useState } from 'react';
-import { Search,StickyNote,X } from 'lucide-react';
+import { useDeferredValue,useEffect,useId,useMemo,useRef,useState } from 'react';
+import { Search,X } from 'lucide-react';
+import {z} from 'zod';
 import { uid } from '@/lib/model';
-import { bodyMatchCount,searchDocuments,searchTerms,searchWorkspace,textRanges,type WorkspaceSearchHit,type WorkspaceSearchJump } from '@/lib/workspace-search';
-import { referenceKey,referencePlace } from '@/lib/internal-references';
+import { searchDocuments,searchTerms,searchWorkspace,type WorkspaceSearchHit,type WorkspaceSearchJump } from '@/lib/workspace-search';
+import { referenceKey } from '@/lib/internal-references';
 import { useStudio } from './studio-provider';
 import { IconButton,Modal } from './primitives';
-import { DocIcon } from './studio-icons';
+import { SearchResultContent } from './search-result';
 import { Select } from './select';
 
-export function openWorkspaceSearch(){window.dispatchEvent(new Event('workspace-search'));}
+export function openWorkspaceSearch(query?:string){window.dispatchEvent(new CustomEvent('workspace-search',{detail:query}));}
 
 /** The last query and scope stay for this page only, so the next result is one reopen away. Never stored. */
 const last={query:'',scope:'all'};
@@ -18,7 +19,11 @@ const last={query:'',scope:'all'};
 export function WorkspaceSearch({currentWorkId,onOpen}:{currentWorkId:string;onOpen:(hit:WorkspaceSearchHit,jump:WorkspaceSearchJump)=>void}){
   const [open,setOpen]=useState(false),origin=useRef<HTMLElement|null>(null),pending=useRef<WorkspaceSearchHit|null>(null),query=useRef('');
   useEffect(()=>{
-    const show=()=>{if(document.querySelector('.modal:not(.workspace-search-dialog)'))return;
+    const show=(event?:Event)=>{if(document.querySelector('.modal:not(.workspace-search-dialog)'))return;
+
+if(event instanceof CustomEvent){const value=z.string().safeParse(event.detail);
+
+if(value.success){last.query=value.data.slice(0,500);last.scope='all';}}
 
 if(!open){origin.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setOpen(true);}};
 
@@ -55,21 +60,5 @@ function SearchContents({currentWorkId,onChoose}:{currentWorkId:string;onChoose:
   }}/>{query&&<IconButton label="전체 검색어 지우기" onClick={()=>{setQuery('');setIndex(0);setLimit(50);input.current?.focus();}}><X size={14}/></IconButton>}</div><Select aria-label="검색 범위" value={scope} onChange={value=>{setScope(value);setIndex(0);setLimit(50);}}><option value="all">전체</option><option value="current">현재 작품 · {state.works.find(work=>work.id===currentWorkId)?.title}</option><option value="notes">노트</option><optgroup label="작품">{state.works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</optgroup></Select></div>
   <p className="field-help" role="status">{found.length}개</p><div ref={list} className="workspace-search-results" role="listbox" id={listId} aria-label="전체 검색 결과" aria-busy={busy}>{visible.map((hit,i)=>{const target=hit.document;
 
-return <button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} key={referenceKey(target)} aria-selected={chosen===i} className="reference-card" onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} disabled={busy} onClick={()=>onChoose(hit,deferred)}>{target.kind==='note'?<StickyNote size={15}/>:<DocIcon doc={{kind:target.docKind,category:target.docCategory}} size={15}/>}<span><strong title={target.label}><SearchHighlight text={target.label} terms={terms}/></strong><small title={target.path}><SearchHighlight text={referencePlace(target)} terms={terms}/></small>{hit.snippet&&<p className="workspace-search-snippet"><SearchHighlight text={hit.snippet} terms={terms}/></p>}</span><MatchCount hit={hit} terms={terms}/></button>;})}</div>{deferred.trim()&&!found.length&&<p className="field-help">검색 결과가 없습니다.</p>}{found.length>limit&&<button type="button" className="button" onClick={()=>{setIndex(limit);setLimit(value=>value+50);input.current?.focus();}}>더 보기</button>}</>;
-}
-
-function MatchCount({hit,terms}:{hit:WorkspaceSearchHit;terms:string[]}){
-  const count=bodyMatchCount(hit.document.content,terms);
-
-  return count>0&&<small className="workspace-search-count" aria-label={`본문 ${count}곳 일치`}>{count}곳</small>;
-}
-
-function SearchHighlight({text,terms}:{text:string;terms:string[]}){
-  const ranges=textRanges(text,terms);let cursor=0;
-
-  const parts=ranges.map(range=>{const before=text.slice(cursor,range.from);cursor=range.to;
-
-return <Fragment key={range.from}>{before}<mark className="editor-search-match">{text.slice(range.from,range.to)}</mark></Fragment>;});
-
-  return <>{parts}{text.slice(cursor)}</>;
+return <button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} key={referenceKey(target)} aria-selected={chosen===i} className="reference-card" onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} disabled={busy} onClick={()=>onChoose(hit,deferred)}><SearchResultContent hit={hit} terms={terms}/></button>;})}</div>{deferred.trim()&&!found.length&&<p className="field-help">검색 결과가 없습니다.</p>}{found.length>limit&&<button type="button" className="button" onClick={()=>{setIndex(limit);setLimit(value=>value+50);input.current?.focus();}}>더 보기</button>}</>;
 }
