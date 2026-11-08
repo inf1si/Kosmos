@@ -2,7 +2,7 @@
 
 import { documentSchema } from '@/lib/model';
 import { trashRows } from '@/lib/workspace-trash';
-import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ArrowLeft, Cloud, StickyNote, Trash2, Globe2, HardDrive, Inbox, House, Link2, MoreHorizontal, NotebookPen, Pin, PinOff, PanelLeft, Paperclip, Plus, RotateCcw, Search, Settings, SlidersHorizontal, Snowflake, Sparkles, Tag, Waypoints, X } from 'lucide-react';
@@ -18,8 +18,7 @@ import { useStudio } from './studio-provider';
 import { GoogleAccountControl } from './studio-auth';
 import { IconButton, Popover, TooltipProvider } from './primitives';
 import { RichEditor, type NoteTools } from './rich-editor';
-import {searchDocuments,searchTerms,searchWorkspace,type WorkspaceSearchHit,type WorkspaceSearchJump} from '@/lib/workspace-search';
-import {SearchResultContent} from './search-result';
+import type { WorkspaceSearchJump } from '@/lib/workspace-search';
 import { InternalReferencePanel } from './internal-reference-panel';
 import type { InternalReference } from '@/lib/internal-reference-node';
 import type { ReferenceTarget } from '@/lib/internal-references';
@@ -33,7 +32,7 @@ import { NOTES_LIST_VIEW_KEY, notesListViews } from '@/lib/app-preferences';
 import { useDrawerFocus } from './use-drawer-focus';
 import { SidebarResizer, useSidebarStyle } from './sidebar-resizer';
 import { filterNotes, noteBacklinks, noteDocument, noteTitle, patchNote } from '@/lib/personal-notes';
-import { plainText, uid, wikiReferences, type NovelDocument, type PersonalNote } from '@/lib/model';
+import { plainText, wikiReferences, type NovelDocument, type PersonalNote } from '@/lib/model';
 import { cloud, cloudConfigured } from '@/lib/cloud';
 import { db } from '@/lib/database';
 import { Select } from './select';
@@ -44,18 +43,16 @@ const NOTE_EXTENSIONS=[...noteExtensions,NoteImageView];
 
 const NOTE_LINK_COPY={tool:'노트 링크 추가',title:'노트 연결',select:'연결할 노트',open:'열기'};
 
-type Props={searchJump:WorkspaceSearchJump|null;onSearchJump:()=>void;onSearch:(query?:string)=>void;onSearchResult:(hit:WorkspaceSearchHit,jump:WorkspaceSearchJump)=>void;activeId:string;captureId:string;importRequested:boolean;onImportOpened:()=>void;onImportBack:()=>void;onSelect:(id:string)=>void;onReturn:()=>void;onNew:(to?:NoteDestination,template?:string)=>void;onOpenWork:(workId:string,docId?:string)=>void};
+type Props={searchJump:WorkspaceSearchJump|null;onSearchJump:()=>void;onSearch:()=>void;activeId:string;captureId:string;importRequested:boolean;onImportOpened:()=>void;onImportBack:()=>void;onSelect:(id:string)=>void;onReturn:()=>void;onNew:(to?:NoteDestination,template?:string)=>void;onOpenWork:(workId:string,docId?:string)=>void};
 
-export function PersonalNotes({searchJump,onSearchJump,onSearch,onSearchResult,activeId,captureId,importRequested,onImportOpened,onImportBack,onSelect,onReturn,onNew,onOpenWork}:Props){
+export function PersonalNotes({searchJump,onSearchJump,onSearch,activeId,captureId,importRequested,onImportOpened,onImportBack,onSelect,onReturn,onNew,onOpenWork}:Props){
   const s=useStudio(),notes=s.state?.notes||EMPTY_NOTES;
   const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);
   const [referencePreview,setReferencePreview]=useState<InternalReference|null>(null);
   useEffect(()=>setReferencePreview(null),[activeId]);
   const [sidebar,setSidebar]=useState(false),[compact,setCompact]=useState(true),[side,setSide]=useState<'links'|'ai'|null>(null);
   const [listView,chooseList]=useStoredChoice(NOTES_LIST_VIEW_KEY,notesListViews,'tree'),[importOpen,setImportOpen]=useState(false),[folderWork,setFolderWork]=useState<{id:string;anchor:HTMLElement|null}|null>(null);
-  const [query,setQuery]=useState(''),[filterOpen,setFilterOpen]=useState(false),[box,setBox]=useState<'all'|'inbox'|'icebox'>('all'),[tag,setTag]=useState(''),[workId,setWorkId]=useState('');
-  const [searchIndex,setSearchIndex]=useState(0),[searchLimit,setSearchLimit]=useState(50),searchListId=useId(),searchInput=useRef<HTMLInputElement>(null),searchList=useRef<HTMLDivElement>(null);
-  const pendingSearch=useRef<{hit:WorkspaceSearchHit;jump:WorkspaceSearchJump}|null>(null);
+  const [filterOpen,setFilterOpen]=useState(false),[box,setBox]=useState<'all'|'inbox'|'icebox'>('all'),[tag,setTag]=useState(''),[workId,setWorkId]=useState('');
   const sidebarStyle=useSidebarStyle();
   const sidebarRef=useRef<HTMLElement>(null),closeSidebar=useCallback(()=>setSidebar(false),[]);
   // Settings asks for note import (the studio switches here first) and for this space's templates.
@@ -68,24 +65,8 @@ return()=>window.removeEventListener('studio-modal',listener);},[]);
   const aiRef=useRef<HTMLElement>(null),closeAI=useCallback(()=>setSide(null),[]);
   useDrawerFocus(compact&&!!side,aiRef,closeAI,side==='links'?'note-links-toggle':'note-ai-toggle');
   useDrawerFocus(compact&&sidebar,sidebarRef,closeSidebar,'sidebar-toggle');
-  useEffect(()=>{
-    const pending=pendingSearch.current;
-
-    if(sidebar||!pending)return;
-    // The drawer's cleanup restores its trigger first; only then may the editor take the search selection.
-    pendingSearch.current=null;onSearchResult(pending.hit,pending.jump);
-  },[sidebar,onSearchResult]);
-  const search=useDeferredValue(query),visible=useMemo(()=>filterNotes(notes,{box,tag,workId}),[notes,box,tag,workId]);
+  const visible=useMemo(()=>filterNotes(notes,{box,tag,workId}),[notes,box,tag,workId]);
   const eligible=useMemo(()=>visible.map(n=>n.id),[visible]);
-
-  const documents=useMemo(()=>{const ids=new Set(eligible);
-
-return s.state?searchDocuments(s.state).filter(doc=>doc.kind==='note'&&ids.has(doc.targetId)):[];},[s.state,eligible]);
-
-  const found=useMemo(()=>searchWorkspace(documents,search,'notes',''),[documents,search]);
-  const hits=found.slice(0,searchLimit),chosen=Math.min(searchIndex,Math.max(0,hits.length-1)),terms=searchTerms(search),searching=!!query.trim(),busy=query!==search;
-  useEffect(()=>{setSearchIndex(0);setSearchLimit(50);},[box,tag,workId]);
-  useEffect(()=>{searchList.current?.querySelector('[aria-selected=true]')?.scrollIntoView({block:'nearest'});},[chosen,search,box,tag,workId]);
   const tree=useMemo(()=>s.state?noteTreeWork(s.state):null,[s.state]);
   // No note in the address opens the notes home instead of an arbitrary first note.
   const active=activeId?notes.find(n=>n.id===activeId):undefined,readonly=!!s.conflict;
@@ -112,7 +93,7 @@ return wikiReferences(a.content).filter(id=>ids.has(id)&&id!==a.id).length+noteB
   const works=s.state.works,allTags=[...new Set(notes.flatMap(n=>n.tags))].sort((a,b)=>a.localeCompare(b));
   const inbox=notes.filter(n=>n.box==='inbox').length,icebox=notes.length-inbox,filters=(tag?1:0)+(workId?1:0);
 
-  function create(to?:NoteDestination,template?:string){setQuery('');setBox('all');setTag('');setWorkId('');onNew(to,template);
+  function create(to?:NoteDestination,template?:string){setBox('all');setTag('');setWorkId('');onNew(to,template);
 
 if(compact)setSidebar(false);}
 
@@ -121,12 +102,6 @@ if(compact)setSidebar(false);}
   function select(id:string){onSelect(id);
 
 if(compact)setSidebar(false);}
-
-  function chooseSearch(hit:WorkspaceSearchHit){
-    const jump={id:uid(),targetId:hit.document.targetId,terms};
-
-    if(compact&&sidebar){pendingSearch.current={hit,jump};setSidebar(false);setSide(null);}else onSearchResult(hit,jump);
-  }
 
   function previewReference(ref:InternalReference){setReferencePreview(ref);setSide('links');
 
@@ -158,33 +133,24 @@ if(compact)setSidebar(false);}
       <nav className="studio-tools notes-tools" aria-label="노트 도구">
         <button type="button" className="nav-item" aria-pressed={!active} onClick={()=>select('')}><House size={16}/><span>노트 홈</span></button>
         <button type="button" className="nav-item" disabled={readonly} onClick={()=>create()}><Plus size={16}/><span>새 노트</span></button>
-        <button type="button" className="nav-item" data-workspace-search-opener onClick={()=>onSearch(query.trim()?query:undefined)}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
-        <div className="notes-search-row"><div className="sidebar-search"><Search size={15}/><input ref={searchInput} id="notes-search" role="combobox" aria-autocomplete="list" aria-controls={searchListId} aria-expanded={searching&&hits.length>0} aria-activedescendant={searching&&hits.length?`${searchListId}-${chosen}`:undefined} aria-label="전체 노트 검색" placeholder="제목 · 본문 · 태그 · 폴더 검색" inputMode="search" maxLength={500} value={query} onChange={e=>{setQuery(e.target.value);setSearchIndex(0);setSearchLimit(50);}} onKeyDown={e=>{
-          if(e.nativeEvent.isComposing||e.nativeEvent.keyCode===229)return;
-
-          if(e.key==='Escape'&&query){e.preventDefault();e.stopPropagation();setQuery('');}
-
-          if(!busy&&hits.length&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();setSearchIndex(index=>(index+(e.key==='ArrowDown'?1:-1)+hits.length)%hits.length);}
-
-          if(!busy&&e.key==='Enter'&&hits.length){e.preventDefault();chooseSearch(hits[chosen]);}
-        }}/>{query&&<IconButton label="노트 검색 지우기" onClick={()=>{setQuery('');searchInput.current?.focus();}}><X size={14}/></IconButton>}</div>
-        <Popover open={filterOpen} onOpenChange={setFilterOpen} title="노트 필터" width={280} align="end" trigger={<IconButton label={filters?`노트 필터 · ${filters}개 적용`:'노트 필터'} aria-pressed={!!filters} className="icon-button notes-filter"><SlidersHorizontal size={15}/>{filters>0&&<i className="notes-filter-dot" aria-hidden="true"/>}</IconButton>}>
-          <label>태그<Select aria-label="태그로 노트 찾기" value={tag} onChange={value=>setTag(value)}><option value="">모든 태그</option>{allTags.map(value=><option key={value}>{value}</option>)}</Select></label>
-          <label>연결된 작품<Select aria-label="연결된 작품으로 노트 찾기" value={workId} onChange={value=>setWorkId(value)}><option value="">모든 작품</option>{works.map(work=><option value={work.id} key={work.id}>{work.title}</option>)}</Select></label>
-          <div className="popover-actions"><button type="button" className="button" disabled={!filters} onClick={()=>{setTag('');setWorkId('');}}><RotateCcw size={13}/>필터 초기화</button></div>
-        </Popover></div>
+        <button type="button" className="nav-item" data-workspace-search-opener onClick={onSearch}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
         <div className="notes-views segmented" role="group" aria-label="노트 보기">{([['all','전체',notes.length],['inbox','수집함',inbox],['icebox','아이스박스',icebox]] as const).map(([value,label,count])=><button type="button" key={value} aria-pressed={box===value} onClick={()=>setBox(value)}>{label}<small>{count}</small></button>)}</div>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'trash'}))}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state.trash).length}</small></button>
         <button type="button" className="nav-item" data-settings-opener onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings:notes'}))}><Settings size={16}/><span>설정</span></button>
       </nav>
-      <div className="sidebar-scroll notes-list" aria-label="노트 목록">{searching?<><p className="field-help notes-search-count" role="status">{found.length}개</p><div ref={searchList} className="workspace-search-results notes-search-results" role="listbox" id={searchListId} aria-label="노트 검색 결과" aria-busy={busy}>{hits.map((hit,index)=><button type="button" role="option" tabIndex={-1} id={`${searchListId}-${index}`} key={hit.document.targetId} aria-selected={chosen===index} aria-current={active?.id===hit.document.targetId||undefined} className="reference-card" disabled={busy} onPointerMove={()=>setSearchIndex(index)} onMouseDown={e=>e.preventDefault()} onClick={()=>chooseSearch(hit)}><SearchResultContent hit={hit} terms={terms}/></button>)}</div>{!busy&&!found.length&&<p className="muted notes-empty">검색 결과가 없습니다.</p>}{found.length>searchLimit&&<button type="button" className="button" onClick={()=>{setSearchIndex(searchLimit);setSearchLimit(limit=>limit+50);searchInput.current?.focus();}}>더 보기</button>}</>:<><div className="notes-list-view segmented" role="group" aria-label="노트 목록 보기"><button type="button" aria-pressed={listView==='tree'} onClick={()=>chooseList('tree')}>폴더</button><button type="button" aria-pressed={listView==='list'} onClick={()=>chooseList('list')}>최근 수정순</button></div>{listView==='tree'?<DocumentTree work={tree!} query={search} activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onRenameDocument={(id,title)=>patch(id,{title})} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:!!search.trim()||box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'노트가 없습니다.'}</p>}{listView==='tree'&&!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">노트가 없습니다.</p>}</>}</div>
+      <div className="sidebar-scroll notes-list" aria-label="노트 목록"><div className="notes-list-controls"><div className="notes-list-view segmented" role="group" aria-label="노트 목록 보기"><button type="button" aria-pressed={listView==='tree'} onClick={()=>chooseList('tree')}>폴더</button><button type="button" aria-pressed={listView==='list'} onClick={()=>chooseList('list')}>최근 수정순</button></div><Popover open={filterOpen} onOpenChange={setFilterOpen} title="노트 필터" width={280} align="end" trigger={<IconButton label={filters?`노트 필터 · ${filters}개 적용`:'노트 필터'} aria-pressed={!!filters} className="icon-button notes-filter"><SlidersHorizontal size={15}/>{filters>0&&<i className="notes-filter-dot" aria-hidden="true"/>}</IconButton>}>
+          <label>태그<Select aria-label="태그로 노트 찾기" value={tag} onChange={value=>setTag(value)}><option value="">모든 태그</option>{allTags.map(value=><option key={value}>{value}</option>)}</Select></label>
+          <label>연결된 작품<Select aria-label="연결된 작품으로 노트 찾기" value={workId} onChange={value=>setWorkId(value)}><option value="">모든 작품</option>{works.map(work=><option value={work.id} key={work.id}>{work.title}</option>)}</Select></label>
+          <div className="popover-actions"><button type="button" className="button" disabled={!filters} onClick={()=>{setTag('');setWorkId('');}}><RotateCcw size={13}/>필터 초기화</button></div>
+        </Popover></div>{listView==='tree'?<DocumentTree work={tree!} query="" activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onRenameDocument={(id,title)=>patch(id,{title})} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'노트가 없습니다.'}</p>}{listView==='tree'&&!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">노트가 없습니다.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
     {sidebar&&!compact&&<SidebarResizer target={sidebarRef} onCollapse={closeSidebar}/>}
     <main className="studio-panel">
       <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
-      {active?<RichEditor searchJump={searchJump} onSearchJump={onSearchJump} key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} references={{onPreview:previewReference,onConnections:()=>{setReferencePreview(null);setSide(value=>value==='links'&&!referencePreview?null:'links');
+      {/* Wait for the mobile drawer to restore its trigger before the editor applies a search jump. */}
+      {active?<RichEditor searchJump={compact&&sidebar?null:searchJump} onSearchJump={onSearchJump} key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} references={{onPreview:previewReference,onConnections:()=>{setReferencePreview(null);setSide(value=>value==='links'&&!referencePreview?null:'links');
 
 if(compact)setSidebar(false);},open:side==='links'}} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');
 
@@ -206,7 +172,7 @@ const work=works.find(w=>w.documents.some(d=>d.id===id));
 
 if(work)onOpenWork(work.id,id);}}/>}</div></aside></>}
     {templateRequest&&<WorkspaceTemplates source={{scope:'notes'}} request={templateRequest} onClose={()=>setTemplateRequest(null)} onBack={templateRequest.fromSettings?()=>{setTemplateRequest(null);window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings-return:template'}));}:undefined} onReturnFocus={templateRequest.fromSettings?()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus():undefined} onCreated={select}/>}
-    <NotesImportDialog open={importOpen} onClose={()=>setImportOpen(false)} onBack={onImportBack} onReturnFocus={()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus()} onImported={()=>{setQuery('');setBox('all');setTag('');setWorkId('');chooseList('tree');}}/>
+    <NotesImportDialog open={importOpen} onClose={()=>setImportOpen(false)} onBack={onImportBack} onReturnFocus={()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus()} onImported={()=>{setBox('all');setTag('');setWorkId('');chooseList('tree');}}/>
     {folderWork&&<FolderWorkPopover key={folderWork.id} folderId={folderWork.id} anchor={folderWork.anchor} onClose={()=>setFolderWork(null)} onCreated={id=>{setFolderWork(null);onOpenWork(id);}}/>}
   </div></TooltipProvider>;
 }

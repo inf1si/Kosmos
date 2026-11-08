@@ -2,7 +2,6 @@
 
 import { useDeferredValue,useEffect,useId,useMemo,useRef,useState } from 'react';
 import { Search,X } from 'lucide-react';
-import {z} from 'zod';
 import { uid } from '@/lib/model';
 import { searchDocuments,searchTerms,searchWorkspace,type WorkspaceSearchHit,type WorkspaceSearchJump } from '@/lib/workspace-search';
 import { referenceKey } from '@/lib/internal-references';
@@ -11,7 +10,7 @@ import { IconButton,Modal } from './primitives';
 import { SearchResultContent } from './search-result';
 import { Select } from './select';
 
-export function openWorkspaceSearch(query?:string){window.dispatchEvent(new CustomEvent('workspace-search',{detail:query}));}
+export function openWorkspaceSearch(){window.dispatchEvent(new Event('workspace-search'));}
 
 /** The last query and scope stay for this page only, so the next result is one reopen away. Never stored. */
 const last={query:'',scope:'all'};
@@ -19,11 +18,7 @@ const last={query:'',scope:'all'};
 export function WorkspaceSearch({currentWorkId,onOpen}:{currentWorkId:string;onOpen:(hit:WorkspaceSearchHit,jump:WorkspaceSearchJump)=>void}){
   const [open,setOpen]=useState(false),origin=useRef<HTMLElement|null>(null),pending=useRef<WorkspaceSearchHit|null>(null),query=useRef('');
   useEffect(()=>{
-    const show=(event?:Event)=>{if(document.querySelector('.modal:not(.workspace-search-dialog)'))return;
-
-if(event instanceof CustomEvent){const value=z.string().safeParse(event.detail);
-
-if(value.success){last.query=value.data.slice(0,500);last.scope='all';}}
+    const show=()=>{if(document.querySelector('.modal:not(.workspace-search-dialog)'))return;
 
 if(!open){origin.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setOpen(true);}};
 
