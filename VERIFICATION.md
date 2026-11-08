@@ -8,7 +8,9 @@
 - Chromium Webpack 개발 실행에서 합성 인증/REST로 공간 만들기·빈 공간·섹션/폴더/노트 추가·문서/폴더 하위 구조 이동·기존 참조 미리보기·공간 범위 검색/구절 이동·새로고침·빈 이름·공간 삭제 후 기본 공간에 내용 보존을 확인했다. 두 폭(1280/360px) × 54테마 × 트리/공간 선택/이름 폼/검색의 432개 표시 경우, 페이지 오류 0·각 폭 합성 저장 8회로 통과했다. `test-results/note-spaces/`가 증거다. 추가 보드 포인터 드래그로 다른 공간 이동을 확인한 quick도 두 폭/16개 표시 경우·오류 0·합성 저장 9/8회로 통과했다(`test-results/note-spaces-board/`). 새 서버의 최종 전체 432개 표시 경우도 오류 0·합성 저장 9/8회로 통과했다(`test-results/note-spaces-final/`). 이전 최종 실행은 로컬 개발 서버가 종료되어 실패했고 정상 서버에서 새 세션으로 검사했다. 모바일 궤도 다크 이름 입력과 보라 다크 검색을 직접 봤다.
 - 최종 보완 뒤 새 작업공간 quick은 두 폭/16개 표시 경우·오류 0·합성 저장 9/8회로 통과했다(`test-results/note-spaces-final-quick/`). 기존 빠른 메모 UI 회귀도 노트 5개·합성 저장 4회·원고 들여쓰기 18px 유지·오류 0으로 통과했다(`test-results/note-spaces-capture/`). 기존 `notes-search.mjs` quick은 두 폭/두 공간의 8개 경우·오류/원고 쓰기 0회로 통과했다. `note-ideation.mjs`의 기존 보드·체크리스트·이미지·링크/백링크·ENEX 가져오기·폴더→작품 흐름도 합성 노트 6개·작품 3개·저장 4회·페이지 오류 0으로 통과했다.
 - 운영 DB에 CLI로 파일을 생성한 `20261108083801_note_spaces_guard.sql`을 적용했다. 실제 함수/트리거를 쓰는 임시 합성 테이블의 transaction에서 이전 탭의 메타데이터 누락·다른 섹션 부모를 거절하고 정상 이동을 저장한 뒤 rollback했다. 트리거 설치·anon 직접 실행 불가를 확인했으며 실제 작가 자료는 바꾸지 않았다. 보안 advisor는 전후 동일한 3종(1 INFO·2 WARN)이었다. 기존 RLS·노트/대화·휴지통 보호는 유지한다.
-- CI·앱 운영 배포는 확인 전이다. 실제 작가 로그인·원고 쓰기·실제 첨부 업로드·WebKit·실제 휴대폰·OS 한글 IME는 미검증이다.
+- [PR #110](https://github.com/inf1si/Kosmos/pull/110)의 `d33384f`를 main `3dff6abdaa073d6bc1cf3368a3ed0805865ffbb4`에 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/42494154800)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/42494410891)의 전체 281개 검사·기본 빌드·타입·문서·age·전체 린트를 통과했다. 프리뷰 `dpl_HX3DrkuzuLETi3KhLTuKi5HAm4Gy` READY와 정확한 SHA를 확인했다.
+- 정확한 main SHA의 운영 `dpl_8Qkfykk7oRdwzbLtG3m5HXHwC4hk` READY와 www/root/기존 Vercel 별칭을 확인했다. 실제 www의 동일 Chromium 합성 회귀에서 두 폭 × 54테마 × 네 화면 432개 표시 경우와 공간 생성·섹션/폴더/노트·문서/하위 폴더 이동·기존 참조·공간 범위 검색·구절 이동·보드 포인터 드래그·새로고침·빈 이름·공간 삭제 후 내용 보존을 통과했다. 페이지 오류 0·합성 저장 9/8회이며 실제 계정/원고에는 쓰지 않았다. `test-results/note-spaces-production/report.json`과 같은 폴더 화면이 증거다. 운영 360px 궤도 다크 새 공간 폼을 직접 봤다.
+- 실제 작가 로그인·원고 쓰기·실제 첨부 업로드·WebKit·실제 휴대폰·OS 한글 IME는 미검증이다.
 
 ## 2026-11-08 — 집필실·노트 검색 화면 통일
 
