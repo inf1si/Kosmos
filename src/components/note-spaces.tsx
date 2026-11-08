@@ -5,22 +5,22 @@ import { ChevronsUpDown, FolderInput, Notebook, Pencil, Plus, Trash2 } from 'luc
 import { uid } from '@/lib/model';
 import { addNoteSpace, DEFAULT_NOTE_SPACE, moveNote, noteSpaceTitle, notesInSpace, removeNoteSpace, renameNoteSpace, resolveNoteNavigation } from '@/lib/note-navigation';
 import { useStudio } from './studio-provider';
+import { useDismiss } from './use-dismiss';
 import { Popover } from './primitives';
 import { Select } from './select';
 
 export type NoteSpaceRequest={type:'new'|'rename'|'delete';spaceId:string;anchor:HTMLElement|null}|{type:'move';id:string;spaceId:string;anchor:HTMLElement|null};
 
+/** Same card and menu as the studio work switcher: spaces, a divider, then space actions. */
 export function NoteSpaceSwitcher({spaceId,readonly,onSelect,onRequest}:{spaceId:string;readonly:boolean;onSelect:(id:string)=>void;onRequest:(request:NoteSpaceRequest)=>void}){
-  const s=useStudio(),spaces=useMemo(()=>resolveNoteNavigation(s.state!).spaces,[s.state]),[open,setOpen]=useState(false),trigger=useRef<HTMLButtonElement>(null),pending=useRef<'new'|'rename'|'delete'|null>(null);
+  const s=useStudio(),spaces=useMemo(()=>resolveNoteNavigation(s.state!).spaces,[s.state]),[open,setOpen]=useState(false),ref=useDismiss(open,setOpen),trigger=useRef<HTMLButtonElement>(null);
   const space=spaces.find(space=>space.id===spaceId)??spaces[0],notes=notesInSpace(s.state!,space.id);
-  const request=(type:'new'|'rename'|'delete')=>{pending.current=type;setOpen(false);};
+  const request=(type:'new'|'rename'|'delete')=>{setOpen(false);onRequest({type,spaceId:space.id,anchor:trigger.current});};
 
-  return <div className="work-switcher"><Popover open={open} onOpenChange={setOpen} title="노트 작업공간" width={300} onReturnFocus={()=>{const type=pending.current;pending.current=null;
-
-if(type)onRequest({type,spaceId:space.id,anchor:trigger.current});else trigger.current?.focus();}} trigger={<button ref={trigger} type="button" className="work-card" data-note-space-switcher aria-label={`작업공간 전환 · ${noteSpaceTitle(space)}`}><span className="work-cover" aria-hidden="true"><Notebook size={20}/></span><span><strong>{noteSpaceTitle(space)}</strong><small>섹션 {space.sections.length} · 노트 {notes.length}</small></span><ChevronsUpDown size={15}/></button>}>
-    <div className="note-space-list">{spaces.map(item=><button type="button" className="reference-card" key={item.id} aria-current={item.id===space.id||undefined} onClick={()=>{setOpen(false);onSelect(item.id);}}><Notebook size={16}/><span><strong>{noteSpaceTitle(item)}</strong><small>노트 {notesInSpace(s.state!,item.id).length}</small></span></button>)}</div>
-    <div className="popover-actions"><button type="button" className="button" disabled={readonly} onClick={()=>request('new')}><Plus size={14}/>새 작업공간</button><button type="button" className="button" disabled={readonly} onClick={()=>request('rename')}><Pencil size={14}/>이름 변경</button><button type="button" className="button" disabled={readonly||space.id===DEFAULT_NOTE_SPACE} onClick={()=>request('delete')}><Trash2 size={14}/>삭제</button></div>
-  </Popover></div>;
+  return <div className="work-switcher" ref={ref}><button ref={trigger} type="button" className="work-card" data-note-space-switcher aria-label={`작업공간 전환 · ${noteSpaceTitle(space)}`} aria-expanded={open} aria-controls="note-space-menu" onClick={()=>setOpen(v=>!v)}><span className="work-cover" aria-hidden="true"><Notebook size={20}/></span><span><strong>{noteSpaceTitle(space)}</strong><small>섹션 {space.sections.length} · 노트 {notes.length}</small></span><ChevronsUpDown size={15}/></button>
+    {open&&<div id="note-space-menu" className="popover-menu work-menu">{spaces.map(item=><button type="button" key={item.id} aria-current={item.id===space.id||undefined} onClick={()=>{setOpen(false);onSelect(item.id);}}><span>{noteSpaceTitle(item)}</span><small>노트 {notesInSpace(s.state!,item.id).length}</small></button>)}
+      <span className="menu-divider"/><button type="button" disabled={readonly} onClick={()=>request('new')}><Plus size={15}/>새 작업공간</button><button type="button" disabled={readonly} onClick={()=>request('rename')}><Pencil size={15}/>이름 변경</button>{space.id!==DEFAULT_NOTE_SPACE&&<button type="button" disabled={readonly} onClick={()=>request('delete')}><Trash2 size={15}/>삭제</button>}</div>}
+  </div>;
 }
 
 export function NoteSpaceForm({request,onClose,onSelect,onMoved}:{request:NoteSpaceRequest;onClose:()=>void;onSelect:(id:string)=>void;onMoved:(id:string,spaceId:string)=>void}){
