@@ -3,27 +3,28 @@
 import { useMemo, useState, type DragEvent } from 'react';
 import { useStoredChoice } from './use-app-preferences';
 import { NOTES_HOME_VIEW_KEY, notesHomeViews } from '@/lib/app-preferences';
-import { BookOpen, BookPlus, Clapperboard, Folder, Globe2, Inbox, Lightbulb, Plus, Snowflake, UserRound } from 'lucide-react';
+import { BookOpen, BookPlus, Clapperboard, Folder, Globe2, Inbox, Lightbulb, Notebook, Plus, Snowflake, UserRound } from 'lucide-react';
 import { NoteCard } from './notes-reference';
 import { IconButton } from './primitives';
 import { noteBoardColumns, noteDate, noteSnippet, noteTitle } from '@/lib/personal-notes';
-import type { NoteDestination } from '@/lib/note-navigation';
+import {notesInSpace,noteSpaceTitle,resolveNoteNavigation,type NoteDestination} from '@/lib/note-navigation';
 import { noteTemplates } from '@/lib/note-templates';
 import type { PersonalNote, Workspace } from '@/lib/model';
 
 const templateIcons={character:UserRound,world:Globe2,logline:BookOpen,scene:Clapperboard,brainstorm:Lightbulb};
 
 /** 노트 공간의 첫 화면. 최근·고정·수집함과 템플릿을 보여주고, 보드에서는 최상위 폴더별 카드로 펼친다. */
-export function NotesHome({state,readonly,onOpen,onNew,onTemplate,onMove,onFolderWork}:{state:Workspace;readonly:boolean;onOpen:(id:string)=>void;onNew:(to?:NoteDestination)=>void;onTemplate:(id:string)=>void;onMove:(id:string,to:NoteDestination)=>void;onFolderWork:(folderId:string,anchor:HTMLElement|null)=>void}){
+export function NotesHome({state,spaceId,onSpace,onNewSpace,readonly,onOpen,onNew,onTemplate,onMove,onFolderWork}:{state:Workspace;spaceId?:string;onSpace:(id:string)=>void;onNewSpace:(anchor:HTMLElement)=>void;readonly:boolean;onOpen:(id:string)=>void;onNew:(to?:NoteDestination)=>void;onTemplate:(id:string)=>void;onMove:(id:string,to:NoteDestination)=>void;onFolderWork:(folderId:string,anchor:HTMLElement|null)=>void}){
   const [view,choose]=useStoredChoice(NOTES_HOME_VIEW_KEY,notesHomeViews,'home');
-  const notes=state.notes||[];
+  const notes=useMemo(()=>spaceId?notesInSpace(state,spaceId):state.notes||[],[state,spaceId]),spaces=useMemo(()=>resolveNoteNavigation(state).spaces,[state]);
   const recent=useMemo(()=>[...notes].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)),[notes]);
   const pinned=recent.filter(n=>n.pinned),inbox=recent.filter(n=>n.box==='inbox');
 
   return <div className="plot-board notes-home">
     <div className="board-bar"><div className="segmented" role="group" aria-label="노트 첫 화면 보기"><button type="button" aria-pressed={view==='home'} onClick={()=>choose('home')}>최근</button><button type="button" aria-pressed={view==='board'} onClick={()=>choose('board')}>보드</button></div><span>노트 {notes.length} · 수집함 {inbox.length}</span><button type="button" className="button" disabled={readonly} onClick={()=>onNew()}><Plus size={15}/>새 노트</button></div>
-    {view==='board'?<NotesBoard state={state} readonly={readonly} onOpen={onOpen} onNew={onNew} onMove={onMove} onFolderWork={onFolderWork}/>
+    {view==='board'?<NotesBoard state={state} spaceId={spaceId} readonly={readonly} onOpen={onOpen} onNew={onNew} onMove={onMove} onFolderWork={onFolderWork}/>
     :<div className="notes-home-body">
+      {!spaceId&&<section aria-label="작업공간"><div className="note-space-heading"><h3>작업공간 {spaces.length}</h3><button type="button" className="button" disabled={readonly} onClick={e=>onNewSpace(e.currentTarget)}><Plus size={14}/>새 작업공간</button></div><div className="notes-home-grid">{spaces.map(space=><button type="button" className="reference-card" key={space.id} onClick={()=>onSpace(space.id)}><Notebook size={16}/><span><strong>{noteSpaceTitle(space)}</strong><small>섹션 {space.sections.length} · 노트 {notesInSpace(state,space.id).length}</small></span></button>)}</div></section>}
       {pinned.length>0&&<section aria-label="고정한 노트"><h3>고정한 노트 {pinned.length}</h3><div className="notes-home-grid">{pinned.map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
       <section aria-label="최근 수정"><h3>최근 수정</h3>{recent.length?<div className="notes-home-grid">{recent.slice(0,12).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div>:<p className="muted">노트가 없습니다.</p>}</section>
       {inbox.length>0&&<section aria-label="수집함"><h3>수집함 {inbox.length}</h3><div className="notes-home-grid">{inbox.slice(0,6).map(n=><NoteCard key={n.id} note={n} onOpen={onOpen}/>)}</div></section>}
@@ -35,20 +36,20 @@ return <button type="button" className="reference-card" key={t.id} disabled={rea
 }
 
 /** 최상위 폴더마다 한 열. 카드를 다른 열에 놓으면 그 폴더의 맨 뒤로 옮긴다(하위 노트도 함께). */
-function NotesBoard({state,readonly,onOpen,onNew,onMove,onFolderWork}:{state:Workspace;readonly:boolean;onOpen:(id:string)=>void;onNew:(to?:NoteDestination)=>void;onMove:(id:string,to:NoteDestination)=>void;onFolderWork:(folderId:string,anchor:HTMLElement|null)=>void}){
-  const columns=useMemo(()=>noteBoardColumns(state),[state]);
+function NotesBoard({state,spaceId,readonly,onOpen,onNew,onMove,onFolderWork}:{state:Workspace;spaceId?:string;readonly:boolean;onOpen:(id:string)=>void;onNew:(to?:NoteDestination)=>void;onMove:(id:string,to:NoteDestination)=>void;onFolderWork:(folderId:string,anchor:HTMLElement|null)=>void}){
+  const columns=useMemo(()=>noteBoardColumns(state,spaceId),[state,spaceId]);
   const [dragging,setDragging]=useState(''),[over,setOver]=useState<string|null>(null);
 
-  function drop(e:DragEvent,folderId:string|null){e.preventDefault();const id=e.dataTransfer.getData('text/kosmos-note')||dragging;setOver(null);setDragging('');
+  function drop(e:DragEvent,column:(typeof columns)[number]){e.preventDefault();const id=e.dataTransfer.getData('text/kosmos-note')||dragging;setOver(null);setDragging('');
 
-if(id&&!readonly)onMove(id,{parentId:folderId});}
+if(id&&!readonly)onMove(id,{parentId:column.folderId,spaceId:column.spaceId,sectionId:column.sectionId});}
 
   return <div className="board-columns">
-    {columns.map(column=><section className={`board-column ${over===(column.folderId??'root')?'is-drop':''}`} key={column.folderId??'root'} aria-label={column.title}
-      onDragOver={e=>{if(!dragging||readonly)return;e.preventDefault();setOver(column.folderId??'root');}} onDragLeave={()=>setOver(o=>o===(column.folderId??'root')?null:o)} onDrop={e=>drop(e,column.folderId)}>
+    {columns.map(column=><section className={`board-column ${over===(column.key)?'is-drop':''}`} key={column.key} aria-label={column.title}
+      onDragOver={e=>{if(!dragging||readonly)return;e.preventDefault();setOver(column.key);}} onDragLeave={()=>setOver(o=>o===(column.key)?null:o)} onDrop={e=>drop(e,column)}>
       <header>{column.folderId?<Folder size={14}/>:null}<strong>{column.title}</strong><span>{column.notes.length}</span>{column.folderId&&<IconButton label={`${column.title} 폴더로 새 작품 만들기`} disabled={readonly||!column.notes.length} onClick={e=>onFolderWork(column.folderId!,e.currentTarget)}><BookPlus size={14}/></IconButton>}</header>
       {column.notes.map(note=><BoardCard key={note.id} note={note} readonly={readonly} onOpen={onOpen} onDrag={setDragging}/>)}
-      <button type="button" className="board-add" disabled={readonly} onClick={()=>onNew(column.folderId?{parentId:column.folderId}:undefined)}><Plus size={14}/>{column.folderId?'이 폴더에 노트 추가':'노트 추가'}</button>
+      <button type="button" className="board-add" disabled={readonly} onClick={()=>onNew({parentId:column.folderId,spaceId:column.spaceId,sectionId:column.sectionId})}><Plus size={14}/>{column.folderId?'이 폴더에 노트 추가':'노트 추가'}</button>
     </section>)}
   </div>;
 }

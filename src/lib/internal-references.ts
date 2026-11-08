@@ -1,5 +1,5 @@
 import { documentTitle, plainText, type RichNode, type Workspace } from './model';
-import { noteTitle, resolveNoteNavigation } from './note-navigation';
+import { noteTitle, noteSpaceTitle, resolveNoteNavigation } from './note-navigation';
 import { resolveNavigation } from './document-navigation';
 import { internalReferences, type InternalReference } from './internal-reference-node';
 import { workShelves, workShelfTitle } from './work-shelves';
@@ -32,7 +32,9 @@ while(node?.parentId&&!seen.has(node.id)){seen.add(node.id);node=noteNodes.get(n
 
 if(node)path.unshift(node.type==='folder'?node.title:noteTitle(noteById.get(node.id)!));}
 
-return ['노트',...path].join(' / ');}
+const sectionId=noteNodes.get(id)?.sectionId,space=notes.spaces.find(s=>s.sections.some(section=>section.id===sectionId)),section=space?.sections.find(section=>section.id===sectionId);
+
+return ['노트',...(notes.spaces.length>1||space?.title!=='기본 작업공간'?[space?noteSpaceTitle(space):'']:[]),...(space?.sections.length!==1||section?.title!=='노트'?[section?.title]:[]),...path].filter(Boolean).join(' / ');}
 
   function noteParent(id:string){const parentId=noteNodes.get(id)?.parentId,parent=parentId?noteNodes.get(parentId):undefined;
 

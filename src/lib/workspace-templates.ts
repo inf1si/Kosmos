@@ -1,17 +1,17 @@
 import { documentTitle, uid, workspaceSchema, workspaceTemplateSchema, type AssetMeta, type NovelDocument, type PersonalNote, type RichNode, type Workspace, type WorkspaceTemplate } from './model';
 import { applyNavigation, descendantsOf, navigationOrder, resolveNavigation, type DocumentDestination, type DocumentNavigation } from './document-navigation';
-import { applyNoteNavigation, noteTitle, noteTreeWork, resolveNoteNavigation, type NoteDestination } from './note-navigation';
+import { applyNoteNavigation, noteTitle, noteTreeWork, noteDestination, resolveNoteNavigation, type NoteDestination } from './note-navigation';
 import { asNoteNavigation } from './note-navigation-schema';
 import { internalReferenceSchema,internalReferenceType } from './internal-reference-node';
 
-export type TemplateSource={scope:'work';workId:string}|{scope:'notes'};
+export type TemplateSource={scope:'work';workId:string}|{scope:'notes';spaceId?:string};
 
 export type TemplateTarget={scope:'work';workId:string;to:DocumentDestination}|{scope:'notes';to:NoteDestination};
 
 type Copies={sourceId:string;id:string}[];
 
 export function templateTree(state:Workspace,source:TemplateSource){
-  const work=source.scope==='notes'?noteTreeWork(state):state.works.find(w=>w.id===source.workId);
+  const work=source.scope==='notes'?noteTreeWork(state,source.spaceId):state.works.find(w=>w.id===source.workId);
 
   if(!work)throw new Error('작품을 찾지 못했습니다.');
 
@@ -110,7 +110,8 @@ export function prepareTemplate(state:Workspace,source:TemplateSource,selected:s
     template=workspaceTemplateSchema.parse({...base,scope:'work',documents:cloned.documents.map(d=>({...d,isPublic:false})),navigation:cloned.navigation});
     copies=cloned.copies;assets=cloned.assets;
   }else{
-    const cloned=cloneItems(order.map(id=>state.notes!.find(n=>n.id===id)!),selectedNav,state.assets,()=>({templateId:id}));
+    const portable:DocumentNavigation={version:1,sections:[{id:'notes',title:'노트',defaultKind:'memo'}],nodes:selectedNav.nodes.map(n=>({...n,sectionId:'notes'}))};
+    const cloned=cloneItems(order.map(id=>state.notes!.find(n=>n.id===id)!),portable,state.assets,()=>({templateId:id}));
     template=workspaceTemplateSchema.parse({...base,scope:'notes',notes:cloned.documents.map(({aiMessages:_,...note})=>({...note,linkedWorkIds:[],pinned:false})),navigation:cloned.navigation});
     copies=cloned.copies;assets=cloned.assets;
   }
@@ -136,11 +137,11 @@ export function prepareTemplateApplication(state:Workspace,id:string,target:Temp
   }
 
   if(template.scope!=='notes'||target.scope!=='notes')throw new Error('템플릿의 공간을 확인하세요.');
-  const nav=resolveNoteNavigation(state);
+  const nav=resolveNoteNavigation(state),destination=noteDestination(state,target.to);
 
   if(target.to.parentId&&!nav.nodes.some(n=>n.id===target.to.parentId))throw new Error('템플릿을 넣을 위치를 확인하세요.');
   const cloned=cloneItems(template.notes,template.navigation,state.assets,n=>({noteId:n.id}));
-  const nodes=asNoteNavigation(cloned.navigation).nodes.map(n=>({...n,parentId:n.parentId??target.to.parentId}));
+  const nodes=asNoteNavigation(cloned.navigation).nodes.map(n=>({...n,sectionId:destination.sectionId,parentId:n.parentId??destination.parentId}));
   const notes=cloned.documents.map(n=>({...n,linkedWorkIds:[],pinned:false,createdAt:new Date().toISOString()}));
   const next=applyNoteNavigation({...state,notes:[...(state.notes||[]),...notes],assets:[...state.assets,...cloned.assets]},{...nav,nodes:[...nav.nodes,...nodes]});
 

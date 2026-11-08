@@ -1,4 +1,5 @@
 import { type NovelDocument,type RichNode,type Workspace } from './model';
+import { resolveNoteNavigation } from './note-navigation';
 import { propertyText,type CustomProperty } from './custom-properties';
 import { referenceTargets,type ReferenceTarget } from './internal-references';
 
@@ -7,7 +8,7 @@ export type TextRange={from:number;to:number};
 /** Document fields searched like body text and quoted in the result when the body does not match. */
 export type SearchField={label:string;text:string};
 
-export type SearchDocument=ReferenceTarget&{content:RichNode;updatedAt:string;keywords:string;fields:SearchField[];docKind:NovelDocument['kind'];docCategory:string};
+export type SearchDocument=ReferenceTarget&{content:RichNode;updatedAt:string;keywords:string;fields:SearchField[];docKind:NovelDocument['kind'];docCategory:string;noteSpaceId?:string};
 
 export type WorkspaceSearchHit={document:SearchDocument;snippet:string;rank:number};
 
@@ -103,11 +104,12 @@ function fields(values:[string,string][],properties:CustomProperty[]=[]):SearchF
 }
 
 export function searchDocuments(state:Workspace):SearchDocument[]{
+  const nav=resolveNoteNavigation(state),owners=new Map(nav.spaces.flatMap(s=>s.sections.map(section=>[section.id,s.id] as const))),spaceIds=new Map(nav.nodes.map(n=>[n.id,owners.get(n.sectionId)]));
   const details=new Map<string,{updatedAt:string;tags:readonly string[];fields:SearchField[];docKind:NovelDocument['kind'];docCategory:string}>([...state.works.flatMap(work=>work.documents.map(doc=>[doc.id,{updatedAt:doc.updatedAt,tags:[],fields:fields([['요약',doc.summary],['시점 인물',doc.pov],['작중 시간',doc.storyTime]],doc.customProperties),docKind:doc.kind,docCategory:doc.category}] as const)),...(state.notes||[]).map(note=>[note.id,{updatedAt:note.updatedAt,tags:note.tags,fields:fields([],note.customProperties),docKind:'memo',docCategory:''}] as const)]);
 
   return referenceTargets(state).flatMap(target=>{const detail=details.get(target.targetId);
 
-return target.content&&detail?[{...target,content:target.content,updatedAt:detail.updatedAt,fields:detail.fields,docKind:detail.docKind,docCategory:detail.docCategory,keywords:[target.path,target.category,detail.docCategory,...detail.tags].join(' ')}]:[];});
+return target.content&&detail?[{...target,...target.kind==='note'&&{noteSpaceId:spaceIds.get(target.targetId)},content:target.content,updatedAt:detail.updatedAt,fields:detail.fields,docKind:detail.docKind,docCategory:detail.docCategory,keywords:[target.path,target.category,detail.docCategory,...detail.tags].join(' ')}]:[];});
 }
 
 function excerpt(text:string,terms:string[]){
@@ -128,7 +130,9 @@ export function searchWorkspace(documents:SearchDocument[],query:string,scope:st
   const phrase=query.normalize('NFC').trim(),hits:WorkspaceSearchHit[]=[];
 
   for(const document of documents){
-    if(scope==='notes'&&document.kind!=='note'||scope==='current'&&document.workId!==currentWorkId||!['all','notes','current'].includes(scope)&&document.workId!==scope)continue;
+    if(scope==='notes'&&document.kind!=='note'||scope==='current'&&document.workId!==currentWorkId)continue;
+
+    if(scope.startsWith('space:')?document.noteSpaceId!==scope.slice(6):!['all','notes','current'].includes(scope)&&document.workId!==scope)continue;
     const runs=bodyRuns(document.content),titleHits:boolean[]=[],bodyHits:boolean[]=[];
     let matches=true;
 

@@ -27,7 +27,7 @@ function fixture(){
 function containerFixture(){
   const base=fixture(),{state,note,source}=base,work=state.works[0],noteFolder=uid(),nestedNoteFolder=uid(),documentFolder=uid(),nestedDocumentFolder=uid(),shelf=uid();
   state.noteNavigation=resolveNoteNavigation(state);
-  state.noteNavigation.nodes.push({id:noteFolder,type:'folder',title:'자료 폴더',parentId:null},{id:nestedNoteFolder,type:'folder',title:'하위 자료',parentId:noteFolder});
+  state.noteNavigation.nodes.push({id:noteFolder,type:'folder',title:'자료 폴더',parentId:null,sectionId:'notes'},{id:nestedNoteFolder,type:'folder',title:'하위 자료',parentId:noteFolder,sectionId:'notes'});
   state.noteNavigation.nodes.find(node=>node.id===note.id)!.parentId=nestedNoteFolder;
   work.navigation=resolveNavigation(work);const node=work.navigation.nodes.find(node=>node.id===source.id)!;
   work.navigation.nodes.push({id:documentFolder,type:'folder',title:'원고 폴더',parentId:null,sectionId:node.sectionId},{id:nestedDocumentFolder,type:'folder',title:'하위 원고',parentId:documentFolder,sectionId:node.sectionId});node.parentId=nestedDocumentFolder;

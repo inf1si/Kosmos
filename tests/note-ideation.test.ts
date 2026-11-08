@@ -17,7 +17,7 @@ return note;};
 
   const a=make('도시','달의 도시'),b=make('인물','떠나는 이유'),c=make('밖','폴더 밖 노트');
   const folder=uid(),sub=uid(),nav=resolveNoteNavigation(state);
-  nav.nodes=[{id:folder,type:'folder',title:'구상',parentId:null},{id:sub,type:'folder',title:'인물들',parentId:folder},...nav.nodes.map(n=>n.id===a.id?{...n,parentId:folder}:n.id===b.id?{...n,parentId:sub}:n)];
+  nav.nodes=[{id:folder,type:'folder',title:'구상',parentId:null,sectionId:'notes'},{id:sub,type:'folder',title:'인물들',parentId:folder,sectionId:'notes'},...nav.nodes.map(n=>n.id===a.id?{...n,parentId:folder}:n.id===b.id?{...n,parentId:sub}:n)];
 
   return {state:applyNoteNavigation(state,nav),a,b,c,folder,sub};
 }

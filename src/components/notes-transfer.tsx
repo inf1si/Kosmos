@@ -16,7 +16,7 @@ const noteFileTypes='.enex,.zip,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.h
 const folderPicker={webkitdirectory:'',directory:''};
 
 /** 여러 앱의 내보내기 파일·폴더를 새 최상위 폴더의 수집함 노트로 가져온다. 원본 폴더 구조·태그·날짜·노트 간 링크를 유지한다. */
-export function NotesImportDialog({open,onClose,onImported,onBack,onReturnFocus}:{open:boolean;onClose:()=>void;onImported:(folderId:string)=>void;onBack:()=>void;onReturnFocus?:()=>void}){
+export function NotesImportDialog({open,spaceId,onClose,onImported,onBack,onReturnFocus}:{open:boolean;spaceId?:string;onClose:()=>void;onImported:(folderId:string)=>void;onBack:()=>void;onReturnFocus?:()=>void}){
   const s=useStudio(),[bundle,setBundle]=useState<ImportBundle|null>(null),[folder,setFolder]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
   const operation=useRef(0);
 
@@ -46,7 +46,7 @@ if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRel
       <div className="transfer-list">{bundle.pages.slice(0,200).map(p=><div className="transfer-row notes-import-row" key={p.key}><FileText size={14}/><span>{p.title}<small>{[p.tags?.length?p.tags.map(t=>`#${t}`).join(' '):'',p.key].filter(Boolean).join(' · ')}</small></span></div>)}{bundle.pages.length>200&&<p className="muted">외 {bundle.pages.length-200}개</p>}</div>
       {bundle.warnings.length>0&&<details className="transfer-warnings" open><summary>변환 시 확인할 항목 {bundle.warnings.length}개</summary><ul>{bundle.warnings.slice(0,100).map(w=><li key={w}>{w}</li>)}</ul></details>}
       <p className="field-help notes-import-help">묶음 밖 링크는 일반 텍스트로 변환됩니다.</p>
-      <div className="modal-actions"><button type="button" className="primary" disabled={busy||!bundle.pages.length} onClick={()=>void run(async()=>{const result=await s.importNotes(bundle,folder);setBundle(null);setMessage(`노트 ${result.count}개를 가져왔습니다.`);onImported(result.folderId);})}>{busy?'처리 중…':`노트 ${bundle.pages.length}개 가져오기`}</button></div>
+      <div className="modal-actions"><button type="button" className="primary" disabled={busy||!bundle.pages.length} onClick={()=>void run(async()=>{const result=await s.importNotes(bundle,folder,spaceId);setBundle(null);setMessage(`노트 ${result.count}개를 가져왔습니다.`);onImported(result.folderId);})}>{busy?'처리 중…':`노트 ${bundle.pages.length}개 가져오기`}</button></div>
     </>}
     {message&&<p className="success-message" role="status"><Check size={15}/>{message}</p>}{error&&<p className="error-message" role="alert">{error}</p>}
   </Modal>;

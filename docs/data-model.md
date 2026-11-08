@@ -23,7 +23,7 @@ Workspace
 ├─ id, formatVersion: 1, updatedAt
 ├─ aiPreferences?: version: 1, activePresetId, presets[], skills?[], updatedAt
 ├─ notes[]?: 개인 노트 · 태그 · 수집함/아이스박스 · pinned? · 작품 연결 · aiMessages?
-├─ noteNavigation?: version: 1, 노트/폴더 ID·부모·형제 순서
+├─ noteNavigation?: version: 1, spaces[]?: 공간·섹션, 노트/폴더 ID·sectionId?·부모·형제 순서
 ├─ trash?: 노트/문서/작품 사본·시각·원래 위치·AI 기록 (최대 5,000개)
 ├─ templates?: 계정의 work/notes 템플릿 사본·탐색 구조·첨부 소속 (최대 100개)
 ├─ workShelves?: 책장 ID·이름·작품 ID 순서 (최대 40개)
@@ -192,3 +192,7 @@ AI 질문 요청의 작품 `documentRange`·노트 `noteRange`(선택/문단, �
 ## 작품 즐겨찾기
 
 선택적 `Work.favorite`는 boolean이며 누락은 미선택으로 읽는다. 작품 ID에 붙은 상태이므로 책장 이동·제목 변경·휴지통 복원에서도 유지된다. `false`는 명시적 해제다. 이전 백업 복원 시 같은 ID의 누락 필드는 현재 선택을 보존하고, 새로운 ID에는 부여하지 않는다. 공개 `Publication`에는 복사하지 않는다. JSON 형식 버전 1·기존 RPC·SQL은 유지한다. [사용법](work-shelves.md#작품-즐겨찾기).
+
+## 노트 작업공간
+
+`noteNavigation.spaces[]`는 `{id: default 또는 UUID, title: 0~80자, sections: [{id, title}]}`이며 탐색 노드의 `sectionId`로 연결한다. 섹션 ID는 노트 공간 전체에서 유일하고 부모·자식의 섹션이 같아야 한다. 공간·섹션·노트/폴더 UUID 충돌을 거절한다. `trash`의 노트 placement에 선택 `spaceId`·`sectionId`를 보존한다. 본문·첨부·AI 대화·작품 연결은 ID를 유지한다. 형식 버전 1·기존 계정 저장 단위는 같으며 [호환·복원·한도](note-spaces.md#저장호환성)를 따른다.

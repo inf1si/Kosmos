@@ -154,3 +154,7 @@ Google OAuth 앱·웹 클라이언트는 사용자가 생성했다. 새 비밀�
 ## 작품 책장
 
 [work-shelves.ts](../src/lib/work-shelves.ts)는 선택적 `Workspace.workShelves`의 기본 책장 보충·이름·배치·이전 백업 보존을 처리한다. StudioHome과 사이드바 전환 메뉴가 이 메타데이터로 묶고, WorkDialogs/StudioDialogs에서 같은 이동을 사용한다. provider의 기존 저장 큐를 공유하며 trash 검증 전에 영구 삭제한 작품 참조를 정리한다. 공개 데이터 생성과 서재 순위 RPC에는 연결하지 않는다. [사용법과 계약](work-shelves.md).
+
+## 노트 작업공간
+
+계정 전체 Workspace 안에서 노트 본문은 기존 notes 배열에 유지하고 noteNavigation에 공간·섹션·소속을 확장한다. 공간별 Work 어댑터가 집필실의 DocumentTree를 재사용하며 영구 작품이나 공개 판본을 만들지 않는다. [전체 계약](note-spaces.md).

@@ -37,7 +37,7 @@ type StudioContextValue={
   publish:(workId:string,sceneIds:string[])=>Promise<Publication>;unpublish:(workId:string)=>Promise<void>;
   libraryPublications:()=>Promise<LibraryItem[]>;setLibraryOrder:(ids:string[])=>Promise<LibraryItem[]>;
   addAsset:(workId:string,docId:string,file:File)=>Promise<void>;
-  addNoteAsset:(noteId:string,file:File)=>Promise<string>;importNotes:(bundle:ImportBundle,folderTitle:string)=>Promise<{folderId:string;count:number}>;createWorkFromFolder:(folderId:string,target:{title:string;form:Work['form']})=>Promise<string>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
+  addNoteAsset:(noteId:string,file:File)=>Promise<string>;importNotes:(bundle:ImportBundle,folderTitle:string,spaceId?:string)=>Promise<{folderId:string;count:number}>;createWorkFromFolder:(folderId:string,target:{title:string;form:Work['form']})=>Promise<string>;copyNote:(noteId:string,workId:string,kind:NovelDocument['kind'])=>Promise<string>;
   trashNote:(noteId:string)=>Promise<void>;
   trashDocument:(workId:string,docId:string)=>Promise<string>;trashWork:(workId:string)=>Promise<void>;
   trashDocumentFolder:(workId:string,folderId:string)=>Promise<string>;trashNoteFolder:(folderId:string)=>Promise<void>;
@@ -508,9 +508,9 @@ if(result.error)throw result.error;}
     }
   }
 
-  async function importNotes(bundle:ImportBundle,folderTitle:string){
+  async function importNotes(bundle:ImportBundle,folderTitle:string,spaceId?:string){
     await flush();const before=dataRef.current!;
-    const prepared=prepareNoteImport(before,bundle,folderTitle);
+    const prepared=prepareNoteImport(before,bundle,folderTitle,spaceId);
     await checkpoint(namespace,before,'노트 가져오기 전');
 
     for(const asset of prepared.assets){

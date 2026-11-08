@@ -44,3 +44,7 @@
 ## 검증
 
 [`tests/internal-references.test.ts`](../tests/internal-references.test.ts)는 저장·백업·글자 수·교환 파일·제목 변경·없는 대상·템플릿 매핑과 실제 PostgreSQL 호환 런타임의 발행/RLS/권한/제약을 확인한다. [`tests/browser/internal-references.mjs`](../tests/browser/internal-references.mjs)는 합성 작업 공간만 사용하고, 운영에서도 모든 인증·저장 요청을 가로채 실제 계정에 쓰지 않는다. 브라우저의 참조 삽입·되돌리기·이동·미리보기·저장·분할 편집과 27계열 × 두 밝기 × 1280/360px를 검사한다. 실행 결과·운영 DB 적용·실제 기기 확인 경계는 [검증 기록](../VERIFICATION.md)에 구분한다.
+
+## 노트 작업공간 이동
+
+노트·폴더를 다른 공간으로 옮겨도 대상 UUID는 유지한다. 검색과 참조 미리보기의 경로는 현재 작업공간·섹션을 반영하며 기존 참조·백링크는 같은 글을 가리킨다. 공간 자체의 멘션 종류는 추가하지 않는다. [전체 계약](note-spaces.md).

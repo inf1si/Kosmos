@@ -3,6 +3,7 @@
 import { useDeferredValue,useEffect,useId,useMemo,useRef,useState } from 'react';
 import { Search,X } from 'lucide-react';
 import { uid } from '@/lib/model';
+import {resolveNoteNavigation,noteSpaceTitle} from '@/lib/note-navigation';
 import { searchDocuments,searchTerms,searchWorkspace,type WorkspaceSearchHit,type WorkspaceSearchJump } from '@/lib/workspace-search';
 import { referenceKey } from '@/lib/internal-references';
 import { useStudio } from './studio-provider';
@@ -39,7 +40,7 @@ if(hit)onOpen(hit,{id:uid(),targetId:hit.document.targetId,terms:searchTerms(que
 }
 
 function SearchContents({currentWorkId,onChoose}:{currentWorkId:string;onChoose:(hit:WorkspaceSearchHit,query:string)=>void}){
-  const state=useStudio().state!,[query,setQuery]=useState(last.query),[scope,setScope]=useState(()=>['all','current','notes'].includes(last.scope)||state.works.some(work=>work.id===last.scope)?last.scope:'all'),[index,setIndex]=useState(0),[limit,setLimit]=useState(50),listId=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLDivElement>(null);
+  const state=useStudio().state!,spaces=useMemo(()=>resolveNoteNavigation(state).spaces,[state]),[query,setQuery]=useState(last.query),[scope,setScope]=useState(()=>['all','current','notes'].includes(last.scope)||state.works.some(work=>work.id===last.scope)||spaces.some(space=>`space:${space.id}`===last.scope)?last.scope:'all'),[index,setIndex]=useState(0),[limit,setLimit]=useState(50),listId=useId(),input=useRef<HTMLInputElement>(null),list=useRef<HTMLDivElement>(null);
   const deferred=useDeferredValue(query),busy=query!==deferred,documents=useMemo(()=>searchDocuments(state),[state]),found=useMemo(()=>searchWorkspace(documents,deferred,scope,currentWorkId),[documents,deferred,scope,currentWorkId]);
   const visible=found.slice(0,limit),chosen=Math.min(index,Math.max(0,visible.length-1)),terms=searchTerms(deferred);
   useEffect(()=>{list.current?.querySelector('[aria-selected=true]')?.scrollIntoView({block:'nearest'});},[chosen,deferred,scope]);
@@ -52,7 +53,7 @@ function SearchContents({currentWorkId,onChoose}:{currentWorkId:string;onChoose:
     if(!busy&&visible.length&&(e.key==='ArrowDown'||e.key==='ArrowUp')){e.preventDefault();setIndex(i=>(i+(e.key==='ArrowDown'?1:-1)+visible.length)%visible.length);}
 
     if(!busy&&e.key==='Enter'&&visible.length){e.preventDefault();onChoose(visible[chosen],deferred);}
-  }}/>{query&&<IconButton label="전체 검색어 지우기" onClick={()=>{setQuery('');setIndex(0);setLimit(50);input.current?.focus();}}><X size={14}/></IconButton>}</div><Select aria-label="검색 범위" value={scope} onChange={value=>{setScope(value);setIndex(0);setLimit(50);}}><option value="all">전체</option><option value="current">현재 작품 · {state.works.find(work=>work.id===currentWorkId)?.title}</option><option value="notes">노트</option><optgroup label="작품">{state.works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</optgroup></Select></div>
+  }}/>{query&&<IconButton label="전체 검색어 지우기" onClick={()=>{setQuery('');setIndex(0);setLimit(50);input.current?.focus();}}><X size={14}/></IconButton>}</div><Select aria-label="검색 범위" value={scope} onChange={value=>{setScope(value);setIndex(0);setLimit(50);}}><option value="all">전체</option><option value="current">현재 작품 · {state.works.find(work=>work.id===currentWorkId)?.title}</option><option value="notes">모든 노트</option><optgroup label="노트 작업공간">{spaces.map(space=><option key={space.id} value={`space:${space.id}`}>{noteSpaceTitle(space)}</option>)}</optgroup><optgroup label="작품">{state.works.map(work=><option key={work.id} value={work.id}>{work.title}</option>)}</optgroup></Select></div>
   <p className="field-help" role="status">{found.length}개</p><div ref={list} className="workspace-search-results" role="listbox" id={listId} aria-label="전체 검색 결과" aria-busy={busy}>{visible.map((hit,i)=>{const target=hit.document;
 
 return <button type="button" role="option" tabIndex={-1} id={`${listId}-${i}`} key={referenceKey(target)} aria-selected={chosen===i} className="reference-card" onPointerMove={()=>setIndex(i)} onMouseDown={e=>e.preventDefault()} disabled={busy} onClick={()=>onChoose(hit,deferred)}><SearchResultContent hit={hit} terms={terms}/></button>;})}</div>{deferred.trim()&&!found.length&&<p className="field-help">검색 결과가 없습니다.</p>}{found.length>limit&&<button type="button" className="button" onClick={()=>{setIndex(limit);setLimit(value=>value+50);input.current?.focus();}}>더 보기</button>}</>;

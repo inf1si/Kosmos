@@ -28,7 +28,7 @@ const labels={scene:'원고',wiki:'설정 문서',memo:'메모 · 리서치'};
 
 const menuClose=(keep:{current:boolean})=>(e:Event)=>{if(keep.current){e.preventDefault();keep.current=false;}};
 
-type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void;onFolderWork?:(folderId:string,at:HTMLElement|null)=>void};
+type NoteView={matchingIds:string[];eligibleIds:string[];filtered:boolean;onNew:(to:DocumentDestination)=>void;onFolderWork?:(folderId:string,at:HTMLElement|null)=>void;onMoveSpace?:(id:string,at:HTMLElement|null)=>void};
 
 export function DocumentTree({work,query,activeId,readonly:isReadonly,onOpen,onChange,onRenameDocument,onTrash,onTrashFolder,onTemplate,noteView}:{work:Work;query:string;activeId:string;readonly:boolean;onOpen:(id:string,beside?:boolean)=>void;onChange:(fn:(work:Work)=>Work)=>void;onRenameDocument?:(id:string,title:string)=>void;onTrash?:(id:string)=>Promise<void>;onTrashFolder?:(id:string)=>Promise<void>;onTemplate?:(request:TemplateDialogRequest)=>void;noteView?:NoteView}){
   const noun=noteView?'노트':'문서',filtered=noteView?noteView.filtered:!!query.trim();
@@ -209,7 +209,7 @@ return {sectionId:parent.sectionId,parentId:parent.id};
   const targets:{value:string;label:string}[]=[];
   const collect=(sectionId:string,parentId:string|null,trail:string)=>{for(const n of childNodes(parentId,sectionId)){if(excluded.has(n.id))continue;const path=`${trail} / ${title(n)}`;targets.push({value:`node:${n.id}`,label:`${n.type==='folder'?'폴더':noun} · ${path}`});collect(sectionId,n.id,path);}};
 
-  if(moveNode)for(const section of nav.sections){targets.push({value:`section:${section.id}`,label:noteView?'노트 · 최상위':section.title});collect(section.id,null,section.title);}
+  if(moveNode)for(const section of nav.sections){targets.push({value:`section:${section.id}`,label:section.title});collect(section.id,null,section.title);}
 
   let moveTo:DocumentDestination|undefined;
 
@@ -239,6 +239,8 @@ if(!node&&!section)return [];
 return next?moveNavigation(latest,node.id,next):latest;});}});
     }
 
+    if(node&&noteView?.onMoveSpace){const open=noteView.onMoveSpace;entries.push({key:'move-space',label:'다른 작업공간으로 이동',icon:<Folder size={15}/>,disabled:readonly,run:()=>afterMenu(()=>open(node.id,rowOf(t)))});}
+
     if(node?.type==='folder'&&noteView?.onFolderWork){const open=noteView.onFolderWork;entries.push({key:'folder-work',label:'새 작품으로 만들기',icon:<BookPlus size={15}/>,disabled:readonly||!childNodes(node.id,node.sectionId).length,run:()=>afterMenu(()=>open(node.id,rowOf(t)))});}
 
     if(onTemplate){
@@ -262,7 +264,7 @@ return applyNavigation(latest,next);});}});}
       setFolderDelete({id:node.id,title:folderTitle.length>40?`${folderTitle.slice(0,40)}…`:folderTitle,documents:count,folders:nav.nodes.filter(n=>n.type==='folder'&&n.id!==node.id&&subtree.has(n.id)).length,replace:!noteView&&count===work.documents.length});
     })});
 
-    if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'섹션':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);
+    if(node?.type==='folder'&&!childNodes(node.id,node.sectionId).length||section&&nav.sections.length>1&&!['scene','wiki','memo'].includes(section.id)&&!nav.nodes.some(n=>n.sectionId===section.id))entries.push({key:'delete',label:`빈 ${section?'섹션':'폴더'} 삭제`,icon:<Trash2 size={15}/>,disabled:readonly,divider:true,run:()=>{mutate(latest=>{const next=resolveNavigation(latest);
 
 if(section)next.sections=next.sections.filter(s=>s.id!==section.id);else next.nodes=next.nodes.filter(n=>n.id!==node!.id);
 
@@ -335,13 +337,13 @@ if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openFor
   const formTitle=dialog?.type==='move'?`${moveNode?title(moveNode):noun} 이동`:dialog?.type==='folder'?'폴더 만들기':dialog?.type==='document'?'문서 만들기':'섹션 추가';
 
   return <div ref={root} className={styles.tree}>
-    <div className={styles.toolbar} data-navigation-section={noteView?'notes':undefined} data-drop-edge={noteView&&drag?.active&&drag.drop?.id==='notes'?drag.drop.edge:undefined}><span>{noteView?'노트 정리':'문서'}</span>{undo&&<IconButton label={`${noun} 정리 되돌리기`} disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),false);setUndo(null);}}><Undo2 size={14}/></IconButton>}{noteView?<IconButton label="최상위 폴더 추가" disabled={readonly} onClick={e=>openForm({type:'folder',to:{sectionId:'notes',parentId:null}},e.currentTarget)}><FolderPlus size={15}/></IconButton>:<IconButton label="섹션 추가" disabled={readonly||nav.sections.length>=40} onClick={e=>openForm({type:'section'},e.currentTarget)}><Plus size={15}/></IconButton>}</div>
-    {noteView?<section className={styles.section} aria-label="노트 트리">{renderNodes('notes',null,0)}</section>:nav.sections.map((section,index)=>{const sectionClosed=!query.trim()&&closed.has(`section:${section.id}`),count=nav.nodes.filter(n=>n.sectionId===section.id&&n.type==='document').length,drop=drag?.active&&drag.drop?.id===section.id?drag.drop:undefined;
+    <div className={styles.toolbar} data-navigation-section={noteView?nav.sections[0].id:undefined} data-drop-edge={noteView&&drag?.active&&drag.drop?.id===nav.sections[0].id?drag.drop.edge:undefined}><span>{noteView?'노트 정리':'문서'}</span>{undo&&<IconButton label={`${noun} 정리 되돌리기`} disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),false);setUndo(null);}}><Undo2 size={14}/></IconButton>}{noteView?<IconButton label="최상위 폴더 추가" disabled={readonly} onClick={e=>openForm({type:'folder',to:{sectionId:nav.sections[0].id,parentId:null}},e.currentTarget)}><FolderPlus size={15}/></IconButton>:null}<IconButton label="섹션 추가" disabled={readonly||nav.sections.length>=40} onClick={e=>openForm({type:'section'},e.currentTarget)}><Plus size={15}/></IconButton></div>
+    {nav.sections.map((section,index)=>{const sectionClosed=!query.trim()&&closed.has(`section:${section.id}`),count=nav.nodes.filter(n=>n.sectionId===section.id&&n.type==='document').length,drop=drag?.active&&drag.drop?.id===section.id?drag.drop:undefined;
       const t={id:section.id,section:true},isRenaming=renaming?.id===section.id&&!!renaming.section;
 
       return <section key={section.id} className={styles.section} aria-label={section.title}>{rowContext(t,<div data-navigation-section={section.id} data-drop-edge={drop?.edge} className={`${styles.heading} ${menuOpen(t)||dialog&&anchor.current?.dataset.navigationSection===section.id?styles.active:''} ${drop?.error?styles.invalid:''}`}>
         {isRenaming?<span className={styles.sectionTitle}><ChevronDown size={13}/><i className="tree-number" aria-hidden="true">{String(index+1).padStart(2,'0')}</i>{renameInput(section.title)}</span>:<button type="button" className={styles.sectionTitle} aria-expanded={!sectionClosed} onClick={()=>toggle(`section:${section.id}`)}>{sectionClosed?<ChevronRight size={13}/>:<ChevronDown size={13}/>}<i className="tree-number" aria-hidden="true">{String(index+1).padStart(2,'0')}</i><span className="tree-label">{section.title}</span><small>{count}</small></button>}
-        <IconButton label={`${section.title} 문서 추가`} disabled={readonly} className={styles.rowMenu} onClick={e=>openForm({type:'document',to:{sectionId:section.id,parentId:null},kind:section.defaultKind},rowOf(t),e.currentTarget)}><Plus size={14}/></IconButton>{rowMenu(t,`${section.title} 섹션 메뉴`)}
+        <IconButton label={`${section.title} ${noun} 추가`} disabled={readonly} className={styles.rowMenu} onClick={e=>noteView?noteView.onNew({sectionId:section.id,parentId:null}):openForm({type:'document',to:{sectionId:section.id,parentId:null},kind:section.defaultKind},rowOf(t),e.currentTarget)}><Plus size={14}/></IconButton>{rowMenu(t,`${section.title} 섹션 메뉴`)}
       </div>)}{!sectionClosed&&renderNodes(section.id,null,0)}</section>;
     })}
     {filtered&&!nav.nodes.some(show)&&<p className="empty-text">검색 결과가 없습니다.</p>}
@@ -352,7 +354,7 @@ if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openFor
 if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButtonElement>(`[data-navigation-row="${activeId}"] button`)||document.getElementById('sidebar-toggle'))?.focus();}}>
       <form onSubmit={e=>{e.preventDefault();formSubmit();}} className={styles.form}>
         {dialog?.type==='move'?<><label>옮길 위치<Select value={destination} onChange={value=>{setDestination(value);setPlace('last');}}>{targets.map(t=><option value={t.value} key={t.value}>{t.label}</option>)}</Select></label><label>순서<Select value={place} onChange={value=>setPlace(value)}><option value="last">맨 뒤</option><option value="first">맨 앞</option>{moveSiblings.map(n=><option key={n.id} value={`before:${n.id}`}>{title(n)} 앞</option>)}</Select></label></>:<label>{dialog?.type==='document'?'문서 제목':'이름'}<input autoFocus value={name} onChange={e=>setName(e.target.value)} maxLength={dialog?.type==='section'?200:300} placeholder={dialog?.type==='document'?'제목 없음':undefined} required={dialog?.type!=='document'}/></label>}
-        {(dialog?.type==='section'||dialog?.type==='document')&&<label>{dialog.type==='section'?'기본 문서 종류':'문서 종류'}<Select value={kind} onChange={value=>setKind(documentSchema.shape.kind.parse(value))}>{Object.entries(labels).map(([v,label])=><option key={v} value={v}>{label}</option>)}</Select></label>}
+        {!noteView&&(dialog?.type==='section'||dialog?.type==='document')&&<label>{dialog.type==='section'?'기본 문서 종류':'문서 종류'}<Select value={kind} onChange={value=>setKind(documentSchema.shape.kind.parse(value))}>{Object.entries(labels).map(([v,label])=><option key={v} value={v}>{label}</option>)}</Select></label>}
 
 
         {error&&<p role="alert" className={styles.error}>{error}</p>}<div className={styles.formButtons}><button type="button" className="button" onClick={()=>setDialog(null)}>취소</button><button type="submit" className="button primary" disabled={readonly}>{dialog?.type==='move'?'이동':'추가'}</button></div>

@@ -35,7 +35,7 @@ try{
   const foreign=newDocument('memo','다른 작품 자료');foreign.content=fromText('다른 작품의 합성 자료입니다.');
   const foreignWork={...work,id:uid(),title:`별도 작품 ${'긴 작품 이름 '.repeat(12)}`,documents:[foreign],navigation:undefined,publications:[],activePublicationId:null};data.works.push(foreignWork);
   const noteFolder=uid(),nestedNoteFolder=uid(),documentFolder=uid(),nestedDocumentFolder=uid(),shelf=uid(),emptyShelf=uid();
-  data.noteNavigation=resolveNoteNavigation(data);data.noteNavigation.nodes.push({id:noteFolder,type:'folder',title:'자료 폴더',parentId:null},{id:nestedNoteFolder,type:'folder',title:'하위 자료',parentId:noteFolder});data.noteNavigation.nodes.find(node=>node.id===target.id).parentId=nestedNoteFolder;
+  data.noteNavigation=resolveNoteNavigation(data);data.noteNavigation.nodes.push({id:noteFolder,type:'folder',title:'자료 폴더',parentId:null,sectionId:'notes'},{id:nestedNoteFolder,type:'folder',title:'하위 자료',parentId:noteFolder,sectionId:'notes'});data.noteNavigation.nodes.find(node=>node.id===target.id).parentId=nestedNoteFolder;
   work.navigation=resolveNavigation(work);const sceneNode=work.navigation.nodes.find(node=>node.id===scene.id);
   work.navigation.nodes.push({id:documentFolder,type:'folder',title:'원고 폴더',parentId:null,sectionId:sceneNode.sectionId},{id:nestedDocumentFolder,type:'folder',title:'하위 원고',parentId:documentFolder,sectionId:sceneNode.sectionId});sceneNode.parentId=nestedDocumentFolder;
   data.workShelves=[{id:'default',title:'',workIds:data.works.filter(value=>value.id!==work.id).map(value=>value.id)},{id:shelf,title:'보관 책장',workIds:[work.id]},{id:emptyShelf,title:'빈 책장',workIds:[]}];workspaceSchema.parse(data);
