@@ -105,6 +105,34 @@ try {
     await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
     await page.locator('.manuscript').first().waitFor();
 
+    // The tree header + opens one add menu (document · folder · section), the same as in notes.
+    await page.locator(`[data-navigation-row="${scene.id}"] button[aria-current="page"]`).waitFor();
+    await button('추가').click();
+    assert.deepEqual(await page.getByRole('menuitem').allInnerTexts(), ['문서 추가', '폴더 추가', '섹션 추가'], 'The studio + menu lists document, folder and section');
+    await page.getByRole('menuitem', { name: '문서 추가', exact: true }).click();
+    const addForm = page.getByRole('dialog', { name: '문서 만들기', exact: true });
+
+    await addForm.getByLabel('문서 제목', { exact: true }).fill('합성 추가 문서');
+    await addForm.getByRole('button', { name: '추가', exact: true }).click();
+    await saved(() => data.works[0].documents.some(d => d.title === '합성 추가 문서'), '문서 추가 saves a new document');
+    const added = data.works[0].documents.find(d => d.title === '합성 추가 문서'), addedNode = data.works[0].navigation.nodes.find(n => n.documentId === added.id || n.id === added.id);
+
+    assert.equal(addedNode.sectionId, data.works[0].navigation.nodes.find(n => n.documentId === scene.id || n.id === scene.id).sectionId, 'The new document goes to the open document\'s section');
+    assert.equal(addedNode.parentId, null);
+    await page.getByRole('textbox', { name: '문서 제목', exact: true }).first().waitFor();
+    await openSidebar();
+    await button('추가').click();
+    await page.getByRole('menuitem', { name: '폴더 추가', exact: true }).click();
+    await page.getByRole('dialog', { name: '폴더 만들기', exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    await button('추가').click();
+    await page.getByRole('menuitem', { name: '섹션 추가', exact: true }).click();
+    await page.getByRole('dialog', { name: '섹션 추가', exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    assert(await button('추가').evaluate(el => el === document.activeElement), 'Closing the form returns focus to +');
+    await page.locator(`[data-navigation-row="${scene.id}"] button`).filter({ hasText: scene.title }).first().click();
+    console.log('PASS add menu');
+
     // … menu → rename → Enter saves the document title, and the open tab and title field follow.
     await page.locator(`[data-navigation-row="${scene.id}"] button[aria-current="page"]`).waitFor();
     await renameFromMenu(scene.title);
@@ -176,6 +204,22 @@ try {
                     await page.locator(`[data-navigation-row="${second.id}"]`).locator('xpath=ancestor::section[1]').screenshot({ path: resolve(output, `${width}-${palette}-${mode}.png`) });
                 await page.keyboard.press('Escape');
                 await renameBox(second.title).waitFor({ state: 'detached' });
+
+                // The + add menu stays on screen with readable items in every theme and width.
+                await button('추가').click();
+
+                const addMenu = page.getByRole('menu'), addBox = await addMenu.boundingBox(), item = await page.getByRole('menuitem', { name: '섹션 추가', exact: true }).evaluate(el => { const style = getComputedStyle(el), menu = getComputedStyle(el.closest('[role=menu]'));
+
+ return { color: style.color, background: menu.backgroundColor, clipped: el.scrollWidth > el.clientWidth + 1 }; });
+
+                assert(addBox.x >= 0 && addBox.x + addBox.width <= width + 1, `${width} ${palette} ${mode}: add menu inside the screen`);
+                assert.notEqual(item.color, item.background);
+                assert(!item.clipped, `${width} ${palette} ${mode}: add menu item not clipped`);
+
+                if (['violet', 'cassette', 'cyber', 'hitchhiker'].includes(palette))
+                    await page.screenshot({ path: resolve(output, `add-${width}-${palette}-${mode}.png`), clip: { x: Math.max(0, addBox.x - 160), y: Math.max(0, addBox.y - 60), width: Math.min(width - Math.max(0, addBox.x - 160), addBox.width + 220), height: addBox.height + 90 } });
+                await page.keyboard.press('Escape');
+                await addMenu.waitFor({ state: 'detached' });
             }
 
         console.log('PASS display', width, results.filter(r => r.width === width).length);

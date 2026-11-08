@@ -12,6 +12,9 @@ export const NOTES_LIST_VIEW_KEY='kosmos-notes-list-view';
 
 export const notesListViews=['tree','list'] as const;
 
+/** The note workspace last chosen on this device; an unknown ID falls back to the default space. */
+export const NOTE_SPACE_KEY='kosmos-note-space';
+
 export const lineHeights=[1.6,1.8,2,2.2,2.4] as const;
 
 export const paragraphIndents=[0,1,2] as const;
