@@ -6,7 +6,9 @@
 - 수정한 브라우저 회귀를 기존 코드에 실행해 노트 사이드바 검색칸이 남아 있다는 단언(1 != 0)으로 실패하는 것을 확인했다. 후속 타입·전체 269개 Node 검사·전체 Anti Slop 린트·문서/기준 diff 검사를 통과했다.
 - Chromium Webpack 개발 실행의 합성 인증/자료에서 노트와 집필실의 같은 창·네 범위·검색어/범위 유지·본문/폴더/속성 발췌·클릭/Enter 구절 선택/스크롤·같은 노트 반복 초점(300ms 뒤에도 유지)·Ctrl F·55개 더 보기·작품↔노트 이동·취소 초점·Ctrl K 닫기를 확인했다. 두 폭(1280/360px) × 54테마 × 두 공간의 216개 표시 경우에서 검색/범위 높이·글자/두 줄 발췌·창 폭이 두 공간에서 동일하고 목록 보기/필터 줄에 가로 넘침이 없었다. 태그·연결 작품·보관함 필터와 초기화도 실제 조작했다. 페이지 오류·원고 쓰기 0회이며 증거는 `test-results/notes-search-parity/report.json`과 같은 폴더 화면이다. 모바일 궤도 다크 노트 검색과 데스크톱 보라 다크 집필실 검색을 직접 봤다.
 - 초기 개발 실행의 청크 로딩·본문 선택 대기는 실패했으며 앱 코드 수정을 끝낸 뒤 새 세션의 quick과 전체 회귀를 통과했다. 기존 전체 검색 `workspace-search.mjs` quick 회귀도 두 폭/보라 라이트·다크에서 통과했다(의도한 편집/실행 취소의 합성 저장 각 1회, 실제 계정 아님).
-- CI·운영 확인은 진행 중이다. 실제 작가 로그인·원고 쓰기·WebKit·실제 휴대폰·OS 한글 IME는 미검증이다.
+- [PR #109](https://github.com/inf1si/Kosmos/pull/109)의 `df146d0`을 main `fa66f70d7d06e3cd3a60ce815cf2f3a206c0ef1d`에 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/42462043720)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/42462211941)의 기본 빌드·269개 검사·문서·타입·age·전체 린트를 통과했다. 프리뷰 `dpl_JbSimVAy1QVfmEL4LZ9vy4gSJZCd`는 정확한 SHA로 READY였다.
+- 정확한 main SHA의 운영 `dpl_3PnGEbwcYLdTJEGo1gwLACeNiFhi` READY와 www/root/기존 Vercel 별칭을 확인했다. 실제 www의 동일 합성 Chromium 회귀에서 두 폭 × 54테마 × 두 공간 216개 표시 경우와 범위/검색어 유지·구절 이동·같은 노트 반복 초점·목록 필터·취소·더 보기를 통과했다. 페이지 오류·원고 쓰기 0회다. 증거는 `test-results/notes-search-parity-production/report.json`과 같은 폴더 화면이며 궤도 다크 360px 노트 검색 화면을 직접 봤다.
+- 실제 작가 로그인·원고 쓰기·WebKit·실제 휴대폰·OS 한글 IME는 미검증이다.
 
 ## 2026-11-08 — 제국 테마 초공간 도약
 
