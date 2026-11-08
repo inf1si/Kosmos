@@ -89,7 +89,11 @@ try {
             assert.match(await style(page, '.public-brand-mark', 'backgroundImage'), /radial-gradient/, 'twin-sun mark');
             assert.match(await pseudo(page, '.book-category', '::before', 'backgroundImage'), /repeating-linear-gradient/, 'starfighter stripes before the kicker');
         } else {
-            assert.match(await style(page, '.book-cover', 'backgroundImage'), /data:image\/svg/, 'battle station on the cover');
+            // Hyperspace streaks replace the earlier battle station (a copyrighted design drawn with radial gradients).
+            const cover = await style(page, '.book-cover', 'backgroundImage');
+            assert.match(cover, /data:image\/svg/, 'hyperspace streaks on the cover');
+            assert.doesNotMatch(cover, /radialGradient/, 'no battle station sphere on the cover');
+            assert.doesNotMatch(await style(page, '.public-brand-mark', 'backgroundImage'), /radialGradient/, 'burst mark, not the battle station');
             assert.equal(await style(page, '.book-read', 'borderTopLeftRadius'), '0px');
             assert.match(await style(page, '.book-read', 'boxShadow'), /inset/, 'red blade edge on the main button');
             assert.match(await pseudo(page, '.book-category', '::before', 'backgroundImage'), /linear-gradient/, 'rank plaque before the kicker');
@@ -119,6 +123,8 @@ try {
         assert.match(await page.locator('.reading-scene-title h2').first().evaluate(el => getComputedStyle(el, '::before').content), /decimal-leading-zero/, 'scene number');
 
         assert.match(await pseudo(page, '.reading-title', '::after', 'backgroundImage'), /data:image\/svg/, 'lightsaber divider');
+
+        if (palette === 'empire') assert.doesNotMatch(await pseudo(page, '.reading-title', '::after', 'backgroundImage'), /rect/, 'red beam without a hilt');
         await shot('reader');
 
         await page.goto(`${base}/studio`, { waitUntil: 'domcontentloaded' });
