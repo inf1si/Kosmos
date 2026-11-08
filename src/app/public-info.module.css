@@ -912,7 +912,7 @@
   width: 19px;
   height: 19px;
   font-size: 0;
-  background: var(--em-death) center / contain no-repeat;
+  background: var(--em-mark) center / contain no-repeat;
 }
 :global([data-palette=empire]) .intro h1 {
   font-family: var(--pub-title);

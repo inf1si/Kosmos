@@ -207,9 +207,9 @@ html:has(.studio){background:var(--ground)}
 [data-palette=tatooine] .doc-tab.active{box-shadow:inset 0 -2px 0 var(--brand)}
 [data-palette=tatooine] .studio-tools::after{height:10px;background:var(--tt-dunes) 0 100%/240px 10px repeat-x}
 [data-palette=tatooine] .work-cover{border-radius:3px;background:linear-gradient(transparent 62%,#0d0709 62%),radial-gradient(circle 5px at 40% 50%,#fffdf0 0 55%,#ffe7a6 85%,transparent),radial-gradient(circle 3px at 64% 55%,#ffd08a 0 60%,transparent),linear-gradient(var(--pub-sky1),var(--pub-sky2) 30%,var(--pub-sky3) 48%,var(--pub-sky4) 62%)}
-/* 제국: 전투 요새 표시, 계급 명판 분류 글자, 붉은 광선검 구분선과 버튼 날, 표시등 세 칸 상태(구상 0칸 → 집필 1칸 → 퇴고 2칸 → 완성 3칸), 벽 패널 띠. */
+/* 제국: 초공간 빛 갈래 표시, 계급 명판 분류 글자, 붉은 광선 구분선과 버튼 날, 표시등 세 칸 상태(구상 0칸 → 집필 1칸 → 퇴고 2칸 → 완성 3칸), 벽 패널 띠. */
 [data-palette=empire] .studio-brand{font-family:var(--pub-tech);font-size:12px;font-weight:600;letter-spacing:.28em;text-transform:uppercase}
-[data-palette=empire] .studio-brand>span{width:15px;height:15px;font-size:0;background:var(--em-death) center/contain no-repeat}
+[data-palette=empire] .studio-brand>span{width:15px;height:15px;font-size:0;background:var(--em-mark) center/contain no-repeat}
 [data-palette=empire] .doc-kicker{display:flex;align-items:center;gap:8px;font-family:var(--pub-tech);font-size:12px;font-weight:500;letter-spacing:.12em;color:var(--pub-kicker)}
 [data-palette=empire] .doc-kicker::before{content:"";width:21px;height:9px;flex:none;box-sizing:border-box;border:1px solid var(--pub-plaque-edge);background:linear-gradient(90deg,#c8241c 0 4px,transparent 4px 5px,#c8241c 5px 9px,transparent 9px 10px,#2357b0 10px 14px,transparent 14px 15px,#2357b0 15px 19px) 0 1px/19px 5px no-repeat,var(--pub-plaque)}
 [data-palette=empire] .doc-divider,[data-palette=empire] .manuscript hr{width:220px;height:16px;border:0;background:var(--em-saber) center/220px 16px no-repeat}
@@ -222,7 +222,7 @@ html:has(.studio){background:var(--ground)}
 [data-palette=empire][data-theme=dark] .status-dot:is(.draft,.review,.done){filter:drop-shadow(0 0 2px #ff3c2899)}
 [data-palette=empire] .doc-tab.active{box-shadow:inset 0 -2px 0 var(--pub-blade)}
 [data-palette=empire] .studio-tools::after{left:10px;right:10px;height:8px;border-block:1px solid var(--pub-seam);background:var(--em-band)}
-[data-palette=empire] .work-cover{border-radius:0;background:var(--em-death) 50% 30%/62% auto no-repeat,var(--em-stars),var(--cover)}
+[data-palette=empire] .work-cover{border-radius:0;background:var(--em-jump) 50% 20%/100% auto no-repeat,var(--em-stars),var(--cover)}
 /* 오디세이: 모노리스 표시, 판 분류 글자, 지평선의 판 구분선, 판 상태(구상 빈 판 → 집필 3분의 1 → 퇴고 반 → 완성 검은 판), 천장 조명판 띠, 원고 머리 오른쪽 위의 HAL 눈. */
 [data-palette=odyssey] .studio-brand{font-family:var(--pub-tech);font-size:11px;font-weight:400;letter-spacing:.24em;text-transform:uppercase}
 [data-palette=odyssey] .studio-brand>span{width:6px;height:14px;font-size:0;background:var(--brand);box-shadow:inset 1px 0 0 var(--pub-accent-rim)}
