@@ -7,6 +7,19 @@
 - 로컬 수동: 위 스크린샷과 `/about` 두 밝기 헤더를 봤다. 1280px 표지는 처음에 위 시리즈 글자가 줄기에 묻혀 위쪽을 표지 색으로 덮도록 고쳤고, 360px(시리즈 글자 숨김)은 덮지 않는다. 기호는 15·17·19px에서 두 밝기 모두 보인다.
 - 미확인: CI·운영 화면·웹폰트 실제 로드·Safari/WebKit·실기기.
 
+## 2026-11-08 — 노트 화면 검색 통합
+
+- 기준 main `217341d`. 사용자 지적대로 노트 화면의 기존 검색칸은 예전 목록 필터였고, 전체 검색 창과 분리되어 있었다. 공유 검색 엔진·결과 내용·본문 위치 이동을 노트 검색칸에 연결하고 기존 보관함/태그/작품 필터를 유지한다. 검색/범위는 메모리 상태이며 Workspace·저장·백업·발행·DB 계약은 유지한다.
+- 새 브라우저 회귀를 기존 코드에 실행해 노트 검색 결과 listbox 부재로 실패하는 것을 확인한 뒤 새 코드로 복구했다. 로컬 타입·검색/편집 19개·전체 269개 검사·전체 Anti Slop 린트·문서 검사를 통과했다.
+- Chromium Webpack 개발 실행에서 실제 노트 검색칸의 제목 우선 정렬·늦은 본문 발췌/강조/2곳·속성/폴더 경로 검색·클릭/키보드 위치 선택/스크롤·같은 노트 반복 이동·Ctrl F 이어 찾기·태그/작품/보관함 필터/초기화·검색어를 전체 범위로 넘겨 다른 작품 이동·55개 결과 더 보기·지우기/기존 보기 복귀를 확인했다. 1280/360px × 54테마의 108개 표시 경우와 글자 12px·두 줄·넘침 없음, 페이지 오류/원고 쓰기 0회로 통과했다. 보라 다크 데스크톱·궤도 다크 모바일을 직접 봤다. 증거는 `test-results/notes-search/report.json`과 같은 폴더 화면이다.
+- 공용 결과 내용 분리와 검색 열기 동작의 회귀는 기존 `workspace-search.mjs`의 Chromium quick(두 폭·보라 라이트/다크) 전체 검색/작품↔노트/본문 선택/실행 취소/분할/취소 초점/더 보기를 통과했다. 이 별도 회귀의 의도한 편집/실행 취소로 각 폭에서 합성 저장 1회가 있었으며 실제 계정에는 쓰지 않았다.
+- [PR #106](https://github.com/inf1si/Kosmos/pull/106)의 `9e21890`을 main `a63fac1802965894a638c1b2426fb42b838f50a3`에 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/42458234772)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/42458447109)의 기본 빌드·전체 검사·age·린트가 통과했다. 프리뷰 `dpl_8Dz8kNPuS9EjE16a84BohxJ2NgU6` READY·보호된 `/studio` 200을 확인했다.
+- 첫 운영 `dpl_9jCi6vFznugvD12Ak6Zpq15nwBmc`는 Turbopack의 next/font import map `queries have exactly one entry` 오류로 실패했다. 같은 SHA를 새로 빌드한 `dpl_8EgXfij6pT3JKaYzL4C8HQ5zRFHs`는 READY·www/root 별칭을 확인했다. 폰트·빌드 설정은 바꾸지 않았다.
+- 실제 www의 같은 합성 회귀는 1280px을 마쳤지만 360px에서 같은 노트를 Enter로 다시 열 때 초점이 sidebar-toggle에 남아 실패했다. 구절 선택/스크롤은 적용되어 있었으며 useDrawerFocus의 닫힘 복귀가 뒤늦게 본문 초점을 가져가는 경합이었다. 모바일은 먼저 사이드바를 닫고 그 정리 후 보류한 결과/검색 위치를 적용하도록 보완했다. 후속 로컬 Chromium 두 폭/54테마 108개 경우는 오류/원고 쓰기 0회로 통과했고 검색/편집 19개·타입·전체 린트·문서 검사도 통과했다.
+- 후속 [PR #108](https://github.com/inf1si/Kosmos/pull/108)의 `993591d`를 main `3e9cb69a71daedbcb37d6262b1a07cc0c3e8d1e2`에 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/42459088615)의 전체 검사·기본 빌드·age·린트를 통과했다. [main CI](https://github.com/inf1si/Kosmos/actions/runs/42459228765)는 첫 실행과 같은 SHA의 재실행 모두 문서·타입·269개 검사를 통과한 뒤 Turbopack의 Hahmlet next/font import map `queries have exactly one entry` 오류로 실패했다. 이 실행의 후속 age·린트 단계는 미실행이며 PR CI와 로컬 린트 통과와 구분한다. 검색 수정은 글꼴·빌드 설정을 바꾸지 않았으며 독립된 운영 빌드는 아래처럼 성공했다. 프리뷰 `dpl_AoCuppewCYQf96vTHCm5KuQj6g2t`는 READY였다.
+- 정확한 최종 main SHA의 운영 `dpl_EACd2dREaWW7foG9vcCowLnBvRrh` READY와 www/root/기존 Vercel 별칭을 확인했다. 실제 www에서 합성 인증·REST만 사용하는 동일 Chromium 회귀를 다시 실행해 두 폭 × 54테마 108개 경우, 제목 우선·본문 발췌/강조/개수·속성/폴더 검색·클릭과 같은 노트의 키보드 반복 이동/초점·필터·전체 검색 연결·더 보기·지우기를 모두 통과했다. 페이지 오류·원고 쓰기 0회이며 증거는 `test-results/notes-search-production-focus/report.json`과 같은 폴더 화면이다. 운영 보라 다크 데스크톱·궤도 다크 360px 화면을 직접 봤다.
+- 실제 작가 로그인·원고 쓰기·WebKit·실제 모바일 기기·OS 한글 IME 입력은 미검증이다.
+
 ## 2026-11-03 — 서재 책 파일 다운로드
 
 - 기준 main `114229f`. 책 내보내기의 공개·교체·해제, 서재/독서 화면의 형식 메뉴, 익명 목록/첨부 API와 비공개 Storage·RLS 마이그레이션을 추가했다. 선택 문서가 공개 대상이며 등록 파일은 원고 편집·재게시·백업 복원과 독립이다.
