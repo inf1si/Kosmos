@@ -37,3 +37,5 @@
 .transfer-row.notes-import-row{grid-template-columns:18px 1fr}
 .notes-import-row>svg{color:var(--muted)}
 .notes-import-help{margin:12px 0 0}
+
+.note-space-list{max-height:320px;overflow-y:auto}.note-space-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.note-space-heading h3{margin:0}

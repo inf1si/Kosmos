@@ -2,7 +2,7 @@ import { fromText, newDocument, noteSchema, plainText, uid, wikiReferences, work
 import { assetSchema } from './model';
 import { applySuggestion } from './ai';
 import type { ChatMessage } from './ai-conversation';
-import { applyNoteNavigation, materializeNoteNavigation, moveNote, noteDocument, noteTitle, resolveNoteNavigation, type NoteDestination } from './note-navigation';
+import { applyNoteNavigation, materializeNoteNavigation, moveNote, noteDestination, noteDocument, noteTitle, noteSpaceTitle, resolveNoteNavigation, type NoteDestination } from './note-navigation';
 import { noteTemplates, templateContent } from './note-templates';
 
 export { noteTitle, noteDocument } from './note-navigation';
@@ -49,31 +49,38 @@ if(!template)throw new Error('템플릿을 찾지 못했습니다.');
   return {...newNote(),title:template.title,content:templateContent(template)};
 }
 
-export type NoteBoardColumn={folderId:string|null;title:string;notes:PersonalNote[]};
+export type NoteBoardColumn={key:string;folderId:string|null;spaceId:string;sectionId:string;title:string;notes:PersonalNote[]};
 
-/** One column per top-level folder plus notes outside folders; each column lists its notes in tree order. */
-export function noteBoardColumns(state:Workspace):NoteBoardColumn[] {
-  const nav=resolveNoteNavigation(state),byId=new Map((state.notes||[]).map(n=>[n.id,n]));
-  const children=new Map<string|null,typeof nav.nodes>();
+/** Section roots and top-level folders are drop targets; global home spans every space. */
+export function noteBoardColumns(state:Workspace,spaceId?:string):NoteBoardColumn[] {
+  const nav=resolveNoteNavigation(state),byId=new Map((state.notes||[]).map(n=>[n.id,n])),columns:NoteBoardColumn[]=[];
+  const children=new Map<string,typeof nav.nodes>();
 
-for(const node of nav.nodes)children.set(node.parentId,[...(children.get(node.parentId)||[]),node]);
+  for(const node of nav.nodes){const key=`${node.sectionId}/${node.parentId??''}`;children.set(key,[...(children.get(key)||[]),node]);}
 
-  const collect=(id:string,out:PersonalNote[])=>{for(const child of children.get(id)||[]){const note=byId.get(child.id);
+  const collect=(sectionId:string,id:string,out:PersonalNote[])=>{for(const child of children.get(`${sectionId}/${id}`)||[]){const note=byId.get(child.id);
 
-if(note)out.push(note);collect(child.id,out);}
+    if(note)out.push(note);collect(sectionId,child.id,out);
+  }
 
 return out;};
 
-  const root:NoteBoardColumn={folderId:null,title:'폴더 밖',notes:[]},folders:NoteBoardColumn[]=[];
+  for(const space of nav.spaces.filter(s=>!spaceId||s.id===spaceId))for(const section of space.sections){
+    const prefix=[...!spaceId&&nav.spaces.length>1?[noteSpaceTitle(space)]:[],...space.sections.length>1?[section.title]:[]];
+    const root:NoteBoardColumn={key:`${section.id}/root`,folderId:null,spaceId:space.id,sectionId:section.id,title:[...prefix,'폴더 밖'].join(' / '),notes:[]};
 
-  for(const node of children.get(null)||[]){
-    if(node.type==='folder')folders.push({folderId:node.id,title:node.title,notes:collect(node.id,[])});
-    else{const note=byId.get(node.id);
+    for(const node of children.get(`${section.id}/`)||[]){
+      if(node.type==='folder')columns.push({key:node.id,folderId:node.id,spaceId:space.id,sectionId:section.id,title:[...prefix,node.title].join(' / '),notes:collect(section.id,node.id,[])});
+      else{const note=byId.get(node.id);
 
-if(note)root.notes.push(note);collect(node.id,root.notes);}
+        if(note)root.notes.push(note);collect(section.id,node.id,root.notes);
+      }
+    }
+
+    columns.push(root);
   }
 
-  return [...folders,root];
+  return columns;
 }
 
 /** Notes whose body links to this note, most recently edited first. */
@@ -85,7 +92,9 @@ export function addNote(state:Workspace,note=newNote(),to?:NoteDestination):Work
   if((state.notes?.length||0)>=5000)throw new Error('노트는 최대 5,000개까지 보관할 수 있습니다.');
   const base=materializeNoteNavigation(state),next=materializeNoteNavigation({...base,notes:[...(state.notes||[]),noteSchema.parse(note)]});
 
-  return moveNote(next,note.id,to||{parentId:null,beforeId:base.noteNavigation?.nodes.find(n=>n.parentId===null)?.id});
+  const destination=noteDestination(next,to??{parentId:null}),first=!to||!!to.spaceId&&!to.sectionId&&to.parentId===null&&!to.beforeId;
+
+  return moveNote(next,note.id,first?{...to,...destination,beforeId:base.noteNavigation?.nodes.find(n=>n.parentId===null&&n.sectionId===destination.sectionId)?.id}:to??destination);
 }
 
 export function patchNote(state:Workspace,id:string,patch:Partial<Pick<PersonalNote,'title'|'content'|'tags'|'box'|'linkedWorkIds'|'pinned'|'customProperties'>>):Workspace {
@@ -192,6 +201,16 @@ return {id:copy.id,workId,name:meta.name,type:meta.type,size:meta.size};});
 export function preserveNoteDetails(candidate:Workspace,previous:Workspace):Workspace {
   const old=new Map((previous.notes||[]).map(n=>[n.id,n]));
   let result={...candidate,notes:candidate.notes?.map(n=>n.aiMessages===undefined&&old.get(n.id)?.aiMessages!==undefined?{...n,aiMessages:structuredClone(old.get(n.id)!.aiMessages)}:n)};
+
+  if(candidate.noteNavigation===undefined&&previous.noteNavigation?.spaces)result={...result,noteNavigation:{version:1,spaces:structuredClone(previous.noteNavigation.spaces),nodes:[]}};
+
+  if(candidate.noteNavigation&&!candidate.noteNavigation.spaces&&previous.noteNavigation?.spaces){
+    const before=resolveNoteNavigation(previous),fallback=before.spaces.find(s=>s.id==='default')!.sections[0].id;
+    const oldNodes=new Map(before.nodes.map(n=>[n.id,n]));
+    const nodes=candidate.noteNavigation.nodes.map(n=>({...n,sectionId:oldNodes.get(n.id)?.sectionId??fallback}));
+    const byId=new Map(nodes.map(n=>[n.id,n]));
+    result={...result,noteNavigation:{...candidate.noteNavigation,spaces:structuredClone(before.spaces),nodes:nodes.map(n=>({...n,parentId:n.parentId&&byId.get(n.parentId)?.sectionId===n.sectionId?n.parentId:null}))}};
+  }
 
   if(candidate.noteNavigation===undefined&&previous.noteNavigation&&candidate.notes?.some(n=>old.has(n.id))){
     const ids=new Set((candidate.notes||[]).map(n=>n.id));
@@ -388,7 +407,7 @@ parent=id;
 }
 
 /** Imported pages become inbox notes in one new top-level folder that keeps the source folders; tags, dates and links between imported files are kept. */
-export function prepareNoteImport(state:Workspace,bundle:ImportBundle,folderTitle:string) {
+export function prepareNoteImport(state:Workspace,bundle:ImportBundle,folderTitle:string,spaceId='default') {
   const title=folderTitle.trim().slice(0,300)||'가져온 노트';
 
   if((state.notes?.length||0)+bundle.pages.length>5000)throw new Error('노트는 최대 5,000개까지 보관할 수 있습니다.');
@@ -416,7 +435,8 @@ if(!images.has(asset.name))images.set(asset.name,assetId);}
 
   if(assets.length+state.assets.length>2000)throw new Error('작업 공간 첨부는 최대 2,000개입니다. 이미지가 적은 파일로 나누어 가져오세요.');
   const base=materializeNoteNavigation(state),nav=structuredClone(base.noteNavigation!);
-  nav.nodes.unshift({id:folderId,type:'folder',title,parentId:null},...noteImportTree(bundle.pages,noteIds,folderId));
+  const sectionId=noteDestination(state,{spaceId,parentId:null}).sectionId;
+  nav.nodes.unshift({id:folderId,sectionId,type:'folder',title,parentId:null},...noteImportTree(bundle.pages,noteIds,folderId).map(n=>({...n,sectionId})));
   const next=applyNoteNavigation({...base,notes:[...notes,...(base.notes||[])],assets:[...base.assets,...assets],updatedAt:now},nav);
   workspaceSchema.parse(next);
 

@@ -27,11 +27,11 @@ export function WorkspaceTemplates({source,request,onClose,onCreated,onBack,onRe
     for(const node of childrenOf(nav,parentId,sectionId)){const full=[path,label(node)].filter(Boolean).join(' / ');rows.push({node,depth,path:full});walk(sectionId,node.id,depth+1,full);}
   }
 
-  for(const section of nav.sections)walk(section.id,null,0,source.scope==='notes'?'':section.title);
+  for(const section of nav.sections)walk(section.id,null,0,section.title);
   const existing=new Set(nav.nodes.map(n=>n.id)),selection=selected.filter(id=>existing.has(id)),covered=templateSelection(nav,selection);
   const templates=(s.state!.templates||[]).filter(t=>t.scope===source.scope),template=templates.find(t=>t.id===id)||templates[0];
   const templateId=template?.id||'',count=nav.nodes.filter(n=>covered.has(n.id)&&n.type==='document').length;
-  const options=[...nav.sections.map(section=>({value:`section:${section.id}`,label:source.scope==='notes'?'최상위':section.title})),...rows.map(row=>({value:`node:${row.node.id}`,label:row.path}))];
+  const options=[...nav.sections.map(section=>({value:`section:${section.id}`,label:section.title})),...rows.map(row=>({value:`node:${row.node.id}`,label:row.path}))];
   const destination=options.some(o=>o.value===location)?location:options[0].value;
 
   async function run(operation:()=>Promise<void>){setBusy(true);setError('');
@@ -45,7 +45,7 @@ try{await operation();}catch(e){setError(e instanceof Error?e.message:'템플릿
   async function apply(){
     const parentId=destination.startsWith('node:')?destination.slice(5):null;
     const sectionId=parentId?nav.nodes.find(n=>n.id===parentId)!.sectionId:destination.slice(8);
-    const ids=await s.applyTemplate(templateId,source.scope==='notes'?{scope:'notes',to:{parentId}}:{...source,to:{sectionId,parentId}});
+    const ids=await s.applyTemplate(templateId,source.scope==='notes'?{scope:'notes',to:{parentId,sectionId,spaceId:source.scope==='notes'?source.spaceId:undefined}}:{...source,to:{sectionId,parentId}});
     onClose();onCreated(ids[0]);
   }
 

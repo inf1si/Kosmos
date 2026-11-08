@@ -67,3 +67,7 @@ MD/HTML ZIP의 `kosmos-transfer.json`은 Orbis Tertius로 다시 가져올 때 �
 구현: [변환기](../src/lib/interchange.ts)와 형식별 변환기([Word](../src/lib/docx-import.ts)·[RTF](../src/lib/rtf-import.ts)·[한글](../src/lib/hwp-import.ts)·[EPUB](../src/lib/epub-import.ts)·[스크리브너](../src/lib/scrivener-import.ts)), [대화상자](../src/components/interchange-dialog.tsx), [검증](../tests/interchange.test.ts)·[형식별 검증](../tests/note-import-formats.test.ts)·[가져오기 회귀 검사](../tests/import-regressions.test.ts).
 
 MD/HTML ZIP의 사용자 정의 속성은 Kosmos 메타데이터에서 복원하며 다른 앱이나 ENEX는 이를 복원하지 않는다. 제목이 빈 MD/HTML은 제목 줄을 만들지 않는다. 저장한 템플릿 목록과 템플릿 첨부는 교환 ZIP에 포함하지 않으며 전체 백업을 사용한다.
+
+## 노트 작업공간과 교환
+
+노트 가져오기는 현재 공간의 첫 섹션에 폴더를 만들며 사용자 템플릿은 선택 공간·섹션에 적용한다. 전체 백업에는 공간 구조가 포함되고 선택 문서 교환·작품 발행에는 계정의 공간 목록을 넣지 않는다. [전체 계약](note-spaces.md).

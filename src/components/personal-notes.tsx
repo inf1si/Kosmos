@@ -5,14 +5,15 @@ import { trashRows } from '@/lib/workspace-trash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ArrowLeft, Cloud, StickyNote, Trash2, Globe2, HardDrive, Inbox, House, Link2, MoreHorizontal, NotebookPen, Pin, PinOff, PanelLeft, Paperclip, Plus, RotateCcw, Search, Settings, SlidersHorizontal, Snowflake, Sparkles, Tag, Waypoints, X } from 'lucide-react';
+import { ArrowLeft, Cloud, FolderInput, StickyNote, Trash2, Globe2, HardDrive, Inbox, House, Link2, MoreHorizontal, NotebookPen, Pin, PinOff, PanelLeft, Paperclip, Plus, RotateCcw, Search, Settings, SlidersHorizontal, Snowflake, Sparkles, Tag, Waypoints, X } from 'lucide-react';
 import { DocumentTree } from './document-tree';
 import { WorkspaceTemplates, type TemplateDialogRequest } from './workspace-templates';
 import { CustomPropertiesForm, CustomPropertyChips } from './custom-properties';
+import { NoteSpaceSwitcher,NoteSpaceForm,type NoteSpaceRequest } from './note-spaces';
 import { NotesHome } from './notes-home';
 import { NoteCard } from './notes-reference';
 import { AIChat } from './ai-chat';
-import { editNoteTree, moveNote, noteTreeWork, treeDestination, type NoteDestination } from '@/lib/note-navigation';
+import { editNoteTree, moveNote, noteTreeWork, treeDestination, noteSpaceFor, notesInSpace, noteSpaceTitle, resolveNoteNavigation, DEFAULT_NOTE_SPACE, type NoteDestination } from '@/lib/note-navigation';
 import { descendantsOf } from '@/lib/document-navigation';
 import { useStudio } from './studio-provider';
 import { GoogleAccountControl } from './studio-auth';
@@ -47,6 +48,11 @@ type Props={searchJump:WorkspaceSearchJump|null;onSearchJump:()=>void;onSearch:(
 
 export function PersonalNotes({searchJump,onSearchJump,onSearch,activeId,captureId,importRequested,onImportOpened,onImportBack,onSelect,onReturn,onNew,onOpenWork}:Props){
   const s=useStudio(),notes=s.state?.notes||EMPTY_NOTES;
+  const [selectedSpace,setSelectedSpace]=useState(DEFAULT_NOTE_SPACE),[spaceHome,setSpaceHome]=useState(false),[spaceRequest,setSpaceRequest]=useState<NoteSpaceRequest|null>(null);
+  const spaces=useMemo(()=>s.state?resolveNoteNavigation(s.state).spaces:[],[s.state]);
+  const spaceId=s.state&&activeId&&notes.some(n=>n.id===activeId)?noteSpaceFor(s.state,activeId):spaces.some(space=>space.id===selectedSpace)?selectedSpace:DEFAULT_NOTE_SPACE;
+  const space=spaces.find(space=>space.id===spaceId);
+  const spaceNotes=useMemo(()=>s.state?notesInSpace(s.state,spaceId):EMPTY_NOTES,[s.state,spaceId]);
   const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);
   const [referencePreview,setReferencePreview]=useState<InternalReference|null>(null);
   useEffect(()=>setReferencePreview(null),[activeId]);
@@ -65,9 +71,9 @@ return()=>window.removeEventListener('studio-modal',listener);},[]);
   const aiRef=useRef<HTMLElement>(null),closeAI=useCallback(()=>setSide(null),[]);
   useDrawerFocus(compact&&!!side,aiRef,closeAI,side==='links'?'note-links-toggle':'note-ai-toggle');
   useDrawerFocus(compact&&sidebar,sidebarRef,closeSidebar,'sidebar-toggle');
-  const visible=useMemo(()=>filterNotes(notes,{box,tag,workId}),[notes,box,tag,workId]);
+  const visible=useMemo(()=>filterNotes(spaceNotes,{box,tag,workId}),[spaceNotes,box,tag,workId]);
   const eligible=useMemo(()=>visible.map(n=>n.id),[visible]);
-  const tree=useMemo(()=>s.state?noteTreeWork(s.state):null,[s.state]);
+  const tree=useMemo(()=>s.state?noteTreeWork(s.state,spaceId):null,[s.state,spaceId]);
   // No note in the address opens the notes home instead of an arbitrary first note.
   const active=activeId?notes.find(n=>n.id===activeId):undefined,readonly=!!s.conflict;
   useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);setSidebar(!media.matches);const change=()=>{setCompact(media.matches);setSidebar(!media.matches);};
@@ -91,15 +97,19 @@ return wikiReferences(a.content).filter(id=>ids.has(id)&&id!==a.id).length+noteB
 
   if(!s.state)return null;
   const works=s.state.works,allTags=[...new Set(notes.flatMap(n=>n.tags))].sort((a,b)=>a.localeCompare(b));
-  const inbox=notes.filter(n=>n.box==='inbox').length,icebox=notes.length-inbox,filters=(tag?1:0)+(workId?1:0);
+  const inbox=spaceNotes.filter(n=>n.box==='inbox').length,icebox=spaceNotes.length-inbox,filters=(tag?1:0)+(workId?1:0);
 
-  function create(to?:NoteDestination,template?:string){setBox('all');setTag('');setWorkId('');onNew(to,template);
+  function create(to?:NoteDestination,template?:string){setBox('all');setTag('');setWorkId('');onNew(to??{spaceId,parentId:null},template);
 
 if(compact)setSidebar(false);}
 
   function move(id:string,to:NoteDestination){try{s.update(state=>moveNote(state,id,to));}catch(e){alert(e instanceof Error?e.message:'노트를 옮기지 못했습니다.');}}
 
-  function select(id:string){onSelect(id);
+  function selectSpace(id:string){setSelectedSpace(id);setSpaceHome(true);setBox('all');setTag('');setWorkId('');onSelect('');
+
+if(compact)setSidebar(false);}
+
+  function select(id:string){if(id)setSelectedSpace(noteSpaceFor(s.state!,id));else setSpaceHome(false);onSelect(id);
 
 if(compact)setSidebar(false);}
 
@@ -130,11 +140,12 @@ if(compact)setSidebar(false);}
       <div className="sidebar-close"><IconButton label="노트 탐색 닫기" data-drawer-close onClick={closeSidebar}><X size={17}/></IconButton></div>
       <Link className="studio-brand" href="/"><span aria-hidden="true">◌</span>Orbis Tertius</Link><span className="studio-stripes" aria-hidden="true"/>
       <div className="notes-mode segmented" role="group" aria-label="작업 공간"><button type="button" aria-pressed={false} onClick={onReturn}><NotebookPen size={14}/>집필실</button><button type="button" aria-pressed={true}><StickyNote size={14}/>노트</button></div>
+      <NoteSpaceSwitcher spaceId={spaceId} readonly={readonly} onSelect={selectSpace} onRequest={setSpaceRequest}/>
       <nav className="studio-tools notes-tools" aria-label="노트 도구">
-        <button type="button" className="nav-item" aria-pressed={!active} onClick={()=>select('')}><House size={16}/><span>노트 홈</span></button>
+        <button type="button" className="nav-item" aria-pressed={!active&&!spaceHome} onClick={()=>select('')}><House size={16}/><span>노트 홈</span></button>
         <button type="button" className="nav-item" disabled={readonly} onClick={()=>create()}><Plus size={16}/><span>새 노트</span></button>
         <button type="button" className="nav-item" data-workspace-search-opener onClick={onSearch}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
-        <div className="notes-views segmented" role="group" aria-label="노트 보기">{([['all','전체',notes.length],['inbox','수집함',inbox],['icebox','아이스박스',icebox]] as const).map(([value,label,count])=><button type="button" key={value} aria-pressed={box===value} onClick={()=>setBox(value)}>{label}<small>{count}</small></button>)}</div>
+        <div className="notes-views segmented" role="group" aria-label="노트 보기">{([['all','전체',spaceNotes.length],['inbox','수집함',inbox],['icebox','아이스박스',icebox]] as const).map(([value,label,count])=><button type="button" key={value} aria-pressed={box===value} onClick={()=>setBox(value)}>{label}<small>{count}</small></button>)}</div>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'trash'}))}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state.trash).length}</small></button>
         <button type="button" className="nav-item" data-settings-opener onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings:notes'}))}><Settings size={16}/><span>설정</span></button>
       </nav>
@@ -142,12 +153,12 @@ if(compact)setSidebar(false);}
           <label>태그<Select aria-label="태그로 노트 찾기" value={tag} onChange={value=>setTag(value)}><option value="">모든 태그</option>{allTags.map(value=><option key={value}>{value}</option>)}</Select></label>
           <label>연결된 작품<Select aria-label="연결된 작품으로 노트 찾기" value={workId} onChange={value=>setWorkId(value)}><option value="">모든 작품</option>{works.map(work=><option value={work.id} key={work.id}>{work.title}</option>)}</Select></label>
           <div className="popover-actions"><button type="button" className="button" disabled={!filters} onClick={()=>{setTag('');setWorkId('');}}><RotateCcw size={13}/>필터 초기화</button></div>
-        </Popover></div>{listView==='tree'?<DocumentTree work={tree!} query="" activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit))} onRenameDocument={(id,title)=>patch(id,{title})} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'노트가 없습니다.'}</p>}{listView==='tree'&&!notes.length&&!s.state.noteNavigation?.nodes.length&&<p className="muted notes-empty">노트가 없습니다.</p>}</div>
+        </Popover></div>{listView==='tree'?<DocumentTree key={`${spaceId}-${s.epoch}`} work={tree!} query="" activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit,spaceId))} onRenameDocument={(id,title)=>patch(id,{title})} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to,spaceId)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor}),onMoveSpace:(id,anchor)=>setSpaceRequest({type:'move',id,spaceId,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'노트가 없습니다.'}</p>}{listView==='tree'&&!spaceNotes.length&&!tree?.navigation?.nodes.length&&<p className="muted notes-empty">노트가 없습니다.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
     {sidebar&&!compact&&<SidebarResizer target={sidebarRef} onCollapse={closeSidebar}/>}
     <main className="studio-panel">
-      <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
+      <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):spaceHome&&space?noteSpaceTitle(space):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
       {/* Wait for the mobile drawer to restore its trigger before the editor applies a search jump. */}
       {active?<RichEditor searchJump={compact&&sidebar?null:searchJump} onSearchJump={onSearchJump} key={`${active.id}-${s.epoch}`} doc={noteDocument(active)} references={{onPreview:previewReference,onConnections:()=>{setReferencePreview(null);setSide(value=>value==='links'&&!referencePreview?null:'links');
@@ -157,11 +168,11 @@ if(compact)setSidebar(false);},open:side==='links'}} readonly={readonly} autofoc
 if(compact)setSidebar(false);}}} onChange={content=>patch(active.id,{content})}
         heading={<NoteHead key={active.id} note={active} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');
 
-if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork}/>}
+if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork} onMoveSpace={anchor=>setSpaceRequest({type:'move',id:active.id,spaceId,anchor})}/>}
         toolbarEnd={<><span className="char-count" aria-label="글자 수 · 공백 포함">{textStatistics(active.content).charactersWithSpaces.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={side==='ai'} onClick={()=>{setSide(v=>v==='ai'?null:'ai');
 
 if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
-        :<NotesHome state={s.state} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
+        :<NotesHome state={s.state} spaceId={spaceHome?spaceId:undefined} onSpace={selectSpace} onNewSpace={anchor=>setSpaceRequest({type:'new',spaceId,anchor})} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
     </main>
     {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<><InternalReferencePanel sourceId={active.id} preview={referencePreview} onPreview={setReferencePreview} onOpen={openReferenceTarget} showEmpty={!noteLinkCount}/>{!referencePreview&&noteLinkCount>0&&<NoteLinks note={active} notes={notes} onOpen={select}/>}</>
       :<AIChat key={`${s.namespace}-${active.id}-${s.epoch}`} noteId={active.id} doc={noteDocument(active)} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);
@@ -171,13 +182,16 @@ return;}
 const work=works.find(w=>w.documents.some(d=>d.id===id));
 
 if(work)onOpenWork(work.id,id);}}/>}</div></aside></>}
-    {templateRequest&&<WorkspaceTemplates source={{scope:'notes'}} request={templateRequest} onClose={()=>setTemplateRequest(null)} onBack={templateRequest.fromSettings?()=>{setTemplateRequest(null);window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings-return:template'}));}:undefined} onReturnFocus={templateRequest.fromSettings?()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus():undefined} onCreated={select}/>}
-    <NotesImportDialog open={importOpen} onClose={()=>setImportOpen(false)} onBack={onImportBack} onReturnFocus={()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus()} onImported={()=>{setBox('all');setTag('');setWorkId('');chooseList('tree');}}/>
+    {spaceRequest&&<NoteSpaceForm key={`${spaceRequest.type}-${spaceRequest.type==='move'?spaceRequest.id:spaceRequest.spaceId}`} request={spaceRequest} onClose={()=>setSpaceRequest(null)} onSelect={selectSpace} onMoved={(id,destination)=>{setSelectedSpace(destination);
+
+if(active?.id===id||tree?.navigation&&descendantsOf(tree.navigation,id).has(activeId)){setSpaceHome(false);onSelect(activeId);}else selectSpace(destination);}}/>}
+    {templateRequest&&<WorkspaceTemplates source={{scope:'notes',spaceId}} request={templateRequest} onClose={()=>setTemplateRequest(null)} onBack={templateRequest.fromSettings?()=>{setTemplateRequest(null);window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings-return:template'}));}:undefined} onReturnFocus={templateRequest.fromSettings?()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus():undefined} onCreated={select}/>}
+    <NotesImportDialog spaceId={spaceId} open={importOpen} onClose={()=>setImportOpen(false)} onBack={onImportBack} onReturnFocus={()=>document.querySelector<HTMLElement>('[data-settings-opener]')?.focus()} onImported={()=>{selectSpace(spaceId);setBox('all');setTag('');setWorkId('');chooseList('tree');}}/>
     {folderWork&&<FolderWorkPopover key={folderWork.id} folderId={folderWork.id} anchor={folderWork.anchor} onClose={()=>setFolderWork(null)} onCreated={id=>{setFolderWork(null);onOpenWork(id);}}/>}
   </div></TooltipProvider>;
 }
 
-function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork}:{note:PersonalNote;readonly:boolean;links:number;linksOpen:boolean;onLinks:()=>void;onPatch:(patch:Parameters<typeof patchNote>[2])=>void;onOpenWork:Props['onOpenWork']}){
+function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork,onMoveSpace}:{note:PersonalNote;readonly:boolean;links:number;linksOpen:boolean;onLinks:()=>void;onPatch:(patch:Parameters<typeof patchNote>[2])=>void;onOpenWork:Props['onOpenWork'];onMoveSpace:(anchor:HTMLElement|null)=>void}){
   const [propertiesOpen,setPropertiesOpen]=useState(false);
   const s=useStudio(),[panel,setPanel]=useState<'tags'|'works'|'copy'|'files'|null>(null),[draftTag,setDraftTag]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [target,setTarget]=useState(s.state!.works[0].id),[kind,setKind]=useState<NovelDocument['kind']>('memo');
@@ -232,6 +246,7 @@ return work?<button type="button" className="chip soft" key={id} onClick={()=>on
           <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>onPatch({pinned:!note.pinned})}>{note.pinned?<PinOff size={15}/>:<Pin size={15}/>}{note.pinned?'고정 해제':'노트 홈에 고정'}</DropdownMenu.Item>
           <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>onPatch({box:note.box==='icebox'?'inbox':'icebox'})}>{note.box==='icebox'?<Inbox size={15}/>:<Snowflake size={15}/>}{note.box==='icebox'?'수집함으로 꺼내기':'아이스박스에 넣기'}</DropdownMenu.Item>
           <DropdownMenu.Separator className="menu-separator"/>
+          <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>{keepMenuFocus.current=true;window.setTimeout(()=>onMoveSpace(chipsRef.current),0);}}><FolderInput size={15}/>작업공간으로 이동</DropdownMenu.Item>
           <DropdownMenu.Item className="menu-item" onSelect={()=>openPanel('files')}><Paperclip size={15}/>이미지 첨부</DropdownMenu.Item>
           <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>openPanel('copy')}><NotebookPen size={15}/>작품으로 가져오기</DropdownMenu.Item>
         </DropdownMenu.Content></DropdownMenu.Portal>

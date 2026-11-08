@@ -54,7 +54,7 @@ const loose = make('지하철 관찰', '우산 두 개를 든 노인');
 
 const folder = uid(), nav = resolveNoteNavigation(data);
 
-nav.nodes = [{ id: folder, type: 'folder', title: '작품 구상', parentId: null }, ...nav.nodes.map(n => [city.id, motive.id, ending.id].includes(n.id) ? { ...n, parentId: folder } : n)];
+nav.nodes = [{ id: folder, type: 'folder', title: '작품 구상', parentId: null, sectionId: 'notes' }, ...nav.nodes.map(n => [city.id, motive.id, ending.id].includes(n.id) ? { ...n, parentId: folder } : n)];
 
 data = applyNoteNavigation(data, nav);
 

@@ -1,9 +1,9 @@
 import { documentTitle } from './model';
 import { newDocument, trashFolderSchema, workspaceSchema, type TrashItem, type Workspace, type Work } from './model';
-import { asDocumentNavigation, asNoteNavigation } from './note-navigation-schema';
+import { asDocumentNavigation } from './note-navigation-schema';
 import type { DocumentNavigation } from './document-navigation-schema';
 import { noteTitle, removeNote } from './personal-notes';
-import { applyNoteNavigation, noteTreeWork, resolveNoteNavigation } from './note-navigation';
+import { applyNoteNavigation, editNoteTree, noteSpaceFor, noteTreeWork, resolveNoteNavigation } from './note-navigation';
 import { removeDocument } from './document-deletion';
 import { applyNavigation, descendantsOf, resolveNavigation } from './document-navigation';
 import { preserveWorkShelves } from './work-shelves';
@@ -57,9 +57,9 @@ export function trashNote(state:Workspace,id:string):Workspace{
   const note=state.notes?.find(n=>n.id===id);
 
 if(!note)throw new Error('휴지통으로 옮길 노트를 찾지 못했습니다.');
-  const nav=resolveNoteNavigation(state),node=nav.nodes.find(n=>n.id===id)!,siblings=nav.nodes.filter(n=>n.parentId===node.parentId);
+  const nav=resolveNoteNavigation(state),node=nav.nodes.find(n=>n.id===id)!,siblings=nav.nodes.filter(n=>n.parentId===node.parentId&&n.sectionId===node.sectionId);
   const beforeId=siblings[siblings.findIndex(n=>n.id===id)+1]?.id;
-  const item:TrashItem={id,type:'note',deletedAt:new Date().toISOString(),note:structuredClone(note),placement:{parentId:node.parentId,childIds:nav.nodes.filter(n=>n.parentId===id).map(n=>n.id)}};
+  const item:TrashItem={id,type:'note',deletedAt:new Date().toISOString(),note:structuredClone(note),placement:{spaceId:noteSpaceFor(state,id),sectionId:node.sectionId,parentId:node.parentId,childIds:nav.nodes.filter(n=>n.parentId===id).map(n=>n.id)}};
 
   if(beforeId)item.placement.beforeId=beforeId;
 
@@ -119,12 +119,12 @@ export function trashNoteFolder(state:Workspace,folderId:string):Workspace{
   const nav=resolveNoteNavigation(state),folder=nav.nodes.find(n=>n.id===folderId&&n.type==='folder');
 
   if(!folder)throw new Error('삭제할 폴더를 찾지 못했습니다.');
-  const removed=descendantsOf(noteTreeWork(state).navigation!,folderId),notes=(state.notes||[]).filter(n=>removed.has(n.id));
+  const removed=descendantsOf(noteTreeWork(state,noteSpaceFor(state,folderId)).navigation!,folderId),notes=(state.notes||[]).filter(n=>removed.has(n.id));
 
   if((state.trash?.length||0)+notes.length>5000)throw new Error('휴지통이 가득 찼습니다. 일부 항목을 비운 뒤 다시 시도하세요.');
-  const siblings=nav.nodes.filter(n=>n.parentId===folder.parentId),beforeId=siblings[siblings.findIndex(n=>n.id===folderId)+1]?.id,deletedAt=new Date().toISOString();
-  const title=folder.type==='folder'?folder.title:'',tree=folderTree(asDocumentNavigation(nav).nodes,removed);
-  const items:TrashItem[]=notes.map((note,i)=>({id:note.id,type:'note',deletedAt,note:structuredClone(note),placement:{parentId:folder.parentId,childIds:[],...beforeId&&{beforeId}},folder:{id:folderId,title,...i===0&&{nodes:tree}}}));
+  const siblings=nav.nodes.filter(n=>n.parentId===folder.parentId&&n.sectionId===folder.sectionId),beforeId=siblings[siblings.findIndex(n=>n.id===folderId)+1]?.id,deletedAt=new Date().toISOString();
+  const title=folder.type==='folder'?folder.title:'',tree=folderTree(asDocumentNavigation(nav,noteSpaceFor(state,folderId)).nodes,removed);
+  const items:TrashItem[]=notes.map((note,i)=>({id:note.id,type:'note',deletedAt,note:structuredClone(note),placement:{spaceId:noteSpaceFor(state,folderId),sectionId:folder.sectionId,parentId:folder.parentId,childIds:[],...beforeId&&{beforeId}},folder:{id:folderId,title,...i===0&&{nodes:tree}}}));
 
   return checked(applyNoteNavigation({...state,notes:(state.notes||[]).filter(n=>!removed.has(n.id)),trash:[...(state.trash||[]),...items]},{...nav,nodes:nav.nodes.filter(n=>!removed.has(n.id))}));
 }
@@ -178,6 +178,13 @@ return id&&keep.has(id)?id:parentId;};
   return {...nav,nodes:next};
 }
 
+function noteRestoreLocation(state:Workspace,placement:Extract<TrashItem,{type:'note'}>['placement']){
+  const nav=resolveNoteNavigation(state),parent=nav.nodes.find(n=>n.id===placement.parentId),space=nav.spaces.find(s=>s.id===(parent?noteSpaceFor(state,parent.id):placement.spaceId))??nav.spaces.find(s=>s.id==='default')!;
+  const sectionId=parent?.sectionId??space.sections.find(s=>s.id===placement.sectionId)?.id??space.sections[0].id;
+
+  return {spaceId:space.id,sectionId,parentId:parent?.id??null};
+}
+
 /** One restore for a folder-wide deletion: the folder, its subfolders and every document or note still in the trash. */
 function restoreFolder(state:Workspace,group:FolderItem[]):Workspace{
   const ids=new Set(group.map(t=>t.id)),base={...state,trash:state.trash!.filter(t=>!ids.has(t.id))},workIds=new Set(state.works.map(w=>w.id)),first=group[0];
@@ -186,10 +193,10 @@ function restoreFolder(state:Workspace,group:FolderItem[]):Workspace{
     const notes=group.filter(t=>t.type==='note');
 
     if((state.notes?.length||0)+notes.length>5000)throw new Error('노트 보관 한도를 초과해 복원할 수 없습니다.');
-    const nav=noteTreeWork(state).navigation!,parentId=nav.nodes.some(n=>n.id===first.placement.parentId)?first.placement.parentId:null;
+    const {spaceId,sectionId,parentId}=noteRestoreLocation(state,first.placement),nav=noteTreeWork(state,spaceId).navigation!;
     const next={...base,notes:[...(state.notes||[]),...notes.map(t=>({...structuredClone(t.note),linkedWorkIds:t.note.linkedWorkIds.filter(id=>workIds.has(id))}))]};
 
-    return checked(placeOrTop(p=>applyNoteNavigation(next,asNoteNavigation(insertTree(nav,notes,'notes',p))),parentId));
+    return checked(placeOrTop(p=>editNoteTree(next,work=>({...work,navigation:insertTree(nav,notes,sectionId,p)}),spaceId),parentId));
   }
 
   const docs=group.filter(t=>t.type==='document'),work=state.works.find(w=>w.id===first.workId);
@@ -233,10 +240,10 @@ export function restoreTrash(state:Workspace,id:string):Workspace{
 
   if(item.type==='note'){
     if((state.notes?.length||0)>=5000)throw new Error('노트 보관 한도를 초과해 복원할 수 없습니다.');
-    const nav=resolveNoteNavigation(state),parentId=nav.nodes.some(n=>n.id===item.placement.parentId)?item.placement.parentId:null;
-    const children=nav.nodes.filter(n=>item.placement.childIds.includes(n.id)&&n.parentId===parentId),childIds=new Set(children.map(n=>n.id));
-    const before=nav.nodes.findIndex(n=>n.id===item.placement.beforeId&&n.parentId===parentId);
-    nav.nodes.splice(before<0?nav.nodes.length:before,0,{id,type:'note',parentId});nav.nodes=nav.nodes.map(n=>childIds.has(n.id)?{...n,parentId:id}:n);
+    const nav=resolveNoteNavigation(state),{sectionId,parentId}=noteRestoreLocation(state,item.placement);
+    const children=nav.nodes.filter(n=>item.placement.childIds.includes(n.id)&&n.parentId===parentId&&n.sectionId===sectionId),childIds=new Set(children.map(n=>n.id));
+    const before=nav.nodes.findIndex(n=>n.id===item.placement.beforeId&&n.parentId===parentId&&n.sectionId===sectionId);
+    nav.nodes.splice(before<0?nav.nodes.length:before,0,{id,type:'note',parentId,sectionId});nav.nodes=nav.nodes.map(n=>childIds.has(n.id)?{...n,parentId:id}:n);
     const next={...base,notes:[...(state.notes||[]),{...structuredClone(item.note),linkedWorkIds:item.note.linkedWorkIds.filter(id=>workIds.has(id))}]};
 
     try{return checked(applyNoteNavigation(next,nav));}catch(error){if(!(error instanceof Error)||!error.message.includes('24단계'))throw error;

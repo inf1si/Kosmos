@@ -31,7 +31,7 @@ test('노트 삭제는 선택 노트만 제거하고 하위 항목을 기존 형
 test('마지막 노트 삭제 후에도 빈 notes와 계층을 명시하며 삭제 전 첨부는 ZIP 이력에서 복원된다',async()=>{
   const note=newNote(),blob=new Blob(['png']),asset={id:uid(),noteId:note.id,name:'첨부.png',type:'image/png' as const,size:blob.size};note.assetIds=[asset.id];
   const before=addNote({...seedWorkspace(),assets:[asset]},note),next=removeNote(before,note.id);
-  assert.deepEqual(next.notes,[]);assert.deepEqual(next.noteNavigation,{version:1,nodes:[]});assert.deepEqual(next.assets,[]);
+  assert.deepEqual(next.notes,[]);assert.equal(next.noteNavigation?.version,1);assert.deepEqual(next.noteNavigation?.nodes,[]);assert.equal(next.noteNavigation?.spaces?.[0].id,'default');assert.deepEqual(next.assets,[]);
   const revision={id:uid(),namespace:'test',createdAt:before.updatedAt,label:'노트 삭제 전',data:before};
   const backup=await readBackup(await createBackup(next,[revision],[{id:asset.id,blob}]));
   assert.deepEqual(backup.data.notes,[]);assert.deepEqual(backup.revisions[0].data,before);assert.equal(await backup.assets[0].blob.text(),'png');

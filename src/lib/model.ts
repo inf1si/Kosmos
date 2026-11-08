@@ -216,7 +216,7 @@ export const trashFolderSchema=z.object({id:z.uuid(),title:z.string().trim().min
 });
 
 export const trashItemSchema=z.discriminatedUnion('type',[
-  z.object({id:z.uuid(),type:z.literal('note'),deletedAt:z.iso.datetime(),note:noteSchema,placement:trashPlacementSchema,folder:trashFolderSchema.optional()}),
+  z.object({id:z.uuid(),type:z.literal('note'),deletedAt:z.iso.datetime(),note:noteSchema,placement:trashPlacementSchema.extend({spaceId:z.string().min(1).max(100).optional(),sectionId:z.string().min(1).max(100).optional()}),folder:trashFolderSchema.optional()}),
   // A whole work: its list position and the notes that linked to it come back on restore.
   z.object({id:z.uuid(),type:z.literal('work'),deletedAt:z.iso.datetime(),work:workSchema,index:z.number().int().min(0).max(100),noteIds:z.array(z.uuid()).max(5000)}),
   z.object({id:z.uuid(),type:z.literal('document'),deletedAt:z.iso.datetime(),workId:z.uuid(),workTitle:z.string().min(1).max(300),document:documentSchema,aiMessages:chatMessagesSchema.optional(),folder:trashFolderSchema.optional(),placement:trashPlacementSchema.extend({section:z.object({id:z.string().min(1).max(100),title:z.string().min(1).max(200),defaultKind:z.enum(['scene','wiki','memo'])})})}),
@@ -248,7 +248,7 @@ export const workspaceSchema = z.object({
   workShelves:z.array(workShelfSchema).max(40).optional(),
   authorProfile:authorProfileSchema.optional(),
 }).superRefine((data,ctx)=>{
-  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...(data.trash||[]).map(t=>t.id)];
+  const ids = [...data.works.map(w=>w.id), ...data.works.flatMap(w=>w.documents.map(d=>d.id)), ...data.works.flatMap(w=>w.navigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...data.assets.map(a=>a.id), ...(data.notes||[]).map(n=>n.id), ...(data.noteNavigation?.nodes.filter(n=>n.type==='folder').map(n=>n.id)||[]), ...(data.trash||[]).map(t=>t.id), ...(data.noteNavigation?.spaces||[]).flatMap(s=>[...(s.id==='default'?[]:[s.id]),...s.sections.map(section=>section.id).filter(id=>z.uuid().safeParse(id).success)])];
 
   if (new Set(ids).size !== ids.length) ctx.addIssue({code:'custom',message:'중복된 문서 ID가 있습니다.'});
 
