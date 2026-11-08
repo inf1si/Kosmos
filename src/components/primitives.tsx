@@ -6,8 +6,9 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { ArrowLeft, X } from 'lucide-react';
 import { useId,useRef, type ReactNode, type ButtonHTMLAttributes, type CSSProperties, type RefObject } from 'react';
 
-export function IconButton({label,children,...props}:ButtonHTMLAttributes<HTMLButtonElement>&{label:string;children:ReactNode}){
-  return <Tooltip.Root><Tooltip.Trigger asChild><button type="button" className="icon-button" aria-label={label} {...props}>{children}</button></Tooltip.Trigger><Tooltip.Portal><Tooltip.Content className="tooltip" sideOffset={6}>{label}<Tooltip.Arrow/></Tooltip.Content></Tooltip.Portal></Tooltip.Root>;
+/** `tip` is a shorter visible tooltip when the row beside the button already names what `label` spells out for screen readers. */
+export function IconButton({label,tip,children,...props}:ButtonHTMLAttributes<HTMLButtonElement>&{label:string;tip?:string;children:ReactNode}){
+  return <Tooltip.Root><Tooltip.Trigger asChild><button type="button" className="icon-button" aria-label={label} {...props}>{children}</button></Tooltip.Trigger><Tooltip.Portal><Tooltip.Content className="tooltip" sideOffset={6}>{tip??label}<Tooltip.Arrow/></Tooltip.Content></Tooltip.Portal></Tooltip.Root>;
 }
 
 export function TooltipProvider({children}:{children:ReactNode}){return <Tooltip.Provider delayDuration={350}>{children}</Tooltip.Provider>;}
