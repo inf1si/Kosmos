@@ -29,7 +29,7 @@ import { noteExtensions } from '@/lib/editor-extensions';
 import { textStatistics } from '@/lib/text-statistics';
 import { ThemeToggle } from './theme-toggle';
 import { useStoredChoice } from './use-app-preferences';
-import { NOTES_LIST_VIEW_KEY, notesListViews } from '@/lib/app-preferences';
+import { NOTE_SPACE_KEY, NOTES_LIST_VIEW_KEY, notesListViews } from '@/lib/app-preferences';
 import { useDrawerFocus } from './use-drawer-focus';
 import { SidebarResizer, useSidebarStyle } from './sidebar-resizer';
 import { filterNotes, noteBacklinks, noteDocument, noteTitle, patchNote } from '@/lib/personal-notes';
@@ -48,10 +48,13 @@ type Props={searchJump:WorkspaceSearchJump|null;onSearchJump:()=>void;onSearch:(
 
 export function PersonalNotes({searchJump,onSearchJump,onSearch,activeId,captureId,importRequested,onImportOpened,onImportBack,onSelect,onReturn,onNew,onOpenWork}:Props){
   const s=useStudio(),notes=s.state?.notes||EMPTY_NOTES;
-  const [selectedSpace,setSelectedSpace]=useState(DEFAULT_NOTE_SPACE),[spaceHome,setSpaceHome]=useState(false),[spaceRequest,setSpaceRequest]=useState<NoteSpaceRequest|null>(null);
+  const [selectedSpace,setSelectedSpace]=useState(()=>{try{return localStorage.getItem(NOTE_SPACE_KEY)||DEFAULT_NOTE_SPACE;}catch{return DEFAULT_NOTE_SPACE;}}),[spaceHome,setSpaceHome]=useState(false),[spaceRequest,setSpaceRequest]=useState<NoteSpaceRequest|null>(null);
   const spaces=useMemo(()=>s.state?resolveNoteNavigation(s.state).spaces:[],[s.state]);
   const spaceId=s.state&&activeId&&notes.some(n=>n.id===activeId)?noteSpaceFor(s.state,activeId):spaces.some(space=>space.id===selectedSpace)?selectedSpace:DEFAULT_NOTE_SPACE;
   const space=spaces.find(space=>space.id===spaceId);
+  // A note opened from search, a reference or the address keeps the sidebar and the remembered space on its own space.
+  useEffect(()=>{setSelectedSpace(spaceId);},[spaceId]);
+  useEffect(()=>{try{localStorage.setItem(NOTE_SPACE_KEY,selectedSpace);}catch{}},[selectedSpace]);
   /** Moving needs another space or section to go to. */
   const movable=spaces.length>1||spaces.some(space=>space.sections.length>1);
   const spaceNotes=useMemo(()=>s.state?notesInSpace(s.state,spaceId):EMPTY_NOTES,[s.state,spaceId]);
@@ -168,13 +171,13 @@ if(compact)setSidebar(false);}
 if(compact)setSidebar(false);},open:side==='links'}} readonly={readonly} autofocus={active.id===captureId} contentLabel="노트 본문" wiki={linkTargets} onWikiClick={select} linkCopy={NOTE_LINK_COPY} noteTools={noteTools} aiTools={{scope:{noteId:active.id,docId:active.id},onContinue:()=>{setSide('ai');
 
 if(compact)setSidebar(false);}}} onChange={content=>patch(active.id,{content})}
-        heading={<NoteHead key={active.id} note={active} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');
+        heading={<NoteHead key={active.id} note={active} spaceTitle={spaces.length>1&&space?noteSpaceTitle(space):undefined} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');
 
 if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork} onMoveSpace={movable?anchor=>setSpaceRequest({type:'move',id:active.id,spaceId,anchor}):undefined}/>}
         toolbarEnd={<><span className="char-count" aria-label="글자 수 · 공백 포함">{textStatistics(active.content).charactersWithSpaces.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={side==='ai'} onClick={()=>{setSide(v=>v==='ai'?null:'ai');
 
 if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
-        :<NotesHome state={s.state} spaceId={spaceHome?spaceId:undefined} onSpace={selectSpace} onNewSpace={anchor=>setSpaceRequest({type:'new',spaceId,anchor})} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
+        :<NotesHome state={s.state} spaceId={spaceHome?spaceId:undefined} currentSpaceId={spaceId} onSpace={selectSpace} onNewSpace={anchor=>setSpaceRequest({type:'new',spaceId,anchor})} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
     </main>
     {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<><InternalReferencePanel sourceId={active.id} preview={referencePreview} onPreview={setReferencePreview} onOpen={openReferenceTarget} showEmpty={!noteLinkCount}/>{!referencePreview&&noteLinkCount>0&&<NoteLinks note={active} notes={notes} onOpen={select}/>}</>
       :<AIChat key={`${s.namespace}-${active.id}-${s.epoch}`} noteId={active.id} doc={noteDocument(active)} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);
@@ -193,7 +196,7 @@ if(active?.id===id||tree?.navigation&&descendantsOf(tree.navigation,id).has(acti
   </div></TooltipProvider>;
 }
 
-function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork,onMoveSpace}:{note:PersonalNote;readonly:boolean;links:number;linksOpen:boolean;onLinks:()=>void;onPatch:(patch:Parameters<typeof patchNote>[2])=>void;onOpenWork:Props['onOpenWork'];onMoveSpace?:(anchor:HTMLElement|null)=>void}){
+function NoteHead({note,spaceTitle,readonly,links,linksOpen,onLinks,onPatch,onOpenWork,onMoveSpace}:{note:PersonalNote;spaceTitle?:string;readonly:boolean;links:number;linksOpen:boolean;onLinks:()=>void;onPatch:(patch:Parameters<typeof patchNote>[2])=>void;onOpenWork:Props['onOpenWork'];onMoveSpace?:(anchor:HTMLElement|null)=>void}){
   const [propertiesOpen,setPropertiesOpen]=useState(false);
   const s=useStudio(),[panel,setPanel]=useState<'tags'|'works'|'copy'|'files'|null>(null),[draftTag,setDraftTag]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [target,setTarget]=useState(s.state!.works[0].id),[kind,setKind]=useState<NovelDocument['kind']>('memo');
@@ -230,7 +233,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const url=URL.crea
 try{const id=await s.copyNote(note.id,targetId,kind);onOpenWork(targetId,id);}catch(e){setError(e instanceof Error?e.message:'노트를 가져오지 못했습니다.');}finally{setBusy(false);}}
 
   return <div className="doc-head">
-    <span className="doc-kicker">개인 노트 · {note.box==='icebox'?'아이스박스':'수집함'}</span>
+    <span className="doc-kicker">{spaceTitle??'개인 노트'} · {note.box==='icebox'?'아이스박스':'수집함'}</span>
     <input className="doc-title" aria-label="노트 제목" placeholder="제목 (선택)" maxLength={300} value={note.title} disabled={effectiveReadonly} onChange={e=>onPatch({title:e.target.value})} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.closest('.editor-scroll')?.querySelector<HTMLElement>('.manuscript')?.focus();}}}/>
     <div className="doc-chips" ref={chipsRef}>
       <Popover open={panel==='tags'} onOpenChange={open=>{setPanel(current=>open?'tags':current==='tags'?null:current);setError('');}} title="노트 태그" width={320} onReturnFocus={returnToBody} trigger={<button type="button" className="chip" aria-label={note.tags.length?`태그 ${note.tags.length}개`:'태그 추가'}><Tag size={13}/>{note.tags.length?<span className="notes-tag-summary">{note.tags.slice(0,3).map(tag=>`#${tag}`).join(' ')}{note.tags.length>3?` +${note.tags.length-3}`:''}</span>:'태그 추가'}</button>}><div className="notes-popover"><div className="doc-chips">{note.tags.map(tag=><button type="button" className="chip" key={tag} aria-label={`${tag} 태그 제거`} disabled={effectiveReadonly} onClick={()=>onPatch({tags:note.tags.filter(value=>value!==tag)})}>#{tag}<X size={12}/></button>)}</div><form onSubmit={e=>{e.preventDefault();addTag();}} className="notes-tag-form"><input aria-label="새 태그" maxLength={40} placeholder="태그 입력" value={draftTag} disabled={effectiveReadonly} onChange={e=>setDraftTag(e.target.value)}/><button type="submit" className="button" disabled={effectiveReadonly}>추가</button></form>{error&&<p className="danger" role="alert">{error}</p>}</div></Popover>

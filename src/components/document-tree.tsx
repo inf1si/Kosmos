@@ -4,7 +4,7 @@ import { documentSchema } from '@/lib/model';
 import { Fragment, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ArrowDown, ArrowUp, BookPlus, ChevronDown, ChevronRight, Columns2, FileText, Files, Folder, FolderPlus, GripVertical, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookPlus, ChevronDown, ChevronRight, Columns2, FileText, Files, Folder, FolderPlus, GripVertical, ListPlus, MoreHorizontal, Pencil, Plus, StickyNote, Trash2, Undo2 } from 'lucide-react';
 import { type NovelDocument, type Work, statuses, plainText, uid } from '@/lib/model';
 import { applyNavigation, createNavigationDocument, descendantsOf, insertFolder, moveNavigation, navigationSnapshot, resolveNavigation, restoreNavigation, siblingDestination, type DocumentDestination, type NavigationNode, type NavigationSnapshot } from '@/lib/document-navigation';
 import { IconButton, Modal, Popover } from './primitives';
@@ -136,7 +136,7 @@ return next;});}
   async function moveToTrash(node:NavigationNode){
     if(readonly||!onTrash)return;setMovingToTrash(true);setError('');
 
-    try{await onTrash(node.id);setUndo(null);window.setTimeout(()=>root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="섹션 추가"]')?.focus(),0);}
+    try{await onTrash(node.id);setUndo(null);window.setTimeout(()=>root.current?.querySelector<HTMLElement>('[data-tree-add]')?.focus(),0);}
     catch(error){setError(error instanceof Error?error.message:`${noun}를 휴지통으로 옮기지 못했습니다.`);menuButtonOf({id:node.id})?.focus();}
     finally{setMovingToTrash(false);}
   }
@@ -276,6 +276,20 @@ return applyNavigation(latest,next);});}});
   const renderEntries=(t:Target,Item:typeof DropdownMenu.Item,Separator:typeof DropdownMenu.Separator)=>menuEntries(t).map(e=><Fragment key={e.key}>{e.divider&&<Separator className="menu-separator"/>}<Item className="menu-item" disabled={e.disabled} title={e.title} onSelect={e.run}>{e.icon}{e.label}</Item></Fragment>);
   const menuKey=(t:Target)=>`${t.section?'section':'node'}:${t.id}`,menuOpen=(t:Target)=>menuFor===`menu:${menuKey(t)}`||menuFor===`context:${menuKey(t)}`;
 
+  /** One add menu for the studio and notes: a document or folder goes to the top of the current section, or a new section. */
+  const addSection=nav.sections.find(section=>section.id===nodes.get(activeId)?.sectionId)??nav.sections[0],addButton=useRef<HTMLButtonElement>(null);
+
+  const addEntries:MenuEntry[]=addSection?[
+    {key:'document',label:`${noun} 추가`,icon:<Plus size={15}/>,disabled:readonly,run:()=>{const to={sectionId:addSection.id,parentId:null};afterMenu(()=>noteView?noteView.onNew(to):openForm({type:'document',to,kind:addSection.defaultKind},addButton.current));}},
+    {key:'folder',label:'폴더 추가',icon:<FolderPlus size={15}/>,disabled:readonly,run:()=>afterMenu(()=>openForm({type:'folder',to:{sectionId:addSection.id,parentId:null}},addButton.current))},
+    {key:'section',label:'섹션 추가',icon:<ListPlus size={15}/>,disabled:readonly||nav.sections.length>=40,run:()=>afterMenu(()=>openForm({type:'section'},addButton.current))},
+  ]:[{key:'section',label:'섹션 추가',icon:<ListPlus size={15}/>,disabled:readonly,run:()=>afterMenu(()=>openForm({type:'section'},addButton.current))}];
+
+  const addMenu=<DropdownMenu.Root modal={false} open={menuFor==='menu:add'} onOpenChange={open=>setMenuFor(open?'menu:add':null)}>
+    <DropdownMenu.Trigger asChild><button ref={addButton} type="button" className="icon-button" aria-label="추가" title="추가" data-tree-add=""><Plus size={15}/></button></DropdownMenu.Trigger>
+    <DropdownMenu.Portal><DropdownMenu.Content className="menu" align="end" sideOffset={4} collisionPadding={12} onCloseAutoFocus={menuClose(keepMenuFocus)}>{addEntries.map(e=><DropdownMenu.Item key={e.key} className="menu-item" disabled={e.disabled} onSelect={e.run}>{e.icon}{e.label}</DropdownMenu.Item>)}</DropdownMenu.Content></DropdownMenu.Portal>
+  </DropdownMenu.Root>;
+
   /** 행 오른쪽 … 버튼과 우클릭이 같은 항목을 연다. */
   const rowMenu=(t:Target,label:string)=><DropdownMenu.Root modal={false} open={menuFor===`menu:${menuKey(t)}`} onOpenChange={open=>setMenuFor(open?`menu:${menuKey(t)}`:null)}>
     <DropdownMenu.Trigger asChild><button type="button" className={`icon-button ${styles.rowMenu}`} aria-label={label} title={label} data-row-menu=""><MoreHorizontal size={15}/></button></DropdownMenu.Trigger>
@@ -337,7 +351,7 @@ if(e.detail>0&&suppressed?.id===n.id&&Date.now()<suppressed.until)return;openFor
   const formTitle=dialog?.type==='move'?`${moveNode?title(moveNode):noun} 이동`:dialog?.type==='folder'?'폴더 만들기':dialog?.type==='document'?'문서 만들기':'섹션 추가';
 
   return <div ref={root} className={styles.tree}>
-    <div className={styles.toolbar} data-navigation-section={noteView?nav.sections[0].id:undefined} data-drop-edge={noteView&&drag?.active&&drag.drop?.id===nav.sections[0].id?drag.drop.edge:undefined}><span>{noteView?'노트 정리':'문서'}</span>{undo&&<IconButton label={`${noun} 정리 되돌리기`} disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),false);setUndo(null);}}><Undo2 size={14}/></IconButton>}{noteView?<IconButton label="최상위 폴더 추가" disabled={readonly} onClick={e=>openForm({type:'folder',to:{sectionId:nav.sections[0].id,parentId:null}},e.currentTarget)}><FolderPlus size={15}/></IconButton>:null}<IconButton label="섹션 추가" disabled={readonly||nav.sections.length>=40} onClick={e=>openForm({type:'section'},e.currentTarget)}><Plus size={15}/></IconButton></div>
+    <div className={styles.toolbar} data-navigation-section={noteView?nav.sections[0].id:undefined} data-drop-edge={noteView&&drag?.active&&drag.drop?.id===nav.sections[0].id?drag.drop.edge:undefined}><span>{noteView?'노트 정리':'문서'}</span>{undo&&<IconButton label={`${noun} 정리 되돌리기`} disabled={readonly} onClick={()=>{const previous=undo;mutate(latest=>restoreNavigation(latest,previous),false);setUndo(null);}}><Undo2 size={14}/></IconButton>}{addMenu}</div>
     {nav.sections.map((section,index)=>{const sectionClosed=!query.trim()&&closed.has(`section:${section.id}`),count=nav.nodes.filter(n=>n.sectionId===section.id&&n.type==='document').length,drop=drag?.active&&drag.drop?.id===section.id?drag.drop:undefined;
       const t={id:section.id,section:true},isRenaming=renaming?.id===section.id&&!!renaming.section;
 
@@ -362,7 +376,7 @@ if(target?.isConnected)target.focus();else (root.current?.querySelector<HTMLButt
     </Popover>
     <Modal open={!!folderDelete} onClose={()=>{if(!movingToTrash){setFolderDelete(null);setError('');}}} title="폴더 전체 삭제" onReturnFocus={()=>{
       if(returnFocus.current?.isConnected)returnFocus.current.focus();
-      else root.current?.querySelector<HTMLElement>(noteView?'[aria-label="최상위 폴더 추가"]':'[aria-label="섹션 추가"]')?.focus();
+      else root.current?.querySelector<HTMLElement>('[data-tree-add]')?.focus();
     }}>
       <p style={{overflowWrap:'anywhere'}}>‘{folderDelete?.title}’ 폴더를 전체 삭제할까요?</p>
       <p className="field-help">{folderDelete?.documents?`폴더 구조와 하위 ${noun} ${folderDelete.documents}개를 휴지통에 보관합니다.${folderDelete.replace?' 빈 원고 하나를 남깁니다.':''}`:`하위 폴더 ${folderDelete?.folders||0}개도 삭제합니다.`}</p>
