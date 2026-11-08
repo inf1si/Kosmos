@@ -137,7 +137,7 @@ return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openN
 return()=>media.removeEventListener('change',update);},[]);
   const workMenuRef=useDismiss(workMenu,setWorkMenu);const moreMenuRef=useDismiss(moreMenu,setMoreMenu);
 
-  function openSearch(query?:string){openWorkspaceSearch(query);}
+  function openSearch(){openWorkspaceSearch();}
 
   useEffect(()=>{const media=window.matchMedia('(max-width: 900px)');setCompact(media.matches);
 
@@ -185,7 +185,7 @@ if(id){setWorkId(id);setCurrent(docId||'');setLastDoc(docId||'');setTabs(readStu
 
   const searchDialog=<WorkspaceSearch key="workspace-search" currentWorkId={work.id} onOpen={openSearchResult}/>;
 
-  if(notesOpen)return <TooltipProvider>{searchDialog}<PersonalNotes searchJump={searchJump} onSearchJump={()=>setSearchJump(null)} onSearch={openSearch} onSearchResult={openSearchResult} activeId={selectedNote} captureId={captureId} importRequested={noteImport} onImportOpened={()=>setNoteImport(false)} onImportBack={()=>{if(importFromStudio.current)returnToWork();modal('settings-return:note-import');}} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs key="studio-dialogs" workId={work.id}/></TooltipProvider>;
+  if(notesOpen)return <TooltipProvider>{searchDialog}<PersonalNotes searchJump={searchJump} onSearchJump={()=>setSearchJump(null)} onSearch={openSearch} activeId={selectedNote} captureId={captureId} importRequested={noteImport} onImportOpened={()=>setNoteImport(false)} onImportBack={()=>{if(importFromStudio.current)returnToWork();modal('settings-return:note-import');}} onSelect={openNotes} onReturn={()=>returnToWork()} onNew={createNote} onOpenWork={returnToWork}/><StudioDialogs key="studio-dialogs" workId={work.id}/></TooltipProvider>;
   const onHome=current===HOME,onBoard=current===BOARD,onGraph=current===GRAPH,onOverview=onHome||onBoard||onGraph;
   const active=openingDocument(docs,onOverview?lastDoc:current,lastDoc);
   const view=onHome?HOME:onGraph?GRAPH:onBoard?BOARD:active.id;
