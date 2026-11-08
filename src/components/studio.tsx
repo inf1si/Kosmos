@@ -6,6 +6,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDown, ArrowUp, CassetteTape, ChevronLeft, ChevronRight, ChevronsUpDown, Clock3, Cloud, Columns2, FileText, Globe2, Grid3x3, HardDrive, House, LayoutGrid, Link2, Lock, Maximize2, MoreHorizontal, Network, NotebookPen, PanelLeft, PanelRight, Paperclip, Plus, Save, Search, Send, Settings, Settings2, SlidersHorizontal, Sparkles, StickyNote, Trash2, User, X } from 'lucide-react';
 import { useStudio } from './studio-provider';
+import { useDismiss } from './use-dismiss';
 import { TooltipProvider, IconButton, Modal } from './primitives';
 import { RichEditor } from './rich-editor';
 import { EditorTabs } from './editor-tabs';
@@ -68,20 +69,6 @@ function studioEntry(){
   try{home=parseAppPreferences(localStorage.getItem(APP_PREFERENCES_KEY)).studioStart==='home';}catch{/* Server render or blocked storage: start on the home. */}
 
   return {workId:position.workId,docId:position.docs[position.workId]||'',home,tabs:readStudioTabs(position.workId)};
-}
-
-/** Closes a popover on a click outside it or Escape, returning focus to its toggle. */
-function useDismiss(open:boolean,setOpen:(open:boolean)=>void){
-  const ref=useRef<HTMLDivElement>(null);
-  useEffect(()=>{if(!open)return;const down=(e:PointerEvent)=>{if(!ref.current?.contains(e.target instanceof Node?e.target:null))setOpen(false);};
-
-const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);ref.current?.querySelector<HTMLElement>('[aria-expanded]')?.focus();}};
-
-document.addEventListener('pointerdown',down);document.addEventListener('keydown',key);
-
-return()=>{document.removeEventListener('pointerdown',down);document.removeEventListener('keydown',key);};},[open,setOpen]);
-
-  return ref;
 }
 
 export function Studio(){

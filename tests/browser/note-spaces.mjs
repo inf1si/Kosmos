@@ -20,6 +20,15 @@ const browser=await pw.chromium.launch({headless:true,executablePath:process.env
 
 let current;
 
+/** Every menu button stays inside the menu, and the current space differs from the others. */
+const menuLayout=el=>{const box=el.getBoundingClientRect(),items=[...el.querySelectorAll('button')],current=el.querySelector('[aria-current=true]'),other=items.find(b=>b!==current&&!b.disabled);
+
+ const inside=items.every(b=>{const r=b.getBoundingClientRect();
+
+return r.left>=box.left-0.5&&r.right<=box.right+0.5;});
+
+ return {inside,current:current&&getComputedStyle(current).backgroundColor,other:other&&getComputedStyle(other).backgroundColor};};
+
 const until=async(page,check,label)=>{for(let i=0;i<150;i++){if(await check())return;await page.waitForTimeout(60);}
 
 assert.fail(label);};
@@ -53,11 +62,14 @@ for(const n of [a,b,c])data=addNote(data,n);
 
   const openSpaces=async()=>{await openSidebar();await opener().click();
 
-return page.getByRole('dialog',{name:'노트 작업공간',exact:true});};
+const menu=sidebar.locator('#note-space-menu');await menu.waitFor();
+
+return menu;};
 
   const selectSpace=async title=>{const popup=await openSpaces();await popup.getByRole('button',{name:new RegExp(`^${title}`)}).click();};
 
   await openSidebar();await sidebar.locator(`[data-navigation-row="${folder}"]`).waitFor();assert((await opener().innerText()).includes('기본 작업공간'));
+  await sidebar.getByRole('button',{name:'기존 폴더 메뉴',exact:true}).click();assert.equal(await page.getByRole('menuitem',{name:'다른 작업공간으로 이동',exact:true}).count(),0,'one space and one section offers nowhere to move');await page.keyboard.press('Escape');
   await (await openSpaces()).getByRole('button',{name:'새 작업공간',exact:true}).click();let form=page.getByRole('dialog',{name:'새 작업공간',exact:true});await form.waitFor();assert.equal(await form.getByRole('textbox',{name:'작업공간 이름'}).evaluate(el=>el===document.activeElement),true);
   await form.getByRole('textbox',{name:'작업공간 이름'}).fill('구상실');await form.getByRole('button',{name:'만들기',exact:true}).click();await until(page,()=>data.noteNavigation?.spaces?.length===2,'new space saves migrated structure');
   const spaceId=data.noteNavigation.spaces.find(s=>s.title==='구상실').id;assert.deepEqual(data.notes,original.notes);assert.deepEqual(data.assets,original.assets);assert.deepEqual(data.works,original.works);assert.equal(data.noteNavigation.nodes.find(n=>n.id===c.id).parentId,nested);
@@ -83,7 +95,7 @@ return page.getByRole('dialog',{name:'노트 작업공간',exact:true});};
   for(const palette of quick?PALETTES.slice(0,1):PALETTES)for(const mode of ['light','dark']){
    await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});await openSidebar();
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);assert.equal(await sidebar.evaluate(el=>el.scrollWidth>el.clientWidth+1),false);results.push({width,palette,mode,screen:'tree'});
-   const popup=await openSpaces(),bounds=await popup.boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=width+1);assert.equal(await popup.evaluate(el=>el.scrollWidth>el.clientWidth+1),false);results.push({width,palette,mode,screen:'spaces'});await popup.getByRole('button',{name:'새 작업공간',exact:true}).click();form=page.getByRole('dialog',{name:'새 작업공간',exact:true});const fb=await form.boundingBox();assert(fb.x>=0&&fb.x+fb.width<=width+1);results.push({width,palette,mode,screen:'new'});
+   const popup=await openSpaces(),bounds=await popup.boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=width+1);assert.equal(await popup.evaluate(el=>el.scrollWidth>el.clientWidth+1),false);const layout=await popup.evaluate(menuLayout);assert(layout.inside,'space actions stay inside the menu');assert(layout.current&&layout.current!==layout.other,'current space is highlighted');results.push({width,palette,mode,screen:'spaces'});await popup.getByRole('button',{name:'새 작업공간',exact:true}).click();form=page.getByRole('dialog',{name:'새 작업공간',exact:true});const fb=await form.boundingBox();assert(fb.x>=0&&fb.x+fb.width<=width+1);results.push({width,palette,mode,screen:'new'});
 
    if(['violet','cyber','orbit'].includes(palette)&&mode==='dark')await page.screenshot({path:resolve(out,`new-${width}-${palette}.png`)});await page.keyboard.press('Escape');await sidebar.locator('[data-workspace-search-opener]').click();await search.waitFor();await input.fill('작업공간검색어');await chooseOption(scope,`space:${spaceId}`);await until(page,()=>list.getByRole('option').count().then(n=>n===2),'theme search results');const sb=await search.boundingBox();assert(sb.x>=0&&sb.x+sb.width<=width+1);results.push({width,palette,mode,screen:'search'});
 

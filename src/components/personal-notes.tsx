@@ -52,6 +52,8 @@ export function PersonalNotes({searchJump,onSearchJump,onSearch,activeId,capture
   const spaces=useMemo(()=>s.state?resolveNoteNavigation(s.state).spaces:[],[s.state]);
   const spaceId=s.state&&activeId&&notes.some(n=>n.id===activeId)?noteSpaceFor(s.state,activeId):spaces.some(space=>space.id===selectedSpace)?selectedSpace:DEFAULT_NOTE_SPACE;
   const space=spaces.find(space=>space.id===spaceId);
+  /** Moving needs another space or section to go to. */
+  const movable=spaces.length>1||spaces.some(space=>space.sections.length>1);
   const spaceNotes=useMemo(()=>s.state?notesInSpace(s.state,spaceId):EMPTY_NOTES,[s.state,spaceId]);
   const [templateRequest,setTemplateRequest]=useState<TemplateDialogRequest|null>(null);
   const [referencePreview,setReferencePreview]=useState<InternalReference|null>(null);
@@ -153,7 +155,7 @@ if(compact)setSidebar(false);}
           <label>태그<Select aria-label="태그로 노트 찾기" value={tag} onChange={value=>setTag(value)}><option value="">모든 태그</option>{allTags.map(value=><option key={value}>{value}</option>)}</Select></label>
           <label>연결된 작품<Select aria-label="연결된 작품으로 노트 찾기" value={workId} onChange={value=>setWorkId(value)}><option value="">모든 작품</option>{works.map(work=><option value={work.id} key={work.id}>{work.title}</option>)}</Select></label>
           <div className="popover-actions"><button type="button" className="button" disabled={!filters} onClick={()=>{setTag('');setWorkId('');}}><RotateCcw size={13}/>필터 초기화</button></div>
-        </Popover></div>{listView==='tree'?<DocumentTree key={`${spaceId}-${s.epoch}`} work={tree!} query="" activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit,spaceId))} onRenameDocument={(id,title)=>patch(id,{title})} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to,spaceId)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor}),onMoveSpace:(id,anchor)=>setSpaceRequest({type:'move',id,spaceId,anchor})}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'노트가 없습니다.'}</p>}{listView==='tree'&&!spaceNotes.length&&!tree?.navigation?.nodes.length&&<p className="muted notes-empty">노트가 없습니다.</p>}</div>
+        </Popover></div>{listView==='tree'?<DocumentTree key={`${spaceId}-${s.epoch}`} work={tree!} query="" activeId={active?.id||''} readonly={readonly} onOpen={select} onChange={edit=>s.update(state=>editNoteTree(state,edit,spaceId))} onRenameDocument={(id,title)=>patch(id,{title})} onTrash={trashNote} onTrashFolder={trashFolder} onTemplate={setTemplateRequest} noteView={{matchingIds:visible.map(n=>n.id),eligibleIds:eligible,filtered:box!=='all'||!!tag||!!workId,onNew:to=>create(treeDestination(to,spaceId)),onFolderWork:(id,anchor)=>setFolderWork({id,anchor}),onMoveSpace:movable?(id,anchor)=>setSpaceRequest({type:'move',id,spaceId,anchor}):undefined}}/>:visible.length?visible.map(note=><NoteCard key={note.id} note={note} current={note.id===active?.id} onOpen={select}/>):<p className="muted notes-empty">{notes.length?'조건에 맞는 노트가 없습니다.':'노트가 없습니다.'}</p>}{listView==='tree'&&!spaceNotes.length&&!tree?.navigation?.nodes.length&&<p className="muted notes-empty">노트가 없습니다.</p>}</div>
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
     {sidebar&&!compact&&<SidebarResizer target={sidebarRef} onCollapse={closeSidebar}/>}
@@ -168,7 +170,7 @@ if(compact)setSidebar(false);},open:side==='links'}} readonly={readonly} autofoc
 if(compact)setSidebar(false);}}} onChange={content=>patch(active.id,{content})}
         heading={<NoteHead key={active.id} note={active} readonly={readonly} links={noteLinkCount} linksOpen={side==='links'} onLinks={()=>{setSide(v=>v==='links'?null:'links');
 
-if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork} onMoveSpace={anchor=>setSpaceRequest({type:'move',id:active.id,spaceId,anchor})}/>}
+if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpenWork={onOpenWork} onMoveSpace={movable?anchor=>setSpaceRequest({type:'move',id:active.id,spaceId,anchor}):undefined}/>}
         toolbarEnd={<><span className="char-count" aria-label="글자 수 · 공백 포함">{textStatistics(active.content).charactersWithSpaces.toLocaleString()}자{!sidebar&&<span className="toolbar-status"> · {s.status}</span>}</span><span className="toolbar-divider"/><button type="button" id="note-ai-toggle" className="toolbar-text-button" aria-pressed={side==='ai'} onClick={()=>{setSide(v=>v==='ai'?null:'ai');
 
 if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
@@ -191,7 +193,7 @@ if(active?.id===id||tree?.navigation&&descendantsOf(tree.navigation,id).has(acti
   </div></TooltipProvider>;
 }
 
-function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork,onMoveSpace}:{note:PersonalNote;readonly:boolean;links:number;linksOpen:boolean;onLinks:()=>void;onPatch:(patch:Parameters<typeof patchNote>[2])=>void;onOpenWork:Props['onOpenWork'];onMoveSpace:(anchor:HTMLElement|null)=>void}){
+function NoteHead({note,readonly,links,linksOpen,onLinks,onPatch,onOpenWork,onMoveSpace}:{note:PersonalNote;readonly:boolean;links:number;linksOpen:boolean;onLinks:()=>void;onPatch:(patch:Parameters<typeof patchNote>[2])=>void;onOpenWork:Props['onOpenWork'];onMoveSpace?:(anchor:HTMLElement|null)=>void}){
   const [propertiesOpen,setPropertiesOpen]=useState(false);
   const s=useStudio(),[panel,setPanel]=useState<'tags'|'works'|'copy'|'files'|null>(null),[draftTag,setDraftTag]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [target,setTarget]=useState(s.state!.works[0].id),[kind,setKind]=useState<NovelDocument['kind']>('memo');
@@ -246,7 +248,7 @@ return work?<button type="button" className="chip soft" key={id} onClick={()=>on
           <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>onPatch({pinned:!note.pinned})}>{note.pinned?<PinOff size={15}/>:<Pin size={15}/>}{note.pinned?'고정 해제':'노트 홈에 고정'}</DropdownMenu.Item>
           <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>onPatch({box:note.box==='icebox'?'inbox':'icebox'})}>{note.box==='icebox'?<Inbox size={15}/>:<Snowflake size={15}/>}{note.box==='icebox'?'수집함으로 꺼내기':'아이스박스에 넣기'}</DropdownMenu.Item>
           <DropdownMenu.Separator className="menu-separator"/>
-          <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>{keepMenuFocus.current=true;window.setTimeout(()=>onMoveSpace(chipsRef.current),0);}}><FolderInput size={15}/>작업공간으로 이동</DropdownMenu.Item>
+          {onMoveSpace&&<DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>{keepMenuFocus.current=true;window.setTimeout(()=>onMoveSpace(chipsRef.current),0);}}><FolderInput size={15}/>작업공간으로 이동</DropdownMenu.Item>}
           <DropdownMenu.Item className="menu-item" onSelect={()=>openPanel('files')}><Paperclip size={15}/>이미지 첨부</DropdownMenu.Item>
           <DropdownMenu.Item className="menu-item" disabled={effectiveReadonly} onSelect={()=>openPanel('copy')}><NotebookPen size={15}/>작품으로 가져오기</DropdownMenu.Item>
         </DropdownMenu.Content></DropdownMenu.Portal>
