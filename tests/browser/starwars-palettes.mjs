@@ -123,6 +123,7 @@ try {
         assert.match(await page.locator('.reading-scene-title h2').first().evaluate(el => getComputedStyle(el, '::before').content), /decimal-leading-zero/, 'scene number');
 
         assert.match(await pseudo(page, '.reading-title', '::after', 'backgroundImage'), /data:image\/svg/, 'lightsaber divider');
+
         if (palette === 'empire') assert.doesNotMatch(await pseudo(page, '.reading-title', '::after', 'backgroundImage'), /rect/, 'red beam without a hilt');
         await shot('reader');
 
