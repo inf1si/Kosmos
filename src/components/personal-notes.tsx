@@ -55,6 +55,7 @@ export function PersonalNotes({searchJump,onSearchJump,onSearch,onSearchResult,a
   const [listView,chooseList]=useStoredChoice(NOTES_LIST_VIEW_KEY,notesListViews,'tree'),[importOpen,setImportOpen]=useState(false),[folderWork,setFolderWork]=useState<{id:string;anchor:HTMLElement|null}|null>(null);
   const [query,setQuery]=useState(''),[filterOpen,setFilterOpen]=useState(false),[box,setBox]=useState<'all'|'inbox'|'icebox'>('all'),[tag,setTag]=useState(''),[workId,setWorkId]=useState('');
   const [searchIndex,setSearchIndex]=useState(0),[searchLimit,setSearchLimit]=useState(50),searchListId=useId(),searchInput=useRef<HTMLInputElement>(null),searchList=useRef<HTMLDivElement>(null);
+  const pendingSearch=useRef<{hit:WorkspaceSearchHit;jump:WorkspaceSearchJump}|null>(null);
   const sidebarStyle=useSidebarStyle();
   const sidebarRef=useRef<HTMLElement>(null),closeSidebar=useCallback(()=>setSidebar(false),[]);
   // Settings asks for note import (the studio switches here first) and for this space's templates.
@@ -67,6 +68,13 @@ return()=>window.removeEventListener('studio-modal',listener);},[]);
   const aiRef=useRef<HTMLElement>(null),closeAI=useCallback(()=>setSide(null),[]);
   useDrawerFocus(compact&&!!side,aiRef,closeAI,side==='links'?'note-links-toggle':'note-ai-toggle');
   useDrawerFocus(compact&&sidebar,sidebarRef,closeSidebar,'sidebar-toggle');
+  useEffect(()=>{
+    const pending=pendingSearch.current;
+
+    if(sidebar||!pending)return;
+    // The drawer's cleanup restores its trigger first; only then may the editor take the search selection.
+    pendingSearch.current=null;onSearchResult(pending.hit,pending.jump);
+  },[sidebar,onSearchResult]);
   const search=useDeferredValue(query),visible=useMemo(()=>filterNotes(notes,{box,tag,workId}),[notes,box,tag,workId]);
   const eligible=useMemo(()=>visible.map(n=>n.id),[visible]);
 
@@ -114,7 +122,11 @@ if(compact)setSidebar(false);}
 
 if(compact)setSidebar(false);}
 
-  function chooseSearch(hit:WorkspaceSearchHit){onSearchResult(hit,{id:uid(),targetId:hit.document.targetId,terms});}
+  function chooseSearch(hit:WorkspaceSearchHit){
+    const jump={id:uid(),targetId:hit.document.targetId,terms};
+
+    if(compact&&sidebar){pendingSearch.current={hit,jump};setSidebar(false);setSide(null);}else onSearchResult(hit,jump);
+  }
 
   function previewReference(ref:InternalReference){setReferencePreview(ref);setSide('links');
 

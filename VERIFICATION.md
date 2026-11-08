@@ -6,7 +6,10 @@
 - 새 브라우저 회귀를 기존 코드에 실행해 노트 검색 결과 listbox 부재로 실패하는 것을 확인한 뒤 새 코드로 복구했다. 로컬 타입·검색/편집 19개·전체 269개 검사·전체 Anti Slop 린트·문서 검사를 통과했다.
 - Chromium Webpack 개발 실행에서 실제 노트 검색칸의 제목 우선 정렬·늦은 본문 발췌/강조/2곳·속성/폴더 경로 검색·클릭/키보드 위치 선택/스크롤·같은 노트 반복 이동·Ctrl F 이어 찾기·태그/작품/보관함 필터/초기화·검색어를 전체 범위로 넘겨 다른 작품 이동·55개 결과 더 보기·지우기/기존 보기 복귀를 확인했다. 1280/360px × 54테마의 108개 표시 경우와 글자 12px·두 줄·넘침 없음, 페이지 오류/원고 쓰기 0회로 통과했다. 보라 다크 데스크톱·궤도 다크 모바일을 직접 봤다. 증거는 `test-results/notes-search/report.json`과 같은 폴더 화면이다.
 - 공용 결과 내용 분리와 검색 열기 동작의 회귀는 기존 `workspace-search.mjs`의 Chromium quick(두 폭·보라 라이트/다크) 전체 검색/작품↔노트/본문 선택/실행 취소/분할/취소 초점/더 보기를 통과했다. 이 별도 회귀의 의도한 편집/실행 취소로 각 폭에서 합성 저장 1회가 있었으며 실제 계정에는 쓰지 않았다.
-- CI·운영은 확인 중이다. 실제 작가 로그인·원고 쓰기·WebKit·실제 모바일 기기·OS 한글 IME 입력은 미검증이다.
+- [PR #106](https://github.com/inf1si/Kosmos/pull/106)의 `9e21890`을 main `a63fac1802965894a638c1b2426fb42b838f50a3`에 병합했다. [PR CI](https://github.com/inf1si/Kosmos/actions/runs/42458234772)·[main CI](https://github.com/inf1si/Kosmos/actions/runs/42458447109)의 기본 빌드·전체 검사·age·린트가 통과했다. 프리뷰 `dpl_8Dz8kNPuS9EjE16a84BohxJ2NgU6` READY·보호된 `/studio` 200을 확인했다.
+- 첫 운영 `dpl_9jCi6vFznugvD12Ak6Zpq15nwBmc`는 Turbopack의 next/font import map `queries have exactly one entry` 오류로 실패했다. 같은 SHA를 새로 빌드한 `dpl_8EgXfij6pT3JKaYzL4C8HQ5zRFHs`는 READY·www/root 별칭을 확인했다. 폰트·빌드 설정은 바꾸지 않았다.
+- 실제 www의 같은 합성 회귀는 1280px을 마쳤지만 360px에서 같은 노트를 Enter로 다시 열 때 초점이 sidebar-toggle에 남아 실패했다. 구절 선택/스크롤은 적용되어 있었으며 useDrawerFocus의 닫힘 복귀가 뒤늦게 본문 초점을 가져가는 경합이었다. 모바일은 먼저 사이드바를 닫고 그 정리 후 보류한 결과/검색 위치를 적용하도록 보완했다. 후속 로컬 Chromium 두 폭/54테마 108개 경우는 오류/원고 쓰기 0회로 통과했고 검색/편집 19개·타입·전체 린트·문서 검사도 통과했다. CI·운영 재검증은 진행 중이다.
+- 실제 작가 로그인·원고 쓰기·WebKit·실제 모바일 기기·OS 한글 IME 입력은 미검증이다.
 
 ## 2026-11-03 — 서재 책 파일 다운로드
 
