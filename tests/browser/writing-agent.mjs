@@ -179,13 +179,19 @@ if(!await page.getByRole('button',{name:'작업 대화',exact:true}).isVisible()
 try{
   await until(async()=>{try{return (await fetch(base)).ok;}catch{return false;}},'Next server starts');
 
-  for(const width of [1280,360]){
+  for(const width of process.env.KOSMOS_AGENT_INTERACTIONS_ONLY==='1'?[1280]:[1280,360]){
     const context=await browser.newContext({viewport:{width,height:950}});
     await context.addInitScript(({profile,token,key})=>{if(window!==window.top)return;localStorage.setItem(key,JSON.stringify({access_token:token,refresh_token:'synthetic',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:profile}));},{profile,token,key:'sb-127-auth-token'});
     page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${base}/studio`,{waitUntil:'networkidle'});
     await openAgent();const dialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await dialog.waitFor();
     await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),'');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 실행 방식'}),'review');
     await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).click();await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();
+    await until(async()=>await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()||(await pg.query("select * from public.agent_runs where status='completed'")).rows.length>0,'running task visible');
+
+    if(await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()){
+      assert(await dialog.getByRole('combobox',{name:'에이전트 실행 방식'}).isDisabled());assert(await dialog.getByRole('combobox',{name:'에이전트 제공자'}).isDisabled());assert(await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).isDisabled());
+    }
+
     await until(async()=>{const rows=await pg.query("select * from public.agent_runs order by created_at desc limit 1");const row=rows.rows[0];
 
 if(row?.status==='failed')assert.fail(row.error);
@@ -232,6 +238,8 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify({w
       if(['violet','cyber','orbit'].includes(palette))await page.screenshot({path:resolve(output,`${width}-${palette}.png`)});
     }}
 
+    const downloadPromise=page.waitForEvent('download');await dialog.getByRole('button',{name:'AI 자료 내보내기',exact:true}).click();const download=await downloadPromise,archive=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(archive.format,'orbis-writing-agent');assert(archive.runs.some(row=>row.id===run.id));
+    await dialog.getByRole('button',{name:'새 작업 대화',exact:true}).click();assert(await dialog.getByRole('combobox',{name:'작업 자료 범위'}).isEnabled());assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement));await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),run.session_id);await dialog.locator('.agent-question').waitFor();
     await dialog.getByRole('button',{name:'닫기',exact:true}).click();await page.reload({waitUntil:'networkidle'});await openAgent();await page.getByRole('dialog',{name:'작업 대화',exact:true}).locator('.agent-question').filter({hasText:run.message}).waitFor();await context.close();
   }
 
