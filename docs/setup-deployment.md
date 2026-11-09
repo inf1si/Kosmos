@@ -182,3 +182,5 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 기본 `pnpm dev`·`pnpm build`는 Webpack을 명시한다. Next.js 16.3.8의 Turbopack 글꼴 내부 쿼리 해석 오류가 CI에서 재현되어 빌드 방식을 고정했다. 운영의 글꼴 파일·종류·라이선스는 변경하지 않는다.
 
 `pnpm-workspace.yaml`의 `patchedDependencies`는 [Next.js 글꼴 로더 패치](../patches/next@16.3.8.patch)를 설치 때 적용한다. Google의 `/l/font?kit=...` 응답은 확장자가 없어 기존 로더가 실패하므로 WOFF2/WOFF/OTF/TTF 헤더를 확인해 출력 확장자를 정한다. 다운로드한 바이트는 변경하지 않는다. Next.js를 올릴 때에는 확장자 없는 응답 회귀 검사와 실제 글꼴 빌드를 확인한 뒤 이 패치의 필요성을 다시 판단한다.
+
+GitHub CI의 컴파일은 Google 접속 제한과 분리하기 위해 로컬 테스트 글꼴 응답을 사용한다. 이 환경 변수는 CI의 빌드 명령에만 적용하며 Vercel 배포에는 설정하지 않는다. 실제 Google 파일을 받는 Vercel 빌드도 별도로 통과했는지 확인한다.

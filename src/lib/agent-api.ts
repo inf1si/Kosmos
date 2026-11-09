@@ -163,9 +163,9 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
       if(run.owner_id!==auth.userId)return json({error:'작업을 찾지 못했습니다.'},404);
 
       if(path[2]==='discard'&&run.applied_version===null&&!['queued','running'].includes(run.status)){
-        const result=await db.from('agent_runs').update({reverted:true}).eq('id',run.id).eq('owner_id',auth.userId);
+        const result=await db.from('agent_runs').update({reverted:true}).eq('id',run.id).eq('owner_id',auth.userId).is('applied_version',null).in('status',['completed','failed','cancelled']).select('id').maybeSingle();
 
-        if(result.error)throw new Error('작업본을 버리지 못했습니다.');
+        if(result.error||!result.data)throw new Error('이미 반영되었거나 진행 중인 변경입니다. 다시 확인하세요.');
 
         return json({discarded:true});
       }

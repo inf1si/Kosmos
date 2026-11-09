@@ -652,13 +652,13 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
 
   const refreshCloud=useCallback(async()=>{
     if(!cloudConfigured)return;
-    const target=namespaceRef.current;await saveQueue.current;
+    const target=namespaceRef.current,expectedCloudId=cloudId.current;await saveQueue.current;
     const before=await db.workspaces.get(target);
 
     if(!before||before.dirty||conflictRef.current)throw new Error('미전송 원고와 충돌을 먼저 확인하세요.');
     const remote=await fetchCloud();
 
-    if(!remote||namespaceRef.current!==target)throw new Error('원고 계정이 바뀌었습니다.');
+    if(!remote||remote.id!==expectedCloudId||namespaceRef.current!==target)throw new Error('원고 계정이 바뀌었습니다.');
     await saveQueue.current;
     let refreshed:LocalRecord|null=null;
     await db.transaction('rw',db.workspaces,async()=>{

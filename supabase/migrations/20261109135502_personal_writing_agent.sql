@@ -66,6 +66,7 @@ begin
  select * into r from public.agent_runs where id=p_id for update;
  if not found or not exists(select 1 from public.authors where user_id=r.owner_id) then raise exception 'Author access required'; end if;
  if (not p_revert and r.status not in ('running','completed')) or r.mode='discuss' then raise exception 'Agent cannot write'; end if;
+ if r.reverted then raise exception 'Agent change discarded or reverted'; end if;
  if not p_revert and r.applied_version is not null then return jsonb_build_object('status','saved','version',r.applied_version); end if;
  if p_revert and (r.applied_version is null or r.reverted) then raise exception 'No change to revert'; end if;
  select * into w from public.workspaces where id=r.workspace_id and owner_id=r.owner_id for update;

@@ -191,12 +191,12 @@ export function restoreAgentScope(state:Workspace,before:AgentSnapshot):Workspac
     if(!current||!before.work)throw new Error('작품을 찾지 못했습니다.');
     const old=before.work;
 
-    return workspaceSchema.parse({...state,works:state.works.map(w=>w.id===old.id?{...w,documents:old.documents.map(d=>({...d,updatedAt:new Date().toISOString()})),navigation:old.navigation}:w)});
+    return workspaceSchema.parse({...state,updatedAt:new Date().toISOString(),works:state.works.map(w=>w.id===old.id?{...w,documents:old.documents,navigation:old.navigation}:w)});
   }
 
   const current=notesInSpace(state,before.scope.id),ids=new Set(current.map(n=>n.id)),nav=resolveNoteNavigation(state),sections=new Set(before.navigation!.spaces!.find(s=>s.id===before.scope.id)!.sections.map(s=>s.id));
 
-  return workspaceSchema.parse({...state,notes:[...(state.notes||[]).filter(n=>!ids.has(n.id)),...before.notes.map(n=>({...n,updatedAt:new Date().toISOString(),aiMessages:state.notes?.find(old=>old.id===n.id)?.aiMessages}))],noteNavigation:{...nav,nodes:[...nav.nodes.filter(n=>!sections.has(n.sectionId)),...before.navigation!.nodes]}});
+  return workspaceSchema.parse({...state,updatedAt:new Date().toISOString(),notes:[...(state.notes||[]).filter(n=>!ids.has(n.id)),...before.notes.map(n=>({...n,aiMessages:state.notes?.find(old=>old.id===n.id)?.aiMessages}))],noteNavigation:{...nav,nodes:[...nav.nodes.filter(n=>!sections.has(n.sectionId)),...before.navigation!.nodes]}});
 }
 
 export function validateAgentWorkspace(state:Workspace){return workspaceSchema.parse(state);}

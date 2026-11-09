@@ -39,6 +39,21 @@
     "production migration/RLS and new cloud backup restore",
     "WebKit and physical phone"
   ],
-  "unitTests": 291,
-  "fontLoaderRegression": "Unpatched Next 16.3.8 reproduces the null-extension TypeError; patched loader emits identical WOFF2 bytes and rejects invalid extensionless files."
+  "unitTests": 292,
+  "fontLoaderRegression": "Unpatched Next 16.3.8 reproduces the null-extension TypeError; patched loader emits identical WOFF2 bytes and rejects invalid extensionless files.",
+  "followup": {
+    "coreChecks": 11,
+    "browserCases": 7,
+    "fixtureCalls": 45,
+    "pageErrors": 0,
+    "flows": [
+      "provider object root schema with nested anyOf",
+      "discarded/reverted changes cannot be applied",
+      "discard uses unapplied row condition",
+      "remote note undo refreshes without realtime",
+      "request acceptance locks composer then returns focus",
+      "session user and remote workspace ID checks",
+      "font patch regression and unchanged emitted bytes"
+    ]
+  }
 }

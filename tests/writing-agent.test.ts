@@ -10,6 +10,8 @@ import { resolveNavigation } from '../src/lib/document-navigation';
 import { captureAgentScope,agentHash,agentOverlay,agentDiff,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,type AgentOperation } from '../src/lib/writing-agent';
 import { AgentLanguageModel } from '../src/lib/agent-language-model';
 import { WORKFLOW_SERIALIZE } from '@workflow/serde';
+import { asSchema } from 'ai';
+import { writingAgentTools } from '../src/lib/agent-tools';
 import { publicAgentUrl } from '../src/lib/agent-web';
 
 function fixture(){
@@ -24,7 +26,7 @@ test('에이전트 작업본은 원본을 바꾸지 않고 생성한 문서를 �
   const ops:AgentOperation[]=[{type:'create',id,kind:'memo',title:'개요',text:'관측소에 도착한다.',parentId:null,sectionId,beforeId:null},{type:'replace',id,quote:'도착한다',replacement:'돌아온다'}];
   const overlay=agentOverlay(snapshot,ops);assert.equal(plainText(overlay.work!.documents.find(d=>d.id===id)!.content),'관측소에 돌아온다.');assert.deepEqual(state,before);
   const diff=agentDiff(snapshot,ops);assert.equal(diff.rows.length,1);assert.equal(diff.rows[0].created,true);
-  const applied=workspaceSchema.parse(applyAgentOperations(state,scope,ops));assert.equal(applied.works.find(w=>w.id===work.id)!.documents.length,work.documents.length+1);assert.deepEqual(applied.works.slice(1),state.works.slice(1));
+  const applied=workspaceSchema.parse(applyAgentOperations(state,scope,ops));assert.equal(applied.works.find(w=>w.id===work.id)!.documents.length,work.documents.length+1);assert.deepEqual(applied.works.slice(1),state.works.slice(1));assert.equal(restoreAgentScope(applied,snapshot).works[0].documents[0].updatedAt,state.works[0].documents[0].updatedAt);
 });
 
 test('부분 치환은 서식·각주·다른 문서를 보존하고 모호한 인용을 거절한다',()=>{
@@ -85,6 +87,7 @@ test('실제 SQL은 원고 반영·복구 지점·중복 요청·충돌·취소�
     await db.exec('set role service_role');assert.equal((await db.query<{ok:boolean}>("select public.agent_claim_run($1,'workflow') as ok",[runId])).rows[0].ok,true);assert.equal((await db.query<{ok:boolean}>("select public.agent_claim_run($1,'other-workflow') as ok",[runId])).rows[0].ok,false);
     await db.query("select public.agent_record_step($1,'workflow',$2,$3)",[runId,JSON.stringify({id:'step-1',title:'수정'}),JSON.stringify({type:'rename',id:doc.id,title:'새 이름'})]);await db.query("select public.agent_record_step($1,'workflow',$2,$3)",[runId,JSON.stringify({id:'step-1',title:'수정'}),JSON.stringify({type:'rename',id:doc.id,title:'새 이름'})]);assert.equal((await db.query<{n:number}>('select jsonb_array_length(operations) n from public.agent_runs where id=$1',[runId])).rows[0].n,1);
     const next=applyAgentOperations(state,scope,[{type:'rename',id:doc.id,title:'새 이름'}]);const commit=(version:number)=>db.query<{result:{status:string;version:number}}>('select public.agent_commit_workspace($1,$2,$3,$4,false) as result',[runId,version,JSON.stringify(next),'after']);
+    await db.query('update public.agent_runs set reverted=true where id=$1',[runId]);await assert.rejects(commit(0),/discarded|reverted/);await db.query('update public.agent_runs set reverted=false where id=$1',[runId]);
     assert.equal((await commit(99)).rows[0].result.status,'conflict');assert.equal((await commit(0)).rows[0].result.version,1);assert.equal((await commit(0)).rows[0].result.version,1);assert.equal((await db.query('select * from public.workspace_revisions')).rows.length,1);
     await db.query("update public.agent_runs set status='cancelled' where id=$1",[runId]);
     await db.query('select public.agent_commit_workspace($1,1,$2,$3,true)',[runId,JSON.stringify(state),'before']);assert.equal((await db.query<{version:number}>('select version from public.workspaces')).rows[0].version,2);await assert.rejects(db.query('select public.agent_commit_workspace($1,2,$2,$3,true)',[runId,JSON.stringify(state),'before']),/revert/);
@@ -102,4 +105,11 @@ test('모델 문맥은 최근 대화만 담고 과거 이력은 보존하며 삭
   const runs=[make('이전 질문'),make('최근 질문')],memory={id:uid(),session_id:uid(),title:'기억',content:'내용',sources:[{id,title:'삭제됨'}],updated_at:'2026-11-09'};
   const context=agentContext(runs,[memory],new Set([doc.id]),8);
   assert.equal(context.runs.length,1);assert.equal(context.runs[0].message,'최근 질문');assert.equal(context.allRuns.length,2);assert.equal(context.memories.length,0);assert.equal(runs.length,2);
+});
+
+test('에이전트 변경 도구는 제공자가 받는 최상위 object 명세를 사용한다',async()=>{
+  const tools=writingAgentTools(uid(),'schema-fixture','review',true);
+  const schema=await asSchema(tools.stageChange!.inputSchema!).jsonSchema;
+  assert.equal(schema.type,'object');assert.equal(schema.oneOf,undefined);assert.equal(schema.anyOf,undefined);assert(!JSON.stringify(schema).includes('\"oneOf\"'));
+  assert.equal(writingAgentTools(uid(),'schema-fixture','discuss',true).stageChange,undefined);
 });

@@ -69,7 +69,11 @@ return;}
 
       const calls=content.filter(item=>google?item.functionCall:anthropic?item.type==='tool_use':item.type==='function_call');
       const outputs=content.filter(item=>google?item.functionResponse:anthropic?item.type==='tool_result':item.type==='function_call_output').map(item=>({data:decode(google?item.functionResponse.response.content:anthropic?item.content:item.output)})),step=calls.length;
-      const tool=(name,args)=>({type:'function_call',id:`fc_${step}`,call_id:`call_${step}`,name,arguments:JSON.stringify(args)});
+      const definitions=google?(body.tools||[]).flatMap(tool=>tool.functionDeclarations||[]):body.tools||[];
+
+      for(const definition of definitions){const schema=google?definition.parametersJsonSchema||definition.parameters:anthropic?definition.input_schema:definition.parameters;assert.equal(String(schema.type).toLowerCase(),'object',`${definition.name}: tool arguments must have an object root`);assert(!schema.oneOf&&!schema.anyOf,'root union tool schemas are unsupported');}
+
+      const tool=(name,args)=>({type:'function_call',id:`fc_${step}`,call_id:`call_${step}`,name,arguments:JSON.stringify(name==='stageChange'?{change:args}:args)});
       const search=outputs.find(o=>o.data.documents)?.data,created=outputs.find(o=>o.data.saved&&o.data.id)?.data;
       const names=new Set((google?(body.tools||[]).flatMap(tool=>tool.functionDeclarations||[]):body.tools||[]).map(tool=>tool.name));let item;
 
@@ -119,6 +123,8 @@ return send(value.rows[0].value);
 
     for(const [key,raw] of url.searchParams){
       if(['select','order','limit','offset','on_conflict'].includes(key))continue;assert(/^[a-z_]+$/.test(key));
+
+      if(raw==='is.null'){conditions.push(`${key} is null`);continue;}
 
       if(raw.startsWith('in.(')){const values=raw.slice(4,-1).split(',');conditions.push(`${key} in (${values.map(value=>{parameters.push(value);
 
@@ -180,12 +186,12 @@ try{
   await until(async()=>{try{return (await fetch(base)).ok;}catch{return false;}},'Next server starts');
 
   for(const width of process.env.KOSMOS_AGENT_INTERACTIONS_ONLY==='1'?[1280]:[1280,360]){
-    const context=await browser.newContext({viewport:{width,height:950}});
+    const context=await browser.newContext({viewport:{width,height:950}});context.setDefaultNavigationTimeout(90000);
     await context.addInitScript(({profile,token,key})=>{if(window!==window.top)return;localStorage.setItem(key,JSON.stringify({access_token:token,refresh_token:'synthetic',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:profile}));},{profile,token,key:'sb-127-auth-token'});
     page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${base}/studio`,{waitUntil:'networkidle'});
     await openAgent();const dialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await dialog.waitFor();
     await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),'');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 실행 방식'}),'review');
-    await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).click();await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();
+    await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).click();await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled());await until(async()=>!await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled()&&await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement),'accepted request returns focus without losing new typing');
     await until(async()=>await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()||(await pg.query("select * from public.agent_runs where status='completed'")).rows.length>0,'running task visible');
 
     if(await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()){
@@ -274,17 +280,17 @@ return row.status==='completed';},'API task completes');
   const replay=await api(`sessions/${talk.sessionId}/messages`,'POST',{id:talk.id,message:talk.message,mode:talk.mode,provider:'openai',web:false});assert.equal(replay.status,200);assert.equal((await pg.query('select * from public.agent_runs where id=$1',[talk.id])).rows.length,1);
 
   for(const provider of ['anthropic','gemini']){
-    const task=await createTask({kind:'work',id:initial.works[0].id},'review',`${provider} 연결로 개요를 준비해줘.`,provider),run=await finish(task.id);assert.equal(run.operations.length,2);assert.equal(run.provider,provider);assert(run.events.some(event=>event.title==='문서 읽기'));await api(`changes/${run.id}/discard`,'POST',{});
+    const task=await createTask({kind:'work',id:initial.works[0].id},'review',`${provider} 연결로 개요를 준비해줘.`,provider),run=await finish(task.id);assert.equal(run.operations.length,2);assert.equal(run.provider,provider);assert(run.events.some(event=>event.title==='문서 읽기'));assert.equal((await api(`changes/${run.id}/discard`,'POST',{})).status,200);assert.equal((await api(`changes/${run.id}/apply`,'POST',{})).status,409);
   }
 
   const notes=await createTask({kind:'notes',id:'default'},'execute','노트에 개요를 만들고 정리해줘.');
   const executed=await finish(notes.id);assert(executed.applied_version);assert((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.notes.some(n=>n.id===executed.operations[0].id));
-  const noteContext=await browser.newContext({viewport:{width:360,height:950}});
+  const noteContext=await browser.newContext({viewport:{width:360,height:950}});noteContext.setDefaultNavigationTimeout(90000);
   await noteContext.addInitScript(({profile,token})=>localStorage.setItem('sb-127-auth-token',JSON.stringify({access_token:token,refresh_token:'synthetic',expires_at:Math.floor(Date.now()/1000)+3600,user:profile})),{profile,token});
   page=await noteContext.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${base}/studio#notes/${executed.operations[0].id}`,{waitUntil:'networkidle'});await page.getByLabel('노트 본문',{exact:true}).waitFor();assert((await page.getByLabel('노트 본문',{exact:true}).innerText()).includes('달로 돌아온'));
-  await openAgent();const noteDialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await chooseOption(noteDialog.getByRole('combobox',{name:'작업 대화 선택'}),notes.sessionId);await noteDialog.locator('.agent-question').waitFor();await noteDialog.getByRole('button',{name:/^변경 /}).click();await noteDialog.getByRole('button',{name:'문서 열기',exact:true}).click();await page.getByLabel('노트 본문',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'사이드바 열기',exact:true}).count(),1);await noteContext.close();
+  await openAgent();const noteDialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await chooseOption(noteDialog.getByRole('combobox',{name:'작업 대화 선택'}),notes.sessionId);await noteDialog.locator('.agent-question').waitFor();await noteDialog.getByRole('button',{name:/^변경 /}).click();await noteDialog.getByRole('button',{name:'문서 열기',exact:true}).click();await page.getByLabel('노트 본문',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'사이드바 열기',exact:true}).count(),1);await openAgent();await page.getByRole('dialog',{name:'작업 대화',exact:true}).getByRole('button',{name:'대화',exact:true}).click();await page.getByRole('dialog',{name:'작업 대화',exact:true}).locator('.agent-question').waitFor();
   // Even a cancellation after the commit must leave undo available.
-  await pg.query("update public.agent_runs set status='cancelled' where id=$1",[notes.id]);assert.equal((await api(`changes/${notes.id}/revert`,'POST',{})).status,200);
+  await pg.query("update public.agent_runs set status='cancelled' where id=$1",[notes.id]);assert.equal((await api(`changes/${notes.id}/revert`,'POST',{})).status,200);await until(async()=>await page.getByLabel('노트 본문',{exact:true}).count()===0,'remote undo refreshes open note without realtime');await noteContext.close();
   const stale=await createTask({kind:'work',id:initial.works[0].id},'review','개요를 제안해줘.');await finish(stale.id);
   const current=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;
   current.works[0].documents[0].title='작성자가 새로 고친 제목';await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(current),workspaceId]);

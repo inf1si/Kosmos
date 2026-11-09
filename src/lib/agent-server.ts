@@ -44,6 +44,8 @@ export async function commitAgentChanges(id:string,owner:string,revert=false){
 
   if(run.owner_id!==owner||run.mode==='discuss'||(!revert&&!['running','completed'].includes(run.status)))throw new Error('이 작업의 변경을 적용할 수 없습니다.');
 
+  if(run.reverted)throw new Error('되돌리거나 버린 변경입니다.');
+
   if(!revert&&run.applied_version!==null)return {version:run.applied_version};
 
   if(revert&&(run.applied_version===null||run.reverted))throw new Error('되돌릴 변경이 없습니다.');
