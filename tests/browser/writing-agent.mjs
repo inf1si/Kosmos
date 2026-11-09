@@ -1,3 +1,4 @@
+import { vertexTestEnvironment,vertexReviewResponse } from '../fixtures/vertex.ts';
 // Real local Next.js + Workflow + SDK calls + a synthetic Postgres/Supabase/model service.
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -61,9 +62,11 @@ return;}
     if(url.pathname==='/fixture-model'){
       const provider=url.searchParams.get('provider');modelCalls.push({provider,body});
 
-      const google=provider==='generativelanguage.googleapis.com',anthropic=provider==='api.anthropic.com';
+      const google=provider==='gemini',anthropic=provider==='anthropic';
 
       if(google&&body.tools?.some(tool=>tool.googleSearch||tool.urlContext))return send({candidates:[{content:{role:'model',parts:[{text:'합성 자료에서는 기억의 재구성 가능성을 설명한다.'}]},finishReason:'STOP',groundingMetadata:{groundingChunks:[{web:{uri:'https://example.com/paper',title:'합성 연구 자료'}}],groundingSupports:[{segment:{startIndex:0,endIndex:27,text:'합성 자료에서는 기억의 재구성 가능성을 설명한다.'},groundingChunkIndices:[0]}],webSearchQueries:['기억 연구'],searchEntryPoint:{renderedContent:'<a href="https://www.google.com/search?q=memory" target="_blank">Google 검색 제안</a>'}}}],usageMetadata:{promptTokenCount:24,candidatesTokenCount:12,totalTokenCount:36}});
+
+      if(google&&body.generationConfig?.responseMimeType==='application/json'||anthropic&&(!body.tools?.length||body.tools?.some(tool=>tool.name==='json')))return send(vertexReviewResponse(google?'gemini':'anthropic',{review:'합성 문서 답변',suggestions:[]}));
       const content=google?(body.contents||[]).flatMap(message=>message.parts||[]):anthropic?(body.messages||[]).flatMap(message=>Array.isArray(message.content)?message.content:[]):body.input||[];
       const decode=value=>{try{return JSON.parse(Array.isArray(value)?value.map(part=>part.text||'').join(''):value);}catch{return value;}};
 
@@ -164,7 +167,7 @@ await new Promise(resolve=>mock.listen(0,'127.0.0.1',resolve));
 
 const mockUrl=`http://127.0.0.1:${mock.address().port}`,log=createWriteStream(resolve(output,'server.log'));
 
-const app=spawn('pnpm',['exec','next','dev','--webpack','--hostname','127.0.0.1','--port',String(port)],{cwd:process.cwd(),detached:true,env:{...process.env,NEXT_PUBLIC_SUPABASE_URL:mockUrl,NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',SUPABASE_SERVICE_ROLE_KEY:'synthetic-service',OPENAI_API_KEY:'synthetic-openai',OPENAI_MODEL:'fixture-agent',ANTHROPIC_API_KEY:'synthetic-anthropic',ANTHROPIC_MODEL:'claude-sonnet-4-6',GEMINI_API_KEY:'synthetic-google',GEMINI_MODEL:'gemini-2.5-flash',KOSMOS_AGENT_FIXTURE_URL:mockUrl,NODE_OPTIONS:`${process.env.NODE_OPTIONS||''} --import=${resolve('tests/fixtures/agent-fetch.mjs')}`}});
+const app=spawn('pnpm',['exec','next','dev','--webpack','--hostname','127.0.0.1','--port',String(port)],{cwd:process.cwd(),detached:true,env:{...process.env,NEXT_PUBLIC_SUPABASE_URL:mockUrl,NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',SUPABASE_SERVICE_ROLE_KEY:'synthetic-service',...vertexTestEnvironment,AI_CREDENTIAL_SECRET:'synthetic-encryption-secret-'.repeat(3),KOSMOS_AGENT_FIXTURE_URL:mockUrl,NODE_OPTIONS:`${process.env.NODE_OPTIONS||''} --import=${resolve('tests/fixtures/agent-fetch.mjs')}`}});
 
 app.stdout.pipe(log);
 
@@ -182,6 +185,55 @@ async function openAgent(){await page.getByRole('button',{name:/^사이드바 (�
 
 if(!await page.getByRole('button',{name:'작업 대화',exact:true}).isVisible())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();await page.getByRole('button',{name:'작업 대화',exact:true}).click();}
 
+async function verifySharedAI(width){
+  await page.getByRole('button',{name:/^사이드바 (열기|닫기)$/}).waitFor();
+  const row=page.locator(`[data-navigation-row="${initial.works[0].documents[0].id}"]`);
+
+  if(!await row.isVisible())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();
+  await row.getByTitle(initial.works[0].documents[0].title,{exact:true}).click();
+  await page.getByRole('button',{name:'AI 대화',exact:true}).click();
+  const panel=page.locator('.reference-panel.is-chat');await panel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();
+
+  for(const provider of ['gemini','anthropic']){
+    await panel.getByRole('button',{name:'AI 설정',exact:true}).click();const settings=page.getByRole('dialog',{name:'AI 설정',exact:true});
+    await chooseOption(settings.getByRole('combobox',{name:'설정할 AI 제공자'}),provider);
+    assert.equal(await settings.locator('input[type="password"]').count(),0);
+    await settings.getByRole('textbox',{name:'AI 모델 ID',exact:true}).fill(provider==='gemini'?'gemini-selected':'claude-selected@20260101');
+    await settings.getByRole('button',{name:'모델 저장',exact:true}).click();await settings.getByText('모델 선택을 저장했습니다.',{exact:true}).waitFor();
+
+    if(provider==='gemini'){
+      for(const palette of quick?PALETTES.slice(0,1):PALETTES)for(const mode of ['light','dark']){
+        await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});
+        const layout=await settings.evaluate(el=>({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,overflow:el.scrollWidth>el.clientWidth+1}));assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify({width,palette,mode,layout}));
+        await settings.getByRole('combobox',{name:'설정할 AI 제공자'}).click();await page.getByRole('listbox').waitFor();assert.equal(await page.getByRole('option').count(),2);await page.keyboard.press('Escape');
+        await page.screenshot({path:resolve(output,`vertex-settings-${width}-${palette}-${mode}.png`)});results.push({width,palette,mode,view:'vertex-settings'});
+      }
+    }
+
+    await settings.getByRole('button',{name:'닫기',exact:true}).click();
+    const previousAnswers=await panel.locator('.chat-message.assistant').count();
+    await panel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill(`${provider} 문서 질문`);await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();
+    await until(async()=>await panel.locator('.chat-message.assistant').count()===previousAnswers+1,'ordinary document AI answer');
+    assert.equal(await panel.locator('.chat-message.assistant').last().locator('p').first().innerText(),'합성 문서 답변');
+
+    if(provider==='anthropic'){
+      await panel.getByRole('button',{name:'AI 설정',exact:true}).click();const settings=page.getByRole('dialog',{name:'AI 설정',exact:true});
+      assert.equal(await settings.getByRole('textbox',{name:'AI 모델 ID',exact:true}).inputValue(),'claude-selected@20260101');
+      await settings.getByRole('button',{name:'기본 모델 사용',exact:true}).click();await settings.getByText('기본 모델로 돌아갔습니다.',{exact:true}).waitFor();assert.equal(await settings.getByRole('textbox',{name:'AI 모델 ID',exact:true}).inputValue(),vertexTestEnvironment.VERTEX_CLAUDE_MODEL);await settings.getByRole('button',{name:'닫기',exact:true}).click();
+    }
+
+  }
+
+  await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
+  await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');
+  await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'적용할 AI 답변'}).inputValue(),'합성 문서 답변');await page.keyboard.press('Escape');
+  await page.goto(`${base}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await page.getByRole('button',{name:'AI 대화',exact:true}).click();
+  const notePanel=page.locator('.reference-panel.is-chat');await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();const previousNotes=await notePanel.locator('.chat-message.assistant').count();await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 질문');await notePanel.getByRole('button',{name:'질문 보내기',exact:true}).click();await until(async()=>await notePanel.locator('.chat-message.assistant').count()===previousNotes+1,'ordinary note AI answer');
+  await notePanel.getByRole('button',{name:'노트 참고 패널 닫기',exact:true}).click();await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();await page.keyboard.press('Escape');
+  await page.goto(`${base}/studio`,{waitUntil:'networkidle'});
+
+}
+
 try{
   await until(async()=>{try{return (await fetch(base)).ok;}catch{return false;}},'Next server starts');
 
@@ -189,6 +241,7 @@ try{
     const context=await browser.newContext({viewport:{width,height:950}});context.setDefaultNavigationTimeout(90000);
     await context.addInitScript(({profile,token,key})=>{if(window!==window.top)return;localStorage.setItem(key,JSON.stringify({access_token:token,refresh_token:'synthetic',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:profile}));},{profile,token,key:'sb-127-auth-token'});
     page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${base}/studio`,{waitUntil:'networkidle'});
+    await verifySharedAI(width);
     await openAgent();const dialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await dialog.waitFor();
     await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),'');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 실행 방식'}),'review');
     await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).click();await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled());await until(async()=>!await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled()&&await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement),'accepted request returns focus without losing new typing');
@@ -203,7 +256,7 @@ try{
 if(row?.status==='failed')assert.fail(row.error);
 
 return row?.status==='completed'&&!row.reverted;},'durable agent finishes');
-    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.operations.length,2);assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
+    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.model,'gemini-selected');assert.equal(run.operations.length,2);assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
     await dialog.getByRole('button',{name:/^변경 /}).click();await page.getByText('달로 돌아온 인물은 관측소를 찾는다.',{exact:true}).waitFor();
     const before=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!before.works[0].documents.some(doc=>doc.id===run.operations[0].id));
     await dialog.getByRole('button',{name:'변경 적용',exact:true}).click();await until(async()=>{const row=(await pg.query('select applied_version from public.agent_runs where id=$1',[run.id])).rows[0];
@@ -258,7 +311,7 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify({w
   assert.equal((await fetch(`${base}/api/agent/sessions`)).status,401);
   assert.equal((await api('sessions','POST',{},'https://elsewhere.invalid')).status,403);
 
-  const createTask=async(scope,mode,message,provider='openai')=>{
+  const createTask=async(scope,mode,message,provider='gemini')=>{
     const sessionId=uid(),id=uid();assert.equal((await api('sessions','POST',{id:sessionId,title:message,scope,mode,provider,web:false})).status,201);
     const result=await api(`sessions/${sessionId}/messages`,'POST',{id,message,mode,provider,web:false});assert.equal(result.status,202,JSON.stringify(result));
 
@@ -277,9 +330,9 @@ return row.status==='completed';},'API task completes');
 
   const talk=await createTask({kind:'work',id:initial.works[0].id},'discuss','원문을 읽고 다른 가능성을 의논해줘.');
   const discussed=await finish(talk.id);assert.equal(discussed.operations.length,0);assert(discussed.answer.includes('생각했습니다'));
-  const replay=await api(`sessions/${talk.sessionId}/messages`,'POST',{id:talk.id,message:talk.message,mode:talk.mode,provider:'openai',web:false});assert.equal(replay.status,200);assert.equal((await pg.query('select * from public.agent_runs where id=$1',[talk.id])).rows.length,1);
+  const replay=await api(`sessions/${talk.sessionId}/messages`,'POST',{id:talk.id,message:talk.message,mode:talk.mode,provider:'gemini',web:false});assert.equal(replay.status,200);assert.equal((await pg.query('select * from public.agent_runs where id=$1',[talk.id])).rows.length,1);
 
-  for(const provider of ['anthropic','gemini']){
+  for(const provider of ['anthropic']){
     const task=await createTask({kind:'work',id:initial.works[0].id},'review',`${provider} 연결로 개요를 준비해줘.`,provider),run=await finish(task.id);assert.equal(run.operations.length,2);assert.equal(run.provider,provider);assert(run.events.some(event=>event.title==='문서 읽기'));assert.equal((await api(`changes/${run.id}/discard`,'POST',{})).status,200);assert.equal((await api(`changes/${run.id}/apply`,'POST',{})).status,409);
   }
 
@@ -297,7 +350,7 @@ return row.status==='completed';},'API task completes');
   assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,409);assert.equal((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents[0].title,'작성자가 새로 고친 제목');
   const cancelled=await createTask({kind:'work',id:initial.works[0].id},'execute','이 실행은 중단한다.');assert.equal((await api(`runs/${cancelled.id}/cancel`,'POST',{})).status,200);assert.equal((await pg.query('select status from public.agent_runs where id=$1',[cancelled.id])).rows[0].status,'cancelled');
   const exported=await api('export');assert.equal(exported.status,200);assert.equal(exported.data.format,'orbis-writing-agent');assert(exported.data.runs.some(r=>r.id===notes.id));assert(!JSON.stringify(exported.data).includes('synthetic-openai'));
-  assert(modelCalls.some(call=>call.provider==='generativelanguage.googleapis.com'&&JSON.stringify(call.body.tools).includes('googleSearch')),'native Google search tool is sent');
+  assert(modelCalls.some(call=>call.provider==='gemini'&&JSON.stringify(call.body.tools||[]).includes('googleSearch')),'native Google search tool is sent');
   results.push({flow:'discuss/execute/note-scope/idempotency/cancelled-undo/stale-source/export/auth/origin'});
 
   assert.equal(errors.length,0,errors.join('\n'));await writeFile(resolve(output,'report.json'),JSON.stringify({results,errors,modelCalls:modelCalls.length},null,2));

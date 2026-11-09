@@ -1,4 +1,4 @@
-# OpenAI·Claude·Gemini 대화
+# Vertex AI · Gemini·Claude 대화
 
 ## 집필 작업 대화 (2026-11-09)
 
@@ -7,10 +7,10 @@
 
 ## 화면 문구 (2026-10-10)
 
-집필실·노트의 AI 대화는 짧은 시작 버튼과 **질문 입력** 칸을 표시한다. 인사말·저장/동기화/백업 안내·긴 예시 요청은 상시 나열하지 않는다. 시작 버튼은 기존 요청을 질문 칸에 채우며 직접 전송하기 전에는 호출하지 않는다. **보낼 자료**의 현재 포함 여부·자료 수·전송 한도, 연결 오류·생성 상태·요청 한도는 유지한다. **새 대화** 확인은 현재 기록을 비운다는 결과를 한 문장으로 알린다. 키의 브라우저 보관 기간·백업 제외는 연결 설정에만 짧게 표시한다. 기록·프리셋·스킬의 저장과 전송 범위는 아래 계약과 같다.
+집필실·노트의 AI 대화는 짧은 시작 버튼과 **질문 입력** 칸을 표시한다. 인사말·저장/동기화/백업 안내·긴 예시 요청은 상시 나열하지 않는다. 시작 버튼은 기존 요청을 질문 칸에 채우며 직접 전송하기 전에는 호출하지 않는다. **보낼 자료**의 현재 포함 여부·자료 수·전송 한도, 연결 오류·생성 상태·요청 한도는 유지한다. **새 대화** 확인은 현재 기록을 비운다는 결과를 한 문장으로 알린다. 모델 선택 상태는 설정에서 확인한다. 기록·프리셋·스킬의 저장과 전송 범위는 아래 계약과 같다.
 
 
-제공자별 서버 어댑터와 문서·개인 노트별 대화 화면을 구현했다. 현재 API 키와 모델이 없어 실제 호출·한국어 SF 답변 품질·지연·사용료는 미검증이다. 연결은 [서비스 연결 안내](service-connection.md)를 따른다.
+Vertex AI를 공통 전송 경로로 사용하는 문서·개인 노트별 대화 화면을 구현했다. 현재 GCP 인증과 모델 접근 권한을 운영에 연결하지 않아 실제 호출·한국어 SF 답변 품질·지연·사용료는 미검증이다. 연결은 [서비스 연결 안내](service-connection.md)를 따른다.
 
 ## 원고 범위와 적용
 
@@ -50,33 +50,25 @@ UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권
 
 ## 집필실에서 연결·시스템 프롬프트 설정
 
-**AI 대화 → AI 설정** 또는 사이드바 **설정 › AI**에서 제공자, 정확한 모델 ID, API 키를 넣고 **연결 저장**을 누른다. 설정 창의 AI 구역에는 새 대화에 현재 문서를 넣을지, 연결 설정(본문 링크·시점 인물)을 자동으로 첨부할지 고르는 기기 기본값도 있다(둘 다 기본 켬, [설정](settings.md)). 키를 저장할 때는 AI를 호출하지 않는다. 연결·모델의 유효성과 실제 비용은 첫 샘플 대화에서 확인한다. 이미 이 브라우저에 연결했다면 키 칸을 비워 모델만 변경할 수 있다. **브라우저 연결 해제**는 해당 제공자의 브라우저 설정을 지우며, 서버 기본 설정이 있으면 다시 사용한다. 제공자 세 곳의 연결을 각각 보관한다.
+**AI 대화 → AI 설정** 또는 사이드바 **설정 › AI**에서 Gemini·Claude와 Vertex 모델 ID를 골라 **모델 저장**을 누른다. 인증은 서버의 `orbiter-ai` 프로젝트가 담당한다. 브라우저에서 API 키를 받지 않는다. **기본 모델 사용**은 이 브라우저의 모델 선택만 초기화한다. 모델 저장 자체는 AI를 호출하지 않으며 실제 접근 가능 여부는 요청 시 확인한다. 새 대화의 문서·연결 자료 포함 기본값은 [설정](settings.md)을 따른다.
 
-키·모델은 작가 인증 후 서버에서 AES-256-GCM으로 암호화해 **이 브라우저·이 도메인에 최대 30일** 보관한다. 운영 쿠키는 `__Host-` 접두어, HttpOnly·Secure·SameSite=Strict·Path=/를 사용한다. 작가 ID와 제공자를 암호화 인증 데이터에 묶어 다른 계정이나 제공자가 같은 값을 사용할 수 없게 한다. 키 값·암호문은 상태 API로 반환하지 않는다. 키는 작업 공간, 대화 기록, localStorage, IndexedDB, ZIP·Drive·DB 백업에 넣지 않는다. 다른 기기·도메인, 쿠키 삭제, 만료 또는 서버 암호화 비밀 교체 후에는 재입력한다. 만료·변조된 연결은 실행을 막으며 서버 키로 조용히 전환하지 않는다.
-
-서버 암호화 루트는 32자 이상의 `AI_CREDENTIAL_SECRET`을 우선 사용하고, 없으면 기존 서버 전용 `SUPABASE_SERVICE_ROLE_KEY`에서 HKDF-SHA256으로 목적을 구분한 키를 파생한다. 명시한 전용 비밀이 짧으면 저장을 거절한다. 두 비밀은 공개 환경 변수로 설정하지 않는다. 이 기능에 DB 마이그레이션이나 제공자별 서버 환경 변수는 필수가 아니다. 운영 쿠키에는 비밀값이 암호화되어 있으므로 개발 서버에서는 합성 키만 사용한다.
+모델 ID만 계정·제공자에 묶인 AES-256-GCM HttpOnly 쿠키에 최대 30일 보관한다. 운영 쿠키는 `__Host-`·Secure·SameSite=Strict·Path=/를 사용한다. 만료·변조된 선택은 실행을 막고 다른 모델로 자동 전환하지 않는다. 선택은 다른 기기·도메인 및 ZIP/Drive/DB 백업으로 복사하지 않는다. 암호화에는 `AI_CREDENTIAL_SECRET` 또는 목적을 구분해 파생한 `SUPABASE_SERVICE_ROLE_KEY`를 사용한다. 예전 직접 API 키 쿠키는 사용하지 않으며 모델 저장·초기화 시 삭제한다.
 
 **시스템 프롬프트·프리셋**은 계정 작업 공간에 저장하고 원고와 함께 기기·클라우드에 동기화한다. 기본 집필 동료·문장 퇴고·설정/시간선 점검·SF 가정/개연성·장면/구조 구상·독자 관점 검토 6종, 프리셋 이름은 80자이며 사용자 프리셋 개수·지침 길이의 앱 제한은 없다. 대화창의 **프리셋** 선택으로 다음 질문부터 바꾼다.
 
 AI 설정에서 편집할 프리셋을 골라 **선택 적용**하거나 이름·지침을 작성해 **저장·적용**한다. 기본 프리셋 수정은 사용자 사본을 만든다. **사본으로 저장·적용**, **기본값으로 재설정**도 가능하다. 재설정은 사용자 프리셋을 보존한다. 빈 지침은 기본값으로 저장한다. 미저장 전환을 확인하며 다른 창의 수정이 있으면 최신 내용 또는 사본 저장을 선택한다. 삭제 전 복구 지점을 만들고 활성 프리셋 삭제 시 기본값으로 돌아간다. 이 동작들은 AI를 호출하지 않는다.
 
-전체 ZIP·Drive ZIP·DB 수집에 포함하고 공개 판본·문서 MD/HTML/ENEX 교환에서 제외한다. 이전 백업에 필드가 없으면 현재 라이브러리를 유지한다. 예전 지침은 **이전 지침 불러오기** 후 명시적으로 저장한다. API 키는 별도다. 타이핑만 한 내용은 저장되지 않으므로 창을 닫기 전 저장·적용하고 클라우드 상태를 확인한다. [프롬프트 근거·평가](ai-prompts.md).
+전체 ZIP·Drive ZIP·DB 수집에 포함하고 공개 판본·문서 MD/HTML/ENEX 교환에서 제외한다. 이전 백업에 필드가 없으면 현재 라이브러리를 유지한다. 예전 지침은 **이전 지침 불러오기** 후 명시적으로 저장한다. 서버 인증과 기기의 모델 선택은 별도다. 타이핑만 한 내용은 저장되지 않으므로 창을 닫기 전 저장·적용하고 클라우드 상태를 확인한다. [프롬프트 근거·평가](ai-prompts.md).
 
 사용자가 수정하는 집필 지침과 별도로 자료 범위, JSON 응답 형식, 정확한 원문 인용, 자동 적용 금지 같은 서버 규칙을 유지한다. 참고 문서와 과거 대화에 들어 있는 지시를 새로운 시스템 지침으로 취급하지 않는다.
 
-## 선택적인 서버 기본 설정
+## 서버 연결
 
-| 선택 | 서버 변수 | 공식 요청 형식 |
-|---|---|---|
-| OpenAI | `OPENAI_API_KEY`, `OPENAI_MODEL` | Responses, `text.format` JSON Schema, `store: false` |
-| Claude | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Messages, `output_config.format` JSON Schema |
-| Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL` | generateContent, `responseMimeType` JSON, `responseJsonSchema` |
+일반 대화·커서 AI·작업 대화는 모두 `@ai-sdk/google-vertex`로 호출한다. Gemini는 Google publisher, Claude는 Anthropic publisher를 사용하지만 인증·과금 프로젝트는 같은 `orbiter-ai`다. OpenAI·Anthropic·Gemini Developer API 키와 이전 별칭은 읽지 않는다. 과거 OpenAI 대화의 표시와 백업 호환성은 유지한다.
 
-Vercel의 키와 모델은 선택적인 기본값이다. 브라우저에 연결한 값이 우선하고, 브라우저 연결이 없을 때 서버 기본값을 사용한다. 연결된 제공자만 실행 가능하다. 고정 공식 URL을 사용하며 키는 서버가 제공자 헤더로만 전송한다. 이전 OpenAI `AI_API_KEY`·`AI_MODEL` 별칭은 지원하지만 임의 `AI_API_URL`은 사용하지 않는다. 제공자를 자동 전환하거나 재시도해 원고를 추가 전송하지 않는다. 각 모델은 해당 구조화 출력 형식을 지원해야 한다.
+Vercel은 OIDC → GCP Workload Identity Federation → 서비스 계정의 단기 OAuth 토큰을 사용한다. 토큰은 서버의 실행 단계에서 만들며 브라우저·대화 기록·Workflow 모델 인자에 넣지 않는다. 로컬은 Application Default Credentials를 사용한다. `GOOGLE_VERTEX_PROJECT`와 `VERTEX_GEMINI_MODEL`·`VERTEX_CLAUDE_MODEL`, 인증 설정이 필요하다. 웹 조사는 같은 프로젝트의 `VERTEX_SEARCH_MODEL`(없으면 Gemini 기본 모델)을 사용한다. [설정 절차](vertex-ai.md).
 
-세 제공자는 공유된 한국어 SF 지침과 구조화 출력을 사용한다. 완료 상태·거부·중단과 결과 형식을 검사하고 Gemini의 thought 부분은 제외한다. 앱의 하루 호출 제한은 없다. 제공자의 계정 한도·문맥 크기·요금은 그대로 적용된다. 서버 운영 경계는 질문 요청 4MiB, 제공자 응답 256KiB, 타임아웃 45초·함수 60초이며 과도한 본문은 조용히 자르지 않고 실패로 반환한다. 출력 토큰 설정 2,200과 최대 5개 수정 제안의 응답 계약은 유지한다. 구독/CLI 연결과 별개인 기존 API 호출 경로다.
-
-`store: false`는 OpenAI 요청 옵션이다. 제공자의 전체 보관·학습 정책을 보장하지 않는다. 실제 원고 사용 전 선택 제공자의 최신 정책과 예산을 확인한다. 비용 대시보드·월 예산 강제 상한은 앱에 없다.
+두 모델 계열은 공유 지침과 최대 5개 수정 제안의 구조화 응답 계약을 사용한다. SDK는 Vertex Claude에서 JSON 도구 출력을 사용하며 서버가 결과 스키마를 검증한다. 요청은 4MiB, 출력 설정은 2,200토큰, 즉시 대화 타임아웃은 45초·함수는 60초다. 앱의 일일 횟수·질문 글자 수 제한은 없다. 프로젝트 할당량·모델 문맥·Vertex 요금은 적용된다. 모델·제공자를 자동 전환하지 않는다. 월 예산 강제 상한은 앱에 없다.
 
 ## API
 
@@ -85,7 +77,7 @@ POST `/api/ai/chat`: 작가 Bearer 인증 필요, JSON 본문은 스트림 기�
 ```json
 {
   "workId":"작품 UUID","docId":"문서 UUID","version":"문서 updatedAt",
-  "provider":"openai","message":"질문","includeManuscript":true,
+  "provider":"gemini","message":"질문","includeManuscript":true,
   "sourceIds":["같은 작품 자료 UUID"],
   "promptPresetId":"builtin:default 또는 사용자 UUID",
   "systemPrompt":"선택 프리셋의 집필 지침 · 길이 제한 없음",
@@ -99,19 +91,19 @@ POST `/api/ai/chat`: 작가 Bearer 인증 필요, JSON 본문은 스트림 기�
 
 history는 user/assistant 순서의 완전한 쌍만 허용하며 system 역할을 받지 않는다. 서버에서 현재 원고·자료를 다시 읽고 권한·시점·선택 범위를 검사한다. 일일 횟수를 예약하거나 제한하지 않는다. 서버 활성 프리셋과 ID·지침을 검사하며 이전 ID 없는 요청은 호환한다. 성공 결과는 result(답변을 담은 review 문자열과 suggestions), provider, model, version, sources, promptPreset(id/title/revision)다. 응답은 no-store다.
 
-GET `/api/ai/providers`: 허용 작가의 Bearer 인증 필요. 제공자 ID·표시명·configured·모델·source(browser/server/null)·browserStored·browserInvalid와 서버의 storageAvailable을 반환한다. 키와 암호문은 반환하지 않으며 no-store다.
+GET `/api/ai/providers`: 허용 작가의 Bearer 인증 필요. 제공자 ID·표시명·configured·모델·source(server/null)·browserStored·browserInvalid와 서버의 storageAvailable을 반환한다. 인증 정보와 암호문은 반환하지 않으며 no-store다.
 
-POST `/api/ai/settings`: 같은 Origin과 허용 작가의 Bearer 인증, application/json 필요. 본문은 `{"provider":"openai","model":"정확한 모델 ID","key":"본인이 직접 입력한 키"}`이고 스트림 기준 8KiB까지다. 최초 연결은 키가 필요하며, 유효한 브라우저 연결이 있으면 key를 생략해 모델만 고친다. 성공 본문은 `{"saved":true}`이고 암호화 쿠키를 설정한다.
+POST `/api/ai/settings`: 같은 Origin과 허용 작가의 Bearer 인증, application/json 필요. 본문은 `{"provider":"gemini","model":"정확한 Vertex 모델 ID"}`이고 스트림 기준 8KiB까지다. API 키 필드와 OpenAI 선택은 거절한다. 성공 본문은 `{"saved":true}`이고 모델 선택 쿠키를 설정하며 이전 직접 키 쿠키는 삭제한다.
 
-DELETE `/api/ai/settings`: 같은 인증·Origin·JSON 조건에서 `{"provider":"openai"}`로 해당 쿠키를 해제한다. 두 변경 응답도 no-store며 키를 반환하지 않는다. 형식 오류 400, 인증 없음 401, 다른 Origin 403, 크기 초과 413, JSON 형식 아님 415, 암호화 설정 없음 503을 구분한다.
+DELETE `/api/ai/settings`: 같은 인증·Origin·JSON 조건에서 `{"provider":"gemini"}`로 모델 선택과 이전 직접 키 쿠키를 해제한다. 과거 OpenAI 쿠키의 삭제도 지원한다. 두 응답은 no-store다. 형식 오류 400, 인증 없음 401, 다른 Origin 403, 크기 초과 413, JSON 형식 아님 415, 암호화 설정 없음 503을 구분한다.
 
 이전 POST `/api/review`도 호환을 위해 유지한다. 같은 인증, JSON 본문이며 Content-Length가 없어도 스트림 전체를 10,000바이트로 제한한다.
 
 ```json
-{"workId":"작품 UUID","docId":"문서 UUID","version":"문서 updatedAt","goal":"style","provider":"openai"}
+{"workId":"작품 UUID","docId":"문서 UUID","version":"문서 updatedAt","goal":"style","provider":"gemini"}
 ```
 
-goal은 style 또는 continuity, provider는 openai / anthropic / gemini이며 생략 시 openai다. 성공 결과는 result(검토 의견·quote/replacement/reason 제안), provider, model, version, sources다.
+goal은 style 또는 continuity, 새 요청의 provider는 anthropic / gemini이며 생략 시 gemini다. 과거 openai 값은 기록 호환에만 남고 실행은 거절한다. 성공 결과는 result(검토 의견·quote/replacement/reason 제안), provider, model, version, sources다.
 
 | 응답 | 의미 |
 |---|---|
@@ -123,8 +115,6 @@ goal은 style 또는 continuity, provider는 openai / anthropic / gemini이며 �
 | 502 | 제공자 오류·시간 초과·거부·불완전하거나 잘못된 결과 |
 | 503 | 선택 제공자의 키·모델 미설정 |
 
-외부 제공자 계약은 모의 HTTP 응답으로 테스트했다. 대화 백업 왕복·공개 판본 제외·다른 작품 자료 차단·시점/길이/역할 경계와 키 암호화·계정/제공자 구분·만료·변조·Origin·쿠키 속성·비밀값 미반환·세 제공자의 사용자 프롬프트를 테스트했다. 실제 키로 성공·거부·한도·비용을 시험한 결과가 아니다. 선택 문단 전송·작품 전체 자동 검색·스트리밍·장편 작업 큐는 후속 기능이다.
+외부 제공자 계약은 모의 HTTP 응답으로 테스트했다. 대화 백업 왕복·공개 판본 제외·다른 작품 자료 차단·시점/길이/역할 경계와 모델 선택 암호화·계정/제공자 구분·만료·변조·Origin·쿠키 속성·비밀값 미반환·Vertex 두 계열의 사용자 프롬프트를 테스트했다. 실제 프로젝트 권한으로 성공·거부·한도·비용을 시험한 결과가 아니다. 선택 문단 전송·작품 전체 자동 검색·스트리밍·장편 작업 큐는 후속 기능이다.
 
-구현: [어댑터](../src/lib/ai-provider.ts), [대화 라우트](../src/app/api/ai/chat/route.ts), [화면](../src/components/ai-chat.tsx), [기록](../src/lib/ai-conversation.ts), [자료 경계](../src/lib/ai-chat-context.ts), [적용 로직](../src/lib/ai.ts). 공식 계약: [OpenAI 대화 상태](https://developers.openai.com/api/docs/guides/conversation-state)·[구조화 출력](https://developers.openai.com/api/docs/guides/structured-outputs), [Claude](https://platform.claude.com/docs/en/api/messages/create), [Gemini](https://ai.google.dev/api/generate-content).
-
-노트 커서 요청에는 선택 필드 `noteRange: { kind: "selection" | "paragraph", from, to, text }`를 추가한다. `from/to`는 ProseMirror 위치(중첩 블록·인라인 원자·UTF-16 길이 포함)이며 text와 서버 저장본의 범위 글이 같아야 한다. `noteId === docId`, `includeManuscript: true`일 때만 사용한다. 전송용 필드라 작업 공간·백업 스키마는 바꾸지 않는다. 제공자에 보낼 문서 메타의 `scope`는 선택/문단만 읽었다는 뜻이며 고정 지침에서도 전체 노트로 해석하지 않는다.
+구현: [Vertex 실행](../src/lib/ai-vertex.ts), [인증](../src/lib/vertex-runtime.ts), [대화 라우트](../src/app/api/ai/chat/route.ts), [화면](../src/components/ai-chat.tsx), [기록](../src/lib/ai-conversation.ts), [자료 경계](../src/lib/ai-chat-context.ts), [적용 로직](../src/lib/ai.ts). [Vertex SDK](https://ai-sdk.dev/providers/ai-sdk-providers/google-vertex)·[Vercel GCP OIDC](https://vercel.com/docs/oidc/gcp).

@@ -1,6 +1,6 @@
 'use client';
 
-import { providerSchema } from '@/lib/ai-provider';
+import { providerSchema,activeAIProviders,providerLabels } from '@/lib/ai-provider';
 import { useEffect, useState } from 'react';
 import { NovelDocument, RichNode } from '@/lib/model';
 import { Review, applySuggestion } from '@/lib/ai';
@@ -14,7 +14,7 @@ type AvailableProvider={id:Provider;label:string;configured:boolean;model:string
 
 export function AIReview({workId,doc,onChange,onOpen}:{workId:string;doc:NovelDocument;onChange:(content:RichNode)=>void;onOpen:(id:string)=>void}){
   const s=useStudio();const [goal,setGoal]=useState('style');const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [review,setReview]=useState<{result:Review;version:string;sources:{id:string;title:string}[];docId:string;provider:Provider;model:string}|null>(null);
-  const [provider,setProvider]=useState<Provider>('openai');const [providers,setProviders]=useState<AvailableProvider[]>([{id:'openai',label:'OpenAI',configured:false,model:null},{id:'anthropic',label:'Claude',configured:false,model:null},{id:'gemini',label:'Gemini',configured:false,model:null}]);
+  const [provider,setProvider]=useState<Provider>('gemini');const [providers,setProviders]=useState<AvailableProvider[]>(activeAIProviders.map(id=>({id,label:providerLabels[id],configured:false,model:null})));
   useEffect(()=>{if(!cloudConfigured||!s.user)return;let cancelled=false;void(async()=>{try{const session=await cloud().auth.getSession();const response=await fetch('/api/ai/providers',{headers:{Authorization:`Bearer ${session.data.session?.access_token||''}`}});
 
 if(!response.ok)throw new Error();const result=await response.json();

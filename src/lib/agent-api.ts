@@ -4,6 +4,7 @@ import { HookConflictError } from 'workflow/errors';
 import { writerClient } from './server-auth';
 import { sameOriginCredentialRequest } from './ai-credential-handler';
 import { readLimitedJson,BodyLimitError } from './http';
+import { providerSettingsStatus,requestProviderConfig } from './ai-credentials';
 import { providerConfig } from './ai-provider';
 import { workspaceSchema } from './model';
 import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges } from './agent-server';
@@ -51,15 +52,15 @@ export async function writingAgentAPI(request:Request,path:string[]){
       if(method==='GET'){
         const list=await exportAgentRows('agent_sessions',auth.userId);
 
-        const providers=(['openai','anthropic','gemini'] as const).map(id=>{const config=providerConfig(id);
+        const providers=providerSettingsStatus(request,auth.userId).providers;
 
-return {id,model:config?.model||null,configured:!!config};});
-
-        return json({sessions:z.array(agentSessionSchema).parse(list).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)),providers,webAvailable:!!(process.env.GEMINI_API_KEY&&(process.env.GEMINI_SEARCH_MODEL||process.env.GEMINI_MODEL))});
+        return json({sessions:z.array(agentSessionSchema).parse(list).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)),providers,webAvailable:!!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL)});
       }
 
       if(method==='POST'){
-        const input=agentSessionInputSchema.parse(await readLimitedJson(request,1024*1024)),row=await auth.client.from('workspaces').select('id,payload').eq('owner_id',auth.userId).single();
+        const input=agentSessionInputSchema.parse(await readLimitedJson(request,1024*1024));
+
+if(input.provider==='openai')return json({error:'Vertex AI의 Gemini 또는 Claude를 선택하세요.'},400);const row=await auth.client.from('workspaces').select('id,payload').eq('owner_id',auth.userId).single();
 
         if(row.error)return json({error:'원고를 찾지 못했습니다.'},403);
         captureAgentScope(workspaceSchema.parse(row.data.payload),input.scope);
@@ -90,6 +91,8 @@ return json({session:agentSessionSchema.parse(old.data)});}
 
       if(path.length===2&&method==='PATCH'){
         const input=z.object({mode:agentModeSchema.optional(),provider:agentSessionInputSchema.shape.provider.optional(),web:z.boolean().optional(),title:z.string().trim().min(1).max(300).optional()}).strict().parse(await readLimitedJson(request,8192));
+
+        if(input.provider==='openai')return json({error:'Vertex AI의 Gemini 또는 Claude를 선택하세요.'},400);
         const result=await db.from('agent_sessions').update({...input,updated_at:new Date().toISOString()}).eq('id',session.id).eq('owner_id',auth.userId).select('*').single();
 
         if(result.error)throw new Error('대화 설정을 저장하지 못했습니다.');
@@ -105,13 +108,13 @@ return json({session:agentSessionSchema.parse(old.data)});}
 
 return json({run:agentRunView(await readAgentRun(input.id))});}
 
-        const config=providerConfig(session.provider);
+        const config=requestProviderConfig(request,session.provider,auth.userId);
 
-        if(!config)return json({error:'선택한 제공자의 서버 API 키와 모델을 연결하세요. 브라우저 연결은 작업 실행에 사용하지 않습니다.'},503);
+        if(!config)return json({error:'Vertex AI의 Gemini·Claude 모델과 서버 인증을 설정하세요.'},503);
 
         if(input.mode!==session.mode||input.provider!==session.provider||input.web!==session.web)return json({error:'대화 설정이 바뀌었습니다. 확인 후 다시 보내세요.'},409);
 
-        if(session.web&&!(process.env.GEMINI_API_KEY&&(process.env.GEMINI_SEARCH_MODEL||process.env.GEMINI_MODEL)))return json({error:'Gemini 웹 조사 연결이 필요합니다.'},503);
+        if(session.web&&!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL))return json({error:'Gemini 웹 조사 연결이 필요합니다.'},503);
         const workspace=await auth.client.from('workspaces').select('id,payload').eq('id',session.workspace_id).eq('owner_id',auth.userId).single();
 
         if(workspace.error)return json({error:'원고를 읽지 못했습니다.'},403);

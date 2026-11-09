@@ -2,12 +2,12 @@
 
 import { useCallback,useEffect,useState } from 'react';
 import { cloud,cloudConfigured } from '@/lib/cloud';
-import { providerSchema,type AIProvider } from '@/lib/ai-provider';
+import { vertexProviderSchema,activeAIProviders,providerLabels,type AIProvider } from '@/lib/ai-provider';
 import { z } from 'zod';
 import type { AIProviderStatus } from '@/lib/ai-settings';
 import { useStudio } from './studio-provider';
 
-const initialProviders:AIProviderStatus[]=(['openai','anthropic','gemini'] as const).map(id=>({id,label:({openai:'OpenAI',anthropic:'Claude',gemini:'Gemini'})[id],configured:false,model:null,source:null,browserStored:false,browserInvalid:false}));
+const initialProviders:AIProviderStatus[]=activeAIProviders.map(id=>({id,label:providerLabels[id],configured:false,model:null,source:null,browserStored:false,browserInvalid:false}));
 
 const selections=new Map<string,AIProvider>();
 
@@ -15,14 +15,14 @@ const choiceKey=(namespace:string)=>`kosmos:ai-provider:${namespace}`;
 
 function savedProvider(namespace:string){try{const value=localStorage.getItem(choiceKey(namespace));
 
-const parsed=providerSchema.safeParse(value);
+const parsed=vertexProviderSchema.safeParse(value);
 
 return parsed.success?parsed.data:undefined;}catch{return undefined;}}
 
-/** Both surfaces share a device preference; keys and models stay in the existing secure connection. */
+/** Both surfaces share a device preference; authentication stays on Vertex; only model preferences use the secure cookie. */
 export function useAIConnection(){
   const {namespace}=useStudio();
-  const [providers,setProviders]=useState(initialProviders),[provider,setProviderState]=useState<AIProvider>(selections.get(namespace)||'openai');
+  const [providers,setProviders]=useState(initialProviders),[provider,setProviderState]=useState<AIProvider>(selections.get(namespace)||'gemini');
   const [loadingProviders,setLoadingProviders]=useState(cloudConfigured),[storageAvailable,setStorageAvailable]=useState(false),[connectionError,setConnectionError]=useState('');
 
   const setProvider=useCallback((id:AIProvider)=>{selections.set(namespace,id);setProviderState(id);
@@ -43,7 +43,7 @@ if(!response.ok)throw new Error(body.error||'AI 연결 상태를 확인하지 �
 
     if(signal?.aborted)return;
     setProviders(body.providers);setStorageAvailable(!!body.storageAvailable);setConnectionError('');
-    const choice=selected||selections.get(namespace)||savedProvider(namespace)||body.providers.find((p:AIProviderStatus)=>p.configured)?.id||'openai';setProvider(choice);
+    const remembered=selected||selections.get(namespace)||savedProvider(namespace),choice=body.providers.some((p:AIProviderStatus)=>p.id===remembered)?remembered:body.providers.find((p:AIProviderStatus)=>p.configured)?.id||'gemini';setProvider(vertexProviderSchema.parse(choice));
 
     if(selected)window.dispatchEvent(new CustomEvent('kosmos:ai-connection',{detail:{namespace}}));
   },[namespace,setProvider]);
@@ -52,7 +52,7 @@ if(!response.ok)throw new Error(body.error||'AI 연결 상태를 확인하지 �
     const controller=new AbortController();
     void refreshProviders(undefined,controller.signal).catch(e=>{if(!controller.signal.aborted)setConnectionError(e instanceof Error?e.message:'AI 연결을 확인하지 못했습니다.');}).finally(()=>{if(!controller.signal.aborted)setLoadingProviders(false);});
 
-    const change=(event:Event)=>{if(!(event instanceof CustomEvent))return;const parsed=z.object({namespace:z.string(),id:providerSchema}).safeParse(event.detail);
+    const change=(event:Event)=>{if(!(event instanceof CustomEvent))return;const parsed=z.object({namespace:z.string(),id:vertexProviderSchema}).safeParse(event.detail);
 
 if(parsed.success&&parsed.data.namespace===namespace)setProviderState(parsed.data.id);};
 

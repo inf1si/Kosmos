@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import { workspaceSchema,plainText,wikiReferences,povSettings } from '@/lib/model';
 import { writerClient } from '@/lib/server-auth';
-import { providerSchema,providerConfig,requestReview } from '@/lib/ai-provider';
+import { providerSchema } from '@/lib/ai-provider';
+import { requestReview } from '@/lib/ai-vertex';
+import { requestProviderConfig } from '@/lib/ai-credentials';
 import { readLimitedJson,BodyLimitError } from '@/lib/http';
 
 export const maxDuration=60;
 
-const inputSchema=z.object({workId:z.uuid(),docId:z.uuid(),version:z.string().max(100),goal:z.enum(['style','continuity']),provider:providerSchema.default('openai')});
+const inputSchema=z.object({workId:z.uuid(),docId:z.uuid(),version:z.string().max(100),goal:z.enum(['style','continuity']),provider:providerSchema.default('gemini')});
 
 export async function POST(request:Request){
   const author=await writerClient(request);
@@ -15,9 +17,9 @@ if(!author)return Response.json({error:'작가 로그인이 필요합니다.'},{
 
   try{
     const input=inputSchema.parse(await readLimitedJson(request,10000));
-    const config=providerConfig(input.provider);
+    const config=requestProviderConfig(request,input.provider,author.userId);
 
-if(!config)return Response.json({error:'선택한 AI의 키와 모델이 아직 연결되지 않았습니다.'},{status:503});
+if(!config)return Response.json({error:'Vertex AI 서버 인증과 모델을 설정하세요.'},{status:503});
     const {data,error}=await client.from('workspaces').select('payload').single();
 
 if(error||!data)return Response.json({error:'작가 권한을 확인하세요.'},{status:403});

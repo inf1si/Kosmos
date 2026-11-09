@@ -2,7 +2,7 @@
 
 ## 집필 작업 대화 연결 (2026-11-09)
 
-백그라운드에서 이어지는 **작업 대화**는 서버 API 키·모델과 새 DB migration이 필요하다. 아래 브라우저 쿠키 연결은 기존 문서별 AI 대화용이며 작업 실행에 복사하지 않는다. Gemini 웹 조사는 주 제공자와 별도로 Gemini 서버 연결을 사용한다. [설정 절차](setup-deployment.md#집필-작업-대화)·[사용 계약](writing-agent.md).
+백그라운드에서 이어지는 **작업 대화**는 Vertex 서버 인증·모델과 새 DB migration이 필요하다. 문서·노트·커서 AI와 같은 Vertex 인증을 사용한다. 브라우저 쿠키에는 모델 ID만 저장하며 웹 조사는 Vertex Gemini를 사용한다. [설정 절차](setup-deployment.md#집필-작업-대화)·[사용 계약](writing-agent.md).
 
 ## 서재 다운로드 연결 (2026-11-03)
 
@@ -10,7 +10,7 @@
 
 집필실 **Google 로그인**은 Drive 백업과 다른 연결이다. 로그인·기존 Naver 이메일 작가 계정 연결은 [Google 로그인 안내](google-login.md)를 따른다. 이 페이지의 Drive OAuth 클라이언트·refresh token은 로그인 설정으로 복사하거나 변경하지 않는다.
 
-Supabase·Vercel과 작가 로그인은 연결됐다. 외부 문서 기능은 파일만으로 바로 사용한다. Drive 연결 절차는 아래 기록을 참고하고 실제 최신 상태는 [구현 상태](status.md)와 [검증 기록](../VERIFICATION.md)을 따른다. AI는 키를 만든 제공자부터 활성화한다. 비밀번호·API 키·refresh token은 채팅에 보내지 않는다. API 키는 본인이 집필실의 AI 설정 또는 Vercel 기본 설정에 직접 넣고, 백업 비밀은 Vercel Production 변수에 넣는다.
+Supabase·Vercel과 작가 로그인은 연결됐다. 외부 문서 기능은 파일만으로 바로 사용한다. Drive 연결 절차는 아래 기록을 참고하고 실제 최신 상태는 [구현 상태](status.md)와 [검증 기록](../VERIFICATION.md)을 따른다. AI는 `orbiter-ai`의 Gemini·Claude로 통일한다. [Vertex 연결 절차](vertex-ai.md)를 따른다. 비밀번호·API 키·refresh token은 채팅에 보내지 않고 백업 비밀은 Vercel Production 변수에 넣는다.
 
 2026-10-01에 Google Cloud의 전용 **Kosmos Backup** 프로젝트와 Google Drive API 활성화를 완료했다. 사용자가 앱·웹 OAuth 클라이언트를 만들고 값을 복사해 보관했으며 JSON 다운로드는 완료되지 않았다. 원래 비밀값이 비공개 도구 결과에 포함된 뒤, 사용자가 새 비밀키를 보관하고 기존 키를 비활성화한 상태를 확인했다.
 
@@ -58,24 +58,6 @@ Production 재배포 뒤 작가 로그인 → 백업과 복구 → **지금 외�
 
 토큰 취소·만료·공간 부족이면 과거 정상 ZIP은 남는다. Google 승인을 다시 받거나 공간을 정리하고 같은 절차로 새 성공을 확인한다. 실제 값은 문서에 기록하지 않는다.
 
-## 4. AI 제공자별 연결
+## 4. Vertex AI
 
-기존 문서별 AI 대화는 로그인한 **집필실 → AI 대화 → AI 설정**에서 제공자, 정확한 모델 ID, 발급받은 API 키를 넣고 **연결 저장**하는 것이다. 재배포 없이 해당 브라우저에 연결된다. 키·모델은 서버가 암호화한 쿠키로 최대 30일 보관하며 다른 기기·도메인에서는 다시 넣는다. 저장 자체는 AI를 호출하지 않는다. 프롬프트를 프리셋으로 저장·적용한다. 계정에 동기화·백업하며 API 키는 제외한다. 기본 프리셋·사용자 추가·재설정은 [AI 안내](ai.md)를 따른다.
-
-기존 문서별 AI의 Vercel 연결은 모든 기기가 사용할 **선택적 서버 기본값**이다. 이 브라우저의 연결이 우선하고, 브라우저 연결이 없을 때 아래 값을 사용한다.
-
-| 제공자 | 키 발급·모델 확인 | Vercel Production 변수 |
-|---|---|---|
-| OpenAI | [API 플랫폼](https://platform.openai.com/)과 Responses 구조화 출력 지원 모델 | `OPENAI_API_KEY`, `OPENAI_MODEL` |
-| Claude | [Anthropic Console](https://platform.claude.com/)과 Messages JSON Schema 지원 모델 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` |
-| Gemini | [Google AI Studio](https://aistudio.google.com/)와 generateContent JSON Schema 지원 모델 | `GEMINI_API_KEY`, `GEMINI_MODEL` |
-
-현재 키·모델은 없다. 각 키를 만든 뒤 제공자 문서의 정확한 모델 ID를 넣는다. 하나만 연결해도 그 제공자부터 사용할 수 있다. 세 계정의 결제·사용 한도는 서로 별개이며 ChatGPT·Claude 웹 구독이 API 사용료를 대신한다고 가정하지 않는다. 제공자 대시보드의 가능한 예산·알림·사용 제한을 설정하고 짧은 샘플로 먼저 검토한다.
-
-Vercel 환경 변수를 바꾸었다면 재배포한다. 집필실에서 키를 저장했다면 재배포하지 않아도 된다. 참고 패널의 **AI 대화** 탭(서식 도구의 **AI 대화**)에서 연결된 제공자를 선택한다. 보낼 자료에서 현재 원고 포함 여부와 참고 문서를 선택한다. 질문·시스템 프롬프트·최근 대화·선택 자료는 해당 제공자 한 곳에 전송된다. 실패 시 다른 제공자로 자동 전송하지 않는다. 앱의 하루 호출 제한은 없으며 제공자 한도·요금이 적용된다. 실제 결과·한도·원문 보존을 확인한다. [AI 계약과 제한](ai.md).
-
-브라우저 키 보관에는 서버의 `AI_CREDENTIAL_SECRET`(별도 무작위 32자 이상)을 권장한다. 생략하면 이미 백업용으로 설정한 `SUPABASE_SERVICE_ROLE_KEY`에서 별도 암호화 키를 파생하므로 기존 운영 설정으로도 사용할 수 있다. 값은 `NEXT_PUBLIC_` 변수에 넣지 않는다. 암호화 루트 교체·만료·브라우저 데이터 삭제 후에는 키를 재입력한다. 오류가 나면 **브라우저 연결 해제** 후 새 키·모델로 다시 저장한다.
-
-## 완료 기록
-
-키와 토큰을 제외하고 최초 성공 날짜, Drive ZIP 복원 결과, 자동 일정 결과, 선택 모델, 샘플 AI 검토·제안 적용 결과를 [검증 기록](../VERIFICATION.md)에 추가한다. 현재 단계는 코드·모의 계약 검증과 OAuth 앱 프로덕션 준비, 사용자 재승인·Refresh token 보관·Google 변수 저장 완료 보고까지다. 나머지 서버 설정과 실제 백업 검증은 남아 있다.
+일반 문서·노트·커서 AI와 작업 대화는 모두 [Vertex AI 연결](vertex-ai.md)을 따른다. 서버 인증을 연결한 뒤 앱의 AI 설정에서 모델을 선택한다. OpenAI·Claude·Gemini 직접 API 키 입력은 지원하지 않는다. 구독 웹사이트의 로그인과 API 과금은 별개다.

@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 2026-11-09 — Vertex AI 통합
+
+- 문서·노트·커서 AI와 작업 대화를 Google Cloud `orbiter-ai`의 Vertex Gemini·Claude로 통일한다. 웹 조사도 Vertex Gemini를 사용하며 직접 OpenAI·Anthropic·Gemini Developer API 호출은 제거한다. 기존 대화·백업의 제공자 표시는 보존한다.
+- AI 설정은 API 키 대신 모델 선택만 저장한다. 서버 인증은 Vercel OIDC/WIF 또는 로컬 ADC이며 단기 토큰을 Workflow 인자·브라우저·기록에 넣지 않는다.
+- Production 주체 하나에 서비스 계정 사용을 허용하는 GCP 설정 스크립트와 [연결 안내](docs/vertex-ai.md)를 추가한다. 운영 GCP 권한·모델 활성화·migration·배포는 별도다. [검증](VERIFICATION.md).
+
+
 ## 2026-11-09 — 개인 집필 작업 대화
 
 - 집필실·노트에 문서를 오가며 이어지는 **작업 대화**를 추가한다. 작품/노트 공간별 자료 검색·읽기·문서/폴더 생성·부분 수정·이동·기억·Gemini 웹 조사를 제공한다.

@@ -71,7 +71,7 @@
 | 운영 플랜·외부 백업 저장소·보관 기간 | Vercel Hobby·Supabase Free, Drive 남은 무료 공간 선택. OAuth·보관 기간 미설정 | 단계 2~3 |
 | 사이트명·작가명·첫 공개 작품 | 임시 이름·샘플 | 단계 3 |
 | 사용자 도메인 | 미구매·미연결 | 기본 URL 검증 후 |
-| AI 제공자·모델·월 예산 | OpenAI·Claude·Gemini 선택·코드 구현. 키·모델·예산 미설정 | 단계 4 |
+| AI 제공자·모델·월 예산 | Vertex Gemini·Claude 선택·코드 구현. GCP 인증·모델 접근·예산 운영 미설정 | 단계 4 |
 | 기존 원고 형식·가져오기 범위 | ZIP·ENEX·MD·HTML·TXT·CSV 구현. 실제 원고·외부 앱 왕복 검증 전 | 실제 원고 이동 전 |
 
 현재 코드의 세부 경계는 [구현 상태](status.md), 원래 목표는 [제품 요구사항](product.md)과 [상세 설계](product-spec.md)를 따른다.

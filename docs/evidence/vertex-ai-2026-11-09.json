@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-09",
+  "project": "orbiter-ai",
+  "baseline": "15909947c30f036ab4581d209772dfb645ff44be",
+  "transport": "@ai-sdk/google-vertex 5.0.134; Vertex Gemini and Anthropic publishers only",
+  "environment": "Local Next.js 16.3.8 Webpack + Workflow 5.4.0 + AI SDK 7.0.166 + synthetic PGlite/Supabase, OIDC/STS/IAM/model responses",
+  "realAuthorDataWritten": false,
+  "paidModelCalls": 0,
+  "gcpIamResourcesCreated": false,
+  "checks": {
+    "nodeSuite": 290,
+    "additionalGcpScriptTests": 2,
+    "finalCoreSuite": 13,
+    "typecheck": "passed",
+    "lint": "passed",
+    "docs": "passed",
+    "productionBuild": "passed with local test font responses; 35 steps and 1 workflow"
+  },
+  "browser": {
+    "widths": [
+      1280,
+      360
+    ],
+    "paletteModeCombinations": 54,
+    "displayCases": 432,
+    "totalCases": 433,
+    "pageErrors": [],
+    "fixtureModelCalls": 57,
+    "flows": [
+      "Gemini/Claude model preference save",
+      "ordinary document AI for both model families",
+      "document cursor AI",
+      "ordinary note and note cursor AI",
+      "review/create/read/replace/remember/search/apply/open/forget/undo/reload",
+      "execute and discuss modes",
+      "idempotency, cancellation and cancelled undo",
+      "discard/reverted and stale-source conflict",
+      "remote undo without realtime",
+      "JSON export/download, authentication and origin checks",
+      "session/settings dropdowns at both widths across all themes"
+    ]
+  },
+  "gcpScript": "Mock gcloud verifies production-only exact subject, dedicated audience, roles/aiplatform.user and roles/iam.workloadIdentityUser only, no key creation, update on rerun, billing/project rejection",
+  "unverified": [
+    "Actual orbiter-ai billing/IAM/WIF setup",
+    "Claude partner terms/model enablement",
+    "Paid model response quality, citations, latency and cost",
+    "Live external URL context",
+    "Production migration, deployment and Workflow resume",
+    "Cloud backup restore of agent tables",
+    "WebKit and physical phone"
+  ],
+  "followup": {
+    "browserCases": 9,
+    "fixtureModelCalls": 42,
+    "pageErrors": 0,
+    "flows": [
+      "Claude custom model reset returns to server default in real settings UI",
+      "saved Gemini model ID is captured in durable agent run",
+      "ordinary document and note chat/cursor regression",
+      "agent review/apply/undo and state guards repeated"
+    ]
+  }
+}
