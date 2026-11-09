@@ -60,5 +60,17 @@
       "ordinary document and note chat/cursor regression",
       "agent review/apply/undo and state guards repeated"
     ]
+  },
+  "authErrorRegression": {
+    "red": "Synthetic OIDC rejection leaked provider detail before guard",
+    "green": "Web research returns a new generic error with no cause; final 22 core checks pass",
+    "realCredentialsUsed": false
+  },
+  "previousCommitChecks": {
+    "commit": "b0c57ec5c79ba2621fa78d27724d1885da3357ed",
+    "ciRun": "https://github.com/inf1si/Kosmos/actions/runs/42659875535",
+    "ci": "success",
+    "previewDeployment": "dpl_5Das9o7a7NzPvn7s3Ls5UAsmYh29",
+    "preview": "READY with real Google Fonts"
   }
 }

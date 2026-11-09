@@ -34,5 +34,5 @@ async function streamAgentModel(vendor:AIProvider,modelId:string,options:Paramet
 
   if(!config)throw new Error('Vertex AI 서버 인증과 모델을 설정하세요.');
 
-  return vertexLanguageModel(config).doStream(options);
+  try{return await vertexLanguageModel(config).doStream(options);}catch{throw new Error('Vertex AI 요청을 완료하지 못했습니다. 모델·접근 권한·할당량을 확인하세요.');}
 }
