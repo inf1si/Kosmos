@@ -46,6 +46,8 @@ import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences'
 import { openingDocument, readStudioPosition, readStudioTabs, rememberStudioPosition, rememberStudioTabs } from '@/lib/studio-position';
 import { workShelves, workShelfTitle } from '@/lib/work-shelves';
 import { Select } from './select';
+import { openWritingAgent } from './writing-agent';
+import { agentSourceOpenSchema } from '@/lib/writing-agent';
 
 const HOME='home';
 
@@ -115,6 +117,24 @@ return()=>window.removeEventListener('studio-modal',listener);},[notesOpen,openN
   const [searchJump,setSearchJump]=useState<WorkspaceSearchJump|null>(null);
   const [workMenu,setWorkMenu]=useState(false);const [moreMenu,setMoreMenu]=useState(false);const [phone,setPhone]=useState(false);const [account,setAccount]=useState(false);const [paperId,setPaperId]=useState<string|null>(null);const [workSettings,setWorkSettings]=useState<string|null>(null);const [workConfirm,setWorkConfirm]=useState<WorkConfirm|null>(null);
   const [compact,setCompact]=useState(false);const sidebarRef=useRef<HTMLElement>(null);const sidebarStyle=useSidebarStyle();const referenceRef=useRef<HTMLElement>(null);
+  useEffect(()=>{const listener=(event:Event)=>{if(!(event instanceof CustomEvent))return;const parsed=agentSourceOpenSchema.safeParse(event.detail);
+
+    if(!parsed.success)return;const {scope,id}=parsed.data;
+
+    setFocus(false);setReference(null);setSplitId(null);
+
+if(compact)setSidebar(false);
+
+    if(scope.kind==='notes'){openNotes(id);
+
+return;}
+
+    setNotesOpen(false);setWorkId(scope.id);setCurrent(id);setLastDoc(id);setTabs(previous=>[...new Set([...(workId===scope.id?previous:readStudioTabs(scope.id)),id])]);window.history.replaceState(null,'',window.location.pathname+window.location.search);
+  };
+
+window.addEventListener('writing-agent-source',listener);
+
+return()=>window.removeEventListener('writing-agent-source',listener);},[openNotes,compact,workId]);
   const closeSidebar=useCallback(()=>setSidebar(false),[]);const closeReference=useCallback(()=>setReference(null),[]);
   useDrawerFocus(!notesOpen&&compact&&sidebar&&!focus&&!s.loading,sidebarRef,closeSidebar,'sidebar-toggle');
   useDrawerFocus(!notesOpen&&compact&&!!reference&&!focus&&!s.loading,referenceRef,closeReference,phone?'more-toggle':'reference-toggle');
@@ -309,6 +329,7 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       <nav className="studio-tools" aria-label="작업 도구">
         <button type="button" className="nav-item" aria-pressed={onHome} onClick={()=>go(HOME)}><House size={16}/><span>집필실 홈</span></button>
         <button type="button" className="nav-item" data-workspace-search-opener onClick={()=>openSearch()}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
+        <button type="button" className="nav-item" onClick={()=>openWritingAgent({kind:'work',id:work.id})}><Sparkles size={16}/><span>작업 대화</span></button>
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
         <button type="button" className="nav-item" aria-pressed={onGraph} onClick={()=>go(GRAPH)}><Network size={16}/><span>문서 그래프</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('trash')}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state!.trash).length}</small></button>

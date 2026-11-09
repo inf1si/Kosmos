@@ -167,3 +167,14 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 열의 NOT NULL·양수 제약, `assign_library_position` 트리거, `get_author_library()`·`set_library_order(uuid[])`를 확인한다. 두 RPC는 authenticated만 실행 가능하며 내부에서 허용 작가·owner·현재 판본 전체 목록을 검사한다. anon에는 활성 공개 판본의 순위 SELECT만 추가하며 쓰기 권한·기존 RLS·Auth·Storage 정책은 유지한다. 보안 진단의 authenticated SECURITY DEFINER 경고 두 항목은 이 의도된 RPC와 내부 소유자 검사를 함께 검토한다.
 
 운영 적용·CI·실제 계정 검증 여부는 [검증 기록](../VERIFICATION.md)을 따른다. 열린 집필실/서재 탭은 배포 후 새로고침한다.
+
+
+## 집필 작업 대화
+
+1. `20261109135502_personal_writing_agent.sql`을 동일 Supabase 프로젝트에 적용한다. 별도 세션·실행·기억 테이블, 소유자 읽기 RLS, 서버 전용 원고 반영 RPC를 만든다. 새 테이블을 작가 한 명의 비공개 자료로 취급한다.
+2. Production에 기존 Supabase URL·서비스 키와 사용할 제공자의 서버 환경 변수를 설정한다. `OPENAI_API_KEY`/`OPENAI_MODEL`, `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL`, `GEMINI_API_KEY`/`GEMINI_MODEL` 중 하나 이상이 필요하다. 키는 Vercel의 비밀 값으로 입력하고 저장소·브라우저·채팅에 붙이지 않는다.
+3. 웹 조사는 `GEMINI_API_KEY`와 `GEMINI_SEARCH_MODEL`(없으면 `GEMINI_MODEL`)이 필요하다. Google Search grounding·URL context를 지원하는 현재 모델을 선택한다. Gemini 주 대화 연결과 별도 검색 모델을 지정할 수 있다.
+4. `withWorkflow`를 포함한 앱을 배포한다. `/.well-known/workflow/`의 생성 route는 Workflow SDK가 관리한다. Vercel의 Workflow 사용 가능 여부·실행/단계 요금·보관 정책을 프로젝트에서 확인한다. Preview에 Production 서비스 키를 자동 복제하지 않는다.
+5. 작은 합성 작품에서 검색→작업본→적용→되돌리기, 브라우저 종료 후 재접속을 확인한 뒤 실제 글에 사용한다. 제공자 키가 없는 합성 검사는 실제 모델 품질·요금을 검증하지 않는다.
+
+선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
