@@ -38,5 +38,7 @@
     "Vercel production resume",
     "production migration/RLS and new cloud backup restore",
     "WebKit and physical phone"
-  ]
+  ],
+  "unitTests": 291,
+  "fontLoaderRegression": "Unpatched Next 16.3.8 reproduces the null-extension TypeError; patched loader emits identical WOFF2 bytes and rejects invalid extensionless files."
 }

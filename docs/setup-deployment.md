@@ -179,4 +179,6 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 
 선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
 
-기본 `pnpm build`는 Webpack을 명시한다. Next.js 16.3.8의 Turbopack 글꼴 내부 쿼리 해석 오류가 CI에서 재현되어 빌드 방식을 고정했다. 운영의 글꼴 파일·종류·라이선스는 변경하지 않는다.
+기본 `pnpm dev`·`pnpm build`는 Webpack을 명시한다. Next.js 16.3.8의 Turbopack 글꼴 내부 쿼리 해석 오류가 CI에서 재현되어 빌드 방식을 고정했다. 운영의 글꼴 파일·종류·라이선스는 변경하지 않는다.
+
+`pnpm-workspace.yaml`의 `patchedDependencies`는 [Next.js 글꼴 로더 패치](../patches/next@16.3.8.patch)를 설치 때 적용한다. Google의 `/l/font?kit=...` 응답은 확장자가 없어 기존 로더가 실패하므로 WOFF2/WOFF/OTF/TTF 헤더를 확인해 출력 확장자를 정한다. 다운로드한 바이트는 변경하지 않는다. Next.js를 올릴 때에는 확장자 없는 응답 회귀 검사와 실제 글꼴 빌드를 확인한 뒤 이 패치의 필요성을 다시 판단한다.

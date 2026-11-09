@@ -16,3 +16,5 @@ minimumReleaseAgeExclude:
   - '@ai-sdk/gateway@4.0.139'
   - '@ai-sdk/workflow@2.0.98'
   - ai@7.0.166
+patchedDependencies:
+  next@16.3.8: patches/next@16.3.8.patch

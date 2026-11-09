@@ -1,0 +1,20 @@
+diff --git a/dist/compiled/@next/font/dist/google/loader.js b/dist/compiled/@next/font/dist/google/loader.js
+index f8e585c491caac87501f66a307c0fac21e239c08..252ee0f2c231faa6432bc3426d819e88ecd65f5f 100644
+--- a/dist/compiled/@next/font/dist/google/loader.js
++++ b/dist/compiled/@next/font/dist/google/loader.js
+@@ -119,7 +119,14 @@ const nextFontGoogleFontLoader = async ({ functionName, data, emitFontFile, isDe
+             if (fontFileBuffer == null) {
+                 (0, next_font_error_1.nextFontError)(`Failed to fetch \`${fontFamily}\` from Google Fonts.`);
+             }
+-            const ext = /\.(woff|woff2|eot|ttf|otf)$/.exec(googleFontFileUrl)[1];
++            // Google may serve subset files from /l/font?kit=... without a suffix.
++            // Keep the downloaded bytes intact and identify these files by their standard header.
++            const header = fontFileBuffer.subarray(0, 4).toString('hex');
++            const formats = { '774f4632': 'woff2', '774f4646': 'woff', '4f54544f': 'otf', '00010000': 'ttf', '74727565': 'ttf' };
++            const ext = /\.(woff|woff2|eot|ttf|otf)(?:[?#]|$)/.exec(googleFontFileUrl)?.[1] || formats[header];
++            if (!ext) {
++                (0, next_font_error_1.nextFontError)(`Unsupported font file format from Google Fonts: ${fontFamily}`);
++            }
+             // Emit font file to .next/static/media
+             const selfHostedFileUrl = emitFontFile(fontFileBuffer, ext, preloadFontFile, !!adjustFontFallbackMetrics);
+             return {

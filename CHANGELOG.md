@@ -4,7 +4,7 @@
 
 - 집필실·노트에 문서를 오가며 이어지는 **작업 대화**를 추가한다. 작품/노트 공간별 자료 검색·읽기·문서/폴더 생성·부분 수정·이동·기억·Gemini 웹 조사를 제공한다.
 - 함께 생각하기·검토하며 실행·맡겨 실행, 변경 비교·적용·되돌리기, 별도 서버 기록·Workflow 실행·AI 자료 JSON 내보내기를 연결한다. 기존 문서별 AI 대화는 유지한다.
-- Turbopack의 Google 글꼴 쿼리 처리 오류가 CI에서 재현되어 기본 빌드는 검증한 Webpack으로 고정한다.
+- Turbopack의 Google 글꼴 쿼리 처리 오류가 CI에서 재현되어 기본 개발/배포 빌드는 검증한 Webpack으로 고정한다. 확장자 없는 Google Fonts 응답의 형식을 바이트 헤더로 판별하도록 Next.js 16.3.8 로더 패치를 함께 배포한다(글꼴 바이트는 그대로).
 - 서버용 제공자 API 연결과 DB migration이 필요하다. 위키 전체 정리·여러 공간 연결·AI 자료 가져오기는 후속 작업이다. [사용 계약](docs/writing-agent.md)·[설계](docs/personal-knowledge-agent-design.md)·[검증](VERIFICATION.md).
 
 ## 2026-11-09 — 섹션 + 툴팁 겹침
