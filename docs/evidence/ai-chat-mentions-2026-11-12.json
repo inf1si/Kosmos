@@ -30,5 +30,14 @@
     "Production deployment and browser; later results are recorded in the pull request",
     "Live Vertex inference, WebKit, physical device and OS IME"
   ],
-  "separateAgentUIRun": "Existing integrated run stopped at the post-send agent focus assertion after both changed AI chat scopes passed; focused chat mode used for this feature"
+  "separateAgentUIRun": "Existing integrated run stopped at the post-send agent focus assertion after both changed AI chat scopes passed; focused chat mode used for this feature",
+  "sourcePickerFocusFollowup": {
+    "baseline": "fc7998f637130b7bf5cc7b8b795d55658b4ec353",
+    "productionReproduction": "note picker Escape followed immediately by typing: delayed trigger focus closes mention menu",
+    "change": "use existing Popover onReturnFocus guard to return to question and preserve focus already moved elsewhere",
+    "localBrowserCases": 16,
+    "localFixtureModelCalls": 14,
+    "pageErrors": [],
+    "productionRetest": "pending; recorded in the follow-up pull request"
+  }
 }
