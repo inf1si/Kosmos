@@ -4,6 +4,7 @@ import { Workspace, workspaceSchema, Publication, publicationSchema } from './mo
 import { libraryItemSchema, type LibraryItem } from './library-order';
 import { applyNavigation, resolveNavigation } from './document-navigation';
 import { publishedProfileSchema, type AuthorProfile } from './author-profile';
+import { agentCommitSchema, type AgentCommit } from './writing-agent';
 
 let client:SupabaseClient|null=null;
 
@@ -81,6 +82,18 @@ export async function saveCloud(id:string,baseVersion:number,payload:Workspace,r
   if(error)throw new CloudSaveError(error.message,error.code);
 
   return z.object({status:z.enum(['saved','conflict']),version:z.number(),payload:workspaceSchema.optional()}).parse(data);
+}
+
+/** The single agent commit at this cloud version, or null. Any failure leaves the ordinary conflict flow. */
+export async function agentCommitAt(version:number):Promise<AgentCommit|null>{
+  try{
+    const token=(await cloud().auth.getSession()).data.session?.access_token;
+
+    if(!token)return null;
+    const response=await fetch(`/api/agent/commits/${version}`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+
+    return response.ok?z.object({commit:agentCommitSchema.nullable()}).parse(await response.json()).commit:null;
+  }catch{return null;}
 }
 
 export class CloudSaveError extends Error {

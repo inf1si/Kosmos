@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { Workspace, LocalRecord, uid, Revision, Publication, makePublication, withdrawPublication, AssetMeta } from '@/lib/model';
 import { seedWorkspace } from '@/lib/seed';
 import { db, writeLocal, checkpoint, LocalConflict, listRevisions } from '@/lib/database';
-import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, publishCloud, unpublishCloud, authorLibrary, reorderLibrary, cloudRevisions, cloudRevision, type ServerRevision } from '@/lib/cloud';
+import { cloud, cloudConfigured, fetchCloud, initializeCloud, saveCloud, agentCommitAt, publishCloud, unpublishCloud, authorLibrary, reorderLibrary, cloudRevisions, cloudRevision, type ServerRevision } from '@/lib/cloud';
 import { previewPositions, previewPublicationPosition, previewPublications, reorderPreviewLibrary, type LibraryItem } from '@/lib/library-order';
 import { createBackupArchive, readBackup } from '@/lib/backup';
 import { prepareImport, exportInterchange, type ImportBundle, type ImportChoice, type ExportFormat, type TransferDownload } from '@/lib/interchange';
@@ -21,12 +21,15 @@ import { prepareTemplate, prepareTemplateApplication, preserveTemplateData, remo
 import { useAppPreferences } from './use-app-preferences';
 import { preserveWorkShelves } from '@/lib/work-shelves';
 import { preserveWorkFavorites } from '@/lib/work-favorites';
+import { agentCommitJoiner } from '@/lib/writing-agent';
 
 type Conflict={local:Workspace;remote:Workspace;remoteLocalVersion?:number;remoteCloudVersion?:number};
 
 type StudioContextValue={
   state:Workspace|null;namespace:string;loading:boolean;status:string;error:string;conflict:Conflict|null;
   user:string|null;canUse:boolean;epoch:number;lastExportAt:string|null;
+  /** Remount key for a document, note or tree: changes on a full reload and when a joined agent commit changed that item. */
+  viewKey:(id:string)=>string;
   update:(fn:(state:Workspace)=>Workspace)=>void;
   snapshot:(label:string)=>Promise<void>;revisions:()=>Promise<Revision[]>;restore:(data:Workspace)=>Promise<void>;
   serverRevisions:()=>Promise<ServerRevision[]>;restoreServerRevision:(id:string)=>Promise<void>;
@@ -67,10 +70,53 @@ export function StudioProvider({children,localPreview}:{children:ReactNode;local
   const channelRef=useRef<BroadcastChannel|null>(null);const cloudId=useRef<string|null>(null);
   const syncing=useRef(false);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);const pending=useRef(0);
   const openedFor=useRef<string|null|undefined>(undefined);
+  const [joined,setJoined]=useState<Record<string,number>>({});const updateRef=useRef<StudioContextValue['update']>(()=>{});
   const syncError=useRef<string|null>(null);
   const canUse=cloudConfigured?!!user:localPreview;
   const showConflict=useCallback((value:Conflict)=>{conflictRef.current=value;setConflict(value);setStatus('충돌 확인 필요');},[]);
   const setCurrent=useCallback((data:Workspace)=>{dataRef.current=data;setState(data);},[]);
+
+  // One agent commit on top of what this device last saw is joined with unsent edits elsewhere. Anything else stays a conflict.
+  const joinAgent=useCallback(async(remote:Workspace,remoteVersion:number,baseVersion:number)=>{
+    const target=namespaceRef.current,local=dataRef.current;
+
+    if(!local||remoteVersion!==baseVersion+1)return false;
+    const commit=await agentCommitAt(remoteVersion);
+
+    if(!commit||commit.workspace_id!==cloudId.current||commit.applied_version!==remoteVersion)return false;
+    const join=await agentCommitJoiner(local,remote,commit);
+
+    if(!join||namespaceRef.current!==target)return false;
+
+    try{await checkpoint(target,local,'작업 대화 변경을 합치기 전');}catch{return false;}
+
+    if(namespaceRef.current!==target||conflictRef.current)return false;
+
+    // A join always names its scope, so an empty list means the scope was edited after the check.
+    const changed:string[]=[];
+
+    // Join against the newest local state in the tick that stores it, so a keystroke in between is neither lost nor allowed to drop the agent's work.
+    updateRef.current(state=>{const next=join(state);changed.push(...next?.changed??[]);
+
+return next?.state??state;});
+
+    if(!changed.length)return false;
+
+    const step=saveQueue.current.then(()=>db.transaction('rw',db.workspaces,async()=>{
+      const row=await db.workspaces.get(target);
+
+      if(!row||row.cloudVersion!==baseVersion||conflictRef.current||namespaceRef.current!==target)throw new Error('원고가 바뀌었습니다.');
+      const next={...row,cloudVersion:remoteVersion,pendingRequest:undefined};await db.workspaces.put(next);recordRef.current=next;
+    }));
+
+    saveQueue.current=step.catch(()=>{});
+
+    try{await step;}catch{return false;}
+
+    setJoined(old=>({...old,...Object.fromEntries(changed.map(id=>[id,(old[id]||0)+1]))}));
+
+    return true;
+  },[]);
 
   const syncNow=useCallback(async()=>{
     if(!cloudConfigured||!cloudId.current||syncing.current||conflictRef.current)return;
@@ -97,6 +143,10 @@ if(row)await db.workspaces.put({...row,pendingRequest:operation});});
       if(namespaceRef.current!==targetNamespace)return;
 
       if(result.status==='conflict'){
+        if(await joinAgent(result.payload!,result.version,operation.baseVersion)){recovered=true;
+
+return;}
+
         try{await checkpoint(namespaceRef.current,dataRef.current!,'클라우드 충돌 · 기기 원고');}catch{setError('충돌 원고를 이력에 저장하지 못했습니다. ZIP으로 보관하세요.');}
 
         showConflict({local:dataRef.current!,remote:result.payload!,remoteCloudVersion:result.version});
@@ -154,7 +204,7 @@ if(namespaceRef.current!==targetNamespace)return;recordRef.current=next;
     }finally{syncing.current=false;
 
 if(recovered)queueMicrotask(()=>void syncNow());}
-  },[setCurrent,showConflict]);
+  },[joinAgent,setCurrent,showConflict]);
 
   const scheduleSync=useCallback(()=>{if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void syncNow(),1500);},[syncNow]);
 
@@ -186,6 +236,8 @@ showConflict({local:dataRef.current!,remote:e.remote.data,remoteLocalVersion:e.r
       }finally{pending.current--;}
     });
   },[scheduleSync,setCurrent,showConflict]);
+
+  useEffect(()=>{updateRef.current=update;},[update]);
 
   const flush=useCallback(async()=>{await saveQueue.current;
 
@@ -223,7 +275,7 @@ if(author.error||!author.data)throw new Error('이 계정에는 집필실 권한
         if(uidValue){
           const remote=await fetchCloud()||await initializeCloud(row.data);cloudId.current=remote.id;
 
-          if(row.dirty&&row.cloudVersion!==remote.version){showConflict({local:row.data,remote:remote.data,remoteCloudVersion:remote.version});}
+          if(row.dirty&&row.cloudVersion!==remote.version){if(!await joinAgent(remote.data,remote.version,row.cloudVersion))showConflict({local:row.data,remote:remote.data,remoteCloudVersion:remote.version});}
           else if(!row.dirty){const next={...row,data:remote.data,cloudVersion:remote.version};await db.workspaces.put(next);recordRef.current=next;setCurrent(next.data);setStatus('클라우드 동기화됨');}
           else scheduleSync();
         }
@@ -239,7 +291,7 @@ if(author.error||!author.data)throw new Error('이 계정에는 집필실 권한
     return()=>{disposed=true;openedFor.current=undefined;authSub?.unsubscribe();
 
 if(timer.current)clearTimeout(timer.current);};
-  },[localPreview,scheduleSync,setCurrent,showConflict]);
+  },[joinAgent,localPreview,scheduleSync,setCurrent,showConflict]);
   useEffect(()=>{
     if(!state)return;
     const channel=new BroadcastChannel(`orbit:${namespace}`);channelRef.current=channel;
@@ -675,7 +727,7 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
     if(refreshed&&namespaceRef.current===target){recordRef.current=refreshed;setCurrent(remote.data);setEpoch(value=>value+1);setStatus('클라우드 동기화됨');channelRef.current?.postMessage({changed:true});}
   },[setCurrent]);
 
-  return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
+  return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,viewKey:id=>`${id}-${epoch}-${joined[id]||0}`,lastExportAt,update,
     snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,serverRevisions,restoreServerRevision,exportBackup,importBackup,importDocuments,exportDocuments,captureBookWork,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
     libraryPublications,setLibraryOrder,
     login:async(email,password)=>{const {error}=await cloud().auth.signInWithPassword({email,password});

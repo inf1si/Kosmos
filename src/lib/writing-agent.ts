@@ -229,3 +229,36 @@ if(used+size>budget)break;recent.unshift(run);used+=size;}
 
   return {runs:recent,allRuns:safeRuns,memories:safeMemories};
 }
+
+export const agentCommitSchema=z.object({workspace_id:z.uuid(),scope:agentScopeSchema,base_hash:z.string(),applied_hash:z.string(),applied_version:z.number()});
+
+export type AgentCommit=z.infer<typeof agentCommitSchema>;
+
+/**
+ * Joins unsent edits on this device with the one agent commit that made the cloud copy newer.
+ * Resolves to null unless the agent's scope is untouched here and the cloud scope is exactly the agent's result.
+ * The returned function is synchronous so the caller can join against the newest local state in the same tick it stores it;
+ * it returns null when the scope was edited in the meantime.
+ */
+export async function agentCommitJoiner(local:Workspace,remote:Workspace,commit:AgentCommit){
+  try{
+    const before=captureAgentScope(local,commit.scope),after=captureAgentScope(remote,commit.scope);
+
+    if(await agentHash(before)!==commit.base_hash||await agentHash(after)!==commit.applied_hash)return null;
+
+    // Revert compares against applied_hash, so the joined scope must still hash to it.
+    if(await agentHash(captureAgentScope(restoreAgentScope(local,after),commit.scope))!==commit.applied_hash)return null;
+    const untouched=canonicalAgentJson(jsonValueSchema.parse(JSON.parse(JSON.stringify(before)))),body=(d:{title:string;content:RichNode})=>JSON.stringify([d.title,d.content]);
+
+    return (latest:Workspace)=>{
+      try{
+        const current=captureAgentScope(latest,commit.scope);
+
+        if(canonicalAgentJson(jsonValueSchema.parse(JSON.parse(JSON.stringify(current))))!==untouched)return null;
+        const old=new Map(agentDocuments(current).map(d=>[d.id,body(d)]));
+
+        return {state:restoreAgentScope(latest,after),changed:[commit.scope.id,...agentDocuments(after).filter(d=>old.get(d.id)!==body(d)).map(d=>d.id)]};
+      }catch{return null;}
+    };
+  }catch{return null;}
+}

@@ -7,7 +7,7 @@ import { fromText,plainText,uid,workspaceSchema } from '../src/lib/model';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { addNoteSpace,moveNote,noteSpaceFor,resolveNoteNavigation } from '../src/lib/note-navigation';
 import { resolveNavigation } from '../src/lib/document-navigation';
-import { captureAgentScope,agentHash,agentOverlay,agentDiff,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,type AgentOperation } from '../src/lib/writing-agent';
+import { captureAgentScope,agentHash,agentOverlay,agentDiff,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,type AgentOperation } from '../src/lib/writing-agent';
 import { AgentLanguageModel } from '../src/lib/agent-language-model';
 import { WORKFLOW_SERIALIZE } from '@workflow/serde';
 import { asSchema } from 'ai';
@@ -112,4 +112,48 @@ test('에이전트 변경 도구는 제공자가 받는 최상위 object 명세�
   const schema=await asSchema(tools.stageChange!.inputSchema!).jsonSchema;
   assert.equal(schema.type,'object');assert.equal(schema.oneOf,undefined);assert.equal(schema.anyOf,undefined);assert(!JSON.stringify(schema).includes('\"oneOf\"'));
   assert.equal(writingAgentTools(uid(),'schema-fixture','discuss',true).stageChange,undefined);
+});
+
+async function committed(scopeKind:'work'|'notes'){
+  const {state:seeded,work,sectionId}=fixture(),note={...newNote(),title:'관측 노트',content:fromText('관측은 새벽에 시작한다.')},base=addNote(seeded,note),id=uid();
+  const scope=scopeKind==='work'?{kind:'work' as const,id:work.id}:{kind:'notes' as const,id:'default' as const};
+  const ops:AgentOperation[]=scopeKind==='work'?[{type:'create',id,kind:'memo',title:'개요',text:'관측소에 도착한다.',parentId:null,sectionId,beforeId:null},{type:'replace',id:work.documents[0].id,quote:'낡은',replacement:'버려진'}]:[{type:'replace',id:note.id,quote:'새벽',replacement:'자정'}];
+  const remote=workspaceSchema.parse(applyAgentOperations(base,scope,ops));
+  const commit={workspace_id:base.id,scope,base_hash:await agentHash(captureAgentScope(base,scope)),applied_hash:await agentHash(captureAgentScope(remote,scope)),applied_version:2};
+
+  return {base,remote,commit,work,note,created:id};
+}
+
+test('맡겨 실행이 반영한 작품과 다른 곳에서 쓴 글은 충돌 없이 합쳐진다',async()=>{
+  const {base,remote,commit,work,note,created}=await committed('work');
+  const local=structuredClone(base);local.notes!.find(n=>n.id===note.id)!.content=fromText('관측은 새벽에 시작한다. 이 기기에서 이어 쓴 문장.');
+  const join=await agentCommitJoiner(local,remote,commit);assert(join);
+  const later=structuredClone(local);later.notes!.find(n=>n.id===note.id)!.content=fromText('합치는 사이에 한 글자 더.');
+  const joined=join(later);assert(joined);
+  const joinedWork=joined.state.works.find(w=>w.id===work.id)!;
+
+  assert.equal(plainText(joined.state.notes!.find(n=>n.id===note.id)!.content),'합치는 사이에 한 글자 더.','the newest local text outside the scope stays');
+  assert.equal(plainText(joinedWork.documents.find(d=>d.id===created)!.content),'관측소에 도착한다.');assert.equal(plainText(joinedWork.documents.find(d=>d.id===work.documents[0].id)!.content),'달에는 버려진 관측소가 있었다.');
+  assert.deepEqual(new Set(joined.changed),new Set([work.id,created,work.documents[0].id]),'only the tree and the documents the agent changed are reloaded');
+  assert.equal(await agentHash(captureAgentScope(joined.state,commit.scope)),commit.applied_hash,'the joined scope can still be reverted');
+});
+
+test('에이전트가 본 범위를 이 기기에서도 고쳤으면 합치지 않는다',async()=>{
+  const {base,remote,commit,work}=await committed('work');
+  const edited=structuredClone(base);edited.works.find(w=>w.id===work.id)!.documents[1].title='이 기기에서 바꾼 제목';
+  assert.equal(await agentCommitJoiner(edited,remote,commit),null);
+
+  const join=await agentCommitJoiner(base,remote,commit);assert(join);assert.equal(join(edited),null,'an edit inside the scope after the check also stops the join');
+  const other=structuredClone(remote);other.works.find(w=>w.id===work.id)!.documents[1].title='다른 기기에서 바꾼 제목';
+  assert.equal(await agentCommitJoiner(base,other,commit),null,'a cloud scope that is not exactly the agent result is left to the conflict dialog');
+});
+
+test('노트 공간을 맡긴 동안 작품에서 쓴 글도 합쳐진다',async()=>{
+  const {base,remote,commit,work,note}=await committed('notes');
+  const local=structuredClone(base);local.works.find(w=>w.id===work.id)!.documents[0].content=fromText('이 기기에서 고친 본문.');
+  const join=await agentCommitJoiner(local,remote,commit);assert(join);
+  const joined=join(local);assert(joined);
+
+  assert.equal(plainText(joined.state.works.find(w=>w.id===work.id)!.documents[0].content),'이 기기에서 고친 본문.');assert.equal(plainText(joined.state.notes!.find(n=>n.id===note.id)!.content),'관측은 자정에 시작한다.');
+  assert.deepEqual(new Set(joined.changed),new Set(['default',note.id]));assert.equal(await agentHash(captureAgentScope(joined.state,commit.scope)),commit.applied_hash);
 });
