@@ -7,7 +7,9 @@
 - 실제 로컬 Next.js + Workflow + SDK + 합성 PGlite/Supabase/모델 서비스에서 두 폭(1280/360) × 54개 테마의 설정/작업 대화 등 433경우, 합성 모델 57회·페이지 오류 0을 확인했다. Gemini·Claude의 두 번째 모델 선택→실제 Vertex 요청 경로·응답 모델 ID, 문서/노트/커서 질문, 에이전트 모델 고정·활성 시 잠금, 생성/수정/반영/되돌리기/재접속과 기존 상태 보호를 검증했다.
 - 최종 간격 정리와 200자 모델 ID를 추가해 두 폭 빠른 검사 17경우·합성 모델 57회·페이지 오류 0도 통과했다. 설정·대화·커서·에이전트의 실제 모델 메뉴 경계/가로 넘침을 확인했다. 기본값 복구와 이전 모델 하나만 저장한 설정도 검사했다. 예전 원고 검토 UI는 현재 앱에서 마운트하지 않으며 그 API 경로는 Node 검사로 확인했다.
 - 로컬 최적화 빌드는 Google 다운로드를 대체한 테스트 글꼴 응답으로 통과했다(35단계·1 Workflow). 실제 Google 글꼴은 Vercel 빌드에서 구분한다. [증거](docs/evidence/ai-models-2026-11-12.json).
-- 운영 DB/배포·실제 GCP IAM 추론·모델별 품질/요금·WebKit/실기기는 미검증이다. 모델 목록 저장만으로 Model Garden 권한을 부여하지 않는다.
+- `ddde8e9`의 [PR CI](https://github.com/inf1si/Kosmos/actions/runs/43220012596)와 실제 Google Fonts를 받는 [Vercel 미리보기](https://vercel.com/kosmos42/kosmos/8CZxFj8Z8xj2T3bzuwJKaZBUYx48)가 성공했다.
+- 운영 Supabase에 `personal_writing_agent`를 원격 버전 `20261112124759`로 적용했다(저장소 파일 버전 `20261109135502`). 세 테이블 RLS·소유자 읽기·브라우저 쓰기/익명 읽기/RPC 실행 거절·service_role 전용 invoker RPC를 확인했다. 합성 계정/작업공간을 한 트랜잭션에 만들고 역할별 접근·실행 소유권·단계 중복·버전 충돌·반영 중복·복구·재반영 차단을 검사한 뒤 모두 롤백했다. 이후 세 테이블은 0행이며 실제 원고/계정 자료는 바꾸지 않았다. 보안 advisor는 새 항목 없이 기존 2개 INFO·8개 WARN을 유지했다.
+- 이 기록 시점의 운영 코드 배포·실제 GCP IAM 추론·모델별 품질/요금·WebKit/실기기는 미검증이다. 배포 이후 결과는 [PR #114](https://github.com/inf1si/Kosmos/pull/114)에 별도로 기록한다. 모델 목록 저장만으로 Model Garden 권한을 부여하지 않는다.
 
 
 ## 2026-11-09 — Vertex AI 통합

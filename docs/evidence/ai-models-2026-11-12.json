@@ -33,8 +33,30 @@
   "realManuscriptWrites": false,
   "gcpModelAccess": "Opus 5.5 approval reported by user; no live inference test",
   "unverified": [
-    "Production DB migration/deployment and live Vertex calls",
+    "Production code deployment and live Vertex calls; later deployment results are recorded in PR #114",
     "model-specific quality/cost/quotas",
     "WebKit/physical device"
-  ]
+  ],
+  "pullRequestCI": {
+    "sha": "ddde8e92387766550016a8ae0011668d9b8cb680",
+    "run": 43220012596,
+    "conclusion": "success"
+  },
+  "preview": {
+    "id": "dpl_8CZxFj8Z8xj2T3bzuwJKaZBUYx48",
+    "sha": "ddde8e92387766550016a8ae0011668d9b8cb680",
+    "state": "READY",
+    "fonts": "actual Google Fonts"
+  },
+  "database": {
+    "name": "personal_writing_agent",
+    "remoteVersion": "20261112124759",
+    "repositoryVersion": "20261109135502",
+    "rlsTables": 3,
+    "serverOnlyInvokerFunctions": 3,
+    "syntheticRollbackSmoke": "passed",
+    "realManuscriptWrites": false,
+    "agentRowsAfterRollback": 0,
+    "newSecurityAdvisorFindings": 0
+  }
 }

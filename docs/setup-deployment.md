@@ -171,6 +171,8 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 
 ## 집필 작업 대화
 
+기존 운영 프로젝트에는 2026-11-12 `personal_writing_agent`(원격 버전 `20261112124759`, 저장소 파일 `20261109135502`)가 적용됐다. 세 테이블/RLS/서버 전용 RPC와 합성 자료의 트랜잭션 롤백 검사를 완료했다. 같은 프로젝트에 이 SQL을 다시 실행하지 않는다.
+
 1. `20261109135502_personal_writing_agent.sql`을 동일 Supabase 프로젝트에 적용한다. 별도 세션·실행·기억 테이블, 소유자 읽기 RLS, 서버 전용 원고 반영 RPC를 만든다. 새 테이블을 작가 한 명의 비공개 자료로 취급한다.
 2. [Vertex AI 설정](vertex-ai.md)에 따라 `orbiter-ai`에 API·서비스 계정·WIF를 구성하고 Production 환경 변수를 설정한다. 기존 Supabase URL·서비스 키도 필요하다. Gemini·Claude 직접 API 키는 사용하지 않는다.
 3. Google Search grounding·URL context를 지원하는 Vertex Gemini 모델을 웹 조사에 사용한다. `VERTEX_SEARCH_MODEL`이 없으면 `VERTEX_GEMINI_MODEL`을 사용한다.
