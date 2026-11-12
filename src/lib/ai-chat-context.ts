@@ -1,5 +1,5 @@
 import { plainText, type Workspace } from './model';
-import { noteAISources, noteTitle } from './personal-notes';
+import { noteAISources, noteTitle,workAISources } from './personal-notes';
 import type { ChatInput } from './ai-conversation';
 import { editorRangeText } from './editor-target';
 
@@ -22,15 +22,16 @@ export function chatContext(data:Workspace,input:ChatInput){
     if(text!==input.documentRange.text)throw new ChatContextError('선택한 글이 저장본과 다릅니다. 다시 선택하세요.',409);
   }
 
-  const ids=[...new Set(input.sourceIds)];const sources=ids.map(id=>work.documents.find(d=>d.id===id));
+  const available=workAISources(data,work.id),noteIds=new Set((data.notes||[]).map(note=>note.id));
+  const ids=[...new Set(input.sourceIds)];const sources=ids.map(id=>available.find(d=>d.id===id));
 
-  if(sources.some(d=>!d))throw new ChatContextError('같은 작품의 자료만 선택할 수 있습니다.',400);
+  if(sources.some(d=>!d))throw new ChatContextError('같은 작품의 문서 또는 개인 노트만 선택할 수 있습니다.',400);
 
   const document:ChatDocument={kind:doc.kind,chapter:doc.chapter,pov:doc.pov,storyTime:doc.storyTime};
 
   if(input.documentRange)document.scope=input.documentRange.kind;
 
-  return {input:{work:work.title,form:work.form,title:doc.title,document,manuscript:text,references:sources.map(d=>({id:d!.id,title:d!.title,kind:d!.kind,category:d!.category,chapter:d!.chapter,pov:d!.pov,storyTime:d!.storyTime,text:plainText(d!.content)})),question:input.message},sources:sources.map(d=>({id:d!.id,title:d!.title})),version:doc.updatedAt};
+  return {input:{work:work.title,form:work.form,title:doc.title,document,manuscript:text,references:sources.map(d=>({id:d!.id,title:d!.title,kind:noteIds.has(d!.id)?'note':d!.kind,category:d!.category,chapter:d!.chapter,pov:d!.pov,storyTime:d!.storyTime,text:plainText(d!.content)})),question:input.message},sources:sources.map(d=>({id:d!.id,title:d!.title})),version:doc.updatedAt};
 }
 
 function noteChatContext(data:Workspace,input:ChatInput){
