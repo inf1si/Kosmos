@@ -253,6 +253,7 @@ async function verifySourceMentions(panel,width,scope){
   await input.fill('@공통');assert.equal(await list.getByLabel('선택됨').count(),1);await list.getByRole('option').first().click();
   assert((await context.locator('summary').innerText()).includes('참고 1개'));
   await input.fill('name@example.com');assert.equal(await list.count(),0);
+  await input.fill('@없는자료 같은 표기는 어떻게 써?');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor({state:'detached'});assert.equal(await list.count(),0,'an ordinary @ in a sentence does not keep the source search open');
   await input.fill('@없는자료');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor();assert.equal(await list.getByRole('option').count(),0);await input.press('Enter');assert.equal(modelCalls.length,beforeCalls);await input.press('Escape');assert(await panel.isVisible());
   await input.fill('@공통');await list.waitFor();await input.dispatchEvent('compositionstart',{data:'ㄱ'});assert.equal(await list.count(),0);await input.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true});assert.equal(modelCalls.length,beforeCalls);await input.dispatchEvent('compositionend',{data:'공통'});await list.waitFor();await input.press('Escape');
   await input.fill('');await input.fill('@공통');await list.waitFor();await input.press('Tab');assert.equal(await list.count(),0);assert(await panel.getByRole('button',{name:'질문 보내기',exact:true}).evaluate(el=>el===document.activeElement));
@@ -270,7 +271,7 @@ return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,overflow:el.
     await page.screenshot({path:resolve(output,`ai-mention-${scope}-${width}-${palette}-${mode}.png`)});results.push({view:'ai-source-mention',scope,width,palette,mode,layout});
   }
 
-  await input.press('Escape');await input.fill('줄바꿈');await input.press('Shift+Enter');assert.equal(await input.inputValue(),'줄바꿈\n');assert.equal(modelCalls.length,beforeCalls);await input.fill('선택한 @공통 자료를 비교해줘.');await input.press('Escape');
+  await input.press('Escape');await input.fill('줄바꿈');await input.press('Shift+Enter');assert.equal(await input.inputValue(),'줄바꿈\n');assert.equal(modelCalls.length,beforeCalls);await input.fill('선택한 @공통 자료를 비교해줘.');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor({state:'detached'});assert.equal(await list.count(),0,'a finished sentence closes the source search by itself');
   const previous=await panel.locator('.chat-message.assistant').count(),request=page.waitForRequest(r=>r.url().endsWith('/api/ai/chat')&&r.method()==='POST');
   await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();assert.deepEqual((await request).postDataJSON().sourceIds,[mentionA.id]);
   await until(async()=>await panel.locator('.chat-message.assistant').count()===previous+1,'mention reference answer');
@@ -362,7 +363,7 @@ try{
 if(row?.status==='failed')assert.fail(row.error);
 
 return row?.status==='completed'&&!row.reverted;},'durable agent finishes');
-    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.model,'gemini-selected');assert.equal(run.operations.length,2);assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
+    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.model,'gemini-selected');assert.equal(run.operations.length,2);assert.equal(run.events.find(event=>event.title==='문장 수정')?.detail,'에이전트 개요','a sentence edit names its document, not an ID');assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
     await dialog.getByRole('button',{name:/^변경 /}).click();await page.getByText('달로 돌아온 인물은 관측소를 찾는다.',{exact:true}).waitFor();
     const before=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!before.works[0].documents.some(doc=>doc.id===run.operations[0].id));
     await dialog.getByRole('button',{name:'변경 적용',exact:true}).click();await until(async()=>{const row=(await pg.query('select applied_version from public.agent_runs where id=$1',[run.id])).rows[0];

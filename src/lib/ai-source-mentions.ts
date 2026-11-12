@@ -9,6 +9,9 @@ export function chatMentionQuery(value:string,start:number,end:number):ChatMenti
   return {from,to:start,text:before.slice(from+1)};
 }
 
+/** A question may hold an ordinary @: text after it that has a space and matches no source is not a source search. */
+export function chatMentionAbandoned(text:string,matches:number){return matches===0&&/\s/.test(text);}
+
 export function insertChatMention(value:string,query:ChatMentionQuery,title:string){
   if(value.slice(query.from,query.to)!==`@${query.text}`)return null;
   const prefix=value.slice(0,query.from)+`@${title}`,suffix=value.slice(query.to);
