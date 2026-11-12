@@ -5,6 +5,7 @@ import './workflows.css';
 import './studio.css';
 import './studio-tools.css';
 import './personal-notes.css';
+import './writing-agent.css';
 import './workspace-trash.css';
 import './settings.css';
 import './editor-content.css';

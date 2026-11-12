@@ -1,4 +1,6 @@
 allowBuilds:
+  '@swc/core': true
+  cbor-extract: false
   esbuild: true
 minimumReleaseAgeExclude:
   - '@next/env@16.3.8'
@@ -11,3 +13,8 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-arm64-msvc@16.3.8'
   - '@next/swc-win32-x64-msvc@16.3.8'
   - next@16.3.8
+  - '@ai-sdk/gateway@4.0.139'
+  - '@ai-sdk/workflow@2.0.98'
+  - ai@7.0.166
+patchedDependencies:
+  next@16.3.8: patches/next@16.3.8.patch

@@ -1,5 +1,28 @@
 # 변경 기록
 
+## 2026-11-12 — Gemini·Claude 여러 모델 선택
+
+- AI 설정에 제공자별 모델 목록·기본 모델을 저장하고 문서·노트·커서 AI·작업 대화에서 모델을 바로 고른다. 서버의 복수 모델 목록 변수도 선택적으로 지원한다.
+- 요청에 선택 ID를 담아 실행 모델을 고정하고, 에이전트 실행 중에는 해당 모델을 표시·잠근다. 기존 한 모델 설정과 과거 대화/백업을 유지한다. 목록·선택은 기기 설정이며 원고를 수정하지 않는다.
+- 중복·잘못된 ID·목록 밖 기본값과 쿠키 저장 한도 초과를 거절한다. [사용 계약](docs/ai.md)·[Vertex 설정](docs/vertex-ai.md)·[검증](VERIFICATION.md).
+
+
+## 2026-11-09 — Vertex AI 통합
+
+- 문서·노트·커서 AI와 작업 대화를 Google Cloud `orbiter-ai`의 Vertex Gemini·Claude로 통일한다. 웹 조사도 Vertex Gemini를 사용하며 직접 OpenAI·Anthropic·Gemini Developer API 호출은 제거한다. 기존 대화·백업의 제공자 표시는 보존한다.
+- 웹 조사 인증 실패는 전송 라이브러리의 상세 오류를 실행 기록으로 넘기지 않는다.
+- AI 설정은 API 키 대신 모델 선택만 저장한다. 서버 인증은 Vercel OIDC/WIF 또는 로컬 ADC이며 단기 토큰을 Workflow 인자·브라우저·기록에 넣지 않는다.
+- Production 주체 하나에 서비스 계정 사용을 허용하는 GCP 설정 스크립트와 [연결 안내](docs/vertex-ai.md)를 추가한다. 운영 GCP 권한·모델 활성화·migration·배포는 별도다. [검증](VERIFICATION.md).
+
+
+## 2026-11-09 — 개인 집필 작업 대화
+
+- 집필실·노트에 문서를 오가며 이어지는 **작업 대화**를 추가한다. 작품/노트 공간별 자료 검색·읽기·문서/폴더 생성·부분 수정·이동·기억·Gemini 웹 조사를 제공한다.
+- 함께 생각하기·검토하며 실행·맡겨 실행, 변경 비교·적용·되돌리기, 별도 서버 기록·Workflow 실행·AI 자료 JSON 내보내기를 연결한다. 기존 문서별 AI 대화는 유지한다.
+- Turbopack의 Google 글꼴 쿼리 처리 오류가 CI에서 재현되어 기본 개발/배포 빌드는 검증한 Webpack으로 고정한다. 확장자 없는 Google Fonts 응답의 형식을 바이트 헤더로 판별하도록 Next.js 16.3.8 로더 패치를 함께 배포한다(글꼴 바이트는 그대로).
+- 제공자 도구 명세는 object를 최상위로 쓰고 내부 명령은 `anyOf`로 구분한다. CI의 컴파일은 로컬 글꼴, Vercel 빌드는 실제 Google 글꼴로 나누어 검사한다.
+- 서버용 제공자 API 연결과 DB migration이 필요하다. 위키 전체 정리·여러 공간 연결·AI 자료 가져오기는 후속 작업이다. [사용 계약](docs/writing-agent.md)·[설계](docs/personal-knowledge-agent-design.md)·[검증](VERIFICATION.md).
+
 ## 2026-11-09 — 섹션 + 툴팁 겹침
 
 - 새 작업공간의 기본 섹션 **노트** 옆 `+`에 "노트 노트 추가"로 뜨던 툴팁을 **노트 추가**로 고쳤다(집필실은 **문서 추가**). 섹션 이름은 화면 읽기용 이름(`노트 섹션에 노트 추가`)에만 남긴다. `IconButton`에 짧은 툴팁 `tip`을 더했다. [가이드](docs/design-guide.md)·[검증](VERIFICATION.md).

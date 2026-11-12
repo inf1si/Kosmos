@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-09",
+  "baseline": "2c111c947e233e33ac9421185e333c4f41e99647",
+  "environment": "local Next.js 16.3.8 Webpack + Workflow 5.4.0 + AI SDK 7.0.166 + PGlite synthetic Supabase/model HTTP service",
+  "realAuthorDataWritten": false,
+  "paidProviderCalls": 0,
+  "browser": {
+    "widths": [
+      360,
+      1280
+    ],
+    "paletteModeCombinations": 54,
+    "views": [
+      "changes",
+      "chat",
+      "memory"
+    ],
+    "displayCases": 324,
+    "pageErrors": [],
+    "fixtureModelCalls": 55,
+    "flows": [
+      "work review: create/read/replace/remember/web/inspect/apply/open/forget/undo/reload",
+      "three provider tool formats: OpenAI, Anthropic, Gemini",
+      "notes execute + actual mobile note source navigation",
+      "discuss mode read-only tools",
+      "request replay without duplicate run",
+      "cancel + undo after cancelled committed run",
+      "stale source conflict without overwrite",
+      "JSON export without provider keys",
+      "unauthenticated and cross-origin rejection",
+      "all theme mode menus + visible mobile session controls"
+    ]
+  },
+  "fonts": "Next test font response fixture uses local Pretendard only for layout; production font configuration unchanged",
+  "unverified": [
+    "paid model quality/citations/cost/latency",
+    "real external URL context retrieval",
+    "Vercel production resume",
+    "production migration/RLS and new cloud backup restore",
+    "WebKit and physical phone"
+  ],
+  "unitTests": 292,
+  "fontLoaderRegression": "Unpatched Next 16.3.8 reproduces the null-extension TypeError; patched loader emits identical WOFF2 bytes and rejects invalid extensionless files.",
+  "followup": {
+    "coreChecks": 11,
+    "browserCases": 7,
+    "fixtureCalls": 45,
+    "pageErrors": 0,
+    "flows": [
+      "provider object root schema with nested anyOf",
+      "discarded/reverted changes cannot be applied",
+      "discard uses unapplied row condition",
+      "remote note undo refreshes without realtime",
+      "request acceptance locks composer then returns focus",
+      "session user and remote workspace ID checks",
+      "font patch regression and unchanged emitted bytes"
+    ]
+  }
+}

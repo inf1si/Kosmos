@@ -1,3 +1,4 @@
+import { vertexTestEnvironment,vertexAuthResponse,vertexReviewResponse } from './fixtures/vertex';
 import { test } from 'node:test';
 import { z } from 'zod';
 import type { NoteNavigation } from '../src/lib/note-navigation-schema';
@@ -69,7 +70,7 @@ try{await pg.exec('create role anon; create role authenticated; create table pub
 
 test('노트 대화 API는 인증·서버 노트·선택 자료·횟수 예약 없는 제공자 응답을 연결한다',async()=>{
   const { POST }=await import('../src/app/api/ai/chat/route');
-  const {state,a,b}=fixture(),environment={NEXT_PUBLIC_SUPABASE_URL:'https://synthetic.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon-key',OPENAI_API_KEY:'synthetic-key',OPENAI_MODEL:'synthetic-model'};
+  const {state,a,b}=fixture(),environment={NEXT_PUBLIC_SUPABASE_URL:'https://synthetic.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon-key',...vertexTestEnvironment};
   const before=Object.fromEntries(Object.keys(environment).map(key=>[key,process.env[key]])),previousFetch=globalThis.fetch;
   const capturedSchema=z.object({form:z.string(),manuscript:z.string(),references:z.array(z.object({id:z.string(),title:z.string()}))});
   let budget=0,captured:z.infer<typeof capturedSchema>|undefined;
@@ -87,13 +88,17 @@ test('노트 대화 API는 인증·서버 노트·선택 자료·횟수 예약 �
 
 return Response.json(budget);}
 
-    if(url==='https://api.openai.com/v1/responses'){const body=JSON.parse(String(init?.body));captured=capturedSchema.parse(JSON.parse(body.input.at(-1).content));
+    const authResponse=vertexAuthResponse(url);
 
-return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(answer(a.updatedAt).result)}]}]});}
+if(authResponse)return authResponse;
+
+    if(new URL(url).hostname==='aiplatform.googleapis.com'){const body=JSON.parse(String(init?.body));captured=capturedSchema.parse(JSON.parse(body.contents.at(-1).parts[0].text));
+
+      return Response.json(vertexReviewResponse('gemini',answer(a.updatedAt).result));}
 
     throw new Error('Unexpected synthetic request');
   });
-  const input={noteId:a.id,docId:a.id,version:a.updatedAt,provider:'openai',message:'아이디어 확장',includeManuscript:true,sourceIds:[b.id],history:[]};
+  const input={noteId:a.id,docId:a.id,version:a.updatedAt,provider:'gemini',message:'아이디어 확장',includeManuscript:true,sourceIds:[b.id],history:[]};
   const request=(patch={})=>new Request('http://localhost/api/ai/chat',{method:'POST',headers:{Authorization:'Bearer synthetic-token','Content-Type':'application/json'},body:JSON.stringify({...input,...patch})});
 
   try{

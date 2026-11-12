@@ -53,10 +53,10 @@ pnpm start
 | `NEXT_PUBLIC_SUPABASE_URL` | 브라우저·서버 | 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 브라우저·서버 | Supabase publishable key 또는 기존 anon key |
 | `ALLOW_LOCAL_PREVIEW` | 서버 | 기본 `false`. 외부 배포에서 켜지 않음 |
-| `OPENAI_API_KEY`, `OPENAI_MODEL` | 서버 | OpenAI 키·구조화 출력 지원 모델 ID |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | 서버 | Claude 키·모델 ID |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | 서버 | Gemini 키·모델 ID |
-| `AI_API_KEY`, `AI_MODEL` | 서버 | 이전 OpenAI 별칭. 새 연결은 위의 정식 이름 사용 |
+| `GOOGLE_VERTEX_PROJECT`, `GOOGLE_VERTEX_LOCATION` | 서버 | `orbiter-ai`, 기본 `global` |
+| `VERTEX_GEMINI_MODEL`, `VERTEX_CLAUDE_MODEL`, `VERTEX_SEARCH_MODEL` | 서버 | 프로젝트에 허용된 Vertex 모델 ID, 검색 모델은 선택 |
+| `VERTEX_GEMINI_MODELS`, `VERTEX_CLAUDE_MODELS` | 서버 | 선택. 쉼표·줄바꿈 모델 목록. 앱에서 목록 저장도 가능 |
+| `VERTEX_AUTH_MODE`, `GOOGLE_VERTEX_WIF_PROVIDER`, `GOOGLE_VERTEX_SERVICE_ACCOUNT` | 서버 | Vercel OIDC/WIF 인증. 로컬은 `adc` |
 | `BACKUP_STORAGE_PROVIDER` | 서버 | 사용자 선택 `google-drive`. 선택적으로 `s3` |
 | `BACKUP_GOOGLE_CLIENT_ID` | 서버 | 본인 Google OAuth Client ID |
 | `BACKUP_GOOGLE_CLIENT_SECRET` | 서버 | 같은 클라이언트 secret |
@@ -167,3 +167,22 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 열의 NOT NULL·양수 제약, `assign_library_position` 트리거, `get_author_library()`·`set_library_order(uuid[])`를 확인한다. 두 RPC는 authenticated만 실행 가능하며 내부에서 허용 작가·owner·현재 판본 전체 목록을 검사한다. anon에는 활성 공개 판본의 순위 SELECT만 추가하며 쓰기 권한·기존 RLS·Auth·Storage 정책은 유지한다. 보안 진단의 authenticated SECURITY DEFINER 경고 두 항목은 이 의도된 RPC와 내부 소유자 검사를 함께 검토한다.
 
 운영 적용·CI·실제 계정 검증 여부는 [검증 기록](../VERIFICATION.md)을 따른다. 열린 집필실/서재 탭은 배포 후 새로고침한다.
+
+
+## 집필 작업 대화
+
+기존 운영 프로젝트에는 2026-11-12 `personal_writing_agent`(원격 버전 `20261112124759`, 저장소 파일 `20261109135502`)가 적용됐다. 세 테이블/RLS/서버 전용 RPC와 합성 자료의 트랜잭션 롤백 검사를 완료했다. 같은 프로젝트에 이 SQL을 다시 실행하지 않는다.
+
+1. `20261109135502_personal_writing_agent.sql`을 동일 Supabase 프로젝트에 적용한다. 별도 세션·실행·기억 테이블, 소유자 읽기 RLS, 서버 전용 원고 반영 RPC를 만든다. 새 테이블을 작가 한 명의 비공개 자료로 취급한다.
+2. [Vertex AI 설정](vertex-ai.md)에 따라 `orbiter-ai`에 API·서비스 계정·WIF를 구성하고 Production 환경 변수를 설정한다. 기존 Supabase URL·서비스 키도 필요하다. Gemini·Claude 직접 API 키는 사용하지 않는다.
+3. Google Search grounding·URL context를 지원하는 Vertex Gemini 모델을 웹 조사에 사용한다. `VERTEX_SEARCH_MODEL`이 없으면 `VERTEX_GEMINI_MODEL`을 사용한다.
+4. `withWorkflow`를 포함한 앱을 배포한다. `/.well-known/workflow/`의 생성 route는 Workflow SDK가 관리한다. Vercel의 Workflow 사용 가능 여부·실행/단계 요금·보관 정책을 프로젝트에서 확인한다. Preview에 Production 서비스 키를 자동 복제하지 않는다.
+5. 작은 합성 작품에서 검색→작업본→적용→되돌리기, 브라우저 종료 후 재접속을 확인한 뒤 실제 글에 사용한다. 실제 GCP 인증을 사용하지 않은 합성 검사는 실제 모델 품질·요금을 검증하지 않는다.
+
+선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
+
+기본 `pnpm dev`·`pnpm build`는 Webpack을 명시한다. Next.js 16.3.8의 Turbopack 글꼴 내부 쿼리 해석 오류가 CI에서 재현되어 빌드 방식을 고정했다. 운영의 글꼴 파일·종류·라이선스는 변경하지 않는다.
+
+`pnpm-workspace.yaml`의 `patchedDependencies`는 [Next.js 글꼴 로더 패치](../patches/next@16.3.8.patch)를 설치 때 적용한다. Google의 `/l/font?kit=...` 응답은 확장자가 없어 기존 로더가 실패하므로 WOFF2/WOFF/OTF/TTF 헤더를 확인해 출력 확장자를 정한다. 다운로드한 바이트는 변경하지 않는다. Next.js를 올릴 때에는 확장자 없는 응답 회귀 검사와 실제 글꼴 빌드를 확인한 뒤 이 패치의 필요성을 다시 판단한다.
+
+GitHub CI의 컴파일은 Google 접속 제한과 분리하기 위해 로컬 테스트 글꼴 응답을 사용한다. 이 환경 변수는 CI의 빌드 명령에만 적용하며 Vercel 배포에는 설정하지 않는다. 실제 Google 파일을 받는 Vercel 빌드도 별도로 통과했는지 확인한다.

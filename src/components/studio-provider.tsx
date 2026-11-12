@@ -43,7 +43,7 @@ type StudioContextValue={
   trashDocumentFolder:(workId:string,folderId:string)=>Promise<string>;trashNoteFolder:(folderId:string)=>Promise<void>;
   restoreTrash:(id:string)=>Promise<void>;purgeTrash:(ids:string[])=>Promise<void>;
   resolve:(choice:'local'|'remote')=>Promise<void>;login:(email:string,password:string)=>Promise<void>;logout:()=>Promise<void>;
-  flush:()=>Promise<void>;syncNow:()=>Promise<void>;clearError:()=>void;
+  flush:()=>Promise<void>;syncNow:()=>Promise<void>;refreshCloud:()=>Promise<void>;clearError:()=>void;
   saveTemplate:(source:TemplateSource,selected:string[],name:string)=>Promise<string>;
   applyTemplate:(id:string,target:TemplateTarget)=>Promise<string[]>;deleteTemplate:(id:string)=>Promise<void>;
 };
@@ -650,6 +650,31 @@ return next.works.find(w=>w.id===workId)!.documents[0].id;
     update(()=>next);await flush();
   }
 
+  const refreshCloud=useCallback(async()=>{
+    if(!cloudConfigured)return;
+    const target=namespaceRef.current,expectedCloudId=cloudId.current;await saveQueue.current;
+    const before=await db.workspaces.get(target);
+
+    if(!before||before.dirty||conflictRef.current)throw new Error('미전송 원고와 충돌을 먼저 확인하세요.');
+    const remote=await fetchCloud();
+
+    if(!remote||remote.id!==expectedCloudId||namespaceRef.current!==target)throw new Error('원고 계정이 바뀌었습니다.');
+    await saveQueue.current;
+    let refreshed:LocalRecord|null=null;
+    await db.transaction('rw',db.workspaces,async()=>{
+      const latest=await db.workspaces.get(target);
+
+      if(!latest||latest.dirty||pending.current||conflictRef.current||namespaceRef.current!==target)throw new Error('편집 중인 원고를 보존했습니다. 동기화 상태를 확인하세요.');
+
+      if(remote.version<=latest.cloudVersion)return;
+
+      if(latest.localVersion!==before.localVersion)throw new Error('기기 원고가 바뀌었습니다. 다시 확인하세요.');
+      const next={...latest,data:remote.data,cloudVersion:remote.version,localVersion:latest.localVersion+1};await db.workspaces.put(next);refreshed=next;
+    });
+
+    if(refreshed&&namespaceRef.current===target){recordRef.current=refreshed;setCurrent(remote.data);setEpoch(value=>value+1);setStatus('클라우드 동기화됨');channelRef.current?.postMessage({changed:true});}
+  },[setCurrent]);
+
   return <Context.Provider value={{state,namespace,loading,status,error,conflict,user,canUse,epoch,lastExportAt,update,
     snapshot:async(label)=>{await flush();await checkpoint(namespace,dataRef.current!,label);},revisions:()=>listRevisions(namespace),restore,serverRevisions,restoreServerRevision,exportBackup,importBackup,importDocuments,exportDocuments,captureBookWork,publish,unpublish,addAsset,addNoteAsset,importNotes,createWorkFromFolder,copyNote,trashNote,trashDocument,trashDocumentFolder,trashNoteFolder,trashWork,restoreTrash,purgeTrash,resolve,saveTemplate,applyTemplate,deleteTemplate,
     libraryPublications,setLibraryOrder,
@@ -660,5 +685,5 @@ if(error)throw error;},
 
 if(error){const message='서버 로그아웃을 확인하지 못했습니다.';setError(message);throw new Error(message,{cause:error});}
 
-setError('');syncError.current=null;},flush,syncNow,clearError:()=>setError('')}}>{children}</Context.Provider>;
+setError('');syncError.current=null;},flush,syncNow,refreshCloud,clearError:()=>setError('')}}>{children}</Context.Provider>;
 }

@@ -10,3 +10,6 @@ backup-output/
 *.agekey
 *.age
 supabase/.temp/
+.workflow-data/
+src/app/.well-known/workflow/
+/.swc

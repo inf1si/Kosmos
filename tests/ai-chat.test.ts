@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { aiWorkspaceFixture } from './fixtures/ai-workspace';
 import { chatInputSchema,recentChatHistory } from '../src/lib/ai-conversation';
 import { chatContext,ChatContextError } from '../src/lib/ai-chat-context';
-import { providerRequest,requestChat,type AIProvider } from '../src/lib/ai-provider';
+import { providerMessageContext } from '../src/lib/ai-request-context';
 import { makePublication,fromText,workspaceSchema } from '../src/lib/model';
 import { createBackup,readBackup } from '../src/lib/backup';
 import { parseEditorPreferences } from '../src/lib/editor-preferences';
@@ -37,13 +37,10 @@ if(huge[1].role==='assistant')huge[1].result.review='r'.repeat(15000);
 if(huge[3].role==='assistant')huge[3].result.review='r'.repeat(15000);assert.equal(recentChatHistory(huge).length,4);
 });
 
-for(const provider of ['openai','anthropic','gemini'] as const)test(`${provider}: 이전 대화와 현재 질문을 공식 메시지 역할로 보내고 답변을 검증한다`,async()=>{
-  const config={provider,key:'synthetic-server-key',model:'configured-model'},history=recentChatHistory(work.aiConversations![0].messages),request=providerRequest(config,{question:'새 질문',manuscript:'샘플'},history),body=JSON.parse(String(request.init.body));
-  const turns=provider==='openai'?body.input:provider==='anthropic'?body.messages:body.contents;
-  assert.equal(turns.length,5);assert.equal(turns[0].role,'user');assert.equal(turns[1].role,provider==='gemini'?'model':'assistant');assert.equal(turns.at(-1).role,'user');
-  assert(!String(request.init.body).includes(config.key));const reply={review:'이어지는 답변',suggestions:[]};
-  const result=provider==='openai'?{status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(reply)}]}]}:provider==='anthropic'?{stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify(reply)}]}:{candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(reply)}]}}]};
-  assert.deepEqual(await requestChat(config,{},history,(async()=>Response.json(result))),reply);
+test('이전 대화와 현재 질문을 메시지 역할로 보존한다',()=>{
+  const history=recentChatHistory(work.aiConversations![0].messages),context=providerMessageContext({question:'새 질문',manuscript:'샘플'},history);
+  assert.equal(context.messages.length,5);assert.equal(context.messages[0].role,'user');assert.equal(context.messages[1].role,'assistant');assert.equal(context.messages.at(-1)?.role,'user');
+  assert.equal(JSON.parse(context.messages.at(-1)!.content).question,'새 질문');
 });
 
 test('대화는 전체 ZIP 왕복에 남고 공개 판본에서는 빠지며 이전 작업 공간도 계속 열린다',async()=>{

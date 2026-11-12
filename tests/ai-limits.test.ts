@@ -1,5 +1,5 @@
+import { vertexTestEnvironment,vertexAuthResponse,vertexReviewResponse } from './fixtures/vertex';
 import { test } from 'node:test';
-import { z } from 'zod';
 import type { JsonValue } from '../src/lib/json-value';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -13,13 +13,13 @@ import { appendEditorExchange } from '../src/lib/editor-ai-conversation';
 import { createBackup,readBackup } from '../src/lib/backup';
 import type { ChatMessage } from '../src/lib/ai-conversation';
 
-test('세 제공자의 대화·검토는 10회 뒤에도 긴 원고와 참고 전문을 보내고 작가·버전 검사를 유지한다',async()=>{
+test('Vertex 두 모델의 대화·검토는 10회 뒤에도 긴 원고와 참고 전문을 보내고 작가·버전 검사를 유지한다',async()=>{
   const state=aiWorkspaceFixture(),work=state.works[0],doc=work.documents[0];
   doc.content=fromText('긴 원고 '.repeat(5000));
   const sources=Array.from({length:10},(_,i)=>({...newDocument('wiki',`자료 ${i}`),content:fromText('참고 전문 '.repeat(600))}));
   work.documents.push(...sources);
   const note={...newNote(),content:doc.content};state.notes=[note];
-  const environment={NEXT_PUBLIC_SUPABASE_URL:'https://synthetic.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',OPENAI_API_KEY:'synthetic-key',OPENAI_MODEL:'model',ANTHROPIC_API_KEY:'synthetic-key',ANTHROPIC_MODEL:'model',GEMINI_API_KEY:'synthetic-key',GEMINI_MODEL:'model'};
+  const environment={NEXT_PUBLIC_SUPABASE_URL:'https://synthetic.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',...vertexTestEnvironment};
   const previous=Object.fromEntries(Object.keys(environment).map(key=>[key,process.env[key]])),fetcher=globalThis.fetch;
   let reservations=0,calls=0,author=true,captured='';
   Object.assign(process.env,environment);
@@ -36,10 +36,14 @@ test('세 제공자의 대화·검토는 10회 뒤에도 긴 원고와 참고 �
 
 return Response.json({message:'legacy daily limit'},{status:429});}
 
-    const body=JSON.parse(String(init?.body)),result={review:'합성 답변',suggestions:[]};calls++;
-    captured=url.includes('openai.com')?z.union([z.string(),z.array(z.object({content:z.string()})).transform(messages=>messages.at(-1)!.content)]).parse(body.input):url.includes('anthropic.com')?body.messages.at(-1).content:body.contents.at(-1).parts[0].text;
+    const authResponse=vertexAuthResponse(url);
 
-    return Response.json(url.includes('openai.com')?{status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(result)}]}]}:url.includes('anthropic.com')?{stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify(result)}]}:{candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(result)}]}}]});
+if(authResponse)return authResponse;
+    assert.equal(new URL(url).hostname,'aiplatform.googleapis.com');
+    const body=JSON.parse(String(init?.body)),result={review:'합성 답변',suggestions:[]},provider=url.includes('/anthropic/')?'anthropic':'gemini';calls++;
+    captured=provider==='anthropic'?body.messages.at(-1).content[0].text:body.contents.at(-1).parts[0].text;
+
+    return Response.json(vertexReviewResponse(provider,result));
   };
 
   const request=(path:string,body:JsonValue,token=true)=>{const headers=new Headers({'Content-Type':'application/json'});
@@ -49,7 +53,7 @@ if(token)headers.set('Authorization','Bearer synthetic');
 return new Request(`http://localhost${path}`,{method:'POST',headers,body:JSON.stringify(body)});};
 
   try{
-    for(const provider of ['openai','anthropic','gemini']){
+    for(const provider of ['anthropic','gemini']){
       const body={workId:work.id,docId:doc.id,version:doc.updatedAt,provider,message:'긴 질문 '.repeat(2000),includeManuscript:true,sourceIds:sources.map(s=>s.id),history:[]};
 
       for(let i=0;i<12;i++){const response=await chat(request('/api/ai/chat',body));assert.equal(response.status,200);const result=await response.json();assert.equal(result.sources.length,10);assert(!('dailyCalls' in result));}
@@ -70,7 +74,7 @@ return new Request(`http://localhost${path}`,{method:'POST',headers,body:JSON.st
       assert.equal(calls,before);
     }
 
-    assert.equal(reservations,0);assert.equal(calls,75);
+    assert.equal(reservations,0);assert.equal(calls,50);
   }finally{globalThis.fetch=fetcher;
 
 for(const [key,value] of Object.entries(previous))if(value===undefined)delete process.env[key];else process.env[key]=value;}

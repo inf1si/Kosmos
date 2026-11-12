@@ -7,8 +7,8 @@
     "node": ">=22 <25"
   },
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1 --port 3210",
-    "build": "next build",
+    "dev": "next dev --webpack --hostname 127.0.0.1 --port 3210",
+    "build": "next build --webpack",
     "start": "next start --hostname 127.0.0.1 --port 3210",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
@@ -16,6 +16,8 @@
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
+    "@ai-sdk/google-vertex": "5.0.134",
+    "@ai-sdk/workflow": "2.0.98",
     "@aws-sdk/client-s3": "^3.1143.0",
     "@kfonts/maruburi": "0.1.0",
     "@kfonts/nanum-barun-gothic": "0.3.0",
@@ -37,8 +39,12 @@
     "@tiptap/pm": "^3.0.0",
     "@tiptap/react": "^3.0.0",
     "@tiptap/starter-kit": "^3.0.0",
+    "@vercel/oidc": "4.0.7",
+    "@workflow/serde": "5.0.0",
+    "ai": "7.0.166",
     "dexie": "^4.0.0",
     "fast-xml-parser": "^5.11.2",
+    "google-auth-library": "11.3.3",
     "htmlparser2": "^12.0.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.575.0",
@@ -51,10 +57,11 @@
     "react-dom": "^19.2.0",
     "spark-md5": "^3.0.2",
     "wanted-sans": "1.0.3",
+    "workflow": "5.4.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "latest",
+    "@electric-sql/pglite": "0.5.8",
     "@oxlint/plugins": "1.86.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
@@ -62,6 +69,7 @@
     "@types/react-dom": "^19.0.0",
     "@types/spark-md5": "^3.0.5",
     "harfbuzzjs": "1.6.4",
+    "nock": "14.0.16",
     "oxlint": "1.86.0",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.0.0",

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { readLimitedJson,BodyLimitError } from './http';
 import { credentialInputSchema } from './ai-settings';
-import { AI_CREDENTIAL_TTL,credentialCookieName,openCredential,requestCredentialCookie,sealCredential } from './ai-credentials';
+import { AI_CREDENTIAL_TTL,credentialCookieName,legacyCredentialCookieName,sealCredential,openCredential,requestCredentialCookie,ModelCatalogSizeError } from './ai-credentials';
 import { providerSchema } from './ai-provider';
 import { z } from 'zod';
 
@@ -31,27 +31,30 @@ export async function changeAICredential(request:Request,userId:string,env:Recor
       const parsed=z.object({provider:providerSchema}).safeParse(data);
 
 if(!parsed.success)return json({error:'제공자를 확인하세요.'},400);
-      response.cookies.set(credentialCookieName(parsed.data.provider,production),'',{httpOnly:true,secure:production,sameSite:'strict',path:'/',maxAge:0});
+      response.cookies.set(credentialCookieName(parsed.data.provider,production),'',{httpOnly:true,secure:production,sameSite:'strict',path:'/',maxAge:0});response.cookies.set(legacyCredentialCookieName(parsed.data.provider,production),'',{httpOnly:true,secure:production,sameSite:'strict',path:'/',maxAge:0});
 
 return response;
     }
 
     const parsed=credentialInputSchema.safeParse(data);
 
-if(!parsed.success)return json({error:'제공자·모델 ID·API 키의 형식과 길이를 확인하세요.'},400);
-    const {provider,model}=parsed.data,previous=openCredential(requestCredentialCookie(request,provider,production),provider,userId,env);
-    const key=parsed.data.key||previous?.key;
+if(!parsed.success)return json({error:'Vertex AI 제공자와 모델 ID를 확인하세요.'},400);
+    const {provider}=parsed.data;
 
-if(!key)return json({error:'처음 연결할 때는 API 키를 입력하세요.'},400);
-    const value=sealCredential({provider,model,key},userId,env);
+    if(parsed.data.models&&!parsed.data.models.includes(parsed.data.model))return json({error:'목록에서 선택할 모델을 확인하세요.'},400);
+    const old=openCredential(requestCredentialCookie(request,provider,production),provider,userId,env),models=parsed.data.models||(old?.models?[...new Set([...old.models,parsed.data.model])]:undefined),value=sealCredential({...parsed.data,...models&&{models}},userId,env);
+
+    for(const legacy of ['openai','anthropic','gemini'] as const)response.cookies.set(legacyCredentialCookieName(legacy,production),'',{httpOnly:true,secure:production,sameSite:'strict',path:'/',maxAge:0});
     response.cookies.set(credentialCookieName(provider,production),value,{httpOnly:true,secure:production,sameSite:'strict',path:'/',maxAge:AI_CREDENTIAL_TTL});
 
 return response;
   }catch(e){
+    if(e instanceof ModelCatalogSizeError)return json({error:e.message},413);
+
     if(e instanceof BodyLimitError)return json({error:'연결값이 너무 큽니다.'},413);
 
     if(e instanceof SyntaxError)return json({error:'요청 형식을 확인하세요.'},400);
 
-    return json({error:'AI 연결값을 보관하지 못했습니다. 서버의 암호화 설정을 확인하세요.'},503);
+    return json({error:'모델 선택을 저장하지 못했습니다. 서버의 암호화 설정을 확인하세요.'},503);
   }
 }

@@ -24,7 +24,8 @@ jobs:
           pnpm docs:check --base "$DOCS_BASE_SHA"
           pnpm typecheck
           pnpm test
-          pnpm build
+          # Keep CI compilation independent of Google Fonts egress; Vercel checks real fonts.
+          NEXT_FONT_GOOGLE_MOCKED_RESPONSES="$GITHUB_WORKSPACE/tests/fixtures/agent-fonts.cjs" pnpm build
         env:
           DOCS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
       - name: Real age encryption and decryption round trip
