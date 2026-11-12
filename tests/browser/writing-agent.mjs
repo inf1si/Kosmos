@@ -19,6 +19,10 @@ const require=createRequire(import.meta.url),pw=require(process.env.KOSMOS_PLAYW
 
 const output=resolve(process.env.KOSMOS_BROWSER_OUTPUT||'test-results/writing-agent'),port=Number(process.env.KOSMOS_AGENT_TEST_PORT||3230),base=`http://127.0.0.1:${port}`,quick=process.env.KOSMOS_AGENT_QUICK==='1';
 
+const mentionsOnly=process.env.KOSMOS_CHAT_MENTIONS_ONLY==='1',browserBase=process.env.KOSMOS_AGENT_BROWSER_URL||base;
+
+assert(browserBase===base||mentionsOnly,'Remote browser checks must use the synthetic mention-only flow');
+
 await mkdir(output,{recursive:true});
 
 const pg=new PGlite(),profile={id:uid(),aud:'authenticated',role:'authenticated',email:'synthetic@example.invalid',created_at:'2026-11-09T00:00:00Z',app_metadata:{provider:'email'},user_metadata:{},identities:[]},enc=x=>Buffer.from(JSON.stringify(x)).toString('base64url'),token=`${enc({alg:'HS256',typ:'JWT'})}.${enc({sub:profile.id,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'})}.synthetic-signature`,workspaceId=uid();
@@ -30,6 +34,10 @@ state.works[0].documents[0].content=fromText('달의 관측소에는 아무도 �
 const note={...newNote(),title:'관측 노트',content:fromText('관측은 새벽에 시작한다.')};
 
 state=addNote(state,note);
+
+const mentionA={...newNote(),title:'공통 자료',content:fromText('첫 번째 합성 참고 자료의 전문이다.')},mentionB={...newNote(),title:'공통 자료',content:fromText('두 번째 노트는 선택하지 않았다.')},longMention={...newNote(),title:'긴 제목 '+ '노트'.repeat(130),content:fromText('긴 제목의 합성 자료.')};
+
+if(mentionsOnly)state=addNote(addNote(addNote(state,mentionA),mentionB,{parentId:note.id}),longMention);
 
 const initial=structuredClone(state),errors=[],results=[],modelCalls=[],longModel='gemini-'+ 'x'.repeat(193);
 
@@ -173,7 +181,9 @@ app.stdout.pipe(log);
 
 app.stderr.pipe(log);
 
-const browser=await pw.chromium.launch({headless:true,executablePath:process.env.KOSMOS_CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
+const proxyUrl=browserBase!==base&&process.env.HTTPS_PROXY?new URL(process.env.HTTPS_PROXY):null;
+
+const browser=await pw.chromium.launch({headless:true,...proxyUrl&&{proxy:{server:proxyUrl.origin,bypass:'127.0.0.1,localhost'}},executablePath:process.env.KOSMOS_CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
 
 const until=async(check,label)=>{for(let i=0;i<240;i++){if(await check())return;await new Promise(resolve=>setTimeout(resolve,250));}
 
@@ -188,6 +198,84 @@ if(!await page.getByRole('button',{name:'작업 대화',exact:true}).isVisible()
 async function checkModelMenu(control){
   const width=page.viewportSize().width,box=await control.boundingBox();assert(box&&box.x>=0&&box.x+box.width<=width+1,'model control fits viewport');
   await control.click();const menu=page.getByRole('listbox');await menu.waitFor();const layout=await menu.evaluate(el=>({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,overflow:el.scrollWidth>el.clientWidth+1}));assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify(layout));await page.keyboard.press('Escape');
+}
+
+async function prepareRemoteContext(context){
+  if(browserBase===base)return;
+  await context.routeWebSocket('**/realtime/**',socket=>socket.close());
+  await context.route('**/*',async route=>{
+    const request=route.request(),url=new URL(request.url());
+
+    if(url.hostname.endsWith('.supabase.co')){await route.fulfill({response:await route.fetch({url:mockUrl+url.pathname+url.search})});
+
+return;}
+
+    if(url.origin===new URL(browserBase).origin&&url.pathname.startsWith('/api/')){
+      const headers={...await request.allHeaders(),origin:base,host:new URL(base).host};
+      await route.fulfill({response:await route.fetch({url:base+url.pathname+url.search,headers})});
+
+return;
+    }
+
+    assert(['GET','HEAD'].includes(request.method()),'Unexpected live mutation blocked');await route.continue();
+  });
+}
+
+async function verifySourceMentions(panel,width,scope){
+  console.log(JSON.stringify({flow:'mention-start',scope,width}));
+  const input=panel.getByRole('textbox',{name:'AI에게 질문',exact:true}),context=panel.locator('.chat-context');
+
+  if(!await context.evaluate(el=>el.open))await context.locator('summary').click();
+
+  while(await context.locator('.chat-source-chips button').count())await context.locator('.chat-source-chips button').first().click();
+  const beforeCalls=modelCalls.length;
+  await input.fill('앞 문장 @공통 뒤 문장');
+
+  for(let i=0;i<' 뒤 문장'.length;i++)await input.press('ArrowLeft');
+  const list=page.getByRole('listbox',{name:'AI 참고 자료',exact:true});await list.waitFor();
+  assert.equal(await list.getByRole('option').count(),2);
+  const paths=await list.locator('small').allTextContents();assert.notEqual(paths[0],paths[1]);
+  await input.press('ArrowDown');await input.press('ArrowUp');await input.press('ArrowDown');await input.press('Enter');
+  assert.equal(await input.inputValue(),'앞 문장 @공통 자료 뒤 문장');
+  assert(await input.evaluate(el=>el===document.activeElement&&el.selectionStart==='앞 문장 @공통 자료 '.length));
+  assert.equal(await list.count(),0);assert.equal(modelCalls.length,beforeCalls);
+  await input.pressSequentially('이어서 ');assert.equal(await input.inputValue(),'앞 문장 @공통 자료 이어서 뒤 문장');assert.equal(await list.count(),0);
+  await input.pressSequentially('@새검색');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor();
+
+  for(let i=0;i<'@새검색'.length;i++)await input.press('ArrowLeft');
+  assert.equal(await list.count(),0);
+  await context.getByRole('button',{name:'참고 자료 선택',exact:true}).click();
+  const picker=page.getByRole('dialog',{name:'AI 참고 자료 선택',exact:true}),duplicates=picker.locator('label').filter({hasText:'공통 자료'});
+  assert.equal(await duplicates.count(),2);assert.equal(await duplicates.nth(0).getByRole('checkbox').isChecked(),false);assert.equal(await duplicates.nth(1).getByRole('checkbox').isChecked(),true);
+  await duplicates.nth(1).getByRole('checkbox').uncheck();await page.keyboard.press('Escape');
+  assert((await context.locator('summary').innerText()).includes('참고 0개'));
+  await input.fill('@공통');await list.getByRole('option').first().click();
+  await input.fill('@공통');assert.equal(await list.getByLabel('선택됨').count(),1);await list.getByRole('option').first().click();
+  assert((await context.locator('summary').innerText()).includes('참고 1개'));
+  await input.fill('name@example.com');assert.equal(await list.count(),0);
+  await input.fill('@없는자료');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor();assert.equal(await list.getByRole('option').count(),0);await input.press('Enter');assert.equal(modelCalls.length,beforeCalls);await input.press('Escape');assert(await panel.isVisible());
+  await input.fill('@공통');await list.waitFor();await input.dispatchEvent('compositionstart',{data:'ㄱ'});assert.equal(await list.count(),0);await input.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true});assert.equal(modelCalls.length,beforeCalls);await input.dispatchEvent('compositionend',{data:'공통'});await list.waitFor();await input.press('Escape');
+  await input.fill('');await input.fill('@공통');await list.waitFor();await input.press('Tab');assert.equal(await list.count(),0);assert(await panel.getByRole('button',{name:'질문 보내기',exact:true}).evaluate(el=>el===document.activeElement));
+  await input.fill('');await input.fill('@공통');await list.waitFor();await context.getByRole('button',{name:'참고 자료 선택',exact:true}).click();await picker.waitFor();assert.equal(await list.count(),0);await page.keyboard.press('Escape');
+  await input.fill('@긴 제목');await list.waitFor();
+
+  for(const palette of quick?PALETTES.slice(0,1):PALETTES)for(const mode of ['light','dark']){
+    await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});
+
+    const layout=await page.getByRole('dialog',{name:'AI 참고 자료 검색',exact:true}).evaluate(el=>{const box=el.getBoundingClientRect(),row=el.querySelector('[role=option]'),style=getComputedStyle(row),title=getComputedStyle(row.querySelector('strong'));
+
+return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,overflow:el.scrollWidth>el.clientWidth+1,padding:style.paddingTop,ellipsis:title.textOverflow,nowrap:title.whiteSpace};});
+
+    assert(layout.left>=0&&layout.right<=width+1&&layout.top>=0&&layout.bottom<=950&&!layout.overflow,JSON.stringify({width,palette,mode,layout}));assert.equal(layout.padding,'4px');assert.equal(layout.ellipsis,'ellipsis');assert.equal(layout.nowrap,'nowrap');
+    await page.screenshot({path:resolve(output,`ai-mention-${scope}-${width}-${palette}-${mode}.png`)});results.push({view:'ai-source-mention',scope,width,palette,mode,layout});
+  }
+
+  await input.press('Escape');await input.fill('줄바꿈');await input.press('Shift+Enter');assert.equal(await input.inputValue(),'줄바꿈\n');assert.equal(modelCalls.length,beforeCalls);await input.fill('선택한 @공통 자료를 비교해줘.');await input.press('Escape');
+  const previous=await panel.locator('.chat-message.assistant').count(),request=page.waitForRequest(r=>r.url().endsWith('/api/ai/chat')&&r.method()==='POST');
+  await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();assert.deepEqual((await request).postDataJSON().sourceIds,[mentionA.id]);
+  await until(async()=>await panel.locator('.chat-message.assistant').count()===previous+1,'mention reference answer');
+  const sent=JSON.stringify(modelCalls.at(-1).body);assert(sent.includes('첫 번째 합성 참고 자료의 전문이다.'));assert(!sent.includes('두 번째 노트는 선택하지 않았다.'));
+  results.push({flow:'ai-source-mention-keyboard/pointer/caret/checkbox/dedup/email/IME/escape/send',scope,width});console.log(JSON.stringify({flow:'mention-complete',scope,width}));
 }
 
 async function verifySharedAI(width){
@@ -234,14 +322,17 @@ async function verifySharedAI(width){
 
   }
 
+  if(mentionsOnly)await verifySourceMentions(panel,width,'work');
   await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
   await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');
   await chooseOption(page.getByRole('combobox',{name:'AI 질문 제공자',exact:true}),'gemini');await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),longModel);await checkModelMenu(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}));await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),'gemini-fast');
   await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'적용할 AI 답변'}).inputValue(),'합성 문서 답변');assert.equal(modelCalls.at(-1).model,'gemini-fast');await page.keyboard.press('Escape');
-  await page.goto(`${base}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await page.getByRole('button',{name:'AI 대화',exact:true}).click();
+  await page.goto(`${browserBase}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await page.getByRole('button',{name:'AI 대화',exact:true}).click();
   const notePanel=page.locator('.reference-panel.is-chat');await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();const previousNotes=await notePanel.locator('.chat-message.assistant').count();await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 질문');await notePanel.getByRole('button',{name:'질문 보내기',exact:true}).click();await until(async()=>await notePanel.locator('.chat-message.assistant').count()===previousNotes+1,'ordinary note AI answer');
+
+  if(mentionsOnly)await verifySourceMentions(notePanel,width,'note');
   await notePanel.getByRole('button',{name:'노트 참고 패널 닫기',exact:true}).click();await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();await page.keyboard.press('Escape');
-  await page.goto(`${base}/studio`,{waitUntil:'networkidle'});
+  await page.goto(`${browserBase}/studio`,{waitUntil:'networkidle'});
 
 }
 
@@ -250,9 +341,13 @@ try{
 
   for(const width of process.env.KOSMOS_AGENT_INTERACTIONS_ONLY==='1'?[1280]:[1280,360]){
     const context=await browser.newContext({viewport:{width,height:950}});context.setDefaultNavigationTimeout(90000);
-    await context.addInitScript(({profile,token,key})=>{if(window!==window.top)return;localStorage.setItem(key,JSON.stringify({access_token:token,refresh_token:'synthetic',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:profile}));},{profile,token,key:'sb-127-auth-token'});
-    page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${base}/studio`,{waitUntil:'networkidle'});
+    await context.addInitScript(({profile,token,key})=>{if(window!==window.top)return;localStorage.setItem(key,JSON.stringify({access_token:token,refresh_token:'synthetic',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:profile}));},{profile,token,key:browserBase===base?'sb-127-auth-token':'sb-krakjollsufgnwealroh-auth-token'});
+    await prepareRemoteContext(context);
+    page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${browserBase}/studio`,{waitUntil:'networkidle'});
     await verifySharedAI(width);
+
+    if(mentionsOnly){await context.close();continue;}
+
     await openAgent();const dialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await dialog.waitFor();
     await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),'');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 실행 방식'}),'review');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 모델'}),longModel);await checkModelMenu(dialog.getByRole('combobox',{name:'에이전트 모델'}));await chooseOption(dialog.getByRole('combobox',{name:'에이전트 모델'}),'gemini-selected');
     await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).click();await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled());await until(async()=>!await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled()&&await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement),'accepted request returns focus without losing new typing');
@@ -313,6 +408,7 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify({w
     await dialog.getByRole('button',{name:'닫기',exact:true}).click();await page.reload({waitUntil:'networkidle'});await openAgent();await page.getByRole('dialog',{name:'작업 대화',exact:true}).locator('.agent-question').filter({hasText:run.message}).waitFor();await context.close();
   }
 
+  if(!mentionsOnly){
   const api=async(path,method='GET',body,origin=base)=>{
     const response=await fetch(`${base}/api/agent/${path}`,{method,headers:{Authorization:`Bearer ${token}`,Origin:origin,'Content-Type':'application/json'},...body&&{body:JSON.stringify(body)}});
 
@@ -351,7 +447,7 @@ return row.status==='completed';},'API task completes');
   const executed=await finish(notes.id);assert(executed.applied_version);assert((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.notes.some(n=>n.id===executed.operations[0].id));
   const noteContext=await browser.newContext({viewport:{width:360,height:950}});noteContext.setDefaultNavigationTimeout(90000);
   await noteContext.addInitScript(({profile,token})=>localStorage.setItem('sb-127-auth-token',JSON.stringify({access_token:token,refresh_token:'synthetic',expires_at:Math.floor(Date.now()/1000)+3600,user:profile})),{profile,token});
-  page=await noteContext.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${base}/studio#notes/${executed.operations[0].id}`,{waitUntil:'networkidle'});await page.getByLabel('노트 본문',{exact:true}).waitFor();assert((await page.getByLabel('노트 본문',{exact:true}).innerText()).includes('달로 돌아온'));
+  page=await noteContext.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${browserBase}/studio#notes/${executed.operations[0].id}`,{waitUntil:'networkidle'});await page.getByLabel('노트 본문',{exact:true}).waitFor();assert((await page.getByLabel('노트 본문',{exact:true}).innerText()).includes('달로 돌아온'));
   await openAgent();const noteDialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await chooseOption(noteDialog.getByRole('combobox',{name:'작업 대화 선택'}),notes.sessionId);await noteDialog.locator('.agent-question').waitFor();await noteDialog.getByRole('button',{name:/^변경 /}).click();await noteDialog.getByRole('button',{name:'문서 열기',exact:true}).click();await page.getByLabel('노트 본문',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'사이드바 열기',exact:true}).count(),1);await openAgent();await page.getByRole('dialog',{name:'작업 대화',exact:true}).getByRole('button',{name:'대화',exact:true}).click();await page.getByRole('dialog',{name:'작업 대화',exact:true}).locator('.agent-question').waitFor();
   // Even a cancellation after the commit must leave undo available.
   await pg.query("update public.agent_runs set status='cancelled' where id=$1",[notes.id]);assert.equal((await api(`changes/${notes.id}/revert`,'POST',{})).status,200);await until(async()=>await page.getByLabel('노트 본문',{exact:true}).count()===0,'remote undo refreshes open note without realtime');await noteContext.close();
@@ -364,7 +460,9 @@ return row.status==='completed';},'API task completes');
   assert(modelCalls.some(call=>call.provider==='gemini'&&JSON.stringify(call.body.tools||[]).includes('googleSearch')),'native Google search tool is sent');
   results.push({flow:'discuss/execute/note-scope/idempotency/cancelled-undo/stale-source/export/auth/origin'});
 
-  assert.equal(errors.length,0,errors.join('\n'));await writeFile(resolve(output,'report.json'),JSON.stringify({results,errors,modelCalls:modelCalls.length},null,2));
+  }
+
+  assert.equal(errors.length,0,errors.join('\n'));await writeFile(resolve(output,'report.json'),JSON.stringify({browserBase,syntheticOnly:true,results,errors,modelCalls:modelCalls.length},null,2));
   console.log(JSON.stringify({cases:results.length,errors,modelCalls:modelCalls.length}));
 }catch(error){console.error(JSON.stringify({errors,runs:(await pg.query('select id,status,error,events from public.agent_runs')).rows,models:modelCalls.length}));
 

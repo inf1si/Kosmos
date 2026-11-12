@@ -232,6 +232,14 @@ if(!note)throw new Error('노트를 찾지 못했습니다.');
   return [...(state.notes||[]).filter(n=>n.id!==noteId).map(noteDocument),...state.works.filter(w=>note.linkedWorkIds.includes(w.id)).flatMap(w=>w.documents.map(d=>({...d,title:`${w.title} / ${d.title}`.slice(0,300)})))];
 }
 
+export function workAISources(state:Workspace,workId:string):NovelDocument[]{
+  const work=state.works.find(w=>w.id===workId);
+
+  if(!work)throw new Error('작품을 찾지 못했습니다.');
+
+  return [...work.documents,...(state.notes||[]).map(noteDocument)];
+}
+
 export function appendNoteExchange(state:Workspace,id:string,expectedCount:number,question:string,answer:Extract<ChatMessage,{role:'assistant'}>):Workspace {
   const note=state.notes?.find(n=>n.id===id);
 
