@@ -55,6 +55,7 @@ pnpm start
 | `ALLOW_LOCAL_PREVIEW` | 서버 | 기본 `false`. 외부 배포에서 켜지 않음 |
 | `GOOGLE_VERTEX_PROJECT`, `GOOGLE_VERTEX_LOCATION` | 서버 | `orbiter-ai`, 기본 `global` |
 | `VERTEX_GEMINI_MODEL`, `VERTEX_CLAUDE_MODEL`, `VERTEX_SEARCH_MODEL` | 서버 | 프로젝트에 허용된 Vertex 모델 ID, 검색 모델은 선택 |
+| `VERTEX_GEMINI_MODELS`, `VERTEX_CLAUDE_MODELS` | 서버 | 선택. 쉼표·줄바꿈 모델 목록. 앱에서 목록 저장도 가능 |
 | `VERTEX_AUTH_MODE`, `GOOGLE_VERTEX_WIF_PROVIDER`, `GOOGLE_VERTEX_SERVICE_ACCOUNT` | 서버 | Vercel OIDC/WIF 인증. 로컬은 `adc` |
 | `BACKUP_STORAGE_PROVIDER` | 서버 | 사용자 선택 `google-drive`. 선택적으로 `s3` |
 | `BACKUP_GOOGLE_CLIENT_ID` | 서버 | 본인 Google OAuth Client ID |

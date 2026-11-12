@@ -1,5 +1,12 @@
 # 변경 기록
 
+## 2026-11-12 — Gemini·Claude 여러 모델 선택
+
+- AI 설정에 제공자별 모델 목록·기본 모델을 저장하고 문서·노트·커서 AI·작업 대화에서 모델을 바로 고른다. 서버의 복수 모델 목록 변수도 선택적으로 지원한다.
+- 요청에 선택 ID를 담아 실행 모델을 고정하고, 에이전트 실행 중에는 해당 모델을 표시·잠근다. 기존 한 모델 설정과 과거 대화/백업을 유지한다. 목록·선택은 기기 설정이며 원고를 수정하지 않는다.
+- 중복·잘못된 ID·목록 밖 기본값과 쿠키 저장 한도 초과를 거절한다. [사용 계약](docs/ai.md)·[Vertex 설정](docs/vertex-ai.md)·[검증](VERIFICATION.md).
+
+
 ## 2026-11-09 — Vertex AI 통합
 
 - 문서·노트·커서 AI와 작업 대화를 Google Cloud `orbiter-ai`의 Vertex Gemini·Claude로 통일한다. 웹 조사도 Vertex Gemini를 사용하며 직접 OpenAI·Anthropic·Gemini Developer API 호출은 제거한다. 기존 대화·백업의 제공자 표시는 보존한다.

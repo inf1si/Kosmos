@@ -35,7 +35,7 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
   const s=useStudio(),work=s.state!.works.find(w=>w.id===workId),note=s.state!.notes?.find(n=>n.id===noteId);
   const noun=noteId?'노트':'원고',materials=useMemo(()=>noteId?noteAISources(s.state!,noteId):work!.documents,[s.state,noteId,work]);
   const messages=noteId?note?.aiMessages||[]:work!.aiConversations?.find(c=>c.docId===doc.id)?.messages||[];
-  const {providers,provider,setProvider,loadingProviders,storageAvailable,connectionError,refreshProviders,currentProvider}=useAIConnection();
+  const {providers,provider,setProvider,model,setModel,loadingProviders,storageAvailable,connectionError,refreshProviders,currentProvider}=useAIConnection();
   const [settingsOpen,setSettingsOpen]=useState(false);
   const activePreset=activePromptPreset(s.state?.aiPreferences),systemPrompt=activePreset.prompt;
   const [prompt,setPrompt]=useState('');const [busy,setBusy]=useState(false);const [pending,setPending]=useState('');const [error,setError]=useState('');const [notice,setNotice]=useState('');
@@ -43,7 +43,7 @@ export function AIChat({workId,noteId,doc,onOpen}:ChatScope&{doc:NovelDocument;o
   const [sourcesOpen,setSourcesOpen]=useState(false);const [sourceQuery,setSourceQuery]=useState('');const [resetOpen,setResetOpen]=useState(false);
   const log=useRef<HTMLDivElement>(null);const textarea=useRef<HTMLTextAreaElement>(null);const disposed=useRef(false);const settingsTrigger=useRef<HTMLElement|null>(null);
   const availableIds=new Set(materials.filter(d=>d.id!==doc.id).map(d=>d.id));const selectedIds=sourceIds.filter(id=>availableIds.has(id));
-  const configured=cloudConfigured&&currentProvider.configured;const chars=plainText(doc.content).length;
+  const configured=cloudConfigured&&!loadingProviders&&currentProvider.configured;const chars=plainText(doc.content).length;
   useEffect(()=>{disposed.current=false;
 
 return()=>{disposed.current=true;};},[]);
@@ -59,7 +59,7 @@ if(!question||busy||!configured||s.conflict)return;
       await s.flush();await s.syncNow();const session=(await cloud().auth.getSession()).data.session;
 
 if(!session)throw new Error('작가 로그인이 필요합니다.');
-      const version=doc.updatedAt;const response=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({...(noteId?{noteId}:{workId}),docId:doc.id,version,provider,message:question,includeManuscript,sourceIds:selectedIds,history:recentChatHistory(messages),systemPrompt,promptPresetId:activePreset.id})});
+      const version=doc.updatedAt;const response=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({...(noteId?{noteId}:{workId}),docId:doc.id,version,provider,model,message:question,includeManuscript,sourceIds:selectedIds,history:recentChatHistory(messages),systemPrompt,promptPresetId:activePreset.id})});
       const body=await response.json();
 
 if(!response.ok)throw new Error(body.error||'대화를 완료하지 못했습니다.');
@@ -93,7 +93,7 @@ return {...d,content:applySuggestion(d.content,suggestion.quote,suggestion.repla
 
   return <div className="ai-chat">
     <div className="chat-heading"><div><strong title={documentTitle(doc)}>{documentTitle(doc)}</strong></div><IconButton label="AI 설정" disabled={busy||loadingProviders} onClick={e=>{settingsTrigger.current=e.currentTarget;setSettingsOpen(true);}}><Settings2 size={17}/></IconButton><IconButton label="새 대화" disabled={busy||!messages.length||!!s.conflict} onClick={()=>setResetOpen(true)}><MessageSquarePlus size={17}/></IconButton></div>
-    <div className="chat-provider"><label>제공자<Select aria-label="AI 제공자" value={provider} disabled={busy||loadingProviders} onChange={value=>setProvider(providerSchema.parse(value))}>{providers.map(p=><option key={p.id} value={p.id} disabled={!p.configured}>{p.label}{p.configured?'':' · 연결 필요'}</option>)}</Select></label><span title={currentProvider.model||undefined}>{loadingProviders?'연결 확인 중':currentProvider.model||'Vertex 서버 연결 필요'}</span></div>
+    <div className="chat-provider"><label>제공자<Select aria-label="AI 제공자" value={provider} disabled={busy||loadingProviders} onChange={value=>setProvider(providerSchema.parse(value))}>{providers.map(p=><option key={p.id} value={p.id} disabled={!p.configured}>{p.label}{p.configured?'':' · 연결 필요'}</option>)}</Select></label><label>모델<Select aria-label="AI 모델" value={model} disabled={busy||loadingProviders||!currentProvider.models.length} onChange={setModel}>{currentProvider.models.map(id=><option key={id} value={id}>{id}</option>)}</Select></label></div>
     {!configured&&!loadingProviders&&<div className="chat-connection"><p>{currentProvider.browserInvalid?'모델 선택이 만료되었습니다. 다시 저장하세요.':'AI 연결이 필요합니다.'}</p><button type="button" onClick={e=>{settingsTrigger.current=e.currentTarget;setSettingsOpen(true);}}>AI 설정 열기</button></div>}
     <div className="chat-preset"><label>프리셋<Select aria-label="AI 프롬프트 프리셋" value={activePreset.id} disabled={busy||!!s.conflict} onChange={value=>{try{const id=value;s.update(state=>({...state,aiPreferences:activatePromptPreset(state.aiPreferences,id)}));setNotice('');setError('');}catch(err){setError(err instanceof Error?err.message:'프리셋을 적용하지 못했습니다.');}}}>{promptCatalog(s.state?.aiPreferences).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</Select></label></div>
     <details className="chat-context"><summary>보낼 자료 · {includeManuscript?`현재 ${noun}`:`${noun} 제외`} · 참고 {selectedIds.length}개</summary><label className="chat-check"><input type="checkbox" checked={includeManuscript} disabled={busy} onChange={e=>setIncludeManuscript(e.target.checked)}/>현재 {noun} 포함 · {chars.toLocaleString()}자</label><div className="chat-source-chips">{selectedIds.map(id=><button type="button" key={id} disabled={busy} onClick={()=>setSourceIds(ids=>ids.filter(v=>v!==id))}>{materials.find(d=>d.id===id)?.title} ×</button>)}</div><Popover open={sourcesOpen} onOpenChange={setSourcesOpen} side="top" width={340} title="AI 참고 자료 선택" trigger={<button type="button" className="chat-secondary" disabled={busy}><Search size={13}/>참고 자료 선택</button>}><input aria-label="참고 자료 검색" placeholder="제목이나 본문 검색" value={sourceQuery} onChange={e=>setSourceQuery(e.target.value)}/><div className="chat-source-picker">{materials.filter(d=>d.id!==doc.id&&`${documentTitle(d)} ${plainText(d.content)}`.toLocaleLowerCase().includes(sourceQuery.toLocaleLowerCase())).map(d=><label key={d.id}><input type="checkbox" checked={selectedIds.includes(d.id)} disabled={busy} onChange={e=>setSourceIds(ids=>e.target.checked?[...ids,d.id]:ids.filter(id=>id!==d.id))}/><span><strong>{documentTitle(d)}</strong><small>{d.kind==='wiki'?d.category||'설정':d.kind==='memo'?(noteId&&s.state!.notes?.some(n=>n.id===d.id)?'개인 노트':'메모'):'원고'}</small></span></label>)}</div><div className="popover-actions"><button className="primary" onClick={()=>setSourcesOpen(false)}>선택 완료 · {selectedIds.length}개</button></div></Popover></details>

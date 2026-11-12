@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-12",
+  "baseline": "2556223acd83264790b02d91c3e82bfcc0c2ce97",
+  "main": "2c111c947e233e33ac9421185e333c4f41e99647",
+  "nodeTests": 295,
+  "browser": {
+    "widths": [
+      1280,
+      360
+    ],
+    "paletteModeCombinations": 54,
+    "cases": 433,
+    "pageErrors": [],
+    "fixtureModelCalls": 57
+  },
+  "finalLongModelIdCheck": {
+    "idLength": 200,
+    "cases": 17,
+    "pageErrors": [],
+    "fixtureModelCalls": 57
+  },
+  "flows": [
+    "model library save/default/reset",
+    "Gemini and Claude second-model Vertex request paths and response metadata",
+    "document/note/cursor model selection",
+    "agent input model capture and active lock",
+    "legacy settings/history/backup compatibility",
+    "invalid model/duplicate/default mismatch/cookie size rejection",
+    "workspace apply/undo/idempotency/stale-source guards"
+  ],
+  "build": "local optimized Webpack with test fonts; 35 steps, 1 workflow",
+  "paidCalls": 0,
+  "realManuscriptWrites": false,
+  "gcpModelAccess": "Opus 5.5 approval reported by user; no live inference test",
+  "unverified": [
+    "Production DB migration/deployment and live Vertex calls",
+    "model-specific quality/cost/quotas",
+    "WebKit/physical device"
+  ]
+}

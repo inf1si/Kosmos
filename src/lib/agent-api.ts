@@ -108,7 +108,7 @@ return json({session:agentSessionSchema.parse(old.data)});}
 
 return json({run:agentRunView(await readAgentRun(input.id))});}
 
-        const config=requestProviderConfig(request,session.provider,auth.userId);
+        const config=requestProviderConfig(request,session.provider,auth.userId,process.env,input.model);
 
         if(!config)return json({error:'Vertex AI의 Gemini·Claude 모델과 서버 인증을 설정하세요.'},503);
 

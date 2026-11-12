@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { vertexProviderSchema,vertexModelIdSchema } from './ai-provider';
+import { vertexProviderSchema,vertexModelIdSchema,vertexModelListSchema } from './ai-provider';
 
 export const DEFAULT_AI_SYSTEM_PROMPT=`한국어 SF 중단편·장편 출판소설을 쓰는 작가의 집필 동료이자 편집자로 행동한다. 작품의 의도와 작가의 판단을 우선하며 요청한 작업에 집중한다.
 
@@ -31,8 +31,8 @@ export const systemPromptSchema=z.string();
 
 export function effectiveSystemPrompt(value?:string){return systemPromptSchema.parse(value??'').trim()||DEFAULT_AI_SYSTEM_PROMPT;}
 
-export const credentialInputSchema=z.object({provider:vertexProviderSchema,model:vertexModelIdSchema}).strict();
+export const credentialInputSchema=z.object({provider:vertexProviderSchema,model:vertexModelIdSchema,models:vertexModelListSchema.optional()}).strict();
 
 export type CredentialInput=z.infer<typeof credentialInputSchema>;
 
-export type AIProviderStatus={id:'openai'|'anthropic'|'gemini';label:string;configured:boolean;model:string|null;source:'browser'|'server'|null;browserStored:boolean;browserInvalid:boolean};
+export type AIProviderStatus={id:'openai'|'anthropic'|'gemini';label:string;configured:boolean;model:string|null;models:string[];source:'browser'|'server'|null;browserStored:boolean;browserInvalid:boolean};

@@ -19,7 +19,7 @@ if(!auth)return json({error:'작가 로그인이 필요합니다.'},401);
     const parsed=chatInputSchema.safeParse(await readLimitedJson(request,4*1024*1024));
 
 if(!parsed.success)return json({error:'질문·자료·이전 대화의 길이와 형식을 확인하세요.'},400);
-    const input=parsed.data,config=requestProviderConfig(request,input.provider,auth.userId);
+    const input=parsed.data,config=requestProviderConfig(request,input.provider,auth.userId,process.env,input.model);
 
 if(!config)return json({error:'Vertex AI의 Gemini·Claude 모델과 서버 인증을 확인하세요.'},503);
     const row=await auth.client.from('workspaces').select('payload').single();

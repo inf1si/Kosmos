@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { vertexModelIdSchema } from './ai-provider';
 import { reviewSchema } from './ai';
 import { systemPromptSchema } from './ai-settings';
 import { promptPresetIdSchema } from './ai-prompt-presets';
@@ -23,7 +24,7 @@ export type EditorAIScope={noteId:string;docId:string;workId?:never}|{workId:str
 const editorRangeSchema=z.object({kind:z.enum(['selection','paragraph']),from:z.number().int().nonnegative(),to:z.number().int().nonnegative(),text:z.string()});
 
 export const chatInputSchema=z.object({
-  workId:z.uuid().optional(),noteId:z.uuid().optional(),docId:z.uuid(),version:z.string().max(100),provider:conversationProviderSchema,
+  workId:z.uuid().optional(),noteId:z.uuid().optional(),docId:z.uuid(),version:z.string().max(100),provider:conversationProviderSchema,model:vertexModelIdSchema.optional(),
   message:z.string().trim().min(1),includeManuscript:z.boolean(),
   sourceIds:z.array(z.uuid()),
   history:z.array(z.object({role:z.enum(['user','assistant']),content:z.string().min(1)})),

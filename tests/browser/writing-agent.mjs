@@ -31,7 +31,7 @@ const note={...newNote(),title:'관측 노트',content:fromText('관측은 새�
 
 state=addNote(state,note);
 
-const initial=structuredClone(state),errors=[],results=[],modelCalls=[];
+const initial=structuredClone(state),errors=[],results=[],modelCalls=[],longModel='gemini-'+ 'x'.repeat(193);
 
 await pg.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;create table public.authors(user_id uuid primary key);create table public.workspaces(id uuid primary key,owner_id uuid not null,payload jsonb not null,version bigint not null default 1,updated_at timestamptz default now());create table public.workspace_revisions(id uuid default gen_random_uuid(),workspace_id uuid,owner_id uuid,payload jsonb,created_at timestamptz default now());`);
 
@@ -60,7 +60,7 @@ return;}
     const url=new URL(req.url,'http://localhost'),bytes=Buffer.concat(await Array.fromAsync(req)),body=bytes.length?JSON.parse(bytes.toString()):{};
 
     if(url.pathname==='/fixture-model'){
-      const provider=url.searchParams.get('provider');modelCalls.push({provider,body});
+      const provider=url.searchParams.get('provider');modelCalls.push({provider,model:url.searchParams.get('model'),body});
 
       const google=provider==='gemini',anthropic=provider==='anthropic';
 
@@ -167,7 +167,7 @@ await new Promise(resolve=>mock.listen(0,'127.0.0.1',resolve));
 
 const mockUrl=`http://127.0.0.1:${mock.address().port}`,log=createWriteStream(resolve(output,'server.log'));
 
-const app=spawn('pnpm',['exec','next','dev','--webpack','--hostname','127.0.0.1','--port',String(port)],{cwd:process.cwd(),detached:true,env:{...process.env,NEXT_PUBLIC_SUPABASE_URL:mockUrl,NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',SUPABASE_SERVICE_ROLE_KEY:'synthetic-service',...vertexTestEnvironment,AI_CREDENTIAL_SECRET:'synthetic-encryption-secret-'.repeat(3),KOSMOS_AGENT_FIXTURE_URL:mockUrl,NODE_OPTIONS:`${process.env.NODE_OPTIONS||''} --import=${resolve('tests/fixtures/agent-fetch.mjs')}`}});
+const app=spawn('pnpm',['exec','next','dev','--webpack','--hostname','127.0.0.1','--port',String(port)],{cwd:process.cwd(),detached:true,env:{...process.env,NEXT_PUBLIC_SUPABASE_URL:mockUrl,NEXT_PUBLIC_SUPABASE_ANON_KEY:'synthetic-anon',SUPABASE_SERVICE_ROLE_KEY:'synthetic-service',...vertexTestEnvironment,VERTEX_GEMINI_MODELS:'gemini-test,gemini-fast',VERTEX_CLAUDE_MODELS:'claude-opus-5-5',AI_CREDENTIAL_SECRET:'synthetic-encryption-secret-'.repeat(3),KOSMOS_AGENT_FIXTURE_URL:mockUrl,NODE_OPTIONS:`${process.env.NODE_OPTIONS||''} --import=${resolve('tests/fixtures/agent-fetch.mjs')}`}});
 
 app.stdout.pipe(log);
 
@@ -185,6 +185,11 @@ async function openAgent(){await page.getByRole('button',{name:/^사이드바 (�
 
 if(!await page.getByRole('button',{name:'작업 대화',exact:true}).isVisible())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();await page.getByRole('button',{name:'작업 대화',exact:true}).click();}
 
+async function checkModelMenu(control){
+  const width=page.viewportSize().width,box=await control.boundingBox();assert(box&&box.x>=0&&box.x+box.width<=width+1,'model control fits viewport');
+  await control.click();const menu=page.getByRole('listbox');await menu.waitFor();const layout=await menu.evaluate(el=>({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,overflow:el.scrollWidth>el.clientWidth+1}));assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify(layout));await page.keyboard.press('Escape');
+}
+
 async function verifySharedAI(width){
   await page.getByRole('button',{name:/^사이드바 (열기|닫기)$/}).waitFor();
   const row=page.locator(`[data-navigation-row="${initial.works[0].documents[0].id}"]`);
@@ -198,35 +203,41 @@ async function verifySharedAI(width){
     await panel.getByRole('button',{name:'AI 설정',exact:true}).click();const settings=page.getByRole('dialog',{name:'AI 설정',exact:true});
     await chooseOption(settings.getByRole('combobox',{name:'설정할 AI 제공자'}),provider);
     assert.equal(await settings.locator('input[type="password"]').count(),0);
-    await settings.getByRole('textbox',{name:'AI 모델 ID',exact:true}).fill(provider==='gemini'?'gemini-selected':'claude-selected@20260101');
-    await settings.getByRole('button',{name:'모델 저장',exact:true}).click();await settings.getByText('모델 선택을 저장했습니다.',{exact:true}).waitFor();
+    await settings.getByRole('textbox',{name:'AI 모델 목록',exact:true}).fill(provider==='gemini'?`gemini-selected\ngemini-fast\n${longModel}`:'claude-selected@20260101\nclaude-opus-5-5');
+    await settings.getByRole('button',{name:'모델 저장',exact:true}).click();await settings.getByText('모델 목록을 저장했습니다.',{exact:true}).waitFor();
 
     if(provider==='gemini'){
       for(const palette of quick?PALETTES.slice(0,1):PALETTES)for(const mode of ['light','dark']){
         await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});
         const layout=await settings.evaluate(el=>({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,overflow:el.scrollWidth>el.clientWidth+1}));assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify({width,palette,mode,layout}));
         await settings.getByRole('combobox',{name:'설정할 AI 제공자'}).click();await page.getByRole('listbox').waitFor();assert.equal(await page.getByRole('option').count(),2);await page.keyboard.press('Escape');
+        await checkModelMenu(settings.getByRole('combobox',{name:'설정할 AI 모델',exact:true}));
         await page.screenshot({path:resolve(output,`vertex-settings-${width}-${palette}-${mode}.png`)});results.push({width,palette,mode,view:'vertex-settings'});
       }
     }
 
     await settings.getByRole('button',{name:'닫기',exact:true}).click();
+
+    if(provider==='gemini'){await chooseOption(panel.getByRole('combobox',{name:'AI 모델',exact:true}),longModel);await checkModelMenu(panel.getByRole('combobox',{name:'AI 모델',exact:true}));}
+
+    const chosenModel=provider==='gemini'?'gemini-fast':'claude-opus-5-5';await chooseOption(panel.getByRole('combobox',{name:'AI 모델',exact:true}),chosenModel);
     const previousAnswers=await panel.locator('.chat-message.assistant').count();
     await panel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill(`${provider} 문서 질문`);await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();
     await until(async()=>await panel.locator('.chat-message.assistant').count()===previousAnswers+1,'ordinary document AI answer');
-    assert.equal(await panel.locator('.chat-message.assistant').last().locator('p').first().innerText(),'합성 문서 답변');
+    assert.equal(await panel.locator('.chat-message.assistant').last().locator('p').first().innerText(),'합성 문서 답변');assert.equal(modelCalls.at(-1).model,chosenModel);assert.equal(await panel.locator('.chat-message.assistant').last().locator('header small').innerText(),chosenModel);
 
     if(provider==='anthropic'){
       await panel.getByRole('button',{name:'AI 설정',exact:true}).click();const settings=page.getByRole('dialog',{name:'AI 설정',exact:true});
-      assert.equal(await settings.getByRole('textbox',{name:'AI 모델 ID',exact:true}).inputValue(),'claude-selected@20260101');
-      await settings.getByRole('button',{name:'기본 모델 사용',exact:true}).click();await settings.getByText('기본 모델로 돌아갔습니다.',{exact:true}).waitFor();assert.equal(await settings.getByRole('textbox',{name:'AI 모델 ID',exact:true}).inputValue(),vertexTestEnvironment.VERTEX_CLAUDE_MODEL);await settings.getByRole('button',{name:'닫기',exact:true}).click();
+      assert.equal(await settings.getByRole('combobox',{name:'설정할 AI 모델',exact:true}).getAttribute('data-value'),'claude-selected@20260101');
+      await settings.getByRole('button',{name:'기본 모델 사용',exact:true}).click();await settings.getByText('기본 모델로 돌아갔습니다.',{exact:true}).waitFor();assert.equal(await settings.getByRole('combobox',{name:'설정할 AI 모델',exact:true}).getAttribute('data-value'),vertexTestEnvironment.VERTEX_CLAUDE_MODEL);await settings.getByRole('button',{name:'닫기',exact:true}).click();
     }
 
   }
 
   await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
   await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');
-  await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'적용할 AI 답변'}).inputValue(),'합성 문서 답변');await page.keyboard.press('Escape');
+  await chooseOption(page.getByRole('combobox',{name:'AI 질문 제공자',exact:true}),'gemini');await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),longModel);await checkModelMenu(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}));await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),'gemini-fast');
+  await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'적용할 AI 답변'}).inputValue(),'합성 문서 답변');assert.equal(modelCalls.at(-1).model,'gemini-fast');await page.keyboard.press('Escape');
   await page.goto(`${base}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await page.getByRole('button',{name:'AI 대화',exact:true}).click();
   const notePanel=page.locator('.reference-panel.is-chat');await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();const previousNotes=await notePanel.locator('.chat-message.assistant').count();await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 질문');await notePanel.getByRole('button',{name:'질문 보내기',exact:true}).click();await until(async()=>await notePanel.locator('.chat-message.assistant').count()===previousNotes+1,'ordinary note AI answer');
   await notePanel.getByRole('button',{name:'노트 참고 패널 닫기',exact:true}).click();await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();await page.keyboard.press('Escape');
@@ -243,12 +254,12 @@ try{
     page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${base}/studio`,{waitUntil:'networkidle'});
     await verifySharedAI(width);
     await openAgent();const dialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await dialog.waitFor();
-    await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),'');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 실행 방식'}),'review');
+    await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),'');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 실행 방식'}),'review');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 모델'}),longModel);await checkModelMenu(dialog.getByRole('combobox',{name:'에이전트 모델'}));await chooseOption(dialog.getByRole('combobox',{name:'에이전트 모델'}),'gemini-selected');
     await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).click();await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled());await until(async()=>!await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled()&&await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement),'accepted request returns focus without losing new typing');
     await until(async()=>await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()||(await pg.query("select * from public.agent_runs where status='completed'")).rows.length>0,'running task visible');
 
     if(await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()){
-      assert(await dialog.getByRole('combobox',{name:'에이전트 실행 방식'}).isDisabled());assert(await dialog.getByRole('combobox',{name:'에이전트 제공자'}).isDisabled());assert(await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).isDisabled());
+      assert(await dialog.getByRole('combobox',{name:'에이전트 실행 방식'}).isDisabled());assert(await dialog.getByRole('combobox',{name:'에이전트 제공자'}).isDisabled());assert(await dialog.getByRole('combobox',{name:'에이전트 모델'}).isDisabled());assert(await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).isDisabled());
     }
 
     await until(async()=>{const rows=await pg.query("select * from public.agent_runs order by created_at desc limit 1");const row=rows.rows[0];
@@ -311,9 +322,9 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify({w
   assert.equal((await fetch(`${base}/api/agent/sessions`)).status,401);
   assert.equal((await api('sessions','POST',{},'https://elsewhere.invalid')).status,403);
 
-  const createTask=async(scope,mode,message,provider='gemini')=>{
+  const createTask=async(scope,mode,message,provider='gemini',model)=>{
     const sessionId=uid(),id=uid();assert.equal((await api('sessions','POST',{id:sessionId,title:message,scope,mode,provider,web:false})).status,201);
-    const result=await api(`sessions/${sessionId}/messages`,'POST',{id,message,mode,provider,web:false});assert.equal(result.status,202,JSON.stringify(result));
+    const result=await api(`sessions/${sessionId}/messages`,'POST',{id,message,mode,provider,model,web:false});assert.equal(result.status,202,JSON.stringify(result));
 
     return {sessionId,id,message,mode};
   };
@@ -333,7 +344,7 @@ return row.status==='completed';},'API task completes');
   const replay=await api(`sessions/${talk.sessionId}/messages`,'POST',{id:talk.id,message:talk.message,mode:talk.mode,provider:'gemini',web:false});assert.equal(replay.status,200);assert.equal((await pg.query('select * from public.agent_runs where id=$1',[talk.id])).rows.length,1);
 
   for(const provider of ['anthropic']){
-    const task=await createTask({kind:'work',id:initial.works[0].id},'review',`${provider} 연결로 개요를 준비해줘.`,provider),run=await finish(task.id);assert.equal(run.operations.length,2);assert.equal(run.provider,provider);assert(run.events.some(event=>event.title==='문서 읽기'));assert.equal((await api(`changes/${run.id}/discard`,'POST',{})).status,200);assert.equal((await api(`changes/${run.id}/apply`,'POST',{})).status,409);
+    const task=await createTask({kind:'work',id:initial.works[0].id},'review',`${provider} 연결로 개요를 준비해줘.`,provider,'claude-opus-5-5'),run=await finish(task.id);assert.equal(run.operations.length,2);assert.equal(run.provider,provider);assert.equal(run.model,'claude-opus-5-5');assert(run.events.some(event=>event.title==='문서 읽기'));assert.equal((await api(`changes/${run.id}/discard`,'POST',{})).status,200);assert.equal((await api(`changes/${run.id}/apply`,'POST',{})).status,409);
   }
 
   const notes=await createTask({kind:'notes',id:'default'},'execute','노트에 개요를 만들고 정리해줘.');

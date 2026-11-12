@@ -24,7 +24,7 @@ UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권
 
 집필실 원고·설정집·메모·분할 편집과 개인 노트에서 Alt+Enter 또는 `/AI`, 선택 글 우클릭 메뉴로 AI 질문을 연다. [집필실 조작](editor-tools.md#입력-명령과-ai-질문), [노트 조작](personal-notes.md#-입력-명령과-ai-질문). 이 창은 전체 문서 대신 선택 범위 또는 현재 문단을 보낸다. 서버는 작품/문서 또는 노트 ID·저장 버전·편집기 위치·원문을 대조해 불일치 시 AI 호출/한도 예약 전에 409로 거절한다. 문서 길이와 관계없이 선택한 범위만 전송한다. 각주 설명과 이미지 바이트는 포함하지 않는다.
 
-기존 최근 대화·계정 프리셋·제공자 연결·요청 한도·문서/노트 대화 저장을 공유한다. 제공자 선택은 `kosmos:ai-provider:<namespace>` 기기 설정이며 백업·공개판에는 포함하지 않는다. 연결의 키·모델 보관 방식은 같다. 답변은 사용자가 편집·비교한 뒤 창을 열었던 범위에 교체하거나 커서에 삽입하며, 편집기 기록으로 한 번에 되돌린다. 본문이 바뀌거나 적용 전에 창을 닫으면 적용하지 않는다. 커서 답변은 오른쪽 대화에도 보이지만 그곳에는 인용 검색 기반의 자동 적용 제안을 저장하지 않는다.
+기존 최근 대화·계정 프리셋·제공자 연결·요청 한도·문서/노트 대화 저장을 공유한다. 제공자 선택은 `kosmos:ai-provider:<namespace>` 기기 설정이며 백업·공개판에는 포함하지 않는다. 모델 목록·기본값과 빠른 선택의 저장 방식은 아래와 같다. 답변은 사용자가 편집·비교한 뒤 창을 열었던 범위에 교체하거나 커서에 삽입하며, 편집기 기록으로 한 번에 되돌린다. 본문이 바뀌거나 적용 전에 창을 닫으면 적용하지 않는다. 커서 답변은 오른쪽 대화에도 보이지만 그곳에는 인용 검색 기반의 자동 적용 제안을 저장하지 않는다.
 
 ## 내 스킬
 
@@ -50,9 +50,9 @@ UI는 기기 저장·클라우드 동기화를 시도하고 서버가 작가 권
 
 ## 집필실에서 연결·시스템 프롬프트 설정
 
-**AI 대화 → AI 설정** 또는 사이드바 **설정 › AI**에서 Gemini·Claude와 Vertex 모델 ID를 골라 **모델 저장**을 누른다. 인증은 서버의 `orbiter-ai` 프로젝트가 담당한다. 브라우저에서 API 키를 받지 않는다. **기본 모델 사용**은 이 브라우저의 모델 선택만 초기화한다. 모델 저장 자체는 AI를 호출하지 않으며 실제 접근 가능 여부는 요청 시 확인한다. 새 대화의 문서·연결 자료 포함 기본값은 [설정](settings.md)을 따른다.
+**AI 대화 → AI 설정** 또는 사이드바 **설정 › AI**에서 Gemini·Claude를 고르고 **모델 목록**에 ID를 한 줄에 하나씩 넣는다. **기본 모델**을 정해 **모델 저장**을 누르면 문서·노트·커서·작업 대화의 **모델** 드롭다운에서 바로 고를 수 있다. 인증은 서버의 `orbiter-ai` 프로젝트가 담당한다. 브라우저에서 API 키를 받지 않는다. **기본 모델 사용**은 이 브라우저의 목록·기본값을 지우고 서버 목록으로 돌아간다. 모델 저장 자체는 AI를 호출하지 않으며 실제 접근 가능 여부는 요청 시 확인한다. 새 대화의 문서·연결 자료 포함 기본값은 [설정](settings.md)을 따른다.
 
-모델 ID만 계정·제공자에 묶인 AES-256-GCM HttpOnly 쿠키에 최대 30일 보관한다. 운영 쿠키는 `__Host-`·Secure·SameSite=Strict·Path=/를 사용한다. 만료·변조된 선택은 실행을 막고 다른 모델로 자동 전환하지 않는다. 선택은 다른 기기·도메인 및 ZIP/Drive/DB 백업으로 복사하지 않는다. 암호화에는 `AI_CREDENTIAL_SECRET` 또는 목적을 구분해 파생한 `SUPABASE_SERVICE_ROLE_KEY`를 사용한다. 예전 직접 API 키 쿠키는 사용하지 않으며 모델 저장·초기화 시 삭제한다.
+모델 목록·기본 모델 ID를 계정·제공자에 묶인 AES-256-GCM HttpOnly 쿠키에 최대 30일 보관한다. 대화창의 빠른 선택은 계정별 기기 설정 `kosmos:ai-models:<namespace>`에 ID만 보관하고 같은 화면의 다른 AI 도구와 공유한다. 요청마다 선택 모델을 명시하며 실행 중인 에이전트의 모델은 시작 시 고정한다. 목록에서 지운 빠른 선택은 목록의 기본값으로 돌아간다. 모델 개수의 앱 제한은 없지만 암호화 쿠키 3,800자 경계를 넘으면 일부만 저장하지 않고 413으로 거절한다. 운영 쿠키는 `__Host-`·Secure·SameSite=Strict·Path=/를 사용한다. 만료·변조된 선택은 실행을 막고 다른 모델로 자동 전환하지 않는다. 선택은 다른 기기·도메인 및 ZIP/Drive/DB 백업으로 복사하지 않는다. 암호화에는 `AI_CREDENTIAL_SECRET` 또는 목적을 구분해 파생한 `SUPABASE_SERVICE_ROLE_KEY`를 사용한다. 예전 직접 API 키 쿠키는 사용하지 않으며 모델 저장·초기화 시 삭제한다.
 
 **시스템 프롬프트·프리셋**은 계정 작업 공간에 저장하고 원고와 함께 기기·클라우드에 동기화한다. 기본 집필 동료·문장 퇴고·설정/시간선 점검·SF 가정/개연성·장면/구조 구상·독자 관점 검토 6종, 프리셋 이름은 80자이며 사용자 프리셋 개수·지침 길이의 앱 제한은 없다. 대화창의 **프리셋** 선택으로 다음 질문부터 바꾼다.
 
@@ -77,7 +77,7 @@ POST `/api/ai/chat`: 작가 Bearer 인증 필요, JSON 본문은 스트림 기�
 ```json
 {
   "workId":"작품 UUID","docId":"문서 UUID","version":"문서 updatedAt",
-  "provider":"gemini","message":"질문","includeManuscript":true,
+  "provider":"gemini","model":"선택한 Vertex 모델 ID","message":"질문","includeManuscript":true,
   "sourceIds":["같은 작품 자료 UUID"],
   "promptPresetId":"builtin:default 또는 사용자 UUID",
   "systemPrompt":"선택 프리셋의 집필 지침 · 길이 제한 없음",
@@ -89,11 +89,13 @@ POST `/api/ai/chat`: 작가 Bearer 인증 필요, JSON 본문은 스트림 기�
 
 개인 노트 요청은 workId 대신 noteId를 보내며 docId도 같은 노트 UUID다. workId/noteId 중 하나만 허용한다. sourceIds는 다른 개인 노트 또는 연결 작품 문서 UUID다.
 
+model은 생략하면 저장한 기본값을 사용하고, 있으면 경로 없는 Vertex 모델 ID를 검증해 이번 요청에 고정한다. 목록은 선택 편의 기능이며 실제 모델 접근은 GCP 권한과 활성화 상태를 따른다.
+
 history는 user/assistant 순서의 완전한 쌍만 허용하며 system 역할을 받지 않는다. 서버에서 현재 원고·자료를 다시 읽고 권한·시점·선택 범위를 검사한다. 일일 횟수를 예약하거나 제한하지 않는다. 서버 활성 프리셋과 ID·지침을 검사하며 이전 ID 없는 요청은 호환한다. 성공 결과는 result(답변을 담은 review 문자열과 suggestions), provider, model, version, sources, promptPreset(id/title/revision)다. 응답은 no-store다.
 
-GET `/api/ai/providers`: 허용 작가의 Bearer 인증 필요. 제공자 ID·표시명·configured·모델·source(server/null)·browserStored·browserInvalid와 서버의 storageAvailable을 반환한다. 인증 정보와 암호문은 반환하지 않으며 no-store다.
+GET `/api/ai/providers`: 허용 작가의 Bearer 인증 필요. 제공자 ID·표시명·configured·기본 모델·models 목록·source(server/null)·browserStored·browserInvalid와 서버의 storageAvailable을 반환한다. 인증 정보와 암호문은 반환하지 않으며 no-store다.
 
-POST `/api/ai/settings`: 같은 Origin과 허용 작가의 Bearer 인증, application/json 필요. 본문은 `{"provider":"gemini","model":"정확한 Vertex 모델 ID"}`이고 스트림 기준 8KiB까지다. API 키 필드와 OpenAI 선택은 거절한다. 성공 본문은 `{"saved":true}`이고 모델 선택 쿠키를 설정하며 이전 직접 키 쿠키는 삭제한다.
+POST `/api/ai/settings`: 같은 Origin과 허용 작가의 Bearer 인증, application/json 필요. 본문은 `{"provider":"gemini","model":"기본 모델 ID","models":["기본 모델 ID","다른 모델 ID"]}`이고 스트림 기준 8KiB까지다. models는 생략할 수 있고 이전 모델 하나만 저장한 쿠키도 계속 읽는다. 목록을 보내면 중복·빈 목록·목록 밖 기본값을 거절한다. API 키 필드와 OpenAI 선택은 거절한다. 성공 본문은 `{"saved":true}`이고 모델 선택 쿠키를 설정하며 이전 직접 키 쿠키는 삭제한다.
 
 DELETE `/api/ai/settings`: 같은 인증·Origin·JSON 조건에서 `{"provider":"gemini"}`로 모델 선택과 이전 직접 키 쿠키를 해제한다. 과거 OpenAI 쿠키의 삭제도 지원한다. 두 응답은 no-store다. 형식 오류 400, 인증 없음 401, 다른 Origin 403, 크기 초과 413, JSON 형식 아님 415, 암호화 설정 없음 503을 구분한다.
 

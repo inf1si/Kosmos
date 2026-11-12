@@ -20,7 +20,7 @@ globalThis.fetch=async(input,init)=>{
     if(!url.pathname.includes('/projects/orbiter-ai/locations/global/publishers/'))throw new Error('Vertex project path is wrong');
     const provider=url.pathname.includes('/anthropic/')?'anthropic':'gemini';
 
-    return original(`${process.env.KOSMOS_AGENT_FIXTURE_URL}/fixture-model?provider=${provider}`,{method:request.method,headers:{'Content-Type':'application/json'},body:request.method==='GET'?undefined:await request.text(),signal:request.signal});
+    return original(`${process.env.KOSMOS_AGENT_FIXTURE_URL}/fixture-model?provider=${provider}&model=${encodeURIComponent(decodeURIComponent(url.pathname.split('/models/')[1]?.split(':')[0]||''))}`,{method:request.method,headers:{'Content-Type':'application/json'},body:request.method==='GET'?undefined:await request.text(),signal:request.signal});
   }
 
   return original(input,init);

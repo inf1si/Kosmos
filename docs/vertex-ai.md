@@ -27,6 +27,7 @@ bash scripts/setup-vertex-gcp.sh
 | `GOOGLE_VERTEX_SERVICE_ACCOUNT` | `orbiter-vertex@orbiter-ai.iam.gserviceaccount.com` |
 | `VERTEX_GEMINI_MODEL` | 사용할 Vertex Gemini 모델 ID |
 | `VERTEX_CLAUDE_MODEL` | 사용할 Vertex Claude 모델 ID |
+| `VERTEX_GEMINI_MODELS`, `VERTEX_CLAUDE_MODELS` | 선택. 쉼표·줄바꿈으로 나눈 기본 모델 목록 |
 | `VERTEX_SEARCH_MODEL` | 선택. 없으면 Gemini 기본 모델 |
 | `VERTEX_GEMINI_LOCATION`, `VERTEX_CLAUDE_LOCATION` | 선택. 기본 위치와 다른 리전을 쓸 때 |
 
@@ -36,7 +37,7 @@ Vercel의 실행별 OIDC 토큰을 GCP provider의 전용 audience로 교환한�
 
 ## 앱 설정과 로컬 개발
 
-앱의 **AI 설정**은 Gemini·Claude와 모델 ID만 받는다. 저장·초기화는 모델 선택만 바꾸며 인증·권한·결제 계정은 서버 설정으로 관리한다. 상태의 “서버 연결”은 설정이 채워졌음을 뜻하며 IAM·모델 허용 여부를 미리 호출해 검증한 결과는 아니다. 실제 요청이 거절되면 모델·권한·할당량 오류로 표시한다. 이전 API 키 환경 변수와 키 쿠키는 사용하지 않는다. 이전 대화 기록은 그대로 읽고 내보낼 수 있다.
+앱의 **AI 설정**은 Gemini·Claude별 모델 목록과 기본 모델 ID를 받는다. 목록은 한 줄에 하나씩 입력하고, 각 대화창의 **모델** 드롭다운으로 바꾼다. 서버의 단일 모델 변수는 기본값으로 유지되며, 복수 `MODELS` 변수는 초기 목록에 합쳐진다. 단일 변수를 생략하면 복수 목록의 첫 모델을 기본값으로 사용한다. 앱에서 저장한 목록이 있으면 그 목록을 우선 사용한다. 저장·초기화는 모델 선택만 바꾸며 인증·권한·결제 계정은 서버 설정으로 관리한다. 상태의 “서버 연결”은 설정이 채워졌음을 뜻하며 IAM·모델 허용 여부를 미리 호출해 검증한 결과는 아니다. 실제 요청이 거절되면 모델·권한·할당량 오류로 표시한다. 이전 API 키 환경 변수와 키 쿠키는 사용하지 않는다. 이전 대화 기록은 그대로 읽고 내보낼 수 있다.
 
 로컬에서는 `.env.example`을 바탕으로 `VERTEX_AUTH_MODE=adc`, 프로젝트·모델을 설정한 후 실행한다.
 
@@ -46,7 +47,7 @@ gcloud auth application-default set-quota-project orbiter-ai
 pnpm dev
 ```
 
-이 인증 파일은 기기에만 두고 저장소나 Vercel에 업로드하지 않는다. 앱의 모델 선택 쿠키는 다른 기기로 옮기지 않는다.
+이 인증 파일은 기기에만 두고 저장소나 Vercel에 업로드하지 않는다. 모델 목록·기본값 쿠키와 기기의 빠른 모델 선택은 다른 기기로 옮기지 않는다. 모델을 목록에 넣는 것만으로 Model Garden 접근이 활성화되지는 않는다. 웹 조사 모델은 `VERTEX_SEARCH_MODEL` 설정을 계속 사용한다.
 
 ## 확인 범위
 
