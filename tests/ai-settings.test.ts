@@ -74,7 +74,7 @@ test('자격 증명은 교차 출처·비로그인·과도한 입력·직접 API
 
 test('사용자 지침과 자료·형식 규칙을 유지한다',()=>{
   const prompt='문장은 차분하게 검토하고 답변은 세 문단으로 작성해줘.',system=providerMessageContext({manuscript:'합성 원고'},[],prompt).system;
-  assert(system.includes(prompt));assert(system.includes('참고 데이터'));assert(system.includes('최대 5개'));
+  assert(system.includes(prompt));assert(system.includes('참고 데이터'));assert(system.includes('최대 5개'));assert(system.includes('question이 작가의 현재 질문'));assert(system.includes('평가하라는 뜻이 아니다'));assert(DEFAULT_AI_SYSTEM_PROMPT.includes('작가의 창작 파트너')&&!DEFAULT_AI_SYSTEM_PROMPT.includes('그의'));
   assert.equal(effectiveSystemPrompt('   '),DEFAULT_AI_SYSTEM_PROMPT);assert.equal(effectiveSystemPrompt('x'.repeat(4001)).length,4001);
   const fixture=aiWorkspaceFixture(),work=fixture.works[0],doc=work.documents[0];const input={workId:work.id,docId:doc.id,version:doc.updatedAt,provider:'gemini',message:'질문',includeManuscript:true,sourceIds:[],history:[],systemPrompt:prompt};
   assert(chatInputSchema.safeParse(input).success);assert(chatInputSchema.safeParse({...input,systemPrompt:'x'.repeat(4001)}).success);

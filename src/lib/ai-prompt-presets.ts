@@ -7,7 +7,7 @@ export const BUILTIN_PROMPT_IDS=['builtin:default','builtin:line-edit','builtin:
 
 export const DEFAULT_PROMPT_ID=BUILTIN_PROMPT_IDS[0];
 
-export const PROMPT_REVISION='2026-11-13.3';
+export const PROMPT_REVISION='2026-11-13.4';
 
 
 export const promptPresetIdSchema=z.union([z.enum(BUILTIN_PROMPT_IDS),z.uuid()]);
@@ -36,7 +36,7 @@ export type PromptPreset={id:string;title:string;prompt:string;updatedAt:string;
 
 export const BUILTIN_PROMPTS:readonly PromptPreset[]=[
   {id:BUILTIN_PROMPT_IDS[0],title:'창작 파트너',focus:''},
-  {id:BUILTIN_PROMPT_IDS[1],title:'문장 퇴고',focus:'문체 편집에 집중한다. 시점·시제·어휘를 유지하면서 호흡, 중복, 모호한 지시어, 부자연스러운 대화만 우선 살핀다. 단순히 문장을 짧게 만들지 않는다. 실제 원문에 근거한 중요한 수정 최대 5개와 각 이유를 제시한다.'},
+  {id:BUILTIN_PROMPT_IDS[1],title:'문장 퇴고',focus:'문체 편집에 집중한다. 시점·시제·어휘를 유지하면서 호흡, 중복, 모호한 지시어, 부자연스러운 대화만 우선 살핀다. 단순히 문장을 짧게 만들지 않는다. 실제 원문에 근거한 중요한 수정부터 각 이유와 함께 제시한다.'},
   {id:BUILTIN_PROMPT_IDS[2],title:'설정·시간선 점검',focus:'설정과 연속성 편집에 집중한다. 사건 순서, 인물별 지식 획득 시점, 이동·통신 지연, 명칭, 기술의 제약을 대조한다. 명백한 충돌, 설명이 필요한 틈, 의도적 미스터리를 나눈다. 자료 이름·짧은 근거·서사 영향·가장 작은 해결책을 제시한다. 자료가 없다는 이유만으로 모순이라고 단정하지 않는다.'},
   {id:BUILTIN_PROMPT_IDS[3],title:'SF 가정·개연성',focus:'SF 가정을 다듬는 데 집중한다. 먼저 작품의 허구적 전제를 받아들이고, 그 전제가 성립하는 것처럼 보이게 할 가설·원리·디테일을 보탠다. 그런 다음 시간·거리·에너지·기준계·정보 전달·기술 비용에서 독자가 걸려 넘어질 곳을 찾고, 설정을 버리는 대신 메울 방법을 함께 내놓는다. 계산에는 가정·단위·대략적 규모를 표시한다. 기술이 낳을 사회적·윤리적 결과도 이야깃거리로 제안한다.'},
   {id:BUILTIN_PROMPT_IDS[4],title:'장면·구조 구상',focus:'발전 편집과 구상에 집중한다. 장면의 목적, 선택과 결과, 인물 변화, 작품 길이에 맞는 축적을 살핀다. 표현만 바꾼 안이 아니라 방향이 실제로 다른 전개를 내놓되 개수와 형식은 질문에 맞춘다. 작가의 의도 없이 결말이나 장르를 교체하지 않는다. 문장 수정은 명시적으로 요청할 때만 제시한다.'},
