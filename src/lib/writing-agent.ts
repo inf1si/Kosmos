@@ -21,7 +21,7 @@ export const agentStateSchema=z.enum(['queued','running','completed','failed','c
 
 export const agentSessionInputSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),scope:agentScopeSchema,mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
 
-export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),model:vertexModelIdSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
+export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),focusId:z.uuid().optional(),model:vertexModelIdSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
 
 const destination={parentId:z.uuid().nullable(),sectionId:z.string().min(1),beforeId:z.uuid().nullable()};
 
@@ -29,6 +29,7 @@ export const agentOperationSchema=z.discriminatedUnion('type',[
   z.object({type:z.literal('create'),id:z.uuid(),kind:z.enum(['scene','wiki','memo']),title:z.string().max(300),text:z.string(),...destination}),
   z.object({type:z.literal('folder'),id:z.uuid(),title:z.string().trim().min(1).max(300),...destination}),
   z.object({type:z.literal('replace'),id:z.uuid(),quote:z.string().min(1),replacement:z.string()}),
+  z.object({type:z.literal('insert'),id:z.uuid(),after:z.string().min(1).nullable(),text:z.string().trim().min(1)}),
   z.object({type:z.literal('rename'),id:z.uuid(),title:z.string().max(300)}),
   z.object({type:z.literal('move'),id:z.uuid(),...destination}),
 ]);
@@ -108,7 +109,19 @@ export async function agentHash<T>(value:T){
 }
 
 export function agentDocuments(snapshot:AgentSnapshot){
-  return snapshot.work?snapshot.work.documents.map(doc=>({id:doc.id,title:doc.title||'제목 없음',kind:doc.kind,text:plainText(doc.content),content:doc.content})):snapshot.notes.map(note=>({id:note.id,title:note.title||'제목 없음',kind:'note',text:plainText(note.content),content:note.content}));
+  return snapshot.work?snapshot.work.documents.map(doc=>({id:doc.id,title:doc.title||'제목 없음',kind:doc.kind,text:plainText(doc.content),content:doc.content,properties:{chapter:doc.chapter,status:doc.status,category:doc.category,pov:doc.pov,storyTime:doc.storyTime,summary:doc.summary}})):snapshot.notes.map(note=>({id:note.id,title:note.title||'제목 없음',kind:'note',text:plainText(note.content),content:note.content,properties:{tags:note.tags.join(', ')}}));
+}
+
+/** New paragraphs go after the one block that holds the quote, or at the end. Existing blocks keep their formatting. */
+function insertBlocks(content:RichNode,after:string|null,text:string):RichNode{
+  const blocks=content.content||[],added=fromText(text).content||[];
+
+  if(after===null)return {...content,content:blocks.every(b=>b.type==='paragraph'&&!b.content?.length)?added:[...blocks,...added]};
+  const hits=blocks.flatMap((block,index)=>plainText(block).includes(after)?[index]:[]);
+
+  if(hits.length!==1)throw new Error('이어 쓸 위치의 인용이 한 문단에서만 확인되지 않습니다. 더 길게 인용하세요.');
+
+  return {...content,content:[...blocks.slice(0,hits[0]+1),...added,...blocks.slice(hits[0]+1)]};
 }
 
 function scopedState(snapshot:AgentSnapshot):Workspace{
@@ -143,7 +156,7 @@ export function applyAgentOperations(state:Workspace,scope:AgentScope,operations
       }else if(op.type==='move')changed=moveNavigation(work,op.id,{parentId:op.parentId,sectionId:op.sectionId,beforeId:op.beforeId||undefined});
       else{
         if(!doc)throw new Error('허용한 문서 안에서만 수정할 수 있습니다.');
-        changed={...work,documents:work.documents.map(d=>d.id!==op.id?d:op.type==='rename'?{...d,title:op.title,updatedAt:now}:{...d,content:applySuggestion(d.content,op.quote,op.replacement),updatedAt:now})};
+        changed={...work,documents:work.documents.map(d=>d.id!==op.id?d:op.type==='rename'?{...d,title:op.title,updatedAt:now}:{...d,content:op.type==='insert'?insertBlocks(d.content,op.after,op.text):applySuggestion(d.content,op.quote,op.replacement),updatedAt:now})};
       }
 
       next.works=next.works.map(w=>w.id===work.id?changed:w);
@@ -170,7 +183,7 @@ export function applyAgentOperations(state:Workspace,scope:AgentScope,operations
         next=moveNote(next,op.id,{spaceId:scope.id,parentId:op.parentId,sectionId:op.sectionId,beforeId:op.beforeId||undefined});
       }else{
         if(!note||!snapshot.notes.some(n=>n.id===op.id))throw new Error('허용한 노트 안에서만 수정할 수 있습니다.');
-        next.notes=next.notes!.map(n=>n.id!==op.id?n:op.type==='rename'?{...n,title:op.title,updatedAt:now}:{...n,content:applySuggestion(n.content,op.quote,op.replacement),updatedAt:now});
+        next.notes=next.notes!.map(n=>n.id!==op.id?n:op.type==='rename'?{...n,title:op.title,updatedAt:now}:{...n,content:op.type==='insert'?insertBlocks(n.content,op.after,op.text):applySuggestion(n.content,op.quote,op.replacement),updatedAt:now});
       }
     }
   }
@@ -209,6 +222,71 @@ export function agentDiff(before:AgentSnapshot,operations:readonly AgentOperatio
   });
 
   return {rows,structure:operations.filter(op=>op.type==='move'||op.type==='folder').length};
+}
+
+type AgentDocument=ReturnType<typeof agentDocuments>[number];
+
+/** Every term must occur in the title or text. Hits carry the passages around the matches so the model can read from there. */
+export function agentSearch(docs:AgentDocument[],query:string,offset:number,size=30){
+  const fold=(value:string)=>value.normalize('NFC').toLocaleLowerCase(),terms=fold(query).split(/\s+/).filter(Boolean);
+
+  const hits=docs.flatMap((d,index)=>{
+    const title=fold(d.title),text=fold(d.text),at:number[]=[];
+
+    if(!terms.every(term=>title.includes(term)||text.includes(term)))return [];
+    // Offsets are only handed out when folding kept the text length, so readSource can start at them.
+    const exact=text.length===d.text.length,source=exact?d.text:text;
+
+    for(const term of terms)for(let pos=text.indexOf(term);pos>=0;pos=text.indexOf(term,pos+term.length))at.push(pos);
+
+    at.sort((a,b)=>a-b);
+    const matches=at.filter((pos,i)=>i===0||pos-at[i-1]>160).slice(0,3).map(pos=>({offset:exact?Math.max(0,pos-60):null,text:source.slice(Math.max(0,pos-60),pos+160)}));
+
+    // An empty query lists every document in its stored order.
+    return [{rank:terms.length?(terms.some(term=>title.includes(term))?1e9:0)+at.length:-index,hit:{id:d.id,title:d.title,kind:d.kind,excerpt:matches[0]?.text??d.text.slice(0,240),characters:d.text.length,count:at.length,matches}}];
+  }).sort((a,b)=>b.rank-a.rank).map(item=>item.hit);
+
+  return {total:hits.length,nextOffset:offset+size<hits.length?offset+size:null,documents:hits.slice(offset,offset+size)};
+}
+
+/** The tree the writer sees, with the IDs the tools take. Long works are cut at the budget and the rest is left to search. */
+export function agentMap(snapshot:AgentSnapshot,budget=16000){
+  const docs=new Map(agentDocuments(snapshot).map(d=>[d.id,d])),space=snapshot.navigation?.spaces?.find(s=>s.id===snapshot.scope.id);
+  const sections=snapshot.work?.navigation?.sections||space?.sections||[],nodes=snapshot.work?.navigation?.nodes||snapshot.navigation?.nodes||[];
+  const lines=[snapshot.work?`작품: ${snapshot.work.title} (${snapshot.work.form})${snapshot.work.description.trim()?' · '+snapshot.work.description.trim().slice(0,300):''}`:`노트 작업공간: ${space?.title.trim()||'이름 없는 작업공간'}`],listed=new Set<string>();
+
+  let used=lines[0].length,cut=false;
+
+  const add=(line:string)=>{
+    cut||=used+line.length>budget;
+
+    if(!cut){lines.push(line);used+=line.length+1;}
+  };
+
+  const describe=(id:string,depth:number)=>{
+    const d=docs.get(id);
+
+    if(!d)return;
+    const extra=Object.entries({시점:'pov' in d.properties?d.properties.pov:'','작중 시각':'storyTime' in d.properties?d.properties.storyTime:'',요약:'summary' in d.properties?d.properties.summary.replace(/\s+/g,' ').slice(0,80):'',태그:'tags' in d.properties?d.properties.tags:''}).filter(([,value])=>value).map(([key,value])=>` · ${key}: ${value}`).join('');
+    const before=lines.length;add(`${'  '.repeat(depth)}- ${d.title} · ${d.kind} · ${d.text.length}자 · id ${d.id}${extra}`);
+
+if(lines.length>before)listed.add(id);
+  };
+
+  const walk=(sectionId:string,parentId:string|null,depth:number)=>{
+    for(const node of nodes.filter(n=>n.sectionId===sectionId&&n.parentId===parentId)){
+      if(node.type==='folder'){add(`${'  '.repeat(depth)}- 폴더 ${node.title} · id ${node.id}`);walk(sectionId,node.id,depth+1);}
+      else describe(node.id,depth);
+    }
+  };
+
+  for(const section of sections){add(`[섹션 ${section.title} · sectionId ${section.id}]`);walk(section.id,null,0);}
+
+  for(const id of docs.keys())if(!listed.has(id)&&!cut)describe(id,0);
+
+  if(docs.size>listed.size)lines.push(`(지도에 싣지 못한 문서 ${docs.size-listed.size}개는 searchSources로 찾는다.)`);
+
+  return lines.join('\n');
 }
 
 export function richBlocks(content:RichNode){return content.content?.map((node,index)=>({index,id:z.string().safeParse(node.attrs?.blockId).data||null,text:plainText(node)}))||[];}

@@ -162,7 +162,7 @@ if(compact)setSidebar(false);}
         <button type="button" className="nav-item" aria-pressed={!active&&!spaceHome} onClick={()=>select('')}><House size={16}/><span>노트 홈</span></button>
         <button type="button" className="nav-item" disabled={readonly} onClick={()=>create()}><Plus size={16}/><span>새 노트</span></button>
         <button type="button" className="nav-item" data-workspace-search-opener onClick={onSearch}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
-        <button type="button" className="nav-item" onClick={()=>openWritingAgent({kind:'notes',id:spaceId})}><Sparkles size={16}/><span>작업 대화</span></button>
+        <button type="button" className="nav-item" onClick={()=>openWritingAgent({kind:'notes',id:spaceId},active?.id)}><Sparkles size={16}/><span>작업 대화</span></button>
         <div className="notes-views segmented" role="group" aria-label="노트 보기">{([['all','전체',spaceNotes.length],['inbox','수집함',inbox],['icebox','아이스박스',icebox]] as const).map(([value,label,count])=><button type="button" key={value} aria-pressed={box===value} onClick={()=>setBox(value)}>{label}<small>{count}</small></button>)}</div>
         <button type="button" className="nav-item" onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'trash'}))}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state.trash).length}</small></button>
         <button type="button" className="nav-item" data-settings-opener onClick={()=>window.dispatchEvent(new CustomEvent('studio-modal',{detail:'settings:notes'}))}><Settings size={16}/><span>설정</span></button>

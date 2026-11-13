@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { agentSessionHistory,agentAdmin,agentWorkspace,readAgentRun,recordAgentEvent } from './agent-server';
-import { agentContext,agentDocuments,agentOverlay,agentOperationSchema,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
+import { agentContext,agentDocuments,agentOverlay,agentOperationSchema,agentSearch,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
 import { researchAgentWeb } from './agent-web';
 
 function operationId(key:string){
@@ -43,12 +43,11 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
   }
 
   if(name==='search'){
-    const {query,offset}=z.object({query:z.string(),offset:z.number().int().min(0)}).parse(input),terms=query.normalize('NFC').toLocaleLowerCase().split(/\s+/).filter(Boolean);
-    const hits=available.filter(d=>terms.every(term=>(d.title+'\n'+d.text).normalize('NFC').toLocaleLowerCase().includes(term)));
+    const {query,offset}=z.object({query:z.string(),offset:z.number().int().min(0)}).parse(input);
     const sections=overlay.work?.navigation?.sections||overlay.navigation?.spaces?.find(s=>s.id===overlay.scope.id)?.sections||[],nodes=overlay.work?.navigation?.nodes||overlay.navigation?.nodes||[];
     await recordAgentEvent(run,{id:callId,title:'자료 검색',detail:query||'문서 목록'});
 
-    return {total:hits.length,nextOffset:offset+30<hits.length?offset+30:null,documents:hits.slice(offset,offset+30).map(d=>({id:d.id,title:d.title,kind:d.kind,excerpt:d.text.slice(0,240),characters:d.text.length})),sections,folders:nodes.filter(n=>n.type==='folder')};
+    return {...agentSearch(available,query,offset),sections,folders:nodes.filter(n=>n.type==='folder')};
   }
 
   if(name==='read'){
@@ -57,7 +56,7 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     if(!doc)throw new Error('허용한 자료를 찾지 못했습니다.');
     await recordAgentEvent(run,{id:callId,title:'문서 읽기',detail:doc.title,sources:[{id:doc.id,title:doc.title}]});
 
-    return {id:doc.id,title:doc.title,text:doc.text.slice(offset,offset+length),nextOffset:offset+length<doc.text.length?offset+length:null,blocks:richBlocks(doc.content).map(b=>({id:b.id,index:b.index,characters:b.text.length})),characters:doc.text.length};
+    return {id:doc.id,title:doc.title,kind:doc.kind,properties:doc.properties,text:doc.text.slice(offset,offset+length),nextOffset:offset+length<doc.text.length?offset+length:null,blocks:richBlocks(doc.content).map(b=>({id:b.id,index:b.index,characters:b.text.length})),characters:doc.text.length};
   }
 
   if(name==='stage_change'){
@@ -68,7 +67,7 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     agentOverlay(run.snapshot,[...run.operations,op]);
     // The work log names the changed document or folder; an ID alone tells the writer nothing.
     const folder=[...overlay.work?.navigation?.nodes||[],...overlay.navigation?.nodes||[]].find(n=>n.id===op.id),named=docs.find(d=>d.id===op.id)?.title||(folder?.type==='folder'?folder.title:'제목 없음');
-    await recordAgentEvent(run,{id:callId,title:op.type==='create'?'문서 만들기':op.type==='folder'?'폴더 만들기':op.type==='move'?'문서 이동':op.type==='rename'?'이름 변경':'문장 수정',detail:'title' in op?op.title:named},op);
+    await recordAgentEvent(run,{id:callId,title:op.type==='create'?'문서 만들기':op.type==='folder'?'폴더 만들기':op.type==='move'?'문서 이동':op.type==='rename'?'이름 변경':op.type==='insert'?'이어 쓰기':'문장 수정',detail:'title' in op?op.title:named},op);
 
     return {saved:true,id:op.id,changes:agentDiff(run.snapshot,[...run.operations,op])};
   }

@@ -8,7 +8,7 @@ import { providerSettingsStatus,requestProviderConfig } from './ai-credentials';
 import { providerConfig } from './ai-provider';
 import { workspaceSchema } from './model';
 import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges } from './agent-server';
-import { agentSessionInputSchema,agentMessageInputSchema,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema } from './writing-agent';
+import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema } from './writing-agent';
 import { runWritingAgent } from './agent-workflow';
 
 const json=<T,>(value:T,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
@@ -132,7 +132,9 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
         const active=await db.from('agent_runs').select('id').eq('owner_id',auth.userId).in('status',['queued','running']).limit(1);
 
         if(active.data?.length)return json({error:'다른 대화의 작업이 진행 중입니다. 완료하거나 중단한 뒤 보내세요.'},409);
-        const saved=await db.from('agent_runs').insert({id:input.id,session_id:session.id,owner_id:auth.userId,workspace_id:session.workspace_id,message:input.message,provider:config.provider,model:config.model,mode:session.mode,web:session.web,snapshot,base_hash:hash,operations}).select('*').single();
+        // The document open behind the dialog is kept as the run's first work-log entry and handed to the model.
+        const focus=input.focusId?agentDocuments(snapshot).find(d=>d.id===input.focusId):undefined;
+        const saved=await db.from('agent_runs').insert({id:input.id,session_id:session.id,owner_id:auth.userId,workspace_id:session.workspace_id,message:input.message,provider:config.provider,model:config.model,mode:session.mode,web:session.web,snapshot,base_hash:hash,operations,...focus&&{events:[{id:'focus',title:'열어 둔 문서',sources:[{id:focus.id,title:focus.title}]}]}}).select('*').single();
 
         if(saved.error)throw new Error('작업 요청을 보관하지 못했습니다.');
         await db.from('agent_sessions').update({updated_at:new Date().toISOString()}).eq('id',session.id).eq('owner_id',auth.userId);
