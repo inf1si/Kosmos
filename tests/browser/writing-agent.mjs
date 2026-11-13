@@ -88,15 +88,17 @@ return;}
       const search=outputs.find(o=>o.data.documents)?.data,created=outputs.find(o=>o.data.saved&&o.data.id)?.data;
       const names=new Set((google?(body.tools||[]).flatMap(tool=>tool.functionDeclarations||[]):body.tools||[]).map(tool=>tool.name));let item;
 
-      if(step===0)item=tool('searchSources',{query:'',offset:0});
+      if(step===0&&JSON.stringify(google?body.contents?.at(-1):body.messages?.at(-1)).includes('이 장면은 어디야'))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'열어 둔 문서를 확인했습니다.',annotations:[]}]};
+      else if(step===0)item=tool('searchSources',{query:'',offset:0});
       else if(step===1)item=tool('readSource',{id:search.documents[0].id,offset:0,length:12000});
       else if(!names.has('stageChange'))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'원문을 읽었고 다른 전개를 함께 생각했습니다.',annotations:[]}]};
       else if(step===2)item=tool('stageChange',{type:'create',id:uid(),kind:'memo',title:'에이전트 개요',text:'달에 도착한 인물은 관측소를 찾는다.',parentId:null,sectionId:search.sections[0].id,beforeId:null});
       else if(step===3)item=tool('readSource',{id:created.id,offset:0,length:12000});
       else if(step===4)item=tool('stageChange',{type:'replace',id:created.id,quote:'달에 도착한',replacement:'달로 돌아온'});
-      else if(step===5)item=tool('remember',{title:'열린 질문',content:'관측소가 비어 있는 이유를 다음에 검토한다.',sourceIds:[search.documents[0].id]});
-      else if(step===6&&names.has('researchWeb'))item=tool('researchWeb',{query:'기억의 재구성 연구',url:null});
-      else if((step===6&&!names.has('researchWeb'))||step===7&&names.has('researchWeb'))item=tool('inspectChanges',{});
+      else if(step===5)item=tool('stageChange',{type:'insert',id:created.id,after:'관측소를 찾는다',text:'문은 열려 있었다.'});
+      else if(step===6)item=tool('remember',{title:'열린 질문',content:'관측소가 비어 있는 이유를 다음에 검토한다.',sourceIds:[search.documents[0].id]});
+      else if(step===7&&names.has('researchWeb'))item=tool('researchWeb',{query:'기억의 재구성 연구',url:null});
+      else if((step===7&&!names.has('researchWeb'))||step===8&&names.has('researchWeb'))item=tool('inspectChanges',{});
       else item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'자료를 읽고 개요를 만든 뒤 문장을 다듬었습니다. 변경과 열린 질문을 확인할 수 있습니다.',annotations:[]}]};
 
       if(google)return send({candidates:[{content:{role:'model',parts:item.type==='function_call'?[{functionCall:{name:item.name,args:JSON.parse(item.arguments)}}]:[{text:item.content[0].text}]},finishReason:'STOP'}],usageMetadata:{promptTokenCount:30,candidatesTokenCount:20,totalTokenCount:50}});
@@ -184,6 +186,8 @@ app.stderr.pipe(log);
 const proxyUrl=browserBase!==base&&process.env.HTTPS_PROXY?new URL(process.env.HTTPS_PROXY):null;
 
 const browser=await pw.chromium.launch({headless:true,...proxyUrl&&{proxy:{server:proxyUrl.origin,bypass:'127.0.0.1,localhost'}},executablePath:process.env.KOSMOS_CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
+
+const systemOf=call=>call.provider==='gemini'?(call.body.systemInstruction?.parts||[]).map(part=>part.text).join(''):Array.isArray(call.body.system)?call.body.system.map(part=>part.text).join(''):String(call.body.system||'');
 
 const until=async(check,label)=>{for(let i=0;i<240;i++){if(await check())return;await new Promise(resolve=>setTimeout(resolve,250));}
 
@@ -363,8 +367,11 @@ try{
 if(row?.status==='failed')assert.fail(row.error);
 
 return row?.status==='completed'&&!row.reverted;},'durable agent finishes');
-    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.model,'gemini-selected');assert.equal(run.operations.length,2);assert.equal(run.events.find(event=>event.title==='문장 수정')?.detail,'에이전트 개요','a sentence edit names its document, not an ID');assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
-    await dialog.getByRole('button',{name:/^변경 /}).click();await page.getByText('달로 돌아온 인물은 관측소를 찾는다.',{exact:true}).waitFor();
+    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.model,'gemini-selected');assert.equal(run.operations.length,3);assert.equal(run.events.find(event=>event.title==='문장 수정')?.detail,'에이전트 개요','a sentence edit names its document, not an ID');assert.equal(run.events.find(event=>event.title==='이어 쓰기')?.detail,'에이전트 개요');
+    const firstSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('개요를 만들고 열린 질문을 기억해줘.')));
+
+    for(const part of ['현재 실행 방식: 검토하며 실행','researchWeb으로 조사','창작 파트너','상상력과 문학성이 최우선',`작품: ${initial.works[0].title}`,`id ${initial.works[0].documents[0].id}`])assert(firstSystem.includes(part),`agent instructions carry: ${part}`);assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
+    await dialog.getByRole('button',{name:/^변경 /}).click();await page.getByText('달로 돌아온 인물은 관측소를 찾는다.').waitFor();assert.equal(await dialog.locator('.agent-diff pre').last().innerText(),'달로 돌아온 인물은 관측소를 찾는다.\n\n문은 열려 있었다.','the continued paragraph is staged after the quoted one');
     const before=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!before.works[0].documents.some(doc=>doc.id===run.operations[0].id));
     await dialog.getByRole('button',{name:'변경 적용',exact:true}).click();await until(async()=>{const row=(await pg.query('select applied_version from public.agent_runs where id=$1',[run.id])).rows[0];
 
@@ -373,8 +380,13 @@ return row.applied_version!==null;},'review changes apply');
     await dialog.getByRole('button',{name:'문서 열기',exact:true}).click();
     await writeFile(resolve(output,'after-source-open.txt'),await page.locator('body').innerText());await page.screenshot({path:resolve(output,'after-source-open.png')});
     await until(async()=>await page.getByRole('textbox',{name:'문서 제목',exact:true}).count()>0&&await page.getByRole('textbox',{name:'문서 제목',exact:true}).first().inputValue({timeout:1000})==='에이전트 개요','applied document opens in actual editor');
-    assert((await page.locator('.ProseMirror').first().innerText()).includes('달로 돌아온'));
+    assert((await page.locator('.ProseMirror').first().innerText()).includes('달로 돌아온'));assert.deepEqual(await page.locator('.ProseMirror').first().locator('p').allInnerTexts(),['달로 돌아온 인물은 관측소를 찾는다.','문은 열려 있었다.']);
     await openAgent();
+    // The document open behind the dialog reaches the model and the work log, and is not counted as a step.
+    await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('이 장면은 어디야?');const focused=page.waitForRequest(request=>request.url().endsWith('/messages')&&request.method()==='POST');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();assert.equal((await focused).postDataJSON().focusId,run.operations[0].id);
+    await dialog.locator('.agent-answer').filter({hasText:'열어 둔 문서를 확인했습니다.'}).waitFor();
+    const focusSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('이 장면은 어디야')));assert(focusSystem.includes(`작가가 지금 열어 둔 문서: "에이전트 개요" (id ${run.operations[0].id})`),'the open document is named to the model');assert(focusSystem.includes(`- 에이전트 개요 · memo · ${'달로 돌아온 인물은 관측소를 찾는다.\n\n문은 열려 있었다.'.length}자 · id ${run.operations[0].id}`),'the applied document is on the map');
+    const focusTurn=dialog.locator('.agent-turn').last();assert.equal(await focusTurn.locator('summary').innerText(),'완료');await focusTurn.locator('summary').click();assert.equal(await focusTurn.locator('li').count(),1);assert.equal(await focusTurn.locator('li strong').innerText(),'열어 둔 문서');await focusTurn.getByRole('button',{name:'에이전트 개요',exact:true}).waitFor();await page.screenshot({path:resolve(output,`open-document-${width}.png`)});
     await dialog.getByRole('button',{name:'기억',exact:true}).click();await dialog.getByText('관측소가 비어 있는 이유를 다음에 검토한다.',{exact:true}).waitFor();await dialog.getByRole('button',{name:'잊기',exact:true}).click();await until(async()=>(await pg.query('select * from public.agent_memories where session_id=$1',[run.session_id])).rows.length===0,'forget memory');
     await dialog.getByRole('button',{name:/^변경 /}).click();await dialog.getByRole('button',{name:'되돌리기',exact:true}).click();await until(async()=>(await pg.query('select reverted from public.agent_runs where id=$1',[run.id])).rows[0].reverted,'undo batch');
     await dialog.getByRole('button',{name:'대화',exact:true}).click();
@@ -405,7 +417,7 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify({w
     }}
 
     const downloadPromise=page.waitForEvent('download');await dialog.getByRole('button',{name:'AI 자료 내보내기',exact:true}).click();const download=await downloadPromise,archive=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(archive.format,'orbis-writing-agent');assert(archive.runs.some(row=>row.id===run.id));
-    await dialog.getByRole('button',{name:'새 작업 대화',exact:true}).click();assert(await dialog.getByRole('combobox',{name:'작업 자료 범위'}).isEnabled());assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement));await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),run.session_id);await dialog.locator('.agent-question').waitFor();
+    await dialog.getByRole('button',{name:'새 작업 대화',exact:true}).click();assert(await dialog.getByRole('combobox',{name:'작업 자료 범위'}).isEnabled());assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement));await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),run.session_id);await dialog.locator('.agent-question').first().waitFor();
     await dialog.getByRole('button',{name:'닫기',exact:true}).click();await page.reload({waitUntil:'networkidle'});await openAgent();await page.getByRole('dialog',{name:'작업 대화',exact:true}).locator('.agent-question').filter({hasText:run.message}).waitFor();await context.close();
   }
 
@@ -441,7 +453,7 @@ return row.status==='completed';},'API task completes');
   const replay=await api(`sessions/${talk.sessionId}/messages`,'POST',{id:talk.id,message:talk.message,mode:talk.mode,provider:'gemini',web:false});assert.equal(replay.status,200);assert.equal((await pg.query('select * from public.agent_runs where id=$1',[talk.id])).rows.length,1);
 
   for(const provider of ['anthropic']){
-    const task=await createTask({kind:'work',id:initial.works[0].id},'review',`${provider} 연결로 개요를 준비해줘.`,provider,'claude-opus-5-5'),run=await finish(task.id);assert.equal(run.operations.length,2);assert.equal(run.provider,provider);assert.equal(run.model,'claude-opus-5-5');assert(run.events.some(event=>event.title==='문서 읽기'));assert.equal((await api(`changes/${run.id}/discard`,'POST',{})).status,200);assert.equal((await api(`changes/${run.id}/apply`,'POST',{})).status,409);
+    const task=await createTask({kind:'work',id:initial.works[0].id},'review',`${provider} 연결로 개요를 준비해줘.`,provider,'claude-opus-5-5'),run=await finish(task.id);assert.equal(run.operations.length,3);assert(systemOf(modelCalls.findLast(call=>call.provider==='anthropic'&&JSON.stringify(call.body).includes('연결로 개요를 준비해줘'))).includes('웹 조사가 꺼져 있다'));assert.equal(run.provider,provider);assert.equal(run.model,'claude-opus-5-5');assert(run.events.some(event=>event.title==='문서 읽기'));assert.equal((await api(`changes/${run.id}/discard`,'POST',{})).status,200);assert.equal((await api(`changes/${run.id}/apply`,'POST',{})).status,409);
   }
 
   const notes=await createTask({kind:'notes',id:'default'},'execute','노트에 개요를 만들고 정리해줘.');
@@ -450,6 +462,8 @@ return row.status==='completed';},'API task completes');
   await noteContext.addInitScript(({profile,token})=>localStorage.setItem('sb-127-auth-token',JSON.stringify({access_token:token,refresh_token:'synthetic',expires_at:Math.floor(Date.now()/1000)+3600,user:profile})),{profile,token});
   page=await noteContext.newPage();page.on('pageerror',error=>errors.push(error.message));await page.goto(`${browserBase}/studio#notes/${executed.operations[0].id}`,{waitUntil:'networkidle'});await page.getByLabel('노트 본문',{exact:true}).waitFor();assert((await page.getByLabel('노트 본문',{exact:true}).innerText()).includes('달로 돌아온'));
   await openAgent();const noteDialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await chooseOption(noteDialog.getByRole('combobox',{name:'작업 대화 선택'}),notes.sessionId);await noteDialog.locator('.agent-question').waitFor();await noteDialog.getByRole('button',{name:/^변경 /}).click();await noteDialog.getByRole('button',{name:'문서 열기',exact:true}).click();await page.getByLabel('노트 본문',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'사이드바 열기',exact:true}).count(),1);await openAgent();await page.getByRole('dialog',{name:'작업 대화',exact:true}).getByRole('button',{name:'대화',exact:true}).click();await page.getByRole('dialog',{name:'작업 대화',exact:true}).locator('.agent-question').waitFor();
+  await noteDialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('이 장면은 어디야? 노트에서 묻는다.');await noteDialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();await noteDialog.locator('.agent-answer').filter({hasText:'열어 둔 문서를 확인했습니다.'}).waitFor();
+  const noteSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('노트에서 묻는다')));assert(noteSystem.includes(`작가가 지금 열어 둔 문서: "에이전트 개요" (id ${executed.operations[0].id})`),'the open note is named to the model');assert(noteSystem.includes('노트 작업공간: '));assert(noteSystem.includes('현재 실행 방식: 맡겨 실행'));
   // Even a cancellation after the commit must leave undo available.
   await pg.query("update public.agent_runs set status='cancelled' where id=$1",[notes.id]);assert.equal((await api(`changes/${notes.id}/revert`,'POST',{})).status,200);await until(async()=>await page.getByLabel('노트 본문',{exact:true}).count()===0,'remote undo refreshes open note without realtime');await noteContext.close();
   const stale=await createTask({kind:'work',id:initial.works[0].id},'review','개요를 제안해줘.');await finish(stale.id);

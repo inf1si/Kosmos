@@ -71,7 +71,7 @@ AI 대화는 문서별로 연결하며 같은 문서의 대화 ID는 중복할 �
 
 ## 계정의 AI 프리셋
 
-`Workspace.aiPreferences`는 모든 작품에서 공유하는 선택 필드다. version: 1, activePresetId, 사용자 presets[], updatedAt을 저장한다. 프리셋은 UUID id, title 1~80자, 비어 있지 않은 prompt, updatedAt ISO 시각을 갖는다. 프리셋 개수·지침 길이를 제한하지 않는다. 중복 ID·없는 활성 ID를 거절한다. 기본 6종은 코드의 builtin:* ID·버전으로 제공하며 편집은 사본으로 저장한다. 필드가 없으면 기본 집필 동료를 사용한다. 선택 필드 skills[]는 내 스킬로 UUID id, title 1~40자, description 0~120자, 비어 있지 않은 prompt, updatedAt을 갖고 개수 제한 없음이며 중복 ID를 거절한다. 없으면 스킬이 없는 것으로 읽는다.
+`Workspace.aiPreferences`는 모든 작품에서 공유하는 선택 필드다. version: 1, activePresetId, 사용자 presets[], updatedAt을 저장한다. 프리셋은 UUID id, title 1~80자, 비어 있지 않은 prompt, updatedAt ISO 시각을 갖는다. 프리셋 개수·지침 길이를 제한하지 않는다. 중복 ID·없는 활성 ID를 거절한다. 기본 6종은 코드의 builtin:* ID·버전으로 제공하며 편집은 사본으로 저장한다. 필드가 없으면 기본 프리셋 **창작 파트너**를 사용한다. 선택 필드 skills[]는 내 스킬로 UUID id, title 1~40자, description 0~120자, 비어 있지 않은 prompt, updatedAt을 갖고 개수 제한 없음이며 중복 ID를 거절한다. 없으면 스킬이 없는 것으로 읽는다.
 
 전체 ZIP·복구 이력에 포함한다. 이전 백업에 필드가 없으면 현재 라이브러리를 유지하고 있으면 백업의 설정을 복원한다. 문서 MD/HTML/ENEX 교환·공개 판본에는 프리셋을 넣지 않는다. API 키는 작업 공간에 넣지 않는다.
 
