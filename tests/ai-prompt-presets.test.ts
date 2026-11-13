@@ -80,7 +80,7 @@ test('작가 지침·고정 자료/출력 경계를 함께 전달하고 기본 �
   assert(system.includes('애플리케이션 고정 규칙'));assert(system.includes('JSON 문자열'));assert(system.includes('최대 5개'));assert(system.includes('원고·자료·이전 대화'));assert(system.includes('작가 고유 지침\\n'));
   const fallback=providerMessageContext({question:'검토'}).system;
 
-  for(const line of ['창작 파트너','상상력과 문학성이 최우선','그럴듯하게 보이게 만드는 매력적인 가설','요청할 때에만 날카로운 편집자','자유로운 형식으로 답한다','마크다운 기호'])assert(fallback.includes(line),line);
+  for(const line of ['창작 파트너','상상력과 문학성이 최우선','그럴듯하게 보이게 만드는 매력적인 가설','요청할 때에만 날카로운 편집자','자유로운 형식으로 답한다','마크다운 기호','대신 써 주는 것이 아니라','묻지 않은 가지를 하나 더','먼저 떠오르는 안은 버리고','한 줄로만 짚고'])assert(fallback.includes(line),line);
   assert(!/2~3개 대안|목표·근거·문제·대안/.test(fallback),'the default no longer fixes the shape of an answer');
 
   for(const preset of BUILTIN_PROMPTS){assert(preset.prompt.startsWith(DEFAULT_AI_SYSTEM_PROMPT));assert.equal(preset.id===DEFAULT_PROMPT_ID,preset.prompt===DEFAULT_AI_SYSTEM_PROMPT);}
