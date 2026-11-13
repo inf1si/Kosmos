@@ -20,7 +20,7 @@ for(const provider of ['gemini','anthropic'] as const)test(`Vertex ${provider}: 
   assert.deepEqual(await requestReview(config,{manuscript:'안녕'},mock,options),review);
   assert.deepEqual(await requestChat(config,{question:'새 질문'},[{role:'user',content:'이전 질문'},{role:'assistant',content:'이전 답변'}],mock,'고유 지침',options),review);
   const body=requests.at(-1)!.body,turns=provider==='gemini'?body.contents:body.messages;assert.equal(turns.length,3);assert.equal(turns[1].role,provider==='gemini'?'model':'assistant');assert(JSON.stringify(body).includes('고유 지침'));
-  assert.equal(provider==='gemini'?body.generationConfig.maxOutputTokens:body.max_tokens,2200);
+  assert.equal(provider==='gemini'?body.generationConfig.maxOutputTokens:body.max_tokens,8192);
   await assert.rejects(()=>requestReview(config,{},async()=>new Response('invalid permission',{status:403}),options),/Vertex AI/);
   await assert.rejects(()=>requestReview(config,{},async()=>Response.json(vertexReviewResponse(provider,{...review,suggestions:Array(6).fill(review.suggestions[0])})),options),/Vertex AI/);
 });

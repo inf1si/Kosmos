@@ -76,7 +76,7 @@ AI 설정에서 편집할 프리셋을 골라 **선택 적용**하거나 이름�
 
 Vercel은 OIDC → GCP Workload Identity Federation → 서비스 계정의 단기 OAuth 토큰을 사용한다. 토큰은 서버의 실행 단계에서 만들며 브라우저·대화 기록·Workflow 모델 인자에 넣지 않는다. 로컬은 Application Default Credentials를 사용한다. `GOOGLE_VERTEX_PROJECT`와 `VERTEX_GEMINI_MODEL`·`VERTEX_CLAUDE_MODEL`, 인증 설정이 필요하다. 웹 조사는 같은 프로젝트의 `VERTEX_SEARCH_MODEL`(없으면 Gemini 기본 모델)을 사용한다. [설정 절차](vertex-ai.md).
 
-두 모델 계열은 공유 지침과 최대 5개 수정 제안의 구조화 응답 계약을 사용한다. SDK는 Vertex Claude에서 JSON 도구 출력을 사용하며 서버가 결과 스키마를 검증한다. 요청은 4MiB, 출력 설정은 2,200토큰, 즉시 대화 타임아웃은 45초·함수는 60초다. 앱의 일일 횟수·질문 글자 수 제한은 없다. 프로젝트 할당량·모델 문맥·Vertex 요금은 적용된다. 모델·제공자를 자동 전환하지 않는다. 월 예산 강제 상한은 앱에 없다.
+두 모델 계열은 공유 지침과 최대 5개 수정 제안의 구조화 응답 계약을 사용한다. SDK는 Vertex Claude에서 JSON 도구 출력을 사용하며 서버가 결과 스키마를 검증한다. 요청은 4MiB, 출력 설정은 8,192토큰(Gemini는 생각 토큰 포함), 즉시 대화 타임아웃은 45초·함수는 60초다. 앱의 일일 횟수·질문 글자 수 제한은 없다. 프로젝트 할당량·모델 문맥·Vertex 요금은 적용된다. 모델·제공자를 자동 전환하지 않는다. 월 예산 강제 상한은 앱에 없다.
 
 ## API
 

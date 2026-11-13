@@ -7,7 +7,7 @@ import type { JsonValue } from './json-value';
 
 export async function requestChat(config:ProviderConfig,input:JsonValue,history:{role:'user'|'assistant';content:string}[],fetcher:typeof fetch=fetch,systemPrompt?:string,options:VertexRuntimeOptions={}):Promise<Review>{
   try{
-    const result=await generateText({model:vertexLanguageModel(config,{...options,fetch:fetcher}),...providerMessageContext(input,history,systemPrompt),output:Output.object({schema:reviewSchema}),maxRetries:0,maxOutputTokens:2200,abortSignal:AbortSignal.timeout(45000)});
+    const result=await generateText({model:vertexLanguageModel(config,{...options,fetch:fetcher}),...providerMessageContext(input,history,systemPrompt),output:Output.object({schema:reviewSchema}),maxRetries:0,maxOutputTokens:8192,abortSignal:AbortSignal.timeout(45000)});
 
     if(['length','content-filter','error','other'].includes(result.finishReason))throw new Error('불완전한 AI 응답');
 
