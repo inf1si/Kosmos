@@ -8,7 +8,7 @@ import { providerSettingsStatus,requestProviderConfig } from './ai-credentials';
 import { providerConfig } from './ai-provider';
 import { workspaceSchema } from './model';
 import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges } from './agent-server';
-import { agentSessionInputSchema,agentMessageInputSchema,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff } from './writing-agent';
+import { agentSessionInputSchema,agentMessageInputSchema,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema } from './writing-agent';
 import { runWritingAgent } from './agent-workflow';
 
 const json=<T,>(value:T,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
@@ -182,6 +182,19 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
 
         return json(await commitAgentChanges(run.id,auth.userId,path[2]==='revert'));
       }
+    }
+
+    // A browser with unsent edits asks whether the newer cloud version is one agent commit it can join without a conflict.
+    if(path[0]==='commits'&&path.length===2&&method==='GET'){
+      const found=await db.from('agent_runs').select('id').eq('owner_id',auth.userId).eq('applied_version',z.coerce.number().int().positive().parse(path[1])).eq('reverted',false).limit(2);
+
+      if(found.error)throw new Error('반영된 작업을 확인하지 못했습니다.');
+      const ids=z.array(z.object({id:z.uuid()})).parse(found.data);
+
+      if(ids.length!==1)return json({commit:null});
+      const run=await readAgentRun(ids[0].id);
+
+      return json({commit:agentCommitSchema.parse({workspace_id:run.workspace_id,scope:run.snapshot.scope,base_hash:run.base_hash,applied_hash:run.applied_hash,applied_version:run.applied_version})});
     }
 
     if(path[0]==='memories'&&path[1]&&path[2]==='forget'&&method==='POST'){

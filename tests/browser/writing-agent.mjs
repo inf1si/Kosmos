@@ -9,7 +9,7 @@ import {resolve} from 'node:path';
 import {createRequire} from 'node:module';
 import {PGlite} from '@electric-sql/pglite';
 import {seedWorkspace} from '../../src/lib/seed.ts';
-import {uid,fromText,workspaceSchema} from '../../src/lib/model.ts';
+import {uid,fromText,plainText,workspaceSchema} from '../../src/lib/model.ts';
 import {addNote,newNote} from '../../src/lib/personal-notes.ts';
 import {agentRunSchema,agentDiff} from '../../src/lib/writing-agent.ts';
 import {PALETTES} from '../../src/lib/theme.ts';
@@ -253,6 +253,7 @@ async function verifySourceMentions(panel,width,scope){
   await input.fill('@공통');assert.equal(await list.getByLabel('선택됨').count(),1);await list.getByRole('option').first().click();
   assert((await context.locator('summary').innerText()).includes('참고 1개'));
   await input.fill('name@example.com');assert.equal(await list.count(),0);
+  await input.fill('@없는자료 같은 표기는 어떻게 써?');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor({state:'detached'});assert.equal(await list.count(),0,'an ordinary @ in a sentence does not keep the source search open');
   await input.fill('@없는자료');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor();assert.equal(await list.getByRole('option').count(),0);await input.press('Enter');assert.equal(modelCalls.length,beforeCalls);await input.press('Escape');assert(await panel.isVisible());
   await input.fill('@공통');await list.waitFor();await input.dispatchEvent('compositionstart',{data:'ㄱ'});assert.equal(await list.count(),0);await input.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true});assert.equal(modelCalls.length,beforeCalls);await input.dispatchEvent('compositionend',{data:'공통'});await list.waitFor();await input.press('Escape');
   await input.fill('');await input.fill('@공통');await list.waitFor();await input.press('Tab');assert.equal(await list.count(),0);assert(await panel.getByRole('button',{name:'질문 보내기',exact:true}).evaluate(el=>el===document.activeElement));
@@ -270,7 +271,7 @@ return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,overflow:el.
     await page.screenshot({path:resolve(output,`ai-mention-${scope}-${width}-${palette}-${mode}.png`)});results.push({view:'ai-source-mention',scope,width,palette,mode,layout});
   }
 
-  await input.press('Escape');await input.fill('줄바꿈');await input.press('Shift+Enter');assert.equal(await input.inputValue(),'줄바꿈\n');assert.equal(modelCalls.length,beforeCalls);await input.fill('선택한 @공통 자료를 비교해줘.');await input.press('Escape');
+  await input.press('Escape');await input.fill('줄바꿈');await input.press('Shift+Enter');assert.equal(await input.inputValue(),'줄바꿈\n');assert.equal(modelCalls.length,beforeCalls);await input.fill('선택한 @공통 자료를 비교해줘.');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor({state:'detached'});assert.equal(await list.count(),0,'a finished sentence closes the source search by itself');
   const previous=await panel.locator('.chat-message.assistant').count(),request=page.waitForRequest(r=>r.url().endsWith('/api/ai/chat')&&r.method()==='POST');
   await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();assert.deepEqual((await request).postDataJSON().sourceIds,[mentionA.id]);
   await until(async()=>await panel.locator('.chat-message.assistant').count()===previous+1,'mention reference answer');
@@ -362,7 +363,7 @@ try{
 if(row?.status==='failed')assert.fail(row.error);
 
 return row?.status==='completed'&&!row.reverted;},'durable agent finishes');
-    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.model,'gemini-selected');assert.equal(run.operations.length,2);assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
+    const run=agentRunSchema.parse(JSON.parse(JSON.stringify((await pg.query('select * from public.agent_runs order by created_at desc limit 1')).rows[0])));assert.equal(run.error,'');assert.equal(run.model,'gemini-selected');assert.equal(run.operations.length,2);assert.equal(run.events.find(event=>event.title==='문장 수정')?.detail,'에이전트 개요','a sentence edit names its document, not an ID');assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert.equal(run.applied_version,null);
     await dialog.getByRole('button',{name:/^변경 /}).click();await page.getByText('달로 돌아온 인물은 관측소를 찾는다.',{exact:true}).waitFor();
     const before=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!before.works[0].documents.some(doc=>doc.id===run.operations[0].id));
     await dialog.getByRole('button',{name:'변경 적용',exact:true}).click();await until(async()=>{const row=(await pg.query('select applied_version from public.agent_runs where id=$1',[run.id])).rows[0];
@@ -457,8 +458,39 @@ return row.status==='completed';},'API task completes');
   assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,409);assert.equal((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents[0].title,'작성자가 새로 고친 제목');
   const cancelled=await createTask({kind:'work',id:initial.works[0].id},'execute','이 실행은 중단한다.');assert.equal((await api(`runs/${cancelled.id}/cancel`,'POST',{})).status,200);assert.equal((await pg.query('select status from public.agent_runs where id=$1',[cancelled.id])).rows[0].status,'cancelled');
   const exported=await api('export');assert.equal(exported.status,200);assert.equal(exported.data.format,'orbis-writing-agent');assert(exported.data.runs.some(r=>r.id===notes.id));assert(!JSON.stringify(exported.data).includes('synthetic-openai'));
+  // An execute run that commits while the writer keeps typing elsewhere is joined, not turned into a save conflict.
+  const cloudPayload=async()=>(await pg.query('select payload,version from public.workspaces where id=$1',[workspaceId])).rows[0],noteText=async()=>plainText((await cloudPayload()).payload.notes.find(n=>n.id===note.id).content);
+  const typingContext=await browser.newContext({viewport:{width:1280,height:900}});typingContext.setDefaultNavigationTimeout(90000);
+  await typingContext.addInitScript(({profile,token})=>localStorage.setItem('sb-127-auth-token',JSON.stringify({access_token:token,refresh_token:'synthetic',expires_at:Math.floor(Date.now()/1000)+3600,user:profile})),{profile,token});
+  page=await typingContext.newPage();page.on('pageerror',error=>errors.push(error.message));let saves='pass';
+  await page.route('**/rpc/save_workspace',async route=>{while(saves==='hold')await new Promise(done=>setTimeout(done,100));
+
+if(saves==='abort')await route.abort();else await route.continue();});
+  await page.goto(`${browserBase}/studio#notes/${note.id}`,{waitUntil:'networkidle'});
+  const noteBody=page.getByLabel('노트 본문',{exact:true}),conflictDialog=page.getByRole('dialog',{name:'저장 충돌',exact:true});await noteBody.waitFor();await noteBody.click();await page.keyboard.press('Control+End');
+  const joinWork={kind:'work',id:initial.works[0].id},agentDocs=async run=>(await cloudPayload()).payload.works[0].documents.filter(d=>d.id===run.operations[0].id).length;
+
+  saves='hold';await page.keyboard.type(' 맡긴 동안 이어 쓴 문장.');
+  const held=await finish((await createTask(joinWork,'execute','작품에 개요를 만들어줘.')).id);assert(held.applied_version);assert.equal(await agentDocs(held),1);assert(!(await noteText()).includes('이어 쓴 문장'),'the note edit is still unsent when the agent commits');
+  saves='pass';await until(async()=>(await noteText()).includes('맡긴 동안 이어 쓴 문장.'),'unsent note text is saved after the agent commit');
+  assert.equal(await agentDocs(held),1,'the agent document survives the joined save');assert.equal(await conflictDialog.count(),0,'no save conflict dialog');
+  assert(await noteBody.evaluate(el=>el.contains(document.activeElement)),'the note being typed keeps focus');await page.keyboard.type(' 합친 뒤에도 계속.');await until(async()=>(await noteText()).endsWith('합친 뒤에도 계속.'),'typing continues after the join');
+  assert.equal((await api(`changes/${held.id}/revert`,'POST',{})).status,200,'a joined agent change can still be reverted');assert.equal(await agentDocs(held),0);assert((await noteText()).endsWith('합친 뒤에도 계속.'));
+
+  // The same join when the studio is opened again with unsent text and a newer agent commit.
+  await page.reload({waitUntil:'networkidle'});await noteBody.waitFor();await noteBody.click();await page.keyboard.press('Control+End');saves='abort';await page.keyboard.type(' 닫기 전에 쓴 문장.');
+  await until(()=>page.evaluate(()=>new Promise(done=>{const open=indexedDB.open('orbit-novel-studio-v1');open.onerror=()=>done(false);open.onsuccess=()=>{const rows=open.result.transaction('workspaces').objectStore('workspaces').getAll();rows.onsuccess=()=>done(rows.result.some(row=>row.dirty&&JSON.stringify(row.data.notes).includes('닫기 전에 쓴 문장.')));};})),'unsent text is stored on the device');
+  const reopened=await finish((await createTask(joinWork,'execute','작품에 개요를 다시 만들어줘.')).id);assert(reopened.applied_version);
+  await page.reload({waitUntil:'networkidle'});await noteBody.waitFor();assert.equal(await conflictDialog.count(),0,'no save conflict dialog on reopening');assert((await noteBody.innerText()).includes('닫기 전에 쓴 문장.'));
+  saves='pass';await noteBody.click();await page.keyboard.press('Control+End');await page.keyboard.type(' 다시 연 뒤.');await until(async()=>(await noteText()).endsWith('닫기 전에 쓴 문장. 다시 연 뒤.'),'text from before and after reopening is saved');
+  assert.equal(await agentDocs(reopened),1,'the agent document survives reopening');assert.equal(await conflictDialog.count(),0);
+
+  // Unsent edits inside the agent's own scope still stop for the writer to choose.
+  saves='hold';await page.keyboard.type(' 같은 공간에서 쓴 문장.');
+  const same=await finish((await createTask({kind:'notes',id:'default'},'execute','노트에 개요를 만들어줘.')).id);assert(same.applied_version);
+  saves='pass';await conflictDialog.waitFor();await page.screenshot({path:resolve(output,'same-scope-conflict.png')});await typingContext.close();
   assert(modelCalls.some(call=>call.provider==='gemini'&&JSON.stringify(call.body.tools||[]).includes('googleSearch')),'native Google search tool is sent');
-  results.push({flow:'discuss/execute/note-scope/idempotency/cancelled-undo/stale-source/export/auth/origin'});
+  results.push({flow:'discuss/execute/note-scope/idempotency/cancelled-undo/stale-source/export/execute-join/auth/origin'});
 
   }
 

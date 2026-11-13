@@ -3,7 +3,7 @@
 import { useEffect,useId,useLayoutEffect,useRef,useState,type RefObject } from 'react';
 import * as Popup from '@radix-ui/react-popover';
 import { Check } from 'lucide-react';
-import { chatMentionQuery,insertChatMention,type ChatMentionQuery } from '@/lib/ai-source-mentions';
+import { chatMentionAbandoned,chatMentionQuery,insertChatMention,type ChatMentionQuery } from '@/lib/ai-source-mentions';
 import { referencePlace,searchReferences,type ReferenceTarget } from '@/lib/internal-references';
 import { ReferenceIcon } from './internal-reference-icon';
 
@@ -23,6 +23,10 @@ export function ChatMentionInput({value,onChange,inputRef,targets,sourceId,selec
 return;}
 
     if(dismissed.current?.from===next.from&&next.text.startsWith(dismissed.current.text)){setQuery(null);
+
+return;}
+
+    if(chatMentionAbandoned(next.text,searchReferences(targets,sourceId,next.text).length)){setQuery(null);
 
 return;}
 

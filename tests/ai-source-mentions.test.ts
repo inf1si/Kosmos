@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatMentionQuery,insertChatMention } from '../src/lib/ai-source-mentions';
+import { chatMentionAbandoned,chatMentionQuery,insertChatMention } from '../src/lib/ai-source-mentions';
 import { chatContext,ChatContextError } from '../src/lib/ai-chat-context';
 import { aiWorkspaceFixture } from './fixtures/ai-workspace';
 import { addNote,newNote } from '../src/lib/personal-notes';
@@ -14,6 +14,14 @@ test('@ 자료 검색은 커서 앞의 질의를 읽고 이메일·선택·줄�
   assert.deepEqual(chatMentionQuery('🚀 @기억 후',6,6),{from:3,to:6,text:'기억'});
 
   for(const [value,start,end] of [['name@example.com',16,16],['@노트\n다음',6,6],['@노트',0,3]] as const)assert.equal(chatMentionQuery(value,start,end),null);
+});
+
+test('일치하는 자료가 없는 문장 속 @는 자료 검색으로 남지 않는다',()=>{
+  const sentence='SNS에서 @username 같은 표기는 어떻게 써?',query=chatMentionQuery(sentence,sentence.length,sentence.length)!;
+  assert.equal(chatMentionAbandoned(query.text,0),true);
+  assert.equal(chatMentionAbandoned('없는자료',0),false,'a single unmatched word may still be a title being typed');
+  assert.equal(chatMentionAbandoned('이름 있는 노트',1),false);
+  assert.equal(chatMentionAbandoned('',0),false);
 });
 
 test('자료 선택은 @ 질의만 제목으로 바꾸고 뒤 문장과 커서 위치를 보존한다',()=>{

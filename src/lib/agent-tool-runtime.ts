@@ -66,7 +66,9 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
 
     if('id' in op&&op.type!=='create'&&op.type!=='folder'&&!available.some(d=>d.id===op.id)&&!overlay.work?.navigation?.nodes.some(n=>n.id===op.id)&&!overlay.navigation?.nodes.some(n=>n.id===op.id))throw new Error('자료 범위를 벗어났습니다.');
     agentOverlay(run.snapshot,[...run.operations,op]);
-    await recordAgentEvent(run,{id:callId,title:op.type==='create'?'문서 만들기':op.type==='folder'?'폴더 만들기':op.type==='move'?'문서 이동':op.type==='rename'?'이름 변경':'문장 수정',detail:'title' in op?op.title:op.id},op);
+    // The work log names the changed document or folder; an ID alone tells the writer nothing.
+    const folder=[...overlay.work?.navigation?.nodes||[],...overlay.navigation?.nodes||[]].find(n=>n.id===op.id),named=docs.find(d=>d.id===op.id)?.title||(folder?.type==='folder'?folder.title:'제목 없음');
+    await recordAgentEvent(run,{id:callId,title:op.type==='create'?'문서 만들기':op.type==='folder'?'폴더 만들기':op.type==='move'?'문서 이동':op.type==='rename'?'이름 변경':'문장 수정',detail:'title' in op?op.title:named},op);
 
     return {saved:true,id:op.id,changes:agentDiff(run.snapshot,[...run.operations,op])};
   }
