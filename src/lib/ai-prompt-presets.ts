@@ -7,7 +7,7 @@ export const BUILTIN_PROMPT_IDS=['builtin:default','builtin:line-edit','builtin:
 
 export const DEFAULT_PROMPT_ID=BUILTIN_PROMPT_IDS[0];
 
-export const PROMPT_REVISION='2026-11-13.4';
+export const PROMPT_REVISION='2026-11-14.1';
 
 
 export const promptPresetIdSchema=z.union([z.enum(BUILTIN_PROMPT_IDS),z.uuid()]);
