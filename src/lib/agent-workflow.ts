@@ -5,6 +5,7 @@ import { writingAgentTools } from './agent-tools';
 import { agentLanguageModel } from './agent-language-model';
 import { agentContext,agentDocuments,agentMap,agentOverlay,captureAgentScope } from './writing-agent';
 import { buildAgentInstructions } from './agent-instructions';
+import { agentRunRecord,agentStepSettings } from './agent-context';
 import { activePromptPreset } from './ai-prompt-presets';
 import { agentWorkspace,agentAdmin,readAgentRun,agentSessionHistory,commitAgentChanges } from './agent-server';
 
@@ -17,14 +18,19 @@ async function prepareAgentRun(id:string,workflow:string){
   const run=await readAgentRun(id,workflow),history=await agentSessionHistory(run.session_id,run.owner_id);
   const {state}=await agentWorkspace(run),live=captureAgentScope(state,run.snapshot.scope);
   const context=agentContext(history.runs.filter(r=>r.created_at<run.created_at),history.memories,new Set(agentDocuments(live).map(d=>d.id)),Number(process.env.AGENT_HISTORY_CHARACTERS)||60000);
-  const messages:ModelMessage[]=context.runs.flatMap(r=>[{role:'user' as const,content:r.message},...r.answer?[{role:'assistant' as const,content:r.answer}]:[]]);
+
+  // The app appends what each past run changed, so the next turn knows which documents moved and whether they were applied.
+  const messages:ModelMessage[]=context.runs.flatMap(r=>{const answer=[r.answer,agentRunRecord(r)].filter(Boolean).join('\n\n');
+
+return [{role:'user' as const,content:r.message},...answer?[{role:'assistant' as const,content:answer}]:[]];});
+
   messages.push({role:'user',content:run.message});
 
   const focus=run.events.find(e=>e.id==='focus')?.sources?.[0];
   // The persona and skills are the writer's synced AI settings, read when the run starts.
   const instructions=buildAgentInstructions({mode:run.mode,web:run.web,today:new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date()),persona:activePromptPreset(state.aiPreferences).prompt,skills:(state.aiPreferences?.skills||[]).map(skill=>({title:skill.title,description:skill.description,prompt:skill.prompt})),map:agentMap(agentOverlay(run.snapshot,run.operations),Number(process.env.AGENT_MAP_CHARACTERS)||16000),focus:focus?{id:focus.id,title:focus.title}:null,memories:context.memories.map(m=>({title:m.title,content:m.content,sources:m.sources}))});
 
-  return {run:{provider:run.provider,model:run.model,mode:run.mode,web:run.web},messages,instructions,maxSteps:Number(process.env.AGENT_MAX_STEPS)||80};
+  return {run:{provider:run.provider,model:run.model,mode:run.mode,web:run.web},messages,instructions,maxSteps:Number(process.env.AGENT_MAX_STEPS)||80,toolBudget:Number(process.env.AGENT_TOOL_RESULT_CHARACTERS)||80000};
 }
 
 async function completeAgentRun(id:string,workflow:string,answer:string,usage:{input:number;output:number}|null,error=''){
@@ -44,10 +50,11 @@ export async function runWritingAgent(id:string){
   const workflow=getWorkflowMetadata().workflowRunId;
 
   try{
-    const {run,messages,instructions,maxSteps}=await prepareAgentRun(id,workflow);
-    const agent=new WorkflowAgent({model:agentLanguageModel(run.provider,run.model),toolCallConcurrency:1,stopWhen:isStepCount(maxSteps),maxRetries:0,instructions,tools:writingAgentTools(id,workflow,run.mode,run.web)});
+    const {run,messages,instructions,maxSteps,toolBudget}=await prepareAgentRun(id,workflow);
+    const agent=new WorkflowAgent({model:agentLanguageModel(run.provider,run.model),toolCallConcurrency:1,stopWhen:isStepCount(maxSteps),maxRetries:0,instructions,tools:writingAgentTools(id,workflow,run.mode,run.web),prepareStep:({messages:prompt,stepNumber})=>agentStepSettings(prompt,stepNumber,maxSteps,toolBudget)});
     const result=await agent.generate({messages});
-    const issue=result.finishReason==='tool-calls'||result.finishReason==='length'?'실행 단계 또는 모델 출력 한도에 도달했습니다. 준비한 변경을 확인하고 이어서 요청하세요.':'';
+    // The last step has no tools, so reaching the step limit ends in an answer; automatic apply is still held back.
+    const issue=result.finishReason==='tool-calls'||result.finishReason==='length'||result.steps.length>=maxSteps?'실행 단계 또는 모델 출력 한도에 도달했습니다. 준비한 변경을 확인하고 이어서 요청하세요.':'';
     await completeAgentRun(id,workflow,result.text,{input:result.totalUsage.inputTokens||0,output:result.totalUsage.outputTokens||0},issue);
   }catch{
     try{await completeAgentRun(id,workflow,'',null,'작업을 완료하지 못했습니다. 연결·모델 문맥·작업 상태를 확인하세요.');}catch{/* Cancellation and revoked access retain the already saved state. */}

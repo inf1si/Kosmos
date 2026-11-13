@@ -179,7 +179,7 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 4. `withWorkflow`를 포함한 앱을 배포한다. `/.well-known/workflow/`의 생성 route는 Workflow SDK가 관리한다. Vercel의 Workflow 사용 가능 여부·실행/단계 요금·보관 정책을 프로젝트에서 확인한다. Preview에 Production 서비스 키를 자동 복제하지 않는다.
 5. 작은 합성 작품에서 검색→작업본→적용→되돌리기, 브라우저 종료 후 재접속을 확인한 뒤 실제 글에 사용한다. 실제 GCP 인증을 사용하지 않은 합성 검사는 실제 모델 품질·요금을 검증하지 않는다.
 
-선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
+선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000), `AGENT_TOOL_RESULT_CHARACTERS`(기본 80000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
 
 기본 `pnpm dev`·`pnpm build`는 Webpack을 명시한다. Next.js 16.3.8의 Turbopack 글꼴 내부 쿼리 해석 오류가 CI에서 재현되어 빌드 방식을 고정했다. 운영의 글꼴 파일·종류·라이선스는 변경하지 않는다.
 
