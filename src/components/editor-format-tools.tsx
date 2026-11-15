@@ -8,6 +8,7 @@ import { AlignLeft,AlignCenter,AlignRight,AlignJustify,IndentIncrease,IndentDecr
 import { IconButton,Popover } from './primitives';
 import { fontSizes,validFontSize } from '@/lib/editor-preferences';
 import { inlineFontSize,bulletListStyles,orderedListStyles,listStyleType } from '@/lib/manuscript-format';
+import { blockStyle } from '@/lib/editor-block-style';
 import styles from './editor-tools.module.css';
 import { Select } from './select';
 
@@ -136,9 +137,9 @@ if(direction>0)chain.sinkListItem('listItem').run();else chain.liftListItem('lis
   const buttons=[{id:'marks',label:'문자 서식',icon:<Type size={16}/>},{id:'paragraph',label:'문단 서식',icon:<Pilcrow size={16}/>},{id:'table',label:'표',icon:<Table2 size={16}/>},{id:'symbols',label:'특수문자',icon:<Omega size={16}/>}];
   const actions=[['위에 행 추가',()=>editor?.chain().focus().addRowBefore().run(),()=>editor?.can().addRowBefore()],['아래에 행 추가',()=>editor?.chain().focus().addRowAfter().run(),()=>editor?.can().addRowAfter()],['왼쪽 열 추가',()=>editor?.chain().focus().addColumnBefore().run(),()=>editor?.can().addColumnBefore()],['오른쪽 열 추가',()=>editor?.chain().focus().addColumnAfter().run(),()=>editor?.can().addColumnAfter()],['행 삭제',()=>editor?.chain().focus().deleteRow().run(),()=>editor?.can().deleteRow()],['열 삭제',()=>editor?.chain().focus().deleteColumn().run(),()=>editor?.can().deleteColumn()],['셀 병합',()=>editor?.chain().focus().mergeCells().run(),()=>editor?.can().mergeCells()],['셀 나누기',()=>editor?.chain().focus().splitCell().run(),()=>editor?.can().splitCell()],['제목 행 전환',()=>editor?.chain().focus().toggleHeaderRow().run(),()=>editor?.can().toggleHeaderRow()],['표 삭제',()=>editor?.chain().focus().deleteTable().run(),()=>editor?.can().deleteTable()]] as const;
 
-  return <><Select aria-label="문단 스타일" value={editor?.isActive('heading')?String(editor.getAttributes('heading').level):'body'} disabled={disabled} onChange={value=>{if(value==='body')editor?.chain().focus().setParagraph().run();else{const level=Number(value);
+  return <><Select aria-label="문단 스타일" value={editor?.isActive('heading')?String(editor.getAttributes('heading').level):'body'} disabled={disabled} onChange={value=>{const level=value==='body'?0:Number(value);
 
-if(level===1||level===2||level===3)editor?.chain().focus().setHeading({level}).run();}}}><option value="body">본문</option>{[1,2,3].map(level=><option key={level} value={level}>제목 {level}</option>)}</Select>{buttons.map(item=><Popover key={item.id} open={panel===item.id} onOpenChange={open=>setPanel(open?item.id:null)} title={item.label} initialFocus={['marks','paragraph'].includes(item.id)?'content':undefined} width={item.id==='symbols'?340:300} onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label={item.label} disabled={disabled} aria-pressed={panel===item.id}>{item.icon}</IconButton>}>
+if(level===0||level===1||level===2||level===3)editor?.chain().focus().command(blockStyle(level)).run();}}><option value="body">본문</option>{[1,2,3].map(level=><option key={level} value={level}>제목 {level}</option>)}</Select>{buttons.map(item=><Popover key={item.id} open={panel===item.id} onOpenChange={open=>setPanel(open?item.id:null)} title={item.label} initialFocus={['marks','paragraph'].includes(item.id)?'content':undefined} width={item.id==='symbols'?340:300} onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label={item.label} disabled={disabled} aria-pressed={panel===item.id}>{item.icon}</IconButton>}>
     <div className={styles.tools}>
     {item.id==='marks'&&<div className={styles.row}>
       <IconButton label="취소선" aria-pressed={editor?.isActive('strike')} onClick={()=>{editor?.chain().focus().toggleStrike().run();setPanel(null);}}><Strikethrough size={16}/></IconButton>
