@@ -31,6 +31,8 @@
 
 검색 엔진에 알리는 주소는 `NEXT_PUBLIC_SITE_URL`이 있으면 그 값, 없으면 Vercel의 운영 도메인이다. 사용자 도메인을 연결하면 Vercel이 그 도메인을 운영 도메인으로 알려 주므로 따로 설정하지 않아도 된다.
 
+소유 확인 태그는 모든 화면의 `<head>`에 넣는다([`site-metadata.ts`](../src/lib/site-metadata.ts)의 `SITE_VERIFICATION`). 2026-11-16 네이버 서치어드바이저와 Google Search Console 태그를 넣었다.
+
 Google Search Console·네이버 서치어드바이저에 사이트를 등록하고 sitemap 주소를 제출하는 일은 운영자가 직접 한다([배포 안내](setup-deployment.md#검색-등록과-방문-통계)). 등록하지 않아도 검색 엔진이 찾아올 수 있지만 시기를 알 수 없다.
 
 ## 방문 통계

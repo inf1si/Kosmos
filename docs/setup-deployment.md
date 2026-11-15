@@ -2,7 +2,7 @@
 
 ## 작품 조회수 배포 (2026-11-15)
 
-[20261115143500_work_views.sql](../supabase/migrations/20261115143500_work_views.sql)을 한 번 적용한다. `work_views` 테이블과 기록·합계 함수 두 개를 만들며 기존 테이블·작업 공간·판본은 바꾸지 않는다. 앱 배포와 순서는 상관없다: 적용 전에는 조회수를 세지 않고 집필실의 조회 표시만 빠진다. 서버 기록에는 이미 쓰는 `SUPABASE_SERVICE_ROLE_KEY`를 사용한다. 되돌리려면 두 함수와 테이블을 지운다(조회수만 사라진다). [동작](search-and-visits.md#작품-조회수)·[검증](../VERIFICATION.md)
+[20261115143500_work_views.sql](../supabase/migrations/20261115143500_work_views.sql)을 한 번 적용한다. `work_views` 테이블과 기록·합계 함수 두 개를 만들며 기존 테이블·작업 공간·판본은 바꾸지 않는다. 앱 배포와 순서는 상관없다: 적용 전에는 조회수를 세지 않고 집필실의 조회 표시만 빠진다. 서버 기록에는 이미 쓰는 `SUPABASE_SERVICE_ROLE_KEY`를 사용한다. 되돌리려면 두 함수와 테이블을 지운다(조회수만 사라진다). 운영에는 2026-11-16 적용했다. [동작](search-and-visits.md#작품-조회수)·[검증](../VERIFICATION.md)
 
 ## 글 참조 배포 (2026-10-25)
 

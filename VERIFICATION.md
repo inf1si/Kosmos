@@ -10,8 +10,10 @@
 - 색 계열: 같은 검사에서 쉰네 조합 × 두 폭으로 카드 둘째 줄과 공개 상태 줄이 카드·대화상자·화면 밖으로 나가지 않고 가로 스크롤이 없음을 측정했다. 새 색·모양은 없고 기존 12px 줄에 글자만 이었다. 360px 작품 정보 창은 공개 상태 줄이 두 줄로 접힌다(눈으로 확인).
 - 검사 중 확인한 것: 헤드리스 Chromium은 이름에 `HeadlessChrome`이 있어 서버가 로봇으로 걸러 낸다. 검사는 일반 브라우저 이름을 지정한다.
 - PR #127 운영 확인(병합 뒤, curl): `https://www.orbiter.ink`의 robots가 전체 허용과 sitemap 주소를 내고, sitemap에 홈·서재·자기소개와 작품 다섯 개가 있으며, 독서 화면의 제목·소개·canonical·og 태그가 `<head>`에 운영 도메인으로 나오고 미리보기 그림이 200 PNG다. `kosmos-ashy.vercel.app`으로 열어도 canonical은 운영 도메인을 가리킨다.
+- 소유 확인 태그(2026-11-16 추가): 운영 빌드(`pnpm build` → `next start`)에서 홈·서재·독서 화면의 `<head>`에 `naver-site-verification`·`google-site-verification` 태그가 사용자가 준 값으로 나온다. 네이버·Google의 실제 확인은 사용자가 배포 뒤에 한다.
 - 그 밖: 타입 검사, Node 단위 전체, 바뀐 파일 Anti Slop, `pnpm docs:check --base`.
-- 미확인: 운영 DB 마이그레이션(사용자가 SQL Editor에서 실행), 운영에서의 실제 기록과 표시, Safari·Firefox·터치, CI.
+- 운영 DB(2026-11-16): 사용자가 SQL Editor에서 마이그레이션을 실행했다고 알렸다. 그 뒤 운영 사이트 번들에 있는 공개 키로 밖에서 확인했다. `work_views` 읽기, `record_work_view`·`work_view_totals` 실행이 모두 `42501 permission denied`로 거절되고(없는 표는 `PGRST205`로 구분됨), 따라서 표와 두 함수가 있으며 익명 접근은 막혀 있다. 서비스 역할의 기록 권한과 작가의 합계 읽기는 밖에서 볼 수 없어 확인하지 못했다.
+- 미확인: 운영에서의 실제 기록과 집필실 표시, Safari·Firefox·터치, CI.
 
 ## 2026-11-15 — 검색 노출·링크 미리보기·방문 통계
 
