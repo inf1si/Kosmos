@@ -41,11 +41,9 @@ export function workViewTotals(rows:z.infer<typeof workViewRowsSchema>):Map<stri
   return new Map(rows.map(row=>[row.work_id,{total:row.total,recent:row.recent}]));
 }
 
-/** " · 조회 N" for a published work, with the last seven days when asked; empty until the totals are read. */
-export function viewsLabel(totals:Map<string,WorkViews>|null,workId:string,recent=false){
-  if(!totals)return '';
+/** A work's totals once the author's totals are read (zero for a work nobody opened); null until then, so nothing is shown. */
+export function viewsOf(totals:Map<string,WorkViews>|null,workId:string):WorkViews|null{
+  if(!totals)return null;
 
-  const views=totals.get(workId)||{total:0,recent:0};
-
-  return ` · 조회 ${views.total.toLocaleString('ko-KR')}${recent?` · 최근 7일 ${views.recent.toLocaleString('ko-KR')}`:''}`;
+  return totals.get(workId)||{total:0,recent:0};
 }
