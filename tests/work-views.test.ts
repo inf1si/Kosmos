@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {PGlite} from '@electric-sql/pglite';
 import {POST as recordView} from '../src/app/api/views/route';
 import {uid} from '../src/lib/model';
-import {automatedAgent,firstViewToday,seoulDay,viewsLabel,workViewRowsSchema,workViewTotals} from '../src/lib/work-views';
+import {automatedAgent,firstViewToday,seoulDay,viewsOf,workViewRowsSchema,workViewTotals} from '../src/lib/work-views';
 
 const browser='Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
@@ -31,10 +31,9 @@ test('같은 브라우저는 작품마다 하루에 한 번만 센다',()=>{
 test('조회 표시는 합계를 읽은 뒤에만 나온다',()=>{
   const work=uid(),totals=workViewTotals(workViewRowsSchema.parse([{work_id:work,total:'1234',recent:56}]));
 
-  assert.equal(viewsLabel(null,work,true),'');
-  assert.equal(viewsLabel(totals,work),' · 조회 1,234');
-  assert.equal(viewsLabel(totals,work,true),' · 조회 1,234 · 최근 7일 56');
-  assert.equal(viewsLabel(totals,uid(),true),' · 조회 0 · 최근 7일 0');
+  assert.equal(viewsOf(null,work),null);
+  assert.deepEqual(viewsOf(totals,work),{total:1234,recent:56});
+  assert.deepEqual(viewsOf(totals,uid()),{total:0,recent:0});
   assert.equal(workViewRowsSchema.safeParse([{work_id:work,total:-1,recent:0}]).success,false);
 });
 

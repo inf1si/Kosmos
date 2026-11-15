@@ -122,6 +122,9 @@ const userAgent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (K
 
 const reading=`${base}/read/${published.id}`;
 
+// Looked at by eye beside the plot board's chips: a dark default, a keyed palette and a cut-corner one.
+const compared=['violet-dark','cassette-light','cyber-dark'];
+
 try{
  for(let attempt=0;attempt<180;attempt++){
   if(app.exitCode!==null)throw new Error(`Next exited: ${app.exitCode}`);
@@ -194,15 +197,24 @@ if(response.ok)break;}catch{}
 
   await card(published.title).waitFor();
   await until(async()=>(await card(published.title).innerText()).includes('조회 1,234'),'published card shows its total');
-  assert.match(await card(published.title).innerText(),/게시 중 · 조회 1,234/);
+  // The count is its own chip pair under the data line, in the chip's colour rather than the line's muted one.
+  assert.deepEqual(await card(published.title).locator('.work-views .chip').allInnerTexts(),['조회 1,234','최근 7일 56']);
+  assert.doesNotMatch(await card(published.title).locator('small').innerText(),/조회/);
+  assert.match(await card(published.title).locator('small').innerText(),/게시 중/);
+  assert.equal(await card(published.title).locator('.work-views .chip svg').count(),1);
+  assert.deepEqual(await card(published.title).evaluate(node=>{const row=node.querySelector('.work-views'),chip=row.querySelector('.chip'),small=node.querySelector('small');
+
+   return [getComputedStyle(row).flexDirection,getComputedStyle(chip).flexDirection,getComputedStyle(chip).fontSize,getComputedStyle(chip).height,getComputedStyle(chip).color!==getComputedStyle(small).color,row.getBoundingClientRect().top>=small.getBoundingClientRect().bottom];}),['row','row','12px','24px',true,true]);
   assert.doesNotMatch(await card(draft.title).innerText(),/조회/);
+  assert.equal(await studio.locator('.studio-home .reference-card .work-views').count(),1,'only the published work card carries the chips');
 
   await card(published.title).click({button:'right'});await studio.getByRole('menuitem',{name:'작품 정보 편집',exact:true}).click();
 
   const info=studio.getByRole('dialog',{name:'작품 정보',exact:true});
 
   await info.waitFor();
-  assert.match(await info.locator('.work-public-state').innerText(),/^공개 서재에 게시 중 · .+ 판본 · 조회 1,234 · 최근 7일 56$/);
+  assert.match(await info.locator('.work-public-state').innerText(),/^공개 서재에 게시 중 · .+ 판본\s+조회 1,234\s+최근 7일 56$/);
+  assert.deepEqual(await info.locator('.work-public-state .chip').allInnerTexts(),['조회 1,234','최근 7일 56']);
   await studio.screenshot({path:resolve(output,`info-${width}.png`)});
 
   // The line stays inside the dialog and the card in every palette.
@@ -213,9 +225,11 @@ if(response.ok)break;}catch{}
 
      root.setAttribute('data-palette',palette);root.setAttribute('data-theme',theme);
 
-     const line=document.querySelector('.work-public-state'),dialog=line.closest('[role=dialog]'),box=line.getBoundingClientRect(),frame=dialog.getBoundingClientRect();
+     const line=document.querySelector('.work-public-state'),dialog=line.closest('[role=dialog]'),frame=dialog.getBoundingClientRect();
 
-     return box.left>=frame.left-1&&box.right<=frame.right+1&&box.right<=innerWidth+1&&getComputedStyle(line).fontSize==='12px';
+     return [line,...line.querySelectorAll('.chip')].every(node=>{const box=node.getBoundingClientRect();
+
+      return box.left>=frame.left-1&&box.right<=frame.right+1&&box.right<=innerWidth+1&&getComputedStyle(node).fontSize==='12px';});
     },{palette,theme});
 
     assert.equal(inside,true,`${width} ${palette} ${theme} info line`);
@@ -231,12 +245,16 @@ if(response.ok)break;}catch{}
 
      root.setAttribute('data-palette',palette);root.setAttribute('data-theme',theme);
 
-     const cardNode=[...document.querySelectorAll('[data-work-shelf] .reference-card')].find(node=>node.textContent.includes(title)),small=cardNode.querySelector('small'),box=small.getBoundingClientRect(),frame=cardNode.getBoundingClientRect();
+     const cardNode=[...document.querySelectorAll('[data-work-shelf] .reference-card')].find(node=>node.textContent.includes(title)),frame=cardNode.getBoundingClientRect();
 
-     return box.left>=frame.left-1&&box.right<=frame.right+1&&frame.right<=innerWidth+1&&document.documentElement.scrollWidth<=innerWidth+1;
+     return [cardNode.querySelector('small'),...cardNode.querySelectorAll('.work-views .chip')].every(node=>{const box=node.getBoundingClientRect();
+
+      return box.left>=frame.left-1&&box.right<=frame.right+1&&box.bottom<=frame.bottom+1;})&&frame.right<=innerWidth+1&&document.documentElement.scrollWidth<=innerWidth+1;
     },{palette,theme,title:published.title});
 
     assert.equal(inside,true,`${width} ${palette} ${theme} card line`);
+
+    if(compared.includes(`${palette}-${theme}`))await studio.screenshot({path:resolve(output,`home-${palette}-${theme}-${width}.png`)});
    }
   }
 
