@@ -12,6 +12,7 @@ import { Heading1,Heading2,Heading3,MessageSquareText,List,ListOrdered,ListCheck
 import {requestWebLink} from './editor-web-link';
 import type { EditorAIScope } from '@/lib/ai-conversation';
 import { captureEditorTarget,targetIsCurrent,type EditorTarget } from '@/lib/editor-target';
+import { blockStyle } from '@/lib/editor-block-style';
 import { EditorInlineAI,editorAIActions,type EditorAIAction } from './editor-inline-ai';
 import { useStudio } from './studio-provider';
 import { useAIConnection } from './use-ai-connection';
@@ -83,10 +84,10 @@ return true;});
     if(insertsBlock)chain.deleteRange({from:slash.from,to:slash.to});
 
     switch(id){
-      case 'paragraph':chain.setParagraph();break;
-      case 'h1':chain.setHeading({level:1});break;
-      case 'h2':chain.setHeading({level:2});break;
-      case 'h3':chain.setHeading({level:3});break;
+      case 'paragraph':chain.command(blockStyle(0));break;
+      case 'h1':chain.command(blockStyle(1));break;
+      case 'h2':chain.command(blockStyle(2));break;
+      case 'h3':chain.command(blockStyle(3));break;
       case 'bullet':chain.toggleBulletList();break;
       case 'ordered':chain.toggleOrderedList();break;
       case 'task':chain.toggleTaskList();break;

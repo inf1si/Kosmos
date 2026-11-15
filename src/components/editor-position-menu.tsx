@@ -14,6 +14,7 @@ import {editorFootnote} from '@/lib/editor-footnotes';
 import {EditorFootnotePopover} from './editor-footnote-popover';
 import {requestWebLink} from './editor-web-link';
 import {normalizeWebLink} from '@/lib/editor-web-links';
+import {blockStyle} from '@/lib/editor-block-style';
 
 type Special={kind:'footnote';pos:number;id:string}|{kind:'reference';pos:number;reference:InternalReference}|{kind:'web-link';pos:number;to:number;href:string}|{kind:'wiki-link';pos:number;to:number;targetId:string}|{kind:'image';pos:number;alt:string};
 
@@ -174,10 +175,10 @@ return paragraph;});
   }
 
   const paragraphs:Action[]=[
-    {label:'일반 문단',icon:Type,apply:c=>c.setParagraph()},
-    {label:'제목 1',icon:Heading1,apply:c=>c.setHeading({level:1})},
-    {label:'제목 2',icon:Heading2,apply:c=>c.setHeading({level:2})},
-    {label:'제목 3',icon:Heading3,apply:c=>c.setHeading({level:3})},
+    {label:'일반 문단',icon:Type,apply:c=>c.command(blockStyle(0))},
+    {label:'제목 1',icon:Heading1,apply:c=>c.command(blockStyle(1))},
+    {label:'제목 2',icon:Heading2,apply:c=>c.command(blockStyle(2))},
+    {label:'제목 3',icon:Heading3,apply:c=>c.command(blockStyle(3))},
     {label:'글머리 목록',icon:List,apply:c=>c.toggleBulletList()},
     {label:'번호 목록',icon:ListOrdered,apply:c=>c.toggleOrderedList()},
     ...(editor.schema.nodes.taskList?[{label:'체크리스트',icon:ListChecks,apply:(c:ChainedCommands)=>c.toggleTaskList()}]:[]),
