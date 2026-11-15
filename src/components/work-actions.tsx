@@ -9,6 +9,8 @@ import { useStudio } from './studio-provider';
 import { moveWorkToShelf, shelfForWork, workShelves, workShelfTitle } from '@/lib/work-shelves';
 import { toggleWorkFavorite } from '@/lib/work-favorites';
 import { Select } from './select';
+import { useWorkViews } from './use-work-views';
+import { viewsLabel } from '@/lib/work-views';
 
 export type WorkConfirm={type:'unpublish'|'trash';workId:string};
 
@@ -53,7 +55,7 @@ export function WorkContextMenu({work,canTrash,readonly,onOpen,onEdit,onConfirm,
 
 /** Work settings (info, form, public edition, trash) and the two confirmations. Both settings and the card menu open these. */
 export function WorkDialogs({state,settingsId,confirm,readonly,onSettings,onConfirm,onTrashed}:{state:Workspace;settingsId:string|null;confirm:WorkConfirm|null;readonly:boolean;onSettings:(id:string|null)=>void;onConfirm:(confirm:WorkConfirm|null)=>void;onTrashed:(id:string)=>void}){
-  const s=useStudio(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState('');
+  const s=useStudio(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(''),views=useWorkViews();
   const work=state.works.find(w=>w.id===settingsId),target=state.works.find(w=>w.id===confirm?.workId),canTrash=state.works.length>1;
   useEffect(()=>{setError('');},[confirm]);
   useEffect(()=>{setDone('');setError('');},[settingsId]);
@@ -86,7 +88,7 @@ try{s.update(next=>moveWorkToShelf(next,work.id,shelfId));setError('');}catch(ca
         <label>작품 소개<textarea rows={4} value={work.description} onChange={e=>patch(work.id,{description:e.target.value})}/></label>
       </div>
       <div className="modal-actions work-settings-actions">
-        <span className="work-public-state">{work.activePublicationId?`공개 서재에 게시 중 · ${editionDate(work)} 판본`:'공개 서재에 게시하지 않음'}</span>
+        <span className="work-public-state">{work.activePublicationId?`공개 서재에 게시 중 · ${editionDate(work)} 판본${viewsLabel(views,work.id,true)}`:'공개 서재에 게시하지 않음'}</span>
         <button type="button" className="button" disabled={readonly} aria-pressed={!!work.favorite} onClick={()=>s.update(state=>toggleWorkFavorite(state,work.id))}><Star size={15} fill={work.favorite?'currentColor':'none'}/>{work.favorite?'즐겨찾기 해제':'즐겨찾기 추가'}</button>
         {work.activePublicationId&&<button type="button" className="button" disabled={readonly} onClick={()=>onConfirm({type:'unpublish',workId:work.id})}><GlobeOff size={15}/>게시 철회</button>}
         <button type="button" className="button" disabled={readonly||!canTrash} title={canTrash?undefined:lastWork} onClick={()=>onConfirm({type:'trash',workId:work.id})}><Trash2 size={15}/>휴지통으로 이동</button>

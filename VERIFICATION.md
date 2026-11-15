@@ -1,5 +1,18 @@
 # 구현 검증
 
+## 2026-11-15 — 작품 조회수
+
+- 기준 main `c7f6887`(PR #127 병합). 읽은 안내: [검색 노출·방문 통계](docs/search-and-visits.md), [디자인 가이드](docs/design-guide.md) 0절·8절 집필실 홈·작품 정보, [실제 조작 검증](docs/interaction-verification.md).
+- 바꾼 것: 마이그레이션 [`20261115143500_work_views.sql`](supabase/migrations/20261115143500_work_views.sql), 기록 경로 `POST /api/views`([`route.ts`](src/app/api/views/route.ts)), 독서 화면의 기록 요청([`use-record-view.ts`](src/components/use-record-view.ts)), 집필실 홈 카드와 작품 정보 창의 조회 표시([`use-work-views.ts`](src/components/use-work-views.ts)). 대상과 기대: 게시 중인 작품의 독서 화면을 연 브라우저마다 하루 한 번 서버 횟수가 1 늘고, 작가가 집필실에서 합계를 본다. 원고·판본·기기 보기 설정은 바꾸지 않는다.
+- 단위 [`work-views.test.ts`](tests/work-views.test.ts) 5개: 한국 날짜 경계, 로봇 판별(카카오톡 인앱 브라우저는 독자), 브라우저별 하루 한 번, 표시 문구, 기록 경로(같은 사이트의 독자 브라우저만 서비스 키로 한 번 호출하고 로봇·다른 사이트·잘못된 본문·키 없음·서버 오류는 호출 없이 204).
+- DB: 같은 파일에서 PGlite에 마이그레이션을 실제로 적용했다. 서비스 역할의 기록이 활성 작품만 늘리고(철회·없는 작품은 행 없음), 익명·로그인 역할은 기록 함수 실행과 테이블 쓰기가 거절되며, 익명은 읽기도 거절되고, 작가는 자기 작품의 전체·최근 7일 합계만 받는다(7일 전 행은 최근에서 제외).
+- 브라우저: [`work-views.mjs`](tests/browser/work-views.mjs). 실제 Next 개발 서버와 합성 Supabase HTTP 서비스, Chromium 1280px·360px. 독자 브라우저의 첫 열람이 서버에 한 번 기록되고 새로고침·서재를 거쳐 다시 열기·없는 작품 주소는 기록되지 않으며, 브라우저는 이 사이트의 `/api/views`에만 요청한다. 다른 브라우저는 다시 한 번 기록되고, 로그인 토큰이 있는 브라우저는 기록되지 않는다. 집필실 홈의 게시 중 카드에 `게시 중 · 조회 1,234`, 게시하지 않은 작품에는 조회 없음, 카드 우클릭 **작품 정보 편집**의 공개 상태 줄에 `조회 1,234 · 최근 7일 56`. 합계 함수가 없는 서버로 바꾸면 조회 표시만 빠진다. 페이지 오류 0.
+- 색 계열: 같은 검사에서 쉰네 조합 × 두 폭으로 카드 둘째 줄과 공개 상태 줄이 카드·대화상자·화면 밖으로 나가지 않고 가로 스크롤이 없음을 측정했다. 새 색·모양은 없고 기존 12px 줄에 글자만 이었다. 360px 작품 정보 창은 공개 상태 줄이 두 줄로 접힌다(눈으로 확인).
+- 검사 중 확인한 것: 헤드리스 Chromium은 이름에 `HeadlessChrome`이 있어 서버가 로봇으로 걸러 낸다. 검사는 일반 브라우저 이름을 지정한다.
+- PR #127 운영 확인(병합 뒤, curl): `https://www.orbiter.ink`의 robots가 전체 허용과 sitemap 주소를 내고, sitemap에 홈·서재·자기소개와 작품 다섯 개가 있으며, 독서 화면의 제목·소개·canonical·og 태그가 `<head>`에 운영 도메인으로 나오고 미리보기 그림이 200 PNG다. `kosmos-ashy.vercel.app`으로 열어도 canonical은 운영 도메인을 가리킨다.
+- 그 밖: 타입 검사, Node 단위 전체, 바뀐 파일 Anti Slop, `pnpm docs:check --base`.
+- 미확인: 운영 DB 마이그레이션(사용자가 SQL Editor에서 실행), 운영에서의 실제 기록과 표시, Safari·Firefox·터치, CI.
+
 ## 2026-11-15 — 검색 노출·링크 미리보기·방문 통계
 
 - 기준 main `e9e7c89`. 운영 사이트에서 먼저 확인한 것: 서재·독서 화면·설정집의 제목이 모두 `Orbis Tertius`이고 소개·미리보기 태그가 없으며 `/robots.txt`·`/sitemap.xml`이 404였다. 본문은 서버 응답에 들어 있었다. 읽은 안내: Next.js 16.3.8 내장 문서의 generateMetadata·robots·sitemap·opengraph-image, [유지 규칙](docs/maintenance.md).
