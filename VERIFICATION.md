@@ -1,5 +1,17 @@
 # 구현 검증
 
+## 2026-11-15 — 검색 노출·링크 미리보기·방문 통계
+
+- 기준 main `e9e7c89`. 운영 사이트에서 먼저 확인한 것: 서재·독서 화면·설정집의 제목이 모두 `Orbis Tertius`이고 소개·미리보기 태그가 없으며 `/robots.txt`·`/sitemap.xml`이 404였다. 본문은 서버 응답에 들어 있었다. 읽은 안내: Next.js 16.3.8 내장 문서의 generateMetadata·robots·sitemap·opengraph-image, [유지 규칙](docs/maintenance.md).
+- 바꾼 것: 화면별 제목·소개·대표 주소·미리보기 태그([`site-metadata.ts`](src/lib/site-metadata.ts)), 미리보기 그림([`share-image.tsx`](src/lib/share-image.tsx)), `/sitemap.xml`·`/robots.txt`, 방문 통계 연결([`site-analytics.tsx`](src/components/site-analytics.tsx)), 데이터 이용 안내의 **방문 통계** 문단. 화면 모양·저장 형식·DB는 바꾸지 않았다. 한 요청 안에서 화면과 제목이 공개 판본을 한 번만 읽도록 `getPublicData`를 요청 단위로 공유한다.
+- 단위: [`site-metadata.test.ts`](tests/site-metadata.test.ts) 8개. 주소 결정 순서, 운영 배포만 검색 허용, 소개의 길이·줄바꿈·마크다운 제거, 작품 소개 → 부제 → 본문 첫 문단 순서, sitemap 목록(설정이 없는 설정집과 집필실 제외, 잘못된 날짜), 방문을 세는 경로와 로그인한 브라우저 판별.
+- 서버 응답: 합성 localhost(webpack dev, 공개 판본 두 개와 필명을 돌려주는 가짜 Supabase REST). curl로 홈·서재·자기소개·데이터 이용 안내·집필실·독서 화면·설정집·없는 작품 주소의 `<head>`를 읽었다. 제목·소개·canonical·og 태그가 모두 `<head>` 안에 있고, 소개가 없는 작품은 본문 첫 문단(150자, 말줄임표)을 쓰며, 없는 작품 주소와 설정이 없는 설정집·집필실은 noindex다. 독서 화면의 og:image는 작품별 그림 주소, 다른 화면은 `/opengraph-image`다. sitemap은 여섯 주소(설정이 없는 작품의 설정집 제외)를 냈다.
+- 미리보기 그림: 짧은 제목과 부제, 33자 제목 두 경우의 PNG(1200×630)를 눈으로 확인했다. 긴 제목은 글자를 줄여 세 줄 안에 들어가고 오른쪽 궤도 무늬와 겹치지 않게 글 너비를 720px로 묶었다.
+- 브라우저: Chromium 1280px·360px. 서재에서 작품을 눌러 독서 화면으로 가면 탭 제목이 작품 제목으로, 뒤로 가면 `서재 · Orbis Tertius`로 바뀐다. 페이지 오류 0. 개발 실행의 통계 스크립트 기록으로 서재 방문은 전송 대상, 집필실 방문과 로그인 토큰이 있는 브라우저의 서재 방문은 `beforeSend`에서 제외됨을 확인했다(개발 실행은 실제로 보내지 않는다).
+- 운영 빌드: CI와 같은 글꼴 응답으로 `pnpm build`한 뒤 `VERCEL_ENV=production`과 가짜 운영 도메인으로 `next start`를 띄웠다. robots가 전체 허용·`/api/`·`/auth/` 제외·sitemap 주소를 내고, sitemap과 canonical·og 주소가 그 도메인으로 나오며, 독서 화면은 `index, follow`, 집필실과 없는 작품 주소는 noindex다. 그림 경로 두 곳의 빌드 추적 목록에 마루 부리 Regular·Bold가 들어 있고 그림이 200 PNG로 나온다. 개발 실행에서는 운영 배포가 아니므로 robots가 전체 차단, 모든 화면이 noindex다.
+- 그 밖: 타입 검사, Node 단위 전체, 바뀐 파일 Anti Slop, `pnpm docs:check`.
+- 미확인: Vercel 배포에서의 운영 도메인 값과 그림, 카카오톡·X·Slack의 실제 미리보기, Google·네이버 등록과 색인, Vercel 대시보드에서 통계를 켠 뒤의 실제 수집, Safari·Firefox, CI·운영.
+
 ## 2026-11-15 — 제목·문단으로 바꾼 목록 항목은 목록 밖으로
 
 - 기준 main `76d50c6`. 사용자 보고: 같은 날 앞선 수정 뒤 하위 항목을 제목으로 바꿔도 들여쓴 채 남는다. 앞선 수정은 바꾼 줄을 상위 항목 안에 두었다. [`blockStyle`](src/lib/editor-block-style.ts)을 바꿔, 바꾼 줄과 그 뒤에 딸린 내용을 한 단계씩 끌어올려 목록 밖(목록이 놓인 곳의 왼쪽 끝)까지 내보낸다. 인용 안의 목록은 인용 안에 남는다. 읽은 안내: [편집 도구](docs/editor-tools.md#문자문단)·[본문 우클릭](docs/editor-context-menu.md)·[실제 조작 검증](docs/interaction-verification.md).

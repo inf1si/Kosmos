@@ -23,6 +23,7 @@ SF 중단편·장편을 쓰는 개인 작가를 위한 집필실, 공개 독서 
 | 개발 에이전트 스킬과 코드 검사 | [Attention Span·Karpathy·완료 검증·Anti Slop](agent-tools.md) |
 | 직접 원고를 쓰고 게시·복원하기 | [사용 안내](user-guide.md) |
 | 서재 기본 순서 편집·자동 정렬·독자 정렬 | [서재 순서](library-order.md) |
+| 검색 결과·링크 미리보기에 보이는 내용과 방문 통계 | [검색 노출·방문 통계](search-and-visits.md) |
 | 작품을 구상·집필·보관 책장으로 나누기 | [집필실 책장](work-shelves.md) |
 | 이름·필명과 개인 소개를 작성·공개하기 | [자기소개](author-profile.md) |
 | 작품 밖의 아이디어·자료·아이스박스 | [개인 노트](personal-notes.md) |

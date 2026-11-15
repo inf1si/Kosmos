@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ThemeControls } from '@/components/theme-toggle';
+import { SITE_DESCRIPTION, pageMetadata } from '@/lib/site-metadata';
 import styles from './public-info.module.css';
 
-export const metadata: Metadata = {
-  title: 'Orbis Tertius',
-};
+export const metadata: Metadata = pageMetadata({ description: SITE_DESCRIPTION, path: '/' });
 
 export default function Home() {
   return (

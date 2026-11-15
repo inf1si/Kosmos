@@ -1,7 +1,15 @@
+import type { Metadata } from 'next';
+import { libraryDescription, pageMetadata } from '@/lib/site-metadata';
 import { Library } from '@/components/public-site';
 import { getPublicAuthorName, getPublicData } from '@/lib/public-data';
 
 export const dynamic='force-dynamic';
+
+export async function generateMetadata():Promise<Metadata>{
+  const [data,author]=await Promise.all([getPublicData().catch(()=>[]),getPublicAuthorName()]);
+
+  return pageMetadata({title:'서재',description:libraryDescription(data,author),path:'/library'});
+}
 
 export default async function LibraryPage(){let data:Awaited<ReturnType<typeof getPublicData>>=[];let error='';
 

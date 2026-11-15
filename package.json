@@ -39,6 +39,7 @@
     "@tiptap/pm": "^3.0.0",
     "@tiptap/react": "^3.0.0",
     "@tiptap/starter-kit": "^3.0.0",
+    "@vercel/analytics": "2.0.1",
     "@vercel/oidc": "4.0.7",
     "@workflow/serde": "5.0.0",
     "ai": "7.0.166",
