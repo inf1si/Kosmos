@@ -11,18 +11,35 @@ import { inlineFontSize,bulletListStyles,orderedListStyles,listStyleType } from 
 import styles from './editor-tools.module.css';
 import { Select } from './select';
 
-/** The size of the selected text: a number when it is all one size, null when sizes are mixed, undefined when none is set. */
-function selectedFontSize(editor:Editor){
-  const {from,to}=editor.state.selection,sizes=new Set<number|undefined>();
-  editor.state.doc.nodesBetween(from,to,node=>{if(node.isText)sizes.add(inlineFontSize(node.marks.find(m=>m.type.name==='fontSize')?.attrs.size));});
+/** A heading draws unsized text at a multiple of the manuscript size; this is that size for the heading holding `pos`, in the 0.5px steps the control accepts. */
+function headingFontSize(editor:Editor,pos:number,base:number){
+  const heading=editor.view.nodeDOM(editor.state.doc.resolve(pos).before());
 
-  return sizes.size>1?null:[...sizes][0];
+  if(!(heading instanceof HTMLElement))return undefined;
+
+  return Math.round(base*parseFloat(getComputedStyle(heading).fontSize)/parseFloat(getComputedStyle(editor.view.dom).fontSize)*2)/2;
+}
+
+/** The size of the selected text (a number when it is all one size, null when sizes are mixed, undefined when it is all at the manuscript size) and whether any of it carries a size of its own. */
+function selectedFontSize(editor:Editor,base:number){
+  const {from,to}=editor.state.selection,sizes=new Set<number|undefined>();let marked=false;
+  editor.state.doc.nodesBetween(from,to,(node,pos,parent)=>{
+    if(!node.isText)return;
+
+    const own=inlineFontSize(node.marks.find(m=>m.type.name==='fontSize')?.attrs.size);
+
+    if(own)marked=true;
+
+    sizes.add(own??(parent?.type.name==='heading'?headingFontSize(editor,pos,base):undefined));
+  });
+
+  return {size:sizes.size>1?null:[...sizes][0],marked};
 }
 
 /** With text selected the size applies to that text only; with nothing selected it is this device's manuscript display size. */
 export function FontSizeControl({editor,readonly,size,onBaseChange}:{editor:Editor|null;readonly:boolean;size:number;onBaseChange:(size:number)=>void}){
   const ranged=!!editor&&!readonly&&!editor.state.selection.empty;
-  const selected=ranged?selectedFontSize(editor):undefined,shown=selected===null?null:selected??size;
+  const {size:selected,marked}=ranged?selectedFontSize(editor,size):{size:undefined,marked:false},shown=selected===null?null:selected??size;
   const [value,setValue]=useState(shown===null?'':String(shown)),[open,setOpen]=useState(false),listRef=useRef<HTMLDivElement>(null);
   useEffect(()=>setValue(shown===null?'':String(shown)),[shown]);
   useEffect(()=>{if(open)requestAnimationFrame(()=>{const current=listRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]');current?.scrollIntoView({block:'center'});current?.focus();});},[open]);
@@ -44,7 +61,7 @@ if(value.trim()&&validFontSize(n)){if(n!==shown)apply(n);}else setValue(shown===
 if(!ranged)e.currentTarget.blur();}else if(e.key==='Escape')setValue(shown===null?'':String(shown));}}/><span>px</span>
     <Popover open={open} onOpenChange={setOpen} width={208} title={label} onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label="글자 크기 목록" className={`icon-button ${styles.sizeToggle}`} aria-pressed={open}><ChevronDown size={14}/></IconButton>}>
       <div className={styles.sizeList} ref={listRef}>{fontSizes.map(n=><button key={n} type="button" aria-pressed={n===shown} onClick={()=>{apply(n);setOpen(false);}}>{n}<span>px</span></button>)}</div>
-      {ranged&&<div className="popover-actions"><button type="button" className="button" disabled={selected===undefined} onClick={()=>{apply(null);setOpen(false);}}>기본 크기로</button></div>}
+      {ranged&&<div className="popover-actions"><button type="button" className="button" disabled={!marked} onClick={()=>{apply(null);setOpen(false);}}>기본 크기로</button></div>}
     </Popover>
   </span>;
 }
