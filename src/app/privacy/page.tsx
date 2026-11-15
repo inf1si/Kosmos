@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ThemeControls } from '@/components/theme-toggle';
+import { pageMetadata } from '@/lib/site-metadata';
 import styles from '../public-info.module.css';
 
-export const metadata: Metadata = {
-  title: '개인정보 및 데이터 이용 안내 · Orbis Tertius',
+export const metadata: Metadata = pageMetadata({
+  title: '개인정보 및 데이터 이용 안내',
   description: 'Orbis Tertius의 원고 저장, Google Drive 백업, 선택적 AI 대화에 대한 데이터 이용 안내.',
-};
+  path: '/privacy',
+});
 
 export default function PrivacyPage() {
   return (
@@ -133,6 +135,16 @@ export default function PrivacyPage() {
             같은 계정의 모든 작품에서 사용하며 다음 질문부터 선택한 AI 제공자에게 전송합니다.
             공개 판본에는 포함하지 않습니다. 이전 브라우저 지침은 직접 불러와 저장할 수 있습니다.
             모델 선택은 프리셋과 별도로 현재 브라우저·도메인에만 보관합니다.
+          </p>
+        </section>
+
+        <section aria-labelledby="visits-title">
+          <h2 id="visits-title">방문 통계</h2>
+          <p>
+            홈·서재·독서 화면·설정집·소개 화면의 방문은 Vercel Web Analytics로 집계합니다.
+            쿠키를 쓰지 않으며 열어 본 주소, 들어온 경로, 지역, 기기·브라우저 종류와 시각을 모읍니다.
+            방문자는 요청에서 만든 해시로 구분하고 이 구분은 24시간 뒤 버려집니다.
+            집필실과 로그인 화면, 집필실에 로그인한 브라우저의 방문은 보내지 않습니다.
           </p>
         </section>
 

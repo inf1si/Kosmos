@@ -3,11 +3,16 @@ import Link from 'next/link';
 import { ThemeControls } from '@/components/theme-toggle';
 import { PublicAuthorProfile } from '@/components/public-author-profile';
 import { getPublicAuthorProfile } from '@/lib/public-data';
+import { SITE_DESCRIPTION, metaDescription, pageMetadata, plainMarkdown } from '@/lib/site-metadata';
 import styles from '../public-info.module.css';
 
 export const dynamic='force-dynamic';
 
-export const metadata:Metadata={title:'Who I Am · Orbis Tertius'};
+export async function generateMetadata():Promise<Metadata>{
+  const profile=await getPublicAuthorProfile().catch(()=>null);
+
+  return pageMetadata({title:'Who I Am',description:metaDescription(plainMarkdown(profile?.bio||''))||SITE_DESCRIPTION,path:'/about'});
+}
 
 export default async function AboutPage(){
   let profile:Awaited<ReturnType<typeof getPublicAuthorProfile>>=null,error='';

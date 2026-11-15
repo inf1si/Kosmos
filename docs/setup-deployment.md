@@ -146,6 +146,14 @@ Vercel 프로젝트 설정:
 
 Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supabase 프로젝트를 사용한다. Production과 Preview의 환경 변수를 구분한다. 실제 원고를 넣기 전 독립 백업과 복원 시험을 완료한다.
 
+### 검색 등록과 방문 통계
+
+2026-11-15 추가. 동작은 [검색 노출·방문 통계](search-and-visits.md)에 있다.
+
+1. Vercel 프로젝트의 **Analytics**에서 Web Analytics를 켠다. 켜기 전에는 방문을 수집하지 않는다. Hobby는 월 50,000건까지 무료다.
+2. [Google Search Console](https://search.google.com/search-console)과 [네이버 서치어드바이저](https://searchadvisor.naver.com)에 운영 주소를 등록하고 `/sitemap.xml`을 제출한다. 소유 확인용 메타 태그나 파일이 필요하면 코드에 추가한다.
+3. 운영 주소가 Vercel 운영 도메인과 다르게 알려져야 할 때만 `NEXT_PUBLIC_SITE_URL`을 Production에 넣는다.
+
 배포가 성공하면 기본 URL에서 로그인·저장·게시·익명 독서·각주·설정·첨부·ZIP을 다시 확인한다. 사용자 도메인 구매와 연결은 이후에 수행한다. 도메인 변경 후 기기 저장소가 달라지는 점도 확인한다.
 
 ## 7. 다음 연결
