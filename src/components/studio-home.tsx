@@ -18,6 +18,8 @@ import { IconButton, Modal, Popover } from './primitives';
 import { useStudio } from './studio-provider';
 import { useWorkShelfDrag } from './work-shelf-drag';
 import { Select } from './select';
+import { useWorkViews } from './use-work-views';
+import { viewsLabel } from '@/lib/work-views';
 
 const kinds={scene:'원고',wiki:'설정집',memo:'메모'} as const;
 
@@ -28,9 +30,9 @@ const place=(doc:NovelDocument)=>doc.kind==='scene'?doc.chapter.trim()||'부 미
 type ShelfForm={type:'create'}|{type:'rename';id:string}|{type:'move';id:string};
 
 function HomeWorkCard({work,current,readonly,canTrash,onOpen,onEdit,onConfirm,onMove}:{work:Work;current:boolean;readonly:boolean;canTrash:boolean;onOpen:()=>void;onEdit:()=>void;onConfirm:(confirm:WorkConfirm)=>void;onMove?:(at:HTMLElement|null)=>void}){
-  const updated=noteDate(workUpdatedAt(work)),card=useRef<HTMLButtonElement>(null);
+  const updated=noteDate(workUpdatedAt(work)),card=useRef<HTMLButtonElement>(null),views=useWorkViews();
 
-  return <><WorkContextMenu work={work} canTrash={canTrash} readonly={readonly} onOpen={onOpen} onEdit={onEdit} onConfirm={onConfirm} onMove={onMove?()=>onMove(card.current):undefined}><button ref={card} type="button" className="reference-card" aria-current={current||undefined} onClick={onOpen}><Book size={16} className="work-card-icon"/><span><strong>{work.title}</strong><small>{work.form} · 원고 {work.documents.filter(d=>d.kind==='scene').length} · {workChars(work).toLocaleString()}자{work.activePublicationId&&' · 게시 중'}{updated&&` · ${updated} 수정`}</small></span></button></WorkContextMenu><span className="work-card-actions">{onMove&&<IconButton className="icon-button work-shelf-move" label="책장 이동" aria-label={`${work.title} 책장 이동`} disabled={readonly} onClick={e=>onMove(e.currentTarget)}><LibraryBig size={15}/></IconButton>}<WorkFavoriteButton work={work} readonly={readonly}/></span></>;
+  return <><WorkContextMenu work={work} canTrash={canTrash} readonly={readonly} onOpen={onOpen} onEdit={onEdit} onConfirm={onConfirm} onMove={onMove?()=>onMove(card.current):undefined}><button ref={card} type="button" className="reference-card" aria-current={current||undefined} onClick={onOpen}><Book size={16} className="work-card-icon"/><span><strong>{work.title}</strong><small>{work.form} · 원고 {work.documents.filter(d=>d.kind==='scene').length} · {workChars(work).toLocaleString()}자{work.activePublicationId&&' · 게시 중'}{work.activePublicationId&&viewsLabel(views,work.id)}{updated&&` · ${updated} 수정`}</small></span></button></WorkContextMenu><span className="work-card-actions">{onMove&&<IconButton className="icon-button work-shelf-move" label="책장 이동" aria-label={`${work.title} 책장 이동`} disabled={readonly} onClick={e=>onMove(e.currentTarget)}><LibraryBig size={15}/></IconButton>}<WorkFavoriteButton work={work} readonly={readonly}/></span></>;
 }
 
 function collapsedShelves(key:string):Set<string>{

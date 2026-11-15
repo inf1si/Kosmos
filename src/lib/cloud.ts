@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { workViewRowsSchema, workViewTotals } from './work-views';
 import { z } from 'zod';
 import { Workspace, workspaceSchema, Publication, publicationSchema } from './model';
 import { libraryItemSchema, type LibraryItem } from './library-order';
@@ -123,6 +124,15 @@ export async function publicPublications():Promise<Publication[]>{
   if(error)throw error;
 
 return (data||[]).map(row=>publicationSchema.parse({...row.payload,libraryPosition:row.library_position}));
+}
+
+/** The signed-in author's view totals by work. A server without the view tables answers with an error. */
+export async function workViews(){
+  const {data,error}=await cloud().rpc('work_view_totals');
+
+  if(error)throw new Error(error.message);
+
+  return workViewTotals(workViewRowsSchema.parse(data));
 }
 
 export async function authorLibrary():Promise<LibraryItem[]>{

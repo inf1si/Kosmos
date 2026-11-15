@@ -7,6 +7,9 @@ export const SITE_DESCRIPTION='소설과 설정집을 읽는 서재.';
 
 export const SHARE_IMAGE_SIZE={width:1200,height:630};
 
+/** Ownership tags the search consoles ask for. They are public values, read from the home page's <head>. */
+export const SITE_VERIFICATION:NonNullable<Metadata['verification']>={google:'XqDiZCfZTg28FzPBMYCtgPrtY071sTSCLParZ6Xqvug',other:{'naver-site-verification':'ace604da573863dd537c36c746e4bdfe2ed54f02'}};
+
 const DESCRIPTION_LIMIT=150;
 
 type SiteEnvironment={NEXT_PUBLIC_SITE_URL?:string;VERCEL_ENV?:string;VERCEL_PROJECT_PRODUCTION_URL?:string;VERCEL_URL?:string;NODE_ENV?:string};

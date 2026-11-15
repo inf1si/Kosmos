@@ -1,5 +1,9 @@
 # 데이터 모델과 권한
 
+## 작품 조회수 (2026-11-15)
+
+`public.work_views`는 작품 UUID·날짜(한국 시간)를 기본키로 작가 UUID와 그날의 조회 횟수를 보관한다. 방문자를 구분하는 값은 없다. `record_work_view(작품)`은 활성 판본이 있는 작품만 그날 행을 만들거나 1을 더하며 `service_role`만 실행한다. 익명·로그인 역할은 테이블에 쓸 수 없고, 로그인한 작가는 자기 행만 읽는다. `work_view_totals()`는 호출한 작가의 작품별 전체 합계와 최근 7일 합계를 돌려준다. Workspace JSON·판본·백업 형식은 바꾸지 않는다. [동작](search-and-visits.md#작품-조회수)
+
 ## 서재 다운로드 (2026-11-03)
 
 `public.book_downloads`는 작품 UUID·형식(PDF/EPUB/HTML)을 기본키로 작가 UUID·파일 UUID·소유자/파일 UUID 경로·파일명·바이트 수·등록 시각을 보관한다. 파일 UUID·경로도 유일하다. 인증 작가만 자기 활성 작품에 등록·교체하며, 익명 읽기는 같은 작가·작품의 활성 판본이 있을 때만 허용한다. 소유자는 철회 뒤에도 목록 조회·해제가 가능하다. 별도 private `book-downloads` 버킷은 50MiB·허용 MIME·소유자 경로·현재 등록 파일에 대한 RLS를 사용한다. 객체는 덮어쓰지 않으며 파일 ID로 낙관적 교체/해제를 검사한다. RLS 비교를 위해 활성 publications의 owner_id 열 읽기를 허용한다(인증 비밀이 아닌 작가 식별자). Workspace·Publication JSON과 백업 버전은 바뀌지 않는다. [사용·저장 계약](book-export.md#서재-다운로드).

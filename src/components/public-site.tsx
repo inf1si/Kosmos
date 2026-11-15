@@ -16,6 +16,7 @@ import { ThemeControls, paletteOptions, useSitePalette, useSiteTheme } from './t
 import { manuscriptFonts, fontSizes, validFontSize } from '@/lib/editor-preferences';
 import { LIBRARY_SORT_KEY, librarySort, librarySorts, previewPublications, sortPublications, type LibrarySort } from '@/lib/library-order';
 import { Select } from './select';
+import { useRecordView } from './use-record-view';
 import {bookDownloadSchema,type BookDownload} from '@/lib/book-downloads';
 import {BookDownloadMenu} from './book-download-menu';
 
@@ -200,6 +201,7 @@ return <div className="reader-table" key={key}><table aria-label="본문 표" st
 
 export function Reader({workId,initial,localPreview,fontClassName='',author:initialAuthor}:{workId:string;initial:Publication[];localPreview:boolean;fontClassName?:string;author?:string}){
   const {data,loading,author,downloads}=usePublicData(initial,localPreview,initialAuthor);const pub=data.find(p=>p.workId===workId);
+  useRecordView(pub?.workId,!localPreview);
   const [settings,setSettings]=useState(false);const [toc,setToc]=useState(false);const [wikiId,setWikiId]=useState<string|null>(null);const wikiAnchor:PopoverAnchor=useRef(null);
   const [font,setFont]=useState('gowun');const [size,setSize]=useState(19);const [sizeDraft,setSizeDraft]=useState('19');const [width,setWidth]=useState(680);const [theme,setTheme]=useSiteTheme();const [palette,setPalette]=useSitePalette();const [progress,setProgress]=useState(0);
   const restored=useRef(false);
