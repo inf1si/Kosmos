@@ -20,9 +20,9 @@ export type AgentMode=z.infer<typeof agentModeSchema>;
 
 export const agentStateSchema=z.enum(['queued','running','completed','failed','cancelled']);
 
-export const agentSessionInputSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),scope:agentScopeSchema,mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
+export const agentSessionInputSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),scope:agentScopeSchema,mode:agentModeSchema,provider:providerSchema,web:z.boolean().optional()}).strict();
 
-export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),focusId:z.uuid().optional(),model:vertexModelIdSchema.optional(),reasoning:reasoningLevelSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
+export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),focusId:z.uuid().optional(),model:vertexModelIdSchema.optional(),reasoning:reasoningLevelSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean().optional()}).strict();
 
 const destination={parentId:z.uuid().nullable(),sectionId:z.string().min(1),beforeId:z.uuid().nullable()};
 
@@ -111,6 +111,31 @@ export async function agentHash<T>(value:T){
 
 export function agentDocuments(snapshot:AgentSnapshot){
   return snapshot.work?snapshot.work.documents.map(doc=>({id:doc.id,title:doc.title||'제목 없음',kind:doc.kind,text:plainText(doc.content),content:doc.content,properties:{chapter:doc.chapter,status:doc.status,category:doc.category,pov:doc.pov,storyTime:doc.storyTime,summary:doc.summary}})):snapshot.notes.map(note=>({id:note.id,title:note.title||'제목 없음',kind:'note',text:plainText(note.content),content:note.content,properties:{tags:note.tags.join(', ')}}));
+}
+
+/** Every other work and note space, read-only. Trashed items have left the workspace arrays, so they never appear. */
+export function agentLibrary(state:Workspace,scope:AgentScope){
+  const works=state.works.filter(w=>!(scope.kind==='work'&&w.id===scope.id)).flatMap(work=>agentDocuments(captureAgentScope(state,{kind:'work',id:work.id})).map(d=>({...d,place:`작품 ${work.title||'제목 없음'}`})));
+  const spaces=resolveNoteNavigation(state).spaces.filter(space=>!(scope.kind==='notes'&&space.id===scope.id)).flatMap(space=>agentDocuments(captureAgentScope(state,{kind:'notes',id:space.id})).map(d=>({...d,place:`노트 ${space.title.trim()||'이름 없는 작업공간'}`})));
+
+  return [...works,...spaces];
+}
+
+/** IDs the writer still has anywhere. Past turns and memories whose sources left the workspace stay out of the next context. */
+export function agentLiveIds(state:Workspace){
+  return new Set([...state.works.flatMap(w=>w.documents.map(d=>d.id)),...(state.notes||[]).map(n=>n.id)]);
+}
+
+/** One line per other work and note space, so the agent knows what it can look up outside its scope. */
+export function agentLibraryMap(state:Workspace,scope:AgentScope,budget=3000){
+  const lines=[...state.works.filter(w=>!(scope.kind==='work'&&w.id===scope.id)).map(w=>`- 작품 ${w.title||'제목 없음'} (${w.form}) · 문서 ${w.documents.length}개`),...resolveNoteNavigation(state).spaces.filter(s=>!(scope.kind==='notes'&&s.id===scope.id)).map(s=>`- 노트 ${s.title.trim()||'이름 없는 작업공간'} · 노트 ${notesInSpace(state,s.id).length}개`)];
+  const kept:string[]=[];let used=0;
+
+  for(const line of lines){if(used+line.length>budget)break;kept.push(line);used+=line.length+1;}
+
+  if(kept.length<lines.length)kept.push(`(목록에 싣지 못한 곳 ${lines.length-kept.length}개는 searchLibrary로 찾는다.)`);
+
+  return kept.join('\n')||'(다른 작품이나 노트 작업공간이 없다.)';
 }
 
 /** New paragraphs go after the one block that holds the quote, or at the end. Existing blocks keep their formatting. */
