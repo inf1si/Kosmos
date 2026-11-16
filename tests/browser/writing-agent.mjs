@@ -204,6 +204,22 @@ async function checkModelMenu(control){
   await control.click();const menu=page.getByRole('listbox');await menu.waitFor();const layout=await menu.evaluate(el=>({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,overflow:el.scrollWidth>el.clientWidth+1}));assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow,JSON.stringify(layout));await page.keyboard.press('Escape');
 }
 
+/** The thinking control is the shared Select in an existing row: in every palette and mode it and its menu stay inside the screen. */
+async function checkThinkingPalettes(control,view){
+  const width=page.viewportSize().width,original=await page.evaluate(()=>({palette:document.documentElement.dataset.palette,theme:document.documentElement.dataset.theme}));
+
+  for(const palette of PALETTES)for(const mode of ['light','dark']){
+    await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});await checkModelMenu(control);
+    const row=await control.evaluate(el=>{const parent=el.closest('.chat-provider,.note-ai-settings,.agent-settings');
+
+return {overflow:parent.scrollWidth>parent.clientWidth+1,page:document.documentElement.scrollWidth>document.documentElement.clientWidth+1};});assert(!row.overflow&&!row.page,JSON.stringify({view,width,palette,mode,row}));
+
+    if(['cassette-light','cyber-dark'].includes(`${palette}-${mode}`))await page.screenshot({path:resolve(output,`thinking-${view}-${width}-${palette}-${mode}.png`)});
+  }
+
+  await page.evaluate(({palette,theme})=>{for(const [key,value] of [['palette',palette],['theme',theme]]){if(value===undefined)delete document.documentElement.dataset[key];else document.documentElement.dataset[key]=value;}},original);results.push({width,view:`thinking-${view}`,combinations:PALETTES.length*2});
+}
+
 async function prepareRemoteContext(context){
   if(browserBase===base)return;
   await context.routeWebSocket('**/realtime/**',socket=>socket.close());
@@ -325,7 +341,7 @@ async function verifySharedAI(width){
     if(provider==='gemini'){assert.deepEqual(thought.generationConfig.thinkingConfig,{thinkingLevel:'high'});assert.equal(thought.generationConfig.maxOutputTokens,8192+32768);}
     else{assert.equal(thought.thinking.type,'adaptive');assert.equal(thought.output_config.effort,'medium');}
 
-    if(provider==='gemini'){await page.screenshot({path:resolve(output,`thinking-chat-${width}.png`)});results.push({width,view:'thinking-chat'});}
+    if(provider==='gemini'){await page.screenshot({path:resolve(output,`thinking-chat-${width}.png`)});await checkThinkingPalettes(thinking,'chat');}
 
     if(provider==='anthropic'){
       await panel.getByRole('button',{name:'AI 설정',exact:true}).click();const settings=page.getByRole('dialog',{name:'AI 설정',exact:true});
@@ -340,7 +356,7 @@ async function verifySharedAI(width){
   await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');
   await chooseOption(page.getByRole('combobox',{name:'AI 질문 제공자',exact:true}),'gemini');await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),longModel);await checkModelMenu(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}));await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),'gemini-fast');
   // The level chosen in the chat panel is the same device preference here; changing it here changes the next request.
-  const cursorThinking=page.getByRole('combobox',{name:'AI 질문 생각 단계',exact:true});assert.equal(await selectedValue(cursorThinking),'high');await chooseOption(cursorThinking,'low');await page.screenshot({path:resolve(output,`thinking-cursor-${width}.png`)});results.push({width,view:'thinking-cursor'});
+  const cursorThinking=page.getByRole('combobox',{name:'AI 질문 생각 단계',exact:true});assert.equal(await selectedValue(cursorThinking),'high');await chooseOption(cursorThinking,'low');await page.screenshot({path:resolve(output,`thinking-cursor-${width}.png`)});await checkThinkingPalettes(cursorThinking,'cursor');
   const cursorBox=await page.locator('.note-ai-settings').evaluate(el=>({overflow:el.scrollWidth>el.clientWidth+1,right:el.getBoundingClientRect().right}));assert(!cursorBox.overflow&&cursorBox.right<=width+1,JSON.stringify(cursorBox));
   await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'적용할 AI 답변'}).inputValue(),'합성 문서 답변');assert.equal(modelCalls.at(-1).model,'gemini-fast');assert.deepEqual(modelCalls.at(-1).body.generationConfig.thinkingConfig,{thinkingLevel:'low'});await page.keyboard.press('Escape');
   await page.goto(`${browserBase}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await page.getByRole('button',{name:'AI 대화',exact:true}).click();
@@ -370,7 +386,7 @@ try{
     await openAgent();const dialog=page.getByRole('dialog',{name:'작업 대화',exact:true});await dialog.waitFor();
     await chooseOption(dialog.getByRole('combobox',{name:'작업 대화 선택'}),'');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 실행 방식'}),'review');await chooseOption(dialog.getByRole('combobox',{name:'에이전트 모델'}),longModel);await checkModelMenu(dialog.getByRole('combobox',{name:'에이전트 모델'}));await chooseOption(dialog.getByRole('combobox',{name:'에이전트 모델'}),'gemini-selected');
     const agentThinking=dialog.getByRole('combobox',{name:'에이전트 생각 단계',exact:true});assert.equal(await selectedValue(agentThinking),'low','the agent starts from the level saved for this provider');assert.deepEqual((await readOptions(agentThinking)).map(option=>option.label),['생각 · 자동','생각 · 낮음','생각 · 중간','생각 · 높음']);await chooseOption(agentThinking,'medium');
-    const settingsBox=await dialog.locator('.agent-settings').evaluate(el=>({overflow:el.scrollWidth>el.clientWidth+1,right:el.getBoundingClientRect().right}));assert(!settingsBox.overflow&&settingsBox.right<=width+1,JSON.stringify(settingsBox));await page.screenshot({path:resolve(output,`thinking-agent-${width}.png`)});results.push({width,view:'thinking-agent'});
+    const settingsBox=await dialog.locator('.agent-settings').evaluate(el=>({overflow:el.scrollWidth>el.clientWidth+1,right:el.getBoundingClientRect().right}));assert(!settingsBox.overflow&&settingsBox.right<=width+1,JSON.stringify(settingsBox));await page.screenshot({path:resolve(output,`thinking-agent-${width}.png`)});await checkThinkingPalettes(agentThinking,'agent');
     await dialog.getByRole('button',{name:'웹 조사 · Gemini',exact:true}).click();await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled());await until(async()=>!await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled()&&await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement),'accepted request returns focus without losing new typing');
     await until(async()=>await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()||(await pg.query("select * from public.agent_runs where status='completed'")).rows.length>0,'running task visible');
 
