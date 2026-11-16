@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { agentSessionHistory,agentAdmin,agentWorkspace,readAgentRun,recordAgentEvent } from './agent-server';
-import { agentContext,agentDocuments,agentOverlay,agentOperationSchema,agentSearch,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
+import { agentContext,agentDocuments,agentLibrary,agentLiveIds,agentOverlay,agentOperationSchema,agentSearch,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
+import { providerConfig } from './ai-provider';
 import { researchAgentWeb } from './agent-web';
 
 function operationId(key:string){
@@ -16,6 +17,8 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
   const overlay=agentOverlay(run.snapshot,run.operations),docs=agentDocuments(overlay);
   const {state}=await agentWorkspace(run),live=captureAgentScope(state,run.snapshot.scope),liveIds=new Set(agentDocuments(live).map(d=>d.id));
   const available=docs.filter(d=>liveIds.has(d.id)||run.operations.some(op=>op.type==='create'&&op.id===d.id));
+  // Other works and note spaces are read live and never staged; only the run's own scope can change.
+  const library=()=>agentLibrary(state,run.snapshot.scope);
 
   if(old&&name==='stage_change'){
     const op=agentOperationSchema.parse(input);
@@ -26,7 +29,7 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
   if(old&&(name==='remember'||name==='plan'))return {saved:true,detail:old.detail};
 
   if(name==='history_search'||name==='history_read'){
-    const history=await agentSessionHistory(run.session_id,run.owner_id),context=agentContext(history.runs.filter(r=>r.created_at<run.created_at),history.memories,liveIds);
+    const history=await agentSessionHistory(run.session_id,run.owner_id),context=agentContext(history.runs.filter(r=>r.created_at<run.created_at),history.memories,agentLiveIds(state));
 
     if(name==='history_search'){
       const {query,offset}=z.object({query:z.string(),offset:z.number().int().min(0)}).parse(input),terms=query.toLocaleLowerCase().split(/\s+/).filter(Boolean),hits=context.allRuns.filter(r=>terms.every(term=>(r.message+'\n'+r.answer).toLocaleLowerCase().includes(term)));
@@ -50,20 +53,28 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     return {...agentSearch(available,query,offset),sections,folders:nodes.filter(n=>n.type==='folder')};
   }
 
+  if(name==='library_search'){
+    const {query,offset}=z.object({query:z.string(),offset:z.number().int().min(0)}).parse(input),docs=library(),places=new Map(docs.map(d=>[d.id,d.place]));
+    await recordAgentEvent(run,{id:callId,title:'다른 작품·노트 검색',detail:query||'문서 목록'});
+    const result=agentSearch(docs,query,offset);
+
+    return {...result,documents:result.documents.map(d=>({...d,place:places.get(d.id),readOnly:true}))};
+  }
+
   if(name==='read'){
-    const {id,offset,length}=z.object({id:z.uuid(),offset:z.number().int().min(0),length:z.number().int().min(1).max(50000)}).parse(input),doc=available.find(d=>d.id===id);
+    const {id,offset,length}=z.object({id:z.uuid(),offset:z.number().int().min(0),length:z.number().int().min(1).max(50000)}).parse(input),own=available.find(d=>d.id===id),other=own?undefined:library().find(d=>d.id===id),doc=own||other;
 
-    if(!doc)throw new Error('허용한 자료를 찾지 못했습니다.');
-    await recordAgentEvent(run,{id:callId,title:'문서 읽기',detail:doc.title,sources:[{id:doc.id,title:doc.title}]});
+    if(!doc)throw new Error('자료를 찾지 못했습니다. 휴지통에 있거나 지워진 문서일 수 있습니다.');
+    await recordAgentEvent(run,{id:callId,title:other?'다른 자료 읽기':'문서 읽기',detail:other?`${other.place} · ${doc.title}`:doc.title,sources:[{id:doc.id,title:doc.title}]});
 
-    return {id:doc.id,title:doc.title,kind:doc.kind,properties:doc.properties,text:doc.text.slice(offset,offset+length),nextOffset:offset+length<doc.text.length?offset+length:null,blocks:richBlocks(doc.content).map(b=>({id:b.id,index:b.index,characters:b.text.length})),characters:doc.text.length};
+    return {id:doc.id,title:doc.title,kind:doc.kind,...other&&{place:other.place,readOnly:true},properties:doc.properties,text:doc.text.slice(offset,offset+length),nextOffset:offset+length<doc.text.length?offset+length:null,blocks:richBlocks(doc.content).map(b=>({id:b.id,index:b.index,characters:b.text.length})),characters:doc.text.length};
   }
 
   if(name==='stage_change'){
     if(run.mode==='discuss')throw new Error('함께 생각하기에서는 문서를 변경하지 않습니다.');
     const operation=agentOperationSchema.parse(input),op=(operation.type==='create'||operation.type==='folder')?{...operation,id:operationId(`${runId}:${callId}`)}:operation;
 
-    if('id' in op&&op.type!=='create'&&op.type!=='folder'&&!available.some(d=>d.id===op.id)&&!overlay.work?.navigation?.nodes.some(n=>n.id===op.id)&&!overlay.navigation?.nodes.some(n=>n.id===op.id))throw new Error('자료 범위를 벗어났습니다.');
+    if('id' in op&&op.type!=='create'&&op.type!=='folder'&&!available.some(d=>d.id===op.id)&&!overlay.work?.navigation?.nodes.some(n=>n.id===op.id)&&!overlay.navigation?.nodes.some(n=>n.id===op.id))throw new Error(library().some(d=>d.id===op.id)?'다른 작품이나 노트 작업공간의 문서는 읽기만 할 수 있습니다.':'자료 범위를 벗어났습니다.');
     agentOverlay(run.snapshot,[...run.operations,op]);
     // The work log names the changed document or folder; an ID alone tells the writer nothing.
     const folder=[...overlay.work?.navigation?.nodes||[],...overlay.navigation?.nodes||[]].find(n=>n.id===op.id),named=docs.find(d=>d.id===op.id)?.title||(folder?.type==='folder'?folder.title:'제목 없음');
@@ -75,7 +86,7 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
   if(name==='inspect')return agentDiff(run.snapshot,run.operations);
 
   if(name==='web'){
-    if(!run.web)throw new Error('이 작업의 웹 조사가 꺼져 있습니다.');
+    if(!run.web||!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL))throw new Error('웹 조사 연결이 없습니다.');
     const {query,url}=z.object({query:z.string().trim().min(1),url:z.string().nullable()}).parse(input),result=await researchAgentWeb(query,url||undefined);
     await recordAgentEvent(run,{id:callId,title:url?'웹 페이지 읽기':'Google 웹 조사',detail:result.text,sources:result.sources,...result.searchHtml&&{searchHtml:result.searchHtml}});
 
@@ -84,9 +95,9 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
 
   if(name==='remember'){
     const {title,content,sourceIds}=z.object({title:z.string().max(300),content:z.string(),sourceIds:z.array(z.uuid())}).parse(input);
-    const sources=sourceIds.map(id=>available.find(d=>d.id===id));
+    const others=sourceIds.some(id=>!available.some(d=>d.id===id))?library():[],sources=sourceIds.map(id=>available.find(d=>d.id===id)||others.find(d=>d.id===id));
 
-    if(sources.some(s=>!s))throw new Error('기억의 출처가 자료 범위를 벗어났습니다.');
+    if(sources.some(s=>!s))throw new Error('기억의 출처를 찾지 못했습니다.');
     const result=await db.from('agent_memories').upsert({id:operationId(`${runId}:${callId}`),session_id:run.session_id,owner_id:run.owner_id,title,content,sources:sources.map(s=>({id:s!.id,title:s!.title})),updated_at:new Date().toISOString()});
 
     if(result.error)throw new Error('기억을 저장하지 못했습니다.');

@@ -3,7 +3,7 @@ import { isStepCount,type ModelMessage } from 'ai';
 import { FatalError,getWorkflowMetadata } from 'workflow';
 import { writingAgentTools } from './agent-tools';
 import { agentLanguageModel } from './agent-language-model';
-import { agentContext,agentDocuments,agentMap,agentOverlay,captureAgentScope } from './writing-agent';
+import { agentContext,agentLibraryMap,agentLiveIds,agentMap,agentOverlay } from './writing-agent';
 import { buildAgentInstructions } from './agent-instructions';
 import { agentRunRecord,agentStepSettings } from './agent-context';
 import { activePromptPreset } from './ai-prompt-presets';
@@ -17,8 +17,8 @@ async function prepareAgentRun(id:string,workflow:string){
   if(claim.error||!claim.data){await db.from('agent_runs').update({status:'failed',error:'다른 작업이 진행 중이거나 실행 권한이 바뀌었습니다.'}).eq('id',id).eq('status','queued');throw new FatalError('이미 진행 중이거나 중단된 작업입니다.');}
 
   const run=await readAgentRun(id,workflow),history=await agentSessionHistory(run.session_id,run.owner_id);
-  const {state}=await agentWorkspace(run),live=captureAgentScope(state,run.snapshot.scope);
-  const context=agentContext(history.runs.filter(r=>r.created_at<run.created_at),history.memories,new Set(agentDocuments(live).map(d=>d.id)),Number(process.env.AGENT_HISTORY_CHARACTERS)||60000);
+  const {state}=await agentWorkspace(run);
+  const context=agentContext(history.runs.filter(r=>r.created_at<run.created_at),history.memories,agentLiveIds(state),Number(process.env.AGENT_HISTORY_CHARACTERS)||60000);
 
   // The app appends what each past run changed, so the next turn knows which documents moved and whether they were applied.
   const messages:ModelMessage[]=context.runs.flatMap(r=>{const answer=[r.answer,agentRunRecord(r)].filter(Boolean).join('\n\n');
@@ -29,7 +29,7 @@ return [{role:'user' as const,content:r.message},...answer?[{role:'assistant' as
 
   const focus=run.events.find(e=>e.id==='focus')?.sources?.[0];
   // The persona and skills are the writer's synced AI settings, read when the run starts.
-  const instructions=buildAgentInstructions({mode:run.mode,web:run.web,today:new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date()),persona:activePromptPreset(state.aiPreferences).prompt,skills:(state.aiPreferences?.skills||[]).map(skill=>({title:skill.title,description:skill.description,prompt:skill.prompt})),map:agentMap(agentOverlay(run.snapshot,run.operations),Number(process.env.AGENT_MAP_CHARACTERS)||16000),focus:focus?{id:focus.id,title:focus.title}:null,memories:context.memories.map(m=>({title:m.title,content:m.content,sources:m.sources}))});
+  const instructions=buildAgentInstructions({mode:run.mode,web:run.web,today:new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date()),persona:activePromptPreset(state.aiPreferences).prompt,skills:(state.aiPreferences?.skills||[]).map(skill=>({title:skill.title,description:skill.description,prompt:skill.prompt})),map:agentMap(agentOverlay(run.snapshot,run.operations),Number(process.env.AGENT_MAP_CHARACTERS)||16000),library:agentLibraryMap(state,run.snapshot.scope),focus:focus?{id:focus.id,title:focus.title}:null,memories:context.memories.map(m=>({title:m.title,content:m.content,sources:m.sources}))});
 
   return {run:{provider:run.provider,model:run.model,mode:run.mode,web:run.web,reasoning:eventReasoning(run.events)},messages,instructions,maxSteps:Number(process.env.AGENT_MAX_STEPS)||80,toolBudget:Number(process.env.AGENT_TOOL_RESULT_CHARACTERS)||80000};
 }

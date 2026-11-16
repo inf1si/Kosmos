@@ -14,6 +14,9 @@ import { runWritingAgent } from './agent-workflow';
 
 const json=<T,>(value:T,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
 
+/** Web research is a tool the agent picks for itself whenever the Gemini search connection exists. */
+const webAvailable=()=>!!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL);
+
 async function exportAgentRows(table:'agent_sessions'|'agent_runs'|'agent_memories',owner:string){
   const rows=[];
 
@@ -55,7 +58,7 @@ export async function writingAgentAPI(request:Request,path:string[]){
 
         const providers=providerSettingsStatus(request,auth.userId).providers;
 
-        return json({sessions:z.array(agentSessionSchema).parse(list).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)),providers,webAvailable:!!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL)});
+        return json({sessions:z.array(agentSessionSchema).parse(list).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)),providers,webAvailable:webAvailable()});
       }
 
       if(method==='POST'){
@@ -71,7 +74,7 @@ if(input.provider==='openai')return json({error:'Vertex AI의 Gemini 또는 Clau
 
 return json({session:agentSessionSchema.parse(old.data)});}
 
-        const saved=await db.from('agent_sessions').insert({...input,owner_id:auth.userId,workspace_id:row.data.id}).select('*').single();
+        const saved=await db.from('agent_sessions').insert({...input,web:true,owner_id:auth.userId,workspace_id:row.data.id}).select('*').single();
 
         if(saved.error)throw new Error('작업 대화를 만들지 못했습니다.');
 
@@ -113,9 +116,7 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
 
         if(!config)return json({error:'Vertex AI의 Gemini·Claude 모델과 서버 인증을 설정하세요.'},503);
 
-        if(input.mode!==session.mode||input.provider!==session.provider||input.web!==session.web)return json({error:'대화 설정이 바뀌었습니다. 확인 후 다시 보내세요.'},409);
-
-        if(session.web&&!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL))return json({error:'Gemini 웹 조사 연결이 필요합니다.'},503);
+        if(input.mode!==session.mode||input.provider!==session.provider)return json({error:'대화 설정이 바뀌었습니다. 확인 후 다시 보내세요.'},409);
         const workspace=await auth.client.from('workspaces').select('id,payload').eq('id',session.workspace_id).eq('owner_id',auth.userId).single();
 
         if(workspace.error)return json({error:'원고를 읽지 못했습니다.'},403);
@@ -137,7 +138,7 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
         const focus=input.focusId?agentDocuments(snapshot).find(d=>d.id===input.focusId):undefined;
         const level=reasoningChoice(input.reasoning,reasoningLevels(config.provider,config.model,true));
         const events=[...focus?[{id:'focus',title:'열어 둔 문서',sources:[{id:focus.id,title:focus.title}]}]:[],...level!=='auto'?[reasoningEvent(level)]:[]];
-        const saved=await db.from('agent_runs').insert({id:input.id,session_id:session.id,owner_id:auth.userId,workspace_id:session.workspace_id,message:input.message,provider:config.provider,model:config.model,mode:session.mode,web:session.web,snapshot,base_hash:hash,operations,...events.length&&{events}}).select('*').single();
+        const saved=await db.from('agent_runs').insert({id:input.id,session_id:session.id,owner_id:auth.userId,workspace_id:session.workspace_id,message:input.message,provider:config.provider,model:config.model,mode:session.mode,web:webAvailable(),snapshot,base_hash:hash,operations,...events.length&&{events}}).select('*').single();
 
         if(saved.error)throw new Error('작업 요청을 보관하지 못했습니다.');
         await db.from('agent_sessions').update({updated_at:new Date().toISOString()}).eq('id',session.id).eq('owner_id',auth.userId);
