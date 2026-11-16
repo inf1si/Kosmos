@@ -6,6 +6,7 @@ import { chatInputSchema } from '@/lib/ai-conversation';
 import { chatContext,ChatContextError } from '@/lib/ai-chat-context';
 import { readLimitedJson,BodyLimitError } from '@/lib/http';
 import { resolveRequestPrompt } from '@/lib/ai-prompt-presets';
+import { reasoningChoice,reasoningLevels } from '@/lib/ai-reasoning';
 
 export const maxDuration=60;
 
@@ -30,7 +31,7 @@ if(row.error)return json({error:'원고 권한을 확인하세요.'},403);
 
 try{prompt=resolveRequestPrompt(workspace.aiPreferences,input);}catch(e){return json({error:e instanceof Error?e.message:'시스템 프롬프트를 확인하세요.'},409);}
 
-    try{const result=await requestChat(config,context.input,input.history,fetch,prompt.prompt);
+    try{const result=await requestChat(config,context.input,input.history,fetch,prompt.prompt,{},reasoningChoice(input.reasoning,reasoningLevels(config.provider,config.model)));
 
 if(!input.includeManuscript)result.suggestions=[];
 

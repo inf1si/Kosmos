@@ -5,6 +5,7 @@ import { insertDocument, insertFolder, moveNavigation, resolveNavigation } from 
 import { addNote, newNote } from './personal-notes';
 import { applyNoteNavigation, editNoteTree, moveNote, notesInSpace, resolveNoteNavigation } from './note-navigation';
 import { providerSchema,vertexModelIdSchema } from './ai-provider';
+import { reasoningLevelSchema } from './ai-reasoning';
 
 export const agentScopeSchema=z.discriminatedUnion('kind',[
   z.object({kind:z.literal('work'),id:z.uuid()}),
@@ -21,7 +22,7 @@ export const agentStateSchema=z.enum(['queued','running','completed','failed','c
 
 export const agentSessionInputSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),scope:agentScopeSchema,mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
 
-export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),focusId:z.uuid().optional(),model:vertexModelIdSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
+export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),focusId:z.uuid().optional(),model:vertexModelIdSchema.optional(),reasoning:reasoningLevelSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean()}).strict();
 
 const destination={parentId:z.uuid().nullable(),sectionId:z.string().min(1),beforeId:z.uuid().nullable()};
 

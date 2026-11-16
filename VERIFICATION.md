@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-11-16 — AI 생각 단계 선택
+
+- 기준 main `a609b4e`(PR #129 병합), 작업 뒤 `24fb4db`(PR #130)를 합침. 사용자 요청: thinking 단계별 선택과 자동. 읽은 안내: [AI](docs/ai.md), [작업 대화](docs/writing-agent.md), [Vertex 연결](docs/vertex-ai.md), [디자인 가이드](docs/design-guide.md) 8절 AI 설정·커서 명령·32절, [실제 조작 검증](docs/interaction-verification.md). 설치된 SDK(`ai` 7.0.166, `@ai-sdk/google` 4.0.114, `@ai-sdk/anthropic` 4.0.99)의 `reasoning` 처리와 모델별 단계표를 읽고 단계 목록을 맞췄다.
+- 바꾼 것: [`ai-reasoning.ts`](src/lib/ai-reasoning.ts)(모델별 단계·가까운 아래 단계로 맞추기·작업 내역 항목), [`ai-vertex.ts`](src/lib/ai-vertex.ts)(단계와 늘린 출력 한도), AI 대화 경로·작업 대화 API/Workflow, [`use-ai-connection.ts`](src/components/use-ai-connection.ts)(기기 설정 `kosmos:ai-reasoning:<namespace>`), AI 대화·커서 AI 질문·작업 대화의 공용 `Select`. 대상과 기대: 고른 단계가 다음 요청 하나에만이 아니라 같은 계정의 세 화면에 이어지고, 자동은 생각 설정을 보내지 않으며, 모델에 없는 단계는 보이지도 보내지지도 않는다.
+- 단위 [`ai-reasoning.test.ts`](tests/ai-reasoning.test.ts) 4개: 21개 모델 ID의 단계표, 저장 단계 맞추기, 실제 SDK로 만든 Vertex 요청 본문(Gemini 3 `thinkingLevel`, Gemini 2.5 예산, Claude `adaptive`+`effort`, 자동이면 생각 필드 없음·출력 8,192)과 요청 형식 거절. Claude 4.5 이하에 생각을 켜면 SDK가 JSON 답 도구 강제를 풀어 버리는 것을 이 검사에서 발견해 AI 대화·AI 질문에서는 자동만 두었다. 전체 단위 334개 통과, 타입 검사 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버·Workflow·SDK, 합성 Postgres·Supabase·모델, Chromium 1280/360px): 23경우·페이지 오류 0·합성 모델 92회. AI 대화에서 Gemini 높음·Claude 중간을 골라 보낸 요청 본문, 커서 AI 질문이 같은 설정을 이어받고 낮음으로 바꾸면 그 값이 실림, 새로고침 뒤 노트 대화에 저장 단계가 남고 자동이면 생각 설정·늘린 한도가 없음, 작업 대화의 모든 단계 요청에 중간이 실리고 실행 중 잠김, 작업 내역의 **생각 단계** 항목이 작업 개수에서 빠짐, API로 모델에 없는 최대는 높음으로 저장·전송, 모르는 값 400, Claude 작업 대화 최대.
+- 색 계열: 같은 검사에서 세 화면의 생각 선택 칸과 펼친 목록을 쉰네 조합 × 두 폭에서 열어 화면·줄 밖으로 나가지 않고 가로 스크롤이 없음을 측정했다. 보라 다크, 카세트 라이트, 사이버 다크를 1280/360px 화면으로 눈으로 보았다. 새 색·모양·글자 크기는 없다.
+- 미확인: 실제 Vertex 모델이 각 단계를 받는지와 단계별 지연·요금·답의 차이, CI·운영 배포, Safari·Firefox·터치.
+
 ## 2026-11-16 — 원고 줄·문단 간격 기본값과 도구 모음 조절
 
 - 기준 main `a609b4e`(PR #129 병합). 사용자 요청: 독서 화면은 그대로 두고 줄간격·문단 간격 기본값을 좁히며, 설정에서만 바꾸던 이 값을 편집기 도구 모음으로 꺼낼 것. 읽은 안내: [디자인 가이드](docs/design-guide.md) 0절·8절 서식 도구·설정·글꼴·노트·32절, [설정](docs/settings.md), [실제 조작 검증](docs/interaction-verification.md).
