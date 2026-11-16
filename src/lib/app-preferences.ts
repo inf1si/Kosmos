@@ -30,6 +30,11 @@ export const sidebarWidthRange={min:200,max:480} as const;
 
 const defaultSidebarWidth:number|null=null;
 
+/** Dragged reference panel (연결·첨부·노트·AI 대화) width bounds; `null` keeps the CSS default (300px, AI 대화 360px). */
+export const referenceWidthRange={min:280,max:960} as const;
+
+const defaultReferenceWidth:number|null=null;
+
 export type PlotBoardMode='part'|'status'|'time';
 
 export type GraphScope='all'|'local';
@@ -42,7 +47,7 @@ const spacingDefaults=2;
 /** Version 1 (until 2026-11-16) used line height 2 and paragraph gap 1.2. */
 const previousSpacing={lineHeight:2,paragraphGap:1.2} as const;
 
-export const defaultAppPreferences={lineHeight:1.8,paragraphIndent:1,paragraphGap:0.6,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home',sidebarWidth:defaultSidebarWidth,spacingDefaults} as const;
+export const defaultAppPreferences={lineHeight:1.8,paragraphIndent:1,paragraphGap:0.6,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home',sidebarWidth:defaultSidebarWidth,referenceWidth:defaultReferenceWidth,spacingDefaults} as const;
 
 const d=defaultAppPreferences;
 
@@ -64,6 +69,8 @@ const appPreferencesSchema=z.object({
   studioStart:z.enum(['home','last']).catch(d.studioStart),
   /** Studio and notes sidebar width set by dragging its edge. */
   sidebarWidth:z.number().int().min(sidebarWidthRange.min).max(sidebarWidthRange.max).nullable().catch(d.sidebarWidth),
+  /** Studio and notes reference panel width set by dragging its left edge. */
+  referenceWidth:z.number().int().min(referenceWidthRange.min).max(referenceWidthRange.max).nullable().catch(d.referenceWidth),
   /** The spacing defaults the saved values were written against; missing before 2026-11-16. Every save writes the current version. */
   spacingDefaults:z.literal(spacingDefaults).optional().catch(undefined),
 }).catch({...defaultAppPreferences});
@@ -87,6 +94,9 @@ export function parseAppPreferences(raw:string|null):AppPreferences{
 
 /** CSS variable read by `.studio-sidebar` in studio.css. */
 export function sidebarWidthStyle(p:AppPreferences){return p.sidebarWidth===null?{}:{'--sidebar-width':`${p.sidebarWidth}px`};}
+
+/** CSS variable read by `.reference-panel` in studio-tools.css. */
+export function referenceWidthStyle(p:AppPreferences){return p.referenceWidth===null?{}:{'--reference-width':`${p.referenceWidth}px`};}
 
 /** CSS variables read by `.manuscript` rules in studio.css. */
 export function manuscriptLayoutStyle(p:AppPreferences){return {'--manuscript-line':String(p.lineHeight),'--manuscript-indent':`${p.paragraphIndent}em`,'--manuscript-gap':`${p.paragraphGap}em`,'--manuscript-width':`${p.manuscriptWidth}px`};}
