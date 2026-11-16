@@ -58,7 +58,9 @@ export async function runWritingAgent(id:string){
     const result=await agent.generate({messages});
     // The last step has no tools, so reaching the step limit ends in an answer; automatic apply is still held back.
     const issue=result.finishReason==='tool-calls'||result.finishReason==='length'||result.steps.length>=maxSteps?'실행 단계 또는 모델 출력 한도에 도달했습니다. 준비한 변경을 확인하고 이어서 요청하세요.':'';
-    await completeAgentRun(id,workflow,result.text,{input:result.totalUsage.inputTokens||0,output:result.totalUsage.outputTokens||0},issue);
+    // A provider that reports no token counts leaves the usage unknown instead of zero.
+    const {inputTokens:input,outputTokens:output}=result.totalUsage;
+    await completeAgentRun(id,workflow,result.text,input===undefined&&output===undefined?null:{input:input||0,output:output||0},issue);
   }catch{
     try{await completeAgentRun(id,workflow,'',null,'작업을 완료하지 못했습니다. 연결·모델 문맥·작업 상태를 확인하세요.');}catch{/* Cancellation and revoked access retain the already saved state. */}
   }

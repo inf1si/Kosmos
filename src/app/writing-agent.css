@@ -24,3 +24,5 @@
 .agent-panel .chat-composer>div .button{min-height:32px}
 .agent-panel-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
 .agent-panel-settings .select{width:100%;min-width:0;max-width:100%}
+.agent-memory-edit{display:flex;flex-direction:column;gap:8px}.agent-memory-edit input,.agent-memory-edit textarea{width:100%;border-radius:var(--ctl-r,6px)}.agent-memory-edit textarea{line-height:1.75;max-height:40dvh}.agent-memory-edit .agent-change-actions{justify-content:flex-end;margin:0}
+.agent-usage{font-size:12px;margin:4px 0 0;text-align:right}

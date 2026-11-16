@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-11-17 — AI 대화: 사용량·기억 고치기·대화 삭제·분기
+
+- 기준: main 46be590(PR #137) 위. 사용자 요청: 설계 대비 빠진 기능 구현(1묶음 둘째 부분). 읽은 안내: [작업 대화](docs/writing-agent.md), [설계](docs/personal-knowledge-agent-design.md)의 세션 분기·기억 수정·사용량, [디자인 가이드](docs/design-guide.md) AI 대화 절.
+- 바꾼 것: [`agent-api.ts`](src/lib/agent-api.ts)의 `DELETE sessions/:id`·`POST sessions/:id/branch`·`PATCH memories/:id`, API 경로의 `DELETE` 내보내기, [`writing-agent.ts`](src/lib/writing-agent.ts)의 `agentBranchMemory`·`agentUsageTotal`·`agentMemoryEditSchema`, [`agent-workflow.ts`](src/lib/agent-workflow.ts)의 사용량 미보고 시 `null`, 패널의 토큰 표시·고치기·여기서 분기·대화 삭제 확인 창. 응답이 JSON이 아니면 브라우저 원문 오류 대신 기본 문구를 보인다.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 분기 기억(고른 요청까지·완료한 것만·예산·없는 요청 거절), 사용량 합(끝난 작업만, 보고 없음은 미확인), 기억 고치기 입력 검사.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버, 합성 Supabase·PGlite에 실제 마이그레이션, 합성 모델): 25경우·페이지 오류 0. 작업 내역 줄의 `토큰 N`이 DB `usage` 합과 같고, 두 번째 실행 뒤 **이 대화 · 토큰 N**이 보인다. 기억 **고치기**로 내용이 DB에 바뀌고 출처는 남는다. 첫 답의 **여기서 분기**가 `· 분기` 대화를 같은 범위로 만들고 **분기 전 대화** 기억에 그 요청까지만 담긴다. **대화 삭제** 확인 뒤 분기 대화와 그 기억이 DB에서 없어지고 원래 대화는 남으며, 초점은 질문 칸으로 돌아온다. 360px 대화·변경·기억 보기에 가로 넘침 없음.
+- 고친 결함(검사 중 발견): API 경로가 `DELETE`를 내보내지 않아 405와 브라우저 원문 오류가 보였다.
+- 미확인: 실제 Vertex 모델의 사용량 보고, 운영 Supabase에서의 삭제·대량 삽입, CI·운영 배포, Safari·Firefox, 쉰네 조합 전체(quick은 팔레트 하나).
+
 ## 2026-11-17 — AI 대화: 연결 찾기·속성 고치기·변경 점검
 
 - 기준: main 8904ebc(PR #136) 위. 사용자 요청: 설계 대비 빠진 기능 구현(1묶음 첫 부분). 읽은 안내: [작업 대화](docs/writing-agent.md), [설계](docs/personal-knowledge-agent-design.md)의 첫 도구 목록, [디자인 가이드](docs/design-guide.md) AI 대화.
