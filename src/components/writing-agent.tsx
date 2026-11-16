@@ -2,7 +2,7 @@
 
 import { useCallback,useEffect,useMemo,useRef,useState } from 'react';
 import { z } from 'zod';
-import { ArrowUp,FileText,GitBranch,MessageSquarePlus,Settings2,Square,Trash2,Undo2 } from 'lucide-react';
+import { ArrowUp,FileText,Folder,GitBranch,MessageSquarePlus,Settings2,Square,Trash2,Undo2 } from 'lucide-react';
 import { IconButton,Modal } from './primitives';
 import { useAIConnection } from './use-ai-connection';
 import { reasoningLabels,eventReasoning,isReasoningEvent } from '@/lib/ai-reasoning';
@@ -21,6 +21,8 @@ import { providerLabels,providerSchema,activeAIProviders,type AIProvider } from 
 import { agentSessionSchema,agentRunViewSchema,agentMemorySchema,agentChangesSchema,agentScopeSchema,agentModeSchema,agentUsageTotal,type AgentSession,type AgentRunView,type AgentMemory,type AgentScope,type AgentMode } from '@/lib/writing-agent';
 
 const stateNames={queued:'대기 중',running:'진행 중',completed:'완료',failed:'실패',cancelled:'중단'};
+
+const structureNames={created:'새로 만듦',moved:'옮김',renamed:'이름 바꿈',reordered:'순서 바꿈'};
 
 const modeNames={discuss:'함께 생각하기',review:'검토하며 실행',execute:'맡겨 실행'};
 
@@ -143,9 +145,18 @@ return true;}catch(e){setError(e instanceof Error?e.message:'작업을 처리하
 
 return false;}finally{setBusy(false);}};
 
-  const sync=async()=>{if(s.conflict)throw new Error('원고 충돌을 먼저 확인하세요.');await s.flush();await s.syncNow();const row=await db.workspaces.get(namespace);
+  // syncNow returns at once while an autosave is already uploading, so wait for that upload and try again before giving up.
+  const sync=async()=>{
+    for(let attempt=0;attempt<20;attempt++){
+      if(s.conflict)throw new Error('원고 충돌을 먼저 확인하세요.');await s.flush();await s.syncNow();const row=await db.workspaces.get(namespace);
 
-if(!row||row.dirty||row.pendingRequest)throw new Error('원고 동기화를 마친 뒤 다시 시도하세요.');};
+      if(!row)break;
+
+      if(!row.dirty&&!row.pendingRequest)return;await new Promise(resolve=>setTimeout(resolve,300));
+    }
+
+    throw new Error('원고 동기화를 마친 뒤 다시 시도하세요.');
+  };
 
   const settings=async(change:{mode?:AgentMode;provider?:AIProvider})=>{
     if(selected){await request(`sessions/${selected}`,z.object({session:agentSessionSchema}),'PATCH',JSON.stringify(change));setSessions(list=>list.map(session=>session.id===selected?{...session,...change}:session));}
@@ -215,7 +226,7 @@ function WorkLog({run,onOpen}:{run:AgentRunView;onOpen:(id:string)=>void}){
 function AgentChanges({agent,onOpen}:{agent:Agent;onOpen:(id:string)=>void}){
   const {runs,latest,changes,busy,active}=agent;
 
-  return <div className="agent-changes">{runs.some(r=>r.operations.length>0)&&<Select aria-label="변경 작업 선택" value={latest?.id||''} onChange={agent.setChangeId}>{runs.filter(r=>r.operations.length>0).map(r=><option value={r.id} key={r.id}>{r.message.slice(0,80)}</option>)}</Select>}{!latest||!changes?<p className="muted">변경이 없습니다.</p>:<><div className="agent-change-actions"><span>{changes.rows.length}개 문서{changes.structure?` · 구조 변경 ${changes.structure}개`:''}</span>{latest.applied_version!==null&&!latest.reverted?<button type="button" className="button" disabled={busy||!!active} onClick={()=>void agent.apply(latest,true)}><Undo2 size={14}/>되돌리기</button>:<><button type="button" className="button" disabled={busy||!!active||latest.reverted} onClick={()=>void agent.discard(latest)}>작업본 버리기</button><button type="button" className="button primary" disabled={busy||!!active||latest.reverted||latest.status!=='completed'} onClick={()=>void agent.apply(latest)}>변경 적용</button></>}</div>{latest.reverted&&<p className="muted">되돌리거나 버린 변경입니다.</p>}{changes.rows.map(row=><section key={row.id}><div className="agent-diff-title"><FileText size={15}/><strong>{row.title}</strong>{row.created&&<span className="chip">새 문서</span>}{latest.applied_version!==null&&!latest.reverted&&<button type="button" className="button" onClick={()=>onOpen(row.id)}>문서 열기</button>}</div>{row.properties&&<dl className="agent-properties">{row.properties.map(p=><div key={p.name}><dt>{p.name}</dt><dd><span className="muted">{p.before||'없음'}</span> → {p.after||'없음'}</dd></div>)}</dl>}{(row.created||row.before!==row.after)&&<div className="agent-diff"><div><span className="muted">변경 전</span><pre>{row.before||'빈 문서'}</pre></div><div><span className="muted">변경 후</span><pre>{row.after||'빈 문서'}</pre></div></div>}</section>)}</>}</div>;
+  return <div className="agent-changes">{runs.some(r=>r.operations.length>0)&&<Select aria-label="변경 작업 선택" value={latest?.id||''} onChange={agent.setChangeId}>{runs.filter(r=>r.operations.length>0).map(r=><option value={r.id} key={r.id}>{r.message.slice(0,80)}</option>)}</Select>}{!latest||!changes?<p className="muted">변경이 없습니다.</p>:<><div className="agent-change-actions"><span>{changes.rows.length}개 문서{changes.structure.length?` · 구조 변경 ${changes.structure.length}개`:''}</span>{latest.applied_version!==null&&!latest.reverted?<button type="button" className="button" disabled={busy||!!active} onClick={()=>void agent.apply(latest,true)}><Undo2 size={14}/>되돌리기</button>:<><button type="button" className="button" disabled={busy||!!active||latest.reverted} onClick={()=>void agent.discard(latest)}>작업본 버리기</button><button type="button" className="button primary" disabled={busy||!!active||latest.reverted||latest.status!=='completed'} onClick={()=>void agent.apply(latest)}>변경 적용</button></>}</div>{latest.reverted&&<p className="muted">되돌리거나 버린 변경입니다.</p>}{changes.structure.length>0&&<section aria-label="구조 변경"><ul className="agent-structure">{changes.structure.map(item=><li key={item.id}>{item.folder?<Folder size={15}/>:<FileText size={15}/>}<div><strong>{item.title}</strong><span className="chip">{structureNames[item.change]}</span><p>{item.before&&<><span className="muted">{item.before}</span> → </>}{item.after}</p></div></li>)}</ul></section>}{changes.rows.map(row=><section key={row.id}><div className="agent-diff-title"><FileText size={15}/><strong>{row.title}</strong>{row.created&&<span className="chip">새 문서</span>}{latest.applied_version!==null&&!latest.reverted&&<button type="button" className="button" onClick={()=>onOpen(row.id)}>문서 열기</button>}</div>{row.properties&&<dl className="agent-properties">{row.properties.map(p=><div key={p.name}><dt>{p.name}</dt><dd><span className="muted">{p.before||'없음'}</span> → {p.after||'없음'}</dd></div>)}</dl>}{(row.created||row.before!==row.after)&&<div className="agent-diff"><div><span className="muted">변경 전</span><pre>{row.before||'빈 문서'}</pre></div><div><span className="muted">변경 후</span><pre>{row.after||'빈 문서'}</pre></div></div>}</section>)}</>}</div>;
 }
 
 function MemoryEditor({memory,agent,onDone}:{memory:AgentMemory;agent:Agent;onDone:()=>void}){

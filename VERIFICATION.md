@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-11-17 — AI 대화: 구조 변경 비교
+
+- 기준: main 6af5e33(PR #138) 위. 사용자 요청: 설계 대비 빠진 기능 구현(1묶음 마지막, 구조 변경 비교 화면). 읽은 안내: [작업 대화](docs/writing-agent.md), [디자인 가이드](docs/design-guide.md) AI 대화 절.
+- 바꾼 것: [`writing-agent.ts`](src/lib/writing-agent.ts)의 `agentStructure`와 `agentChangesSchema.structure`(수 → 목록), 이름 바꾼 문서의 `제목` 속성 행, 변경 보기의 `ul.agent-structure`. [`writing-agent.tsx`](src/components/writing-agent.tsx)의 요청 전 동기화가 진행 중인 자동 저장을 기다린다.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 새 폴더 위치, 폴더로 옮긴 문서(이전·이후 위치, 바뀐 제목), 새 문서 위치, 이름 바꾼 문서의 `제목` 행, 같은 자리에서 옮긴 항목만 순서 변경으로 보고, 본문만 바꾼 변경은 구조 목록 없음.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick: 25경우·페이지 오류 0. 새 문서가 구조 목록에 **새로 만듦**으로 하나 보이고 요약이 `구조 변경 1개`. 360px 변경 보기 넘침 없음.
+- 고친 결함(검사 중 발견): 이 검사가 7번 중 2번 "원고 동기화를 마친 뒤 다시 시도하세요"로 실패했다(커서 AI 질문 직후 자동 저장이 올라가는 중에 보낸 요청에서 `syncNow`가 바로 돌아옴). 기다렸다 다시 동기화하게 고친 뒤 2번 연속 통과했다(드문 경합이라 두 번으로 재발 없음을 보장하지는 않는다).
+- 미확인: 실제 모델이 만든 큰 구조 변경의 목록 길이, CI·운영, Safari·Firefox.
+
 ## 2026-11-17 — AI 대화: 사용량·기억 고치기·대화 삭제·분기
 
 - 기준: main 46be590(PR #137) 위. 사용자 요청: 설계 대비 빠진 기능 구현(1묶음 둘째 부분). 읽은 안내: [작업 대화](docs/writing-agent.md), [설계](docs/personal-knowledge-agent-design.md)의 세션 분기·기억 수정·사용량, [디자인 가이드](docs/design-guide.md) AI 대화 절.
