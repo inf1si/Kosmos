@@ -5,6 +5,7 @@ import { cloud,cloudConfigured } from '@/lib/cloud';
 import { vertexProviderSchema,vertexModelIdSchema,activeAIProviders,providerLabels,type AIProvider } from '@/lib/ai-provider';
 import { z } from 'zod';
 import type { AIProviderStatus } from '@/lib/ai-settings';
+import { reasoningLevelSchema,reasoningLevels,reasoningChoice,type ReasoningLevel } from '@/lib/ai-reasoning';
 import { useStudio } from './studio-provider';
 
 const initialProviders:AIProviderStatus[]=activeAIProviders.map(id=>({id,label:providerLabels[id],configured:false,model:null,models:[],source:null,browserStored:false,browserInvalid:false}));
@@ -13,19 +14,25 @@ const modelChoicesSchema=z.object({gemini:vertexModelIdSchema.optional(),anthrop
 
 type ModelChoices=z.infer<typeof modelChoicesSchema>;
 
-const selections=new Map<string,AIProvider>(),modelSelections=new Map<string,ModelChoices>();
+const reasoningChoicesSchema=z.object({gemini:reasoningLevelSchema.optional(),anthropic:reasoningLevelSchema.optional()});
 
-const choiceKey=(namespace:string)=>`kosmos:ai-provider:${namespace}`,modelKey=(namespace:string)=>`kosmos:ai-models:${namespace}`;
+type ReasoningChoices=z.infer<typeof reasoningChoicesSchema>;
+
+const selections=new Map<string,AIProvider>(),modelSelections=new Map<string,ModelChoices>(),reasoningSelections=new Map<string,ReasoningChoices>();
+
+const choiceKey=(namespace:string)=>`kosmos:ai-provider:${namespace}`,modelKey=(namespace:string)=>`kosmos:ai-models:${namespace}`,reasoningKey=(namespace:string)=>`kosmos:ai-reasoning:${namespace}`;
 
 function savedProvider(namespace:string){try{return vertexProviderSchema.safeParse(localStorage.getItem(choiceKey(namespace))).data;}catch{return undefined;}}
 
 function savedModels(namespace:string){try{return modelChoicesSchema.parse(JSON.parse(localStorage.getItem(modelKey(namespace))||'{}'));}catch{return {};}}
 
-/** Model IDs are device preferences; authentication stays on Vertex. Requests capture their chosen model. */
+function savedReasoning(namespace:string){try{return reasoningChoicesSchema.parse(JSON.parse(localStorage.getItem(reasoningKey(namespace))||'{}'));}catch{return {};}}
+
+/** Model IDs and thinking levels are device preferences; authentication stays on Vertex. Requests capture their chosen model. */
 export function useAIConnection(){
   const {namespace,user}=useStudio(),account=useRef(namespace);account.current=namespace;
   const [providers,setProviders]=useState(initialProviders),[provider,setProviderState]=useState<AIProvider>(selections.get(namespace)||'gemini');
-  const [choices,setChoices]=useState({namespace,values:modelSelections.get(namespace)||{}});
+  const [choices,setChoices]=useState({namespace,values:modelSelections.get(namespace)||{}}),[levels,setLevels]=useState({namespace,values:reasoningSelections.get(namespace)||{}});
   const [loadingProviders,setLoadingProviders]=useState(cloudConfigured),[storageAvailable,setStorageAvailable]=useState(false),[connectionError,setConnectionError]=useState('');
 
   const setProvider=useCallback((id:AIProvider)=>{selections.set(namespace,id);setProviderState(id);
@@ -42,6 +49,15 @@ export function useAIConnection(){
     try{localStorage.setItem(modelKey(namespace),JSON.stringify(values));}catch{}
 
     window.dispatchEvent(new CustomEvent('kosmos:ai-model',{detail:{namespace,id,model}}));
+  },[namespace]);
+
+  const setReasoning=useCallback((value:string,family:AIProvider)=>{
+    const id=vertexProviderSchema.parse(family),level=reasoningLevelSchema.parse(value),values={...(reasoningSelections.get(namespace)||savedReasoning(namespace)),[id]:level};
+    reasoningSelections.set(namespace,values);setLevels({namespace,values});
+
+    try{localStorage.setItem(reasoningKey(namespace),JSON.stringify(values));}catch{}
+
+    window.dispatchEvent(new CustomEvent('kosmos:ai-reasoning',{detail:{namespace,id,level}}));
   },[namespace]);
 
   const refreshProviders=useCallback(async(selected?:AIProvider,signal?:AbortSignal)=>{
@@ -65,6 +81,7 @@ if(next)setModel(next,selected);window.dispatchEvent(new CustomEvent('kosmos:ai-
 
   useEffect(()=>{
     const controller=new AbortController(),values=modelSelections.get(namespace)||savedModels(namespace);modelSelections.set(namespace,values);setChoices({namespace,values});
+    const saved=reasoningSelections.get(namespace)||savedReasoning(namespace);reasoningSelections.set(namespace,saved);setLevels({namespace,values:saved});
     void refreshProviders(undefined,controller.signal).catch(e=>{if(!controller.signal.aborted)setConnectionError(e instanceof Error?e.message:'AI 연결을 확인하지 못했습니다.');}).finally(()=>{if(!controller.signal.aborted)setLoadingProviders(false);});
 
     const change=(event:Event)=>{if(!(event instanceof CustomEvent))return;const parsed=z.object({namespace:z.literal(namespace),id:vertexProviderSchema}).safeParse(event.detail);
@@ -75,16 +92,25 @@ if(parsed.success)setProviderState(parsed.data.id);};
 
 if(parsed.success){const values={...modelSelections.get(namespace),[parsed.data.id]:parsed.data.model};modelSelections.set(namespace,values);setChoices({namespace,values});}};
 
+    const reasoningChange=(event:Event)=>{if(!(event instanceof CustomEvent))return;const parsed=z.object({namespace:z.literal(namespace),id:vertexProviderSchema,level:reasoningLevelSchema}).safeParse(event.detail);
+
+if(parsed.success){const values={...reasoningSelections.get(namespace),[parsed.data.id]:parsed.data.level};reasoningSelections.set(namespace,values);setLevels({namespace,values});}};
+
     const reconnect=(event:Event)=>{if(event instanceof CustomEvent&&z.object({namespace:z.literal(namespace)}).safeParse(event.detail).success)void refreshProviders(undefined,controller.signal).catch(e=>{if(!controller.signal.aborted)setConnectionError(e instanceof Error?e.message:'AI 연결을 확인하지 못했습니다.');});};
 
-    window.addEventListener('kosmos:ai-provider',change);window.addEventListener('kosmos:ai-model',modelChange);window.addEventListener('kosmos:ai-connection',reconnect);
+    window.addEventListener('kosmos:ai-provider',change);window.addEventListener('kosmos:ai-model',modelChange);window.addEventListener('kosmos:ai-reasoning',reasoningChange);window.addEventListener('kosmos:ai-connection',reconnect);
 
-    return()=>{controller.abort();window.removeEventListener('kosmos:ai-provider',change);window.removeEventListener('kosmos:ai-model',modelChange);window.removeEventListener('kosmos:ai-connection',reconnect);};
+    return()=>{controller.abort();window.removeEventListener('kosmos:ai-provider',change);window.removeEventListener('kosmos:ai-model',modelChange);window.removeEventListener('kosmos:ai-reasoning',reasoningChange);window.removeEventListener('kosmos:ai-connection',reconnect);};
   },[namespace,refreshProviders]);
 
   const modelFor=(family:AIProvider)=>{const status=providers.find(p=>p.id===family),id=vertexProviderSchema.safeParse(family),saved=id.success&&choices.namespace===namespace?choices.values[id.data]:undefined;
 
 return saved&&status?.models.includes(saved)?saved:status?.model||status?.models[0]||'';};
 
-  return {providers,provider,setProvider,model:modelFor(provider),modelFor,setModel:(value:string)=>setModel(value,provider),setProviderModel:setModel,loadingProviders,storageAvailable,connectionError,refreshProviders,currentProvider:providers.find(p=>p.id===provider)||initialProviders[0]};
+  /** The level to send and show for this model: the saved one, or the nearest the model supports. `deep` is the agent's full range. */
+  const reasoningFor=(family:AIProvider,model:string,deep=false)=>{const id=vertexProviderSchema.safeParse(family),options=reasoningLevels(family,model,deep),saved:ReasoningLevel|undefined=id.success&&levels.namespace===namespace?levels.values[id.data]:undefined;
+
+return {options,level:reasoningChoice(saved,options)};};
+
+  return {providers,provider,setProvider,model:modelFor(provider),modelFor,setModel:(value:string)=>setModel(value,provider),setProviderModel:setModel,reasoning:reasoningFor(provider,modelFor(provider)),reasoningFor,setReasoning:(value:string)=>setReasoning(value,provider),setProviderReasoning:setReasoning,loadingProviders,storageAvailable,connectionError,refreshProviders,currentProvider:providers.find(p=>p.id===provider)||initialProviders[0]};
 }

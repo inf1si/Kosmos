@@ -4,10 +4,14 @@ import type { ProviderConfig } from './ai-provider';
 import { vertexLanguageModel,type VertexRuntimeOptions } from './vertex-runtime';
 import { providerMessageContext } from './ai-request-context';
 import type { JsonValue } from './json-value';
+import type { ReasoningLevel } from './ai-reasoning';
 
-export async function requestChat(config:ProviderConfig,input:JsonValue,history:{role:'user'|'assistant';content:string}[],fetcher:typeof fetch=fetch,systemPrompt?:string,options:VertexRuntimeOptions={}):Promise<Review>{
+// Thinking counts toward the output limit, so a chosen level gets room on top of the 8,192-token answer.
+const thinkingRoom:Partial<Record<ReasoningLevel,number>>={low:8192,medium:20480,high:32768};
+
+export async function requestChat(config:ProviderConfig,input:JsonValue,history:{role:'user'|'assistant';content:string}[],fetcher:typeof fetch=fetch,systemPrompt?:string,options:VertexRuntimeOptions={},reasoning:ReasoningLevel='auto'):Promise<Review>{
   try{
-    const result=await generateText({model:vertexLanguageModel(config,{...options,fetch:fetcher}),...providerMessageContext(input,history,systemPrompt),output:Output.object({schema:reviewSchema}),maxRetries:0,maxOutputTokens:8192,abortSignal:AbortSignal.timeout(45000)});
+    const result=await generateText({model:vertexLanguageModel(config,{...options,fetch:fetcher}),...providerMessageContext(input,history,systemPrompt),output:Output.object({schema:reviewSchema}),maxRetries:0,maxOutputTokens:8192+(thinkingRoom[reasoning]||0),...reasoning!=='auto'&&{reasoning},abortSignal:AbortSignal.timeout(45000)});
 
     if(['length','content-filter','error','other'].includes(result.finishReason))throw new Error('불완전한 AI 응답');
 
