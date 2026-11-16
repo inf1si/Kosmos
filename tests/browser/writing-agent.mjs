@@ -160,7 +160,7 @@ return `$${parameters.length}`;}).join(',')})`);}
       rows=[];
 
       for(const item of Array.isArray(body)?body:[body]){
-        const keys=Object.keys(item);assert(keys.every(key=>/^[a-z_]+$/.test(key)));const update=String(req.headers.prefer).includes('merge-duplicates')?` on conflict(id) do update set ${keys.filter(k=>k!=='id').map(k=>`${k}=excluded.${k}`).join(',')}`:'';
+        const keys=Object.keys(item);assert(keys.every(key=>/^[a-z_]+$/.test(key)));const prefer=String(req.headers.prefer),update=prefer.includes('merge-duplicates')?` on conflict(id) do update set ${keys.filter(k=>k!=='id').map(k=>`${k}=excluded.${k}`).join(',')}`:prefer.includes('ignore-duplicates')?' on conflict(id) do nothing':'';
         rows.push(...(await pg.query(`insert into public.${name}(${keys.join(',')}) values(${keys.map((_,i)=>`$${i+1}`).join(',')})${update} returning *`,keys.map(key=>objectValue(key,item[key])))).rows);
       }
     }else if(req.method==='PATCH'){
@@ -555,6 +555,11 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow&&!layout.page,JSO
     if(!await page.locator('.studio-tools').getByRole('button',{name:'설정',exact:true}).isVisible())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();
     await page.locator('.studio-tools').getByRole('button',{name:'설정',exact:true}).click();const settingsDialog=page.getByRole('dialog',{name:'설정',exact:true});await settingsDialog.getByRole('button',{name:'저장 · 백업',exact:true}).click();
     const downloadPromise=page.waitForEvent('download');await settingsDialog.getByRole('button',{name:'AI 자료 내보내기',exact:true}).click();const download=await downloadPromise,archive=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(archive.format,'orbis-writing-agent');assert(archive.runs.some(row=>row.id===run.id));
+    // AI 자료 가져오기 brings a deleted conversation back from that file and skips what is still there.
+    await pg.query('delete from public.agent_sessions where id=$1',[run.session_id]);const restored=archive.runs.filter(row=>row.session_id===run.session_id).length,remembered=archive.memories.filter(row=>row.session_id===run.session_id).length;
+    await settingsDialog.getByLabel('AI 자료 파일').setInputFiles(await download.path());const importedNote=settingsDialog.getByRole('status').filter({hasText:'가져왔습니다'});await importedNote.waitFor();
+    assert.match(await importedNote.innerText(),new RegExp(`^대화 1개 · 실행 ${restored}개 · 기억 ${remembered}개를 가져왔습니다\\.( 이미 있거나 읽지 못한 ${archive.sessions.length+archive.runs.length+archive.memories.length-1-restored-remembered}개는 건너뛰었습니다\\.)?$`));
+    assert.equal((await pg.query('select id from public.agent_runs where session_id=$1',[run.session_id])).rows.length,restored);assert.equal((await pg.query('select owner_id from public.agent_sessions where id=$1',[run.session_id])).rows[0]?.owner_id,profile.id);
     await page.screenshot({path:resolve(output,`settings-agent-export-${width}.png`)});await settingsDialog.getByRole('button',{name:'닫기',exact:true}).click();
     await page.reload({waitUntil:'networkidle'});const reopened=await openPanel(initial.works[0].documents[0]);await reopened.locator('.agent-exchange .chat-message.user').filter({hasText:run.message}).waitFor();await context.close();
   }

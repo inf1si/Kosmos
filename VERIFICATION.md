@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-11-17 — AI 자료 가져오기
+
+- 기준: PR #140(문서 단위 병합, 병합 대기) 위. 사용자 요청: 설계 대비 빠진 기능 구현(2묶음 AI 자료 가져오기). 읽은 안내: [작업 대화](docs/writing-agent.md) 백업 절, [백업과 복구](docs/backup-restore.md), [설정](docs/settings.md).
+- 바꾼 것: [`agent-api.ts`](src/lib/agent-api.ts)의 `POST import`(행 검사, 소유자·작업공간 교체, `on conflict do nothing`, 실행·기억은 이 계정 대화에만), [`writing-agent.ts`](src/lib/writing-agent.ts)의 `agentImportRows`, [`writing-agent.tsx`](src/components/writing-agent.tsx)의 `importAgentData`(3.5MB 단위로 나눠 보냄), 설정 › 저장 · 백업 버튼. 패널 질문 칸 초점 복귀를 `busy`가 풀린 뒤로 옮김.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 가져온 행의 소유자·작업공간 교체, 진행 중 실행은 중단·workflow 비움, 형식이 틀린 행 제외.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick: 25경우·페이지 오류 0. 내보낸 파일에서 지운 대화를 **AI 자료 가져오기**로 되살림(1280·360px 각각: 대화 1개·실행 2개 복원, 소유자 일치, 나머지는 건너뜀 수로 표시), 새로 고침 뒤 패널에 그 대화의 질문이 다시 보임.
+- 고친 결함(검사 중 발견): 360px에서 요청 직후 질문 칸 초점이 빠져 "accepted request returns focus to the input"이 한 번 실패했다. 초점을 칸이 켜진 뒤 주게 고친 뒤 통과했다.
+- 미확인: 수십 MB 내보내기 파일, 다른 계정으로의 가져오기, 운영 Supabase, Safari·Firefox. 원고 ZIP 포함은 하지 않았다.
+
 ## 2026-11-17 — AI 대화: 문서 단위로 변경 적용·되돌리기
 
 - 기준: main 307c5fc(PR #139) 위. 사용자 요청: 설계 대비 빠진 기능 구현(2묶음 문서 단위 병합). 읽은 안내: [작업 대화](docs/writing-agent.md)의 적용·합치기 절, [설계](docs/personal-knowledge-agent-design.md)의 원본 반영 절.

@@ -589,3 +589,28 @@ export function agentUsageTotal(runs:Pick<AgentRunView,'usage'|'status'>[]){
 
   return {input:finished.reduce((sum,run)=>sum+(run.usage?.input||0),0),output:finished.reduce((sum,run)=>sum+(run.usage?.output||0),0),unknown:finished.filter(run=>!run.usage).length};
 }
+
+export const agentImportBatchSchema=z.object({sessions:z.array(z.json()).max(500).default([]),runs:z.array(z.json()).max(500).default([]),memories:z.array(z.json()).max(2000).default([])}).strict();
+
+/**
+ * Rows of an AI data export made fit for this account: the owner and workspace become the importer's, and a run that was
+ * still queued or running when exported is kept as cancelled so no workflow picks it up. Rows that fail the schema are left out.
+ */
+export function agentImportRows(batch:z.infer<typeof agentImportBatchSchema>,owner:string,workspace:string){
+  const sessions=batch.sessions.flatMap(row=>{const parsed=agentSessionSchema.safeParse(row);
+
+return parsed.success?[{...parsed.data,owner_id:owner,workspace_id:workspace}]:[];});
+
+  const runs=batch.runs.flatMap(row=>{const parsed=agentRunSchema.safeParse(row);
+
+    if(!parsed.success)return [];
+    const run=parsed.data;
+
+    return [{...run,owner_id:owner,workspace_id:workspace,workflow_id:null,status:run.status==='queued'||run.status==='running'?'cancelled' as const:run.status}];});
+
+  const memories=batch.memories.flatMap(row=>{const parsed=agentMemorySchema.safeParse(row);
+
+return parsed.success?[{...parsed.data,owner_id:owner}]:[];});
+
+  return {sessions,runs,memories};
+}

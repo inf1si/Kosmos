@@ -56,6 +56,43 @@ export async function exportAgentData(owner:string|null){
   link.href=url;link.download='orbis-agent.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
+const importFileSchema=z.object({format:z.literal('orbis-writing-agent'),version:z.literal(1),sessions:z.array(z.json()),runs:z.array(z.json()),memories:z.array(z.json())});
+
+const importResultSchema=z.object({sessions:z.number(),runs:z.number(),memories:z.number(),skipped:z.number()});
+
+/** Request bodies stay under the hosting limit, so a large export goes up in several batches; a single row over it is skipped. */
+const importBatchBytes=3_500_000;
+
+/**
+ * Brings back an AI data export (orbis-agent.json) into the signed-in account: conversations first, then their runs and memories.
+ * Rows that already exist are left as they are.
+ */
+export async function importAgentData(owner:string|null,file:File){
+  let parsed;
+
+  try{parsed=importFileSchema.parse(JSON.parse(await file.text()));}catch{throw new Error('AI 자료 내보내기 파일(orbis-agent.json)을 고르세요.');}
+
+  const total={sessions:0,runs:0,memories:0,skipped:0};
+
+  for(const table of ['sessions','runs','memories'] as const){
+    let batch:z.infer<typeof z.json>[]=[],size=0;
+
+    const send=async()=>{if(!batch.length)return;const result=await agentRequest(owner,'import',importResultSchema,'POST',JSON.stringify({[table]:batch}));total.sessions+=result.sessions;total.runs+=result.runs;total.memories+=result.memories;total.skipped+=result.skipped;batch=[];size=0;};
+
+    for(const row of parsed[table]){
+      const bytes=new TextEncoder().encode(JSON.stringify(row)).length;
+
+      if(bytes>importBatchBytes){total.skipped++;continue;}
+
+      if(size+bytes>importBatchBytes||batch.length>=(table==='memories'?2000:500))await send();batch.push(row);size+=bytes;
+    }
+
+    await send();
+  }
+
+  return total;
+}
+
 /** Sources can sit in other works or note spaces the agent only read, so the scope comes from where the document lives now. */
 function sourceScope(state:Workspace|null,id:string,fallback:AgentScope|null):AgentScope|null{
   const work=state?.works.find(w=>w.documents.some(d=>d.id===id));
@@ -287,9 +324,11 @@ return mine.find(session=>session.id===saved)?.id||mine[0]?.id||'';}});
   // Quick AI exchanges on this document since the session's last request ride along once, so "AI 대화에서 계속" continues them.
   const since=Date.parse(runs.at(-1)?.created_at||'')||0,previous=legacy.filter(m=>Date.parse(m.createdAt)>since).slice(-6).map(m=>({role:m.role,text:(m.role==='user'?m.text:m.result.review).slice(0,20000)}));
 
-  const send=()=>{if(!question.trim()||busy||!configured||s.conflict)return;void agent.send(question,scope,docId,pointed,previous).then(ok=>{if(ok){setQuestion('');setSourceIds([]);}
+  // The input is disabled while a request is sent, so focus returns once it is enabled again, not on a timer that may run first.
+  const refocus=useRef(false);
+  useEffect(()=>{if(!busy&&refocus.current){refocus.current=false;inputRef.current?.focus();}},[busy]);
 
-requestAnimationFrame(()=>inputRef.current?.focus());});};
+  const send=()=>{if(!question.trim()||busy||!configured||s.conflict)return;refocus.current=true;void agent.send(question,scope,docId,pointed,previous).then(ok=>{if(ok){setQuestion('');setSourceIds([]);}});};
 
   const settings=(event:{currentTarget:HTMLElement})=>{settingsTrigger.current=event.currentTarget;setSettingsOpen(true);};
 

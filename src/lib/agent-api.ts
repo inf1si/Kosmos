@@ -9,7 +9,7 @@ import { providerConfig } from './ai-provider';
 import { reasoningChoice,reasoningLevels,reasoningEvent } from './ai-reasoning';
 import { workspaceSchema } from './model';
 import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges } from './agent-server';
-import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentLibrary,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema,agentMemoryEditSchema,agentBranchInputSchema,agentBranchMemory } from './writing-agent';
+import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentLibrary,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema,agentMemoryEditSchema,agentBranchInputSchema,agentBranchMemory,agentImportBatchSchema,agentImportRows } from './writing-agent';
 import { runWritingAgent } from './agent-workflow';
 
 const json=<T,>(value:T,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
@@ -256,6 +256,37 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
       if(result.error)throw new Error('기억을 지우지 못했습니다.');
 
       return json({forgotten:true});
+    }
+
+    // An export file comes back in batches small enough for one request. Rows that exist already are skipped, never overwritten.
+    if(path[0]==='import'&&path.length===1&&method==='POST'){
+      const batch=agentImportBatchSchema.parse(await readLimitedJson(request,4*1024*1024));
+      const workspace=await auth.client.from('workspaces').select('id').eq('owner_id',auth.userId).single();
+
+      if(workspace.error)return json({error:'원고를 찾지 못했습니다.'},403);
+      const rows=agentImportRows(batch,auth.userId,z.uuid().parse(workspace.data.id));
+
+      const insert=async(table:'agent_sessions'|'agent_runs'|'agent_memories',values:object[])=>{
+        if(!values.length)return 0;
+        const result=await db.from(table).upsert(values,{onConflict:'id',ignoreDuplicates:true}).select('id');
+
+        if(result.error)throw new Error('AI 자료를 가져오지 못했습니다.');
+
+        return result.data.length;
+      };
+
+      // Runs and memories join only conversations of this account, whether imported now or before.
+      const sessionIds=[...new Set([...rows.runs,...rows.memories].map(row=>row.session_id))];
+      const sessions=await insert('agent_sessions',rows.sessions);
+      const owned=sessionIds.length?await db.from('agent_sessions').select('id').eq('owner_id',auth.userId).in('id',sessionIds):{data:[],error:null};
+
+      if(owned.error)throw new Error('AI 자료를 가져오지 못했습니다.');
+      const mine=new Set(z.array(z.object({id:z.uuid()})).parse(owned.data).map(row=>row.id));
+      const runs=await insert('agent_runs',rows.runs.filter(row=>mine.has(row.session_id)));
+      const memories=await insert('agent_memories',rows.memories.filter(row=>mine.has(row.session_id)));
+      const offered=batch.sessions.length+batch.runs.length+batch.memories.length;
+
+      return json({sessions,runs,memories,skipped:offered-sessions-runs-memories});
     }
 
     if(path[0]==='export'&&path.length===1&&method==='GET'){

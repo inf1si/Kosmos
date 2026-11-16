@@ -7,7 +7,7 @@ import { fromText,plainText,uid,workspaceSchema } from '../src/lib/model';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { addNoteSpace,moveNote,noteSpaceFor,resolveNoteNavigation } from '../src/lib/note-navigation';
 import { resolveNavigation } from '../src/lib/document-navigation';
-import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,agentBranchMemory,agentUsageTotal,agentStructure,agentMemoryEditSchema,agentMergeApply,agentMergeRevert,type AgentOperation } from '../src/lib/writing-agent';
+import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,agentBranchMemory,agentUsageTotal,agentStructure,agentMemoryEditSchema,agentMergeApply,agentMergeRevert,agentImportRows,agentImportBatchSchema,type AgentOperation } from '../src/lib/writing-agent';
 import { buildAgentInstructions } from '../src/lib/agent-instructions';
 import { DEFAULT_AI_SYSTEM_PROMPT } from '../src/lib/ai-settings';
 import { AgentLanguageModel } from '../src/lib/agent-language-model';
@@ -343,4 +343,15 @@ test('문서 단위 병합: 고친 문서가 그대로면 다른 문서의 새 �
   const opened=structuredClone(edited),touchedDoc=opened.works[0].documents.find(d=>d.id===doc.id)!;touchedDoc.content={...touchedDoc.content,content:touchedDoc.content.content?.map(node=>({...node,attrs:{...node.attrs,blockId:uid(),lineHeight:null,indent:null}}))};assert(agentMergeRevert(opened,snapshot,both));
   // A document the change wrote that was edited again is not overwritten.
   const touched=structuredClone(applied);touched.works[0].documents.find(d=>d.id===doc.id)!.content=fromText('작가가 다시 고친 문장.');assert.equal(agentMergeRevert(touched,snapshot,both),null);
+});
+
+test('AI 자료 가져오기는 소유자·작업공간을 가져오는 계정 것으로 바꾸고 진행 중이던 실행은 중단으로 둔다',()=>{
+  const {state,scope}=fixture(),other=uid(),owner=uid(),workspace=uid(),sessionId=uid(),now=new Date().toISOString();
+  const session={id:sessionId,title:'예전 대화',scope,mode:'review',provider:'gemini',web:true,owner_id:other,workspace_id:uid(),created_at:now,updated_at:now};
+  const run={id:uid(),session_id:sessionId,owner_id:other,workspace_id:uid(),message:'질문',provider:'gemini',model:'gemini-x',mode:'review',web:true,status:'running',workflow_id:'wf',snapshot:captureAgentScope(state,scope),base_hash:'h',operations:[],events:[],answer:'',error:'',usage:null,applied_version:null,applied_hash:null,reverted:false,created_at:now,updated_at:now};
+  const memory={id:uid(),session_id:sessionId,title:'결정',content:'내용',sources:[],updated_at:now};
+  const rows=agentImportRows(agentImportBatchSchema.parse(JSON.parse(JSON.stringify({sessions:[session,{id:'틀린 값'}],runs:[run],memories:[memory]}))),owner,workspace);
+  assert.equal(rows.sessions.length,1);assert.equal(rows.sessions[0].owner_id,owner);assert.equal(rows.sessions[0].workspace_id,workspace);
+  assert.equal(rows.runs[0].owner_id,owner);assert.equal(rows.runs[0].workspace_id,workspace);assert.equal(rows.runs[0].status,'cancelled');assert.equal(rows.runs[0].workflow_id,null);
+  assert.equal(rows.memories[0].owner_id,owner);
 });
