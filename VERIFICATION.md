@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-11-16 — 작업 대화의 다른 작품·노트 읽기와 스스로 쓰는 웹 조사
+
+- 기준 main `6f0472d`(PR #131 병합). 사용자 요청: AI 대화가 에이전트라면 필요한 자료와 웹 검색을 버튼 없이 스스로 찾아 쓸 것. 읽은 안내: [작업 대화](docs/writing-agent.md), [AI](docs/ai.md), [프롬프트 설계](docs/ai-prompts.md), [실제 조작 검증](docs/interaction-verification.md).
+- 바꾼 것: [`writing-agent.ts`](src/lib/writing-agent.ts)의 `agentLibrary`·`agentLiveIds`·`agentLibraryMap`, 도구 `searchLibrary`와 `readSource`의 범위 밖 읽기([`agent-tool-runtime.ts`](src/lib/agent-tool-runtime.ts)), 지침의 다른 작품·노트 목록과 웹 조사 문장([`agent-instructions.ts`](src/lib/agent-instructions.ts)), API가 실행마다 서버의 Gemini 검색 연결 여부로 웹 조사를 정함([`agent-api.ts`](src/lib/agent-api.ts)), 작업 대화 창의 웹 조사 버튼 삭제. 대상과 기대: 범위 밖 문서는 검색·읽기만 되고 `stageChange`·적용은 고른 범위 문서만 바꾸며, 휴지통 문서는 찾지 않는다. DB·저장 형식은 그대로다.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 다른 작품·노트 공간이 서재로 모이고 지금 범위·휴지통은 빠짐, 서재 목록 예산, 지침 문장, 도구 목록. 전체 단위 337개 통과, 타입 검사 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버·Workflow·SDK, 합성 Postgres·Supabase·모델, Chromium 1280/360px): 작업 대화 창에 웹 조사 버튼이 없음, 합성 모델이 `researchWeb`·`searchLibrary`·범위 밖 `readSource`를 차례로 부르면 작업 내역에 **Google 웹 조사**, **다른 작품·노트 검색**, **다른 자료 읽기**(`작품|노트 이름 · 제목`)가 남고 변경은 범위 안 세 개뿐이며, 지침에 다른 작품·노트 목록과 웹 조사 문장이 실림, Claude로 실행해도 웹 조사 문장이 실림. 23경우·페이지 오류 0·합성 모델 120회. 웹 조사 결과의 Google 검색 제안이 샌드박스 iframe으로 그려질 때 검사용 로그인 주입 스크립트가 그 iframe에서도 돌아 생긴 오류는 검사 쪽 문제라 주입을 최상위 창으로 한정했다.
+- 미확인: 실제 Vertex 모델이 언제 이 도구들을 쓰는지와 늘어난 토큰, CI·운영 배포, Safari·Firefox·터치.
+
 ## 2026-11-16 — AI 생각 단계 선택
 
 - 기준 main `a609b4e`(PR #129 병합), 작업 뒤 `24fb4db`(PR #130)를 합침. 사용자 요청: thinking 단계별 선택과 자동. 읽은 안내: [AI](docs/ai.md), [작업 대화](docs/writing-agent.md), [Vertex 연결](docs/vertex-ai.md), [디자인 가이드](docs/design-guide.md) 8절 AI 설정·커서 명령·32절, [실제 조작 검증](docs/interaction-verification.md). 설치된 SDK(`ai` 7.0.166, `@ai-sdk/google` 4.0.114, `@ai-sdk/anthropic` 4.0.99)의 `reasoning` 처리와 모델별 단계표를 읽고 단계 목록을 맞췄다.
