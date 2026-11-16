@@ -1,5 +1,16 @@
 # 구현 검증
 
+## 2026-11-16 — 문서 옆 AI 대화를 작업 대화 에이전트로
+
+- 기준: 같은 날 1단계(PR #133, 다른 작품·노트 읽기와 스스로 쓰는 웹 조사) 위. 사용자 결정: 문서 AI 대화와 작업 대화를 하나로 합치기. 읽은 안내: [작업 대화](docs/writing-agent.md), [AI](docs/ai.md), [디자인 가이드](docs/design-guide.md) 0절·8절 참고 패널·AI 대화·32절, [설정](docs/settings.md), [실제 조작 검증](docs/interaction-verification.md).
+- 바꾼 것: [`writing-agent.tsx`](src/components/writing-agent.tsx)의 `AgentPanel`(집필실·노트 참고 패널의 AI 대화), 요청의 `sourceIds`·`previous`와 서버 확인([`agent-api.ts`](src/lib/agent-api.ts)), 연 문서 본문 싣기([`agent-workflow.ts`](src/lib/agent-workflow.ts)·[`agent-instructions.ts`](src/lib/agent-instructions.ts)), `ai-chat.tsx` 삭제, 설정 › AI의 보낼 자료 두 줄 삭제. 대상과 기대: 패널은 연 문서의 작품·노트 공간 세션을 이어 가고, 고치기는 실행 방식과 **변경** 보기만 거치며, 예전 기록은 읽기 전용으로 남고 커서 AI 질문은 그대로다. DB·저장 형식은 그대로다.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts)에 연 문서 본문·가리킨 자료·이어 온 대화가 지침에 자료로 실리는 검사를 더했다. 전체 단위 340개, 타입 검사, Anti Slop(oxlint) 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버·Workflow·SDK, 합성 Postgres·Supabase·모델, Chromium 1280/360px): 25경우·페이지 오류 0. 패널에 웹 조사·자료 선택 칸이 없음, Gemini 높음·Claude 중간으로 보낸 두 질문이 한 세션이며 요청에 연 문서 ID가 실리고 지침에 그 본문이 있음, 커서 AI 질문 뒤 **AI 대화에서 계속**을 누르면 **이전 AI 대화**가 펼쳐지고 다음 요청 하나에만 그 질문·답이 실림, 노트 패널은 작품 세션을 보이지 않고 자동 단계면 생각 설정을 보내지 않음, 패널을 쉰네 조합 × 두 폭에서 가로 넘침 없이 측정. `KOSMOS_CHAT_MENTIONS_ONLY=1` 흐름(22경우): `@` 검색의 키보드·클릭·IME·Esc·칩 빼기, 같은 제목 두 자료 중 고른 것만 `sourceIds`와 지침의 가리킨 자료 줄에 실림.
+- 같은 검사에서 찾아 고친 것: 패널을 연 직후 고른 제공자가 늦게 온 세션 기록에 덮여 서버가 409로 거절하던 경합(세션 목록에서 바로 정하고, 목록을 읽는 동안 방식·제공자를 잠금).
+- 그 밖의 브라우저 검사: `app-settings.mjs`, `note-inline-commands.mjs`(AI 대화에서 계속 → 이전 AI 대화·Claude 유지), `ai-limits-copy.mjs`(긴 예전 기록 48개가 열려도 1280/360px 쉰네 조합에서 전송 버튼이 화면 안) 통과. `studio-inline-commands.mjs`는 main에서도 나는 각주 입력칸 문구 대기에서 먼저 멈춰 바꾼 줄(분할 편집의 AI 대화에서 계속)까지 가지 못했다.
+- 색 계열: 보라 라이트, 카세트 라이트, 사이버 다크 화면을 1280/360px로 눈으로 보았다. 새 색은 없고 두 칸 격자(`.agent-panel-settings`)만 더했다.
+- 미확인: 실제 Vertex 모델의 답과 도구 사용, CI·운영 배포, Safari·Firefox·터치, 실제 계정의 긴 예전 기록.
+
 ## 2026-11-16 — 작업 대화의 다른 작품·노트 읽기와 스스로 쓰는 웹 조사
 
 - 기준 main `6f0472d`(PR #131 병합). 사용자 요청: AI 대화가 에이전트라면 필요한 자료와 웹 검색을 버튼 없이 스스로 찾아 쓸 것. 읽은 안내: [작업 대화](docs/writing-agent.md), [AI](docs/ai.md), [프롬프트 설계](docs/ai-prompts.md), [실제 조작 검증](docs/interaction-verification.md).

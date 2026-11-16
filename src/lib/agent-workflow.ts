@@ -3,7 +3,7 @@ import { isStepCount,type ModelMessage } from 'ai';
 import { FatalError,getWorkflowMetadata } from 'workflow';
 import { writingAgentTools } from './agent-tools';
 import { agentLanguageModel } from './agent-language-model';
-import { agentContext,agentLibraryMap,agentLiveIds,agentMap,agentOverlay } from './writing-agent';
+import { agentContext,agentDocuments,agentLibraryMap,agentLiveIds,agentMap,agentOverlay } from './writing-agent';
 import { buildAgentInstructions } from './agent-instructions';
 import { agentRunRecord,agentStepSettings } from './agent-context';
 import { activePromptPreset } from './ai-prompt-presets';
@@ -27,9 +27,11 @@ return [{role:'user' as const,content:r.message},...answer?[{role:'assistant' as
 
   messages.push({role:'user',content:run.message});
 
-  const focus=run.events.find(e=>e.id==='focus')?.sources?.[0];
+  const focus=run.events.find(e=>e.id==='focus')?.sources?.[0],pointed=run.events.find(e=>e.id==='pointed')?.sources||[];
+  // The open document's opening travels with the instructions, so a question about "이 장면" needs no read first.
+  const focusDoc=focus?agentDocuments(agentOverlay(run.snapshot,run.operations)).find(d=>d.id===focus.id):undefined,focusBudget=Number(process.env.AGENT_FOCUS_CHARACTERS)||12000;
   // The persona and skills are the writer's synced AI settings, read when the run starts.
-  const instructions=buildAgentInstructions({mode:run.mode,web:run.web,today:new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date()),persona:activePromptPreset(state.aiPreferences).prompt,skills:(state.aiPreferences?.skills||[]).map(skill=>({title:skill.title,description:skill.description,prompt:skill.prompt})),map:agentMap(agentOverlay(run.snapshot,run.operations),Number(process.env.AGENT_MAP_CHARACTERS)||16000),library:agentLibraryMap(state,run.snapshot.scope),focus:focus?{id:focus.id,title:focus.title}:null,memories:context.memories.map(m=>({title:m.title,content:m.content,sources:m.sources}))});
+  const instructions=buildAgentInstructions({mode:run.mode,web:run.web,today:new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date()),persona:activePromptPreset(state.aiPreferences).prompt,skills:(state.aiPreferences?.skills||[]).map(skill=>({title:skill.title,description:skill.description,prompt:skill.prompt})),map:agentMap(agentOverlay(run.snapshot,run.operations),Number(process.env.AGENT_MAP_CHARACTERS)||16000),library:agentLibraryMap(state,run.snapshot.scope),focus:focus?{id:focus.id,title:focus.title,text:focusDoc?.text.slice(0,focusBudget)??'',more:Math.max(0,(focusDoc?.text.length??0)-focusBudget)}:null,pointed:pointed.map(p=>({id:p.id,title:p.title})),previous:run.events.find(e=>e.id==='previous')?.detail||'',memories:context.memories.map(m=>({title:m.title,content:m.content,sources:m.sources}))});
 
   return {run:{provider:run.provider,model:run.model,mode:run.mode,web:run.web,reasoning:eventReasoning(run.events)},messages,instructions,maxSteps:Number(process.env.AGENT_MAX_STEPS)||80,toolBudget:Number(process.env.AGENT_TOOL_RESULT_CHARACTERS)||80000};
 }
