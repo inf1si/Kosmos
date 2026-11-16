@@ -13,6 +13,7 @@
 .agent-diff{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .agent-diff>div{padding:12px;background:var(--panel);border-radius:var(--r-in,8px);min-width:0}
 .agent-diff pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.8;margin:8px 0 0}
+.agent-properties{display:flex;flex-direction:column;gap:6px;margin:0 0 10px;font-size:12px}.agent-properties div{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px}.agent-properties dt{color:var(--muted)}.agent-properties dd{margin:0;overflow-wrap:anywhere;color:var(--ink2)}
 .agent-memories article{border-bottom:1px solid var(--line);padding-bottom:14px}
 .agent-memories p{white-space:pre-wrap;overflow-wrap:anywhere}
 .agent-panel-views{padding:0 16px 10px;flex-shrink:0}

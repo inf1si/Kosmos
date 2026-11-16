@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { agentOperationSchema,type AgentOperation,type AgentMode } from './writing-agent';
 
-type AgentToolInput=AgentOperation|{query:string;offset:number}|{id:string;offset:number;length:number}|{plan:string}|{title:string;content:string;sourceIds:string[]}|{query:string;url:string|null}|Record<string,never>;
+type AgentToolInput=AgentOperation|{id:string}|{query:string;offset:number}|{id:string;offset:number;length:number}|{plan:string}|{title:string;content:string;sourceIds:string[]}|{query:string;url:string|null}|Record<string,never>;
 
 async function executeAgentTool(runId:string,workflow:string,name:string,input:AgentToolInput,callId:string){
   'use step';
@@ -21,9 +21,11 @@ export function writingAgentTools(runId:string,workflow:string,mode:AgentMode,we
     readSource:tool({description:'ID로 문서를 읽는다. 긴 글은 nextOffset으로 이어 읽는다. properties에는 작가가 적은 요약·시점 인물·작중 시각·상태가 있다. 아직 적용하지 않은 자신의 수정도 반영된 작업본이다. 다른 작품·노트 작업공간의 문서도 ID로 읽으며, 그때는 place와 readOnly가 붙는다.',inputSchema:z.object({id:z.uuid(),offset:z.number().int().min(0),length:z.number().int().min(1).max(50000)}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'read',input,options.toolCallId);}}),
     plan:tool({description:'진행할 작업과 열린 문제를 짧게 기록한다. 단순 대화에는 불필요하다.',inputSchema:z.object({plan:z.string()}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'plan',input,options.toolCallId);}}),
     remember:tool({description:'사용자가 선택한 방향·보류 이유·작업의 열린 질문 또는 근거가 있는 자료 종합을 기억한다. 취향·확정 설정을 추측해서 기록하지 않는다. 새 아이디어는 아이디어임을 명시한다.',inputSchema:z.object({title:z.string().max(300),content:z.string(),sourceIds:z.array(z.uuid())}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'remember',input,options.toolCallId);}}),
+    findReferences:tool({description:'문서 하나에서 나가는 연결(설정 연결·@ 참조)과 그 문서를 가리키는 다른 문서(백링크)를 찾는다. 다른 작품·노트의 문서도 나오며, 읽으려면 readSource를 쓴다.',inputSchema:z.object({id:z.uuid()}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'references',input,options.toolCallId);}}),
+    validateChanges:tool({description:'준비한 변경을 코드로 점검한다. 없는 문서를 가리키는 연결, 본문이 빈 새 문서, 설정 문서가 없는 시점 인물, 겹치는 제목을 알려 준다. 문서를 고친 뒤 답하기 전에 쓴다.',inputSchema:z.object({}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'validate',input,options.toolCallId);}}),
     inspectChanges:tool({description:'현재 문서 변경 전후를 확인한다. 작업 완료 전 결과와 의도를 대조한다.',inputSchema:z.object({}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'inspect',input,options.toolCallId);}}),
     ...mode!=='discuss'&&{
-      stageChange:tool({description:'문서 생성(create)·폴더 생성(folder)·구절 치환(replace)·이어 쓰기(insert)·이름 변경(rename)·문서 이동(move)을 작업본에 반영한다. replace의 quote는 문서에 정확히 한 번, 한 문단의 같은 서식 안에 나오는 구절이어야 하고 문단을 새로 만들지 못한다. insert는 after에 인용한 구절이 든 문단 바로 뒤에 새 문단을 넣으며 after가 null이면 문서 끝에 잇는다. text의 빈 줄이 문단을 나눈다. create/folder의 id는 임의 UUID를 넣으면 서버가 실제 ID를 반환한다. sectionId와 폴더 ID는 문서 지도나 검색 결과의 것을 쓴다. 청하지 않은 대목을 고치거나 원고 전체를 다른 문체로 바꾸지 않는다.',inputSchema:z.object({change:z.union(agentOperationSchema.options)}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'stage_change',input.change,options.toolCallId);}}),
+      stageChange:tool({description:'문서 생성(create)·폴더 생성(folder)·구절 치환(replace)·이어 쓰기(insert)·이름 변경(rename)·문서 이동(move)·속성 변경(properties)을 작업본에 반영한다. properties는 작품 문서의 요약·상태·시점 인물·작중 시각·분류, 노트의 태그를 바꾸며 null인 항목은 그대로 둔다. 작가가 적은 속성을 청하지 않았는데 고치지 않는다. replace의 quote는 문서에 정확히 한 번, 한 문단의 같은 서식 안에 나오는 구절이어야 하고 문단을 새로 만들지 못한다. insert는 after에 인용한 구절이 든 문단 바로 뒤에 새 문단을 넣으며 after가 null이면 문서 끝에 잇는다. text의 빈 줄이 문단을 나눈다. create/folder의 id는 임의 UUID를 넣으면 서버가 실제 ID를 반환한다. sectionId와 폴더 ID는 문서 지도나 검색 결과의 것을 쓴다. 청하지 않은 대목을 고치거나 원고 전체를 다른 문체로 바꾸지 않는다.',inputSchema:z.object({change:z.union(agentOperationSchema.options)}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'stage_change',input.change,options.toolCallId);}}),
     },
     ...web&&{
       researchWeb:tool({description:'Gemini의 Google 검색으로 공개 자료를 조사한다. query에는 필요한 개념만 넣고 원고 전체를 넣지 않는다. 특정 공개 HTTPS 페이지를 읽으려면 url을 지정한다. 검색·모델 비용이 발생할 수 있다.',inputSchema:z.object({query:z.string().min(1),url:z.string().nullable()}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'web',input,options.toolCallId);}}),

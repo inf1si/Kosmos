@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-11-17 — AI 대화: 연결 찾기·속성 고치기·변경 점검
+
+- 기준: main 8904ebc(PR #136) 위. 사용자 요청: 설계 대비 빠진 기능 구현(1묶음 첫 부분). 읽은 안내: [작업 대화](docs/writing-agent.md), [설계](docs/personal-knowledge-agent-design.md)의 첫 도구 목록, [디자인 가이드](docs/design-guide.md) AI 대화.
+- 바꾼 것: [`writing-agent.ts`](src/lib/writing-agent.ts)의 `properties` 변경·`agentReferences`·`agentValidate`·변경 보기 속성 행, [`agent-tools.ts`](src/lib/agent-tools.ts)·[`agent-tool-runtime.ts`](src/lib/agent-tool-runtime.ts)의 `findReferences`·`validateChanges`, 지침, 패널 변경 보기.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 속성 변경(null은 그대로, 작품 문서 태그·노트 다른 속성 거절, 노트 태그 중복 제거, 새 문서는 정한 속성만 표시), 연결 찾기(설정 연결·@ 참조·노트 백링크·없는 문서), 변경 점검(빈 새 문서·없는 시점 인물·지운 노트 참조·겹치는 제목), 도구 명세. 전체 단위 345개, 타입 검사, Anti Slop(oxlint) 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(합성 모델이 연결 찾기 → 속성 변경 → 변경 점검까지 호출): 25경우·페이지 오류 0. 실행의 변경 4개, 작업 내역 **연결 찾기**·**속성 변경**·**변경 점검**(문서 1개 · 문제 없음), 변경 보기의 `요약 없음 → …` 행을 확인했다. 360px 변경 보기 화면을 눈으로 보았다.
+- 미확인: 실제 Vertex 모델이 새 도구를 언제 쓰는지, CI·운영 배포, Safari·Firefox.
+
 ## 2026-11-17 — 참고 패널 폭 조절과 크게 보기
 
 - 기준: main 1a42892(PR #135) 위. 사용자 요청: AI 대화 창 크기 조절과 크게 보기. 읽은 안내: [디자인 가이드](docs/design-guide.md) 0절·참고 패널, [설정](docs/settings.md).
