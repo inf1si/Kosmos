@@ -2,8 +2,8 @@
 
 import { useCallback,useEffect,useMemo,useRef,useState } from 'react';
 import { z } from 'zod';
-import { ArrowUp,Download,FileText,MessageSquarePlus,Settings2,Square,Undo2 } from 'lucide-react';
-import { IconButton,Modal,TooltipProvider } from './primitives';
+import { ArrowUp,FileText,MessageSquarePlus,Settings2,Square,Undo2 } from 'lucide-react';
+import { IconButton } from './primitives';
 import { useAIConnection } from './use-ai-connection';
 import { reasoningLabels,eventReasoning,isReasoningEvent } from '@/lib/ai-reasoning';
 import { Select } from './select';
@@ -13,7 +13,7 @@ import { ChatMentionInput } from './chat-mention-input';
 import { cloud,cloudConfigured } from '@/lib/cloud';
 import { db } from '@/lib/database';
 import { uid,type Workspace } from '@/lib/model';
-import { noteSpaceFor,resolveNoteNavigation } from '@/lib/note-navigation';
+import { noteSpaceFor } from '@/lib/note-navigation';
 import { referenceTargets } from '@/lib/internal-references';
 import { activePromptPreset,activatePromptPreset,promptCatalog } from '@/lib/ai-prompt-presets';
 import type { ChatMessage } from '@/lib/ai-conversation';
@@ -33,9 +33,6 @@ const historySchema=z.object({session:agentSessionSchema,runs:z.array(agentRunVi
 
 type Changes=z.infer<typeof agentChangesSchema>;
 
-/** focusId is the document open behind the dialog; the agent is told so "이 장면" has a referent. */
-export function openWritingAgent(scope:AgentScope,focusId?:string){window.dispatchEvent(new CustomEvent('writing-agent-open',{detail:{...scope,focusId}}));}
-
 async function agentRequest<T extends z.ZodType>(owner:string|null,path:string,schema:T,method='GET',body?:string,signal?:AbortSignal):Promise<z.infer<T>>{
   if(!cloudConfigured)throw new Error('작가 계정으로 로그인한 뒤 사용할 수 있습니다.');
   const session=(await cloud().auth.getSession()).data.session,token=session?.access_token;
@@ -48,6 +45,13 @@ async function agentRequest<T extends z.ZodType>(owner:string|null,path:string,s
   if(!response.ok)throw new Error(z.object({error:z.string()}).safeParse(value).data?.error||'작업 대화에 연결하지 못했습니다.');
 
   return schema.parse(value);
+}
+
+/** Every session, run input snapshot, answer, staged change and memory of the signed-in author, as one JSON file. */
+export async function exportAgentData(owner:string|null){
+  const value=await agentRequest(owner,'export',z.record(z.string(),z.json())),url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})),link=document.createElement('a');
+
+  link.href=url;link.download='orbis-agent.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 /** Sources can sit in other works or note spaces the agent only read, so the scope comes from where the document lives now. */
@@ -68,7 +72,7 @@ function openSource(state:Workspace|null,id:string,fallback:AgentScope|null){
 const scopeKey=(scope:AgentScope)=>`${scope.kind}:${scope.id}`;
 
 /**
- * Sessions, runs and actions shared by the wide dialog and the chat in the reference panel.
+ * Sessions, runs and actions of the AI chat in the reference panel.
  * pick chooses the session to show from the saved one; the panel keeps one per scope.
  */
 function useWritingAgent({open,storageKey,pick}:{open:boolean;storageKey:string;pick:(sessions:AgentSession[],saved:string)=>string}){
@@ -164,7 +168,6 @@ if(change.provider){setSessionProvider(change.provider);connection.setProvider(c
   const discard=(run:AgentRunView)=>act(async()=>{await request(`changes/${run.id}/discard`,z.object({discarded:z.boolean()}),'POST','{}');await refresh();});
   const cancel=(run:AgentRunView)=>act(async()=>{await request(`runs/${run.id}/cancel`,z.object({cancelled:z.boolean()}),'POST','{}');await refresh();});
   const forget=(memory:AgentMemory)=>act(async()=>{await request(`memories/${memory.id}/forget`,z.object({forgotten:z.boolean()}),'POST','{}');await refresh();});
-  const exportData=()=>act(async()=>{const value=await request('export',z.record(z.string(),z.json())),url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='orbis-agent.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 
   const choose=(id:string)=>{const session=sessions.find(item=>item.id===id);
 
@@ -183,7 +186,7 @@ const abort=new AbortController();void request(`runs/${latest.id}/changes`,agent
 
 return()=>abort.abort();},[open,view,latest?.id,latest?.operations.length,request]);
 
-  return {s,sessions,selected,choose,runs,memories,connection,providers,mode,provider,model,models,reasoning,view,setView,error,setError,busy,loading,changes,setChangeId,active,latest,settings,send,apply,discard,cancel,forget,exportData,questionId,act};
+  return {s,sessions,selected,choose,runs,memories,connection,providers,mode,provider,model,models,reasoning,view,setView,error,setError,busy,loading,changes,setChangeId,active,latest,settings,send,apply,discard,cancel,forget,questionId,act};
 }
 
 type Agent=ReturnType<typeof useWritingAgent>;
@@ -206,40 +209,6 @@ function AgentMemories({agent,onOpen}:{agent:Agent;onOpen:(id:string)=>void}){
 
 function AgentViews({agent}:{agent:Agent}){
   return <div className="segmented" role="group" aria-label="작업 대화 보기">{([['chat','대화'],['changes','변경'],['memory','기억']] as const).map(([id,label])=><button type="button" key={id} aria-pressed={agent.view===id} onClick={()=>agent.setView(id)}>{label}{id==='changes'&&agent.latest?.operations.length?` ${agent.latest.operations.length}`:''}</button>)}</div>;
-}
-
-export function WritingAgentDialog(){
-  const [open,setOpen]=useState(false),[initialScope,setInitialScope]=useState<AgentScope|null>(null),[scopeValue,setScopeValue]=useState('');
-  const agent=useWritingAgent({open,storageKey:'',pick:(sessions,saved)=>sessions.find(session=>session.id===saved)?.id||''}),{s,runs,busy,active,connection,provider,model,models,reasoning}=agent;
-  const [question,setQuestion]=useState(''),focusId=useRef<string|undefined>(undefined),inputRef=useRef<HTMLTextAreaElement>(null),opener=useRef<HTMLElement|null>(null);
-
-  useEffect(()=>{const show=(event:Event)=>{if(!(event instanceof CustomEvent))return;const parsed=agentScopeSchema.safeParse(event.detail);
-
-    if(!parsed.success)return;focusId.current=z.object({focusId:z.uuid()}).safeParse(event.detail).data?.focusId;opener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setInitialScope(parsed.data);setScopeValue(scopeKey(parsed.data));setOpen(true);};
-
-    window.addEventListener('writing-agent-open',show);
-
-return()=>window.removeEventListener('writing-agent-open',show);
-  },[]);
-  useEffect(()=>{setQuestion('');setOpen(false);},[s.namespace]);
-
-  const send=()=>{if(!question.trim()||!initialScope)return;const split=scopeValue.indexOf(':'),scope=agentScopeSchema.parse({kind:scopeValue.slice(0,split),id:scopeValue.slice(split+1)});
-    void agent.send(question,scope,scopeValue===scopeKey(initialScope)?focusId.current:undefined).then(ok=>{if(ok)setQuestion('');requestAnimationFrame(()=>inputRef.current?.focus());});};
-
-  const session=agent.sessions.find(item=>item.id===agent.selected);
-  const choices=s.state?[...s.state.works.map(work=>({value:`work:${work.id}`,label:work.title})),...resolveNoteNavigation(s.state).spaces.map(space=>({value:`notes:${space.id}`,label:`노트 · ${space.title||'이름 없는 작업공간'}`}))]:[];
-
-  function openDocument(id:string){setOpen(false);openSource(s.state,id,session?.scope||initialScope);}
-
-  return <TooltipProvider><Modal open={open&&s.canUse} onClose={()=>setOpen(false)} title="작업 대화" wide className="writing-agent-dialog" onReturnFocus={()=>opener.current?.isConnected&&opener.current.focus()}>
-    <div className="board-bar agent-toolbar"><div className="agent-session-choice"><Select aria-label="작업 대화 선택" disabled={busy} value={agent.selected} onChange={agent.choose}><option value="">새 대화</option>{agent.sessions.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</Select><button type="button" className="button" aria-label="새 작업 대화" disabled={busy} onClick={()=>{agent.choose('');setScopeValue(initialScope?scopeKey(initialScope):'');inputRef.current?.focus();}}><MessageSquarePlus size={15}/></button></div><AgentViews agent={agent}/><button type="button" className="button" aria-label="AI 자료 내보내기" disabled={busy} onClick={()=>void agent.exportData()}><Download size={15}/></button></div>
-    <div className="agent-settings"><Select aria-label="작업 자료 범위" value={session?scopeKey(session.scope):scopeValue} disabled={!!agent.selected||busy} onChange={setScopeValue}>{choices.map(choice=><option key={choice.value} value={choice.value}>{choice.label}</option>)}</Select><Select aria-label="에이전트 실행 방식" value={agent.mode} disabled={busy||!!active} onChange={value=>void agent.act(()=>agent.settings({mode:agentModeSchema.parse(value)}))}>{Object.entries(modeNames).map(([id,label])=><option value={id} key={id}>{label}</option>)}</Select><Select aria-label="에이전트 제공자" value={provider} disabled={busy||!!active} onChange={value=>void agent.act(()=>agent.settings({provider:providerSchema.parse(value)}))}>{activeAIProviders.map(id=><option key={id} value={id}>{providerLabels[id]}</option>)}</Select><Select aria-label="에이전트 모델" value={active?.model||model} disabled={busy||!!active||connection.loadingProviders||!models.length} onChange={value=>connection.setProviderModel(value,provider)}>{[...new Set([...models,...active?[active.model]:[]])].map(id=><option key={id} value={id}>{id}</option>)}</Select><Select aria-label="에이전트 생각 단계" value={active?eventReasoning(active.events):reasoning.level} disabled={busy||!!active||connection.loadingProviders||reasoning.options.length<2} onChange={value=>connection.setProviderReasoning(value,provider)}>{[...new Set([...reasoning.options,...active?[eventReasoning(active.events)]:[]])].map(id=><option key={id} value={id}>생각 · {reasoningLabels[id]}</option>)}</Select></div>
-    {(agent.error||connection.connectionError)&&<p role="alert" className="error">{agent.error||connection.connectionError}</p>}
-    <div className="agent-content">
-      {agent.loading?<p className="muted">불러오는 중…</p>:agent.view==='chat'?<div className="agent-messages" aria-live="polite">{!runs.length?<div className="ai-starters">{['흩어진 구상을 모아 개요를 만들어줘.','이 작품에서 서로 어긋나는 설정을 찾아줘.','이 전제를 뒤집으면 어떤 이야기가 될까?'].map(text=><button type="button" className="button" key={text} disabled={busy} onClick={()=>{setQuestion(text);agent.questionId.current='';inputRef.current?.focus();}}>{text}</button>)}</div>:runs.map(run=><article className="agent-turn" key={run.id}><p className="agent-question">{run.message}</p><WorkLog run={run} onOpen={openDocument}/>{run.answer&&<div className="agent-answer">{run.answer}</div>}{run.error&&<p className="error">{run.error}</p>}{!run.answer&&!run.error&&<p className="muted">{stateNames[run.status]}</p>}</article>)}</div>:agent.view==='changes'?<AgentChanges agent={agent} onOpen={openDocument}/>:<AgentMemories agent={agent} onOpen={openDocument}/>}
-    </div>
-    <form className="agent-composer" onSubmit={event=>{event.preventDefault();send();}}><textarea ref={inputRef} disabled={busy} aria-label="에이전트에게 요청" placeholder="요청 입력" value={question} onChange={event=>{setQuestion(event.target.value);agent.questionId.current='';}} onKeyDown={event=>{if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)&&!event.nativeEvent.isComposing){event.preventDefault();send();}}}/><div className="agent-send-actions">{active&&<button type="button" className="button" disabled={busy} onClick={()=>void agent.cancel(active)}><Square size={13}/>중단</button>}<button type="submit" className="button primary" aria-label="에이전트 요청 보내기" disabled={busy||agent.loading||!question.trim()||!!s.conflict}><ArrowUp size={16}/></button></div></form>
-  </Modal></TooltipProvider>;
 }
 
 const workStarters=[

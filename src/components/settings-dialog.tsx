@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Archive, ArrowLeftRight, BookOpen, Files, FileUp, Keyboard, LayoutGrid, Palette, RotateCcw, Sparkles, StickyNote, Trash2, Type, User } from 'lucide-react';
+import { Archive, ArrowLeftRight, BookOpen, Download, Files, FileUp, Keyboard, LayoutGrid, Palette, RotateCcw, Sparkles, StickyNote, Trash2, Type, User } from 'lucide-react';
 import { AuthorProfilePanel } from './author-profile-panel';
 import { Modal } from './primitives';
 import { useStudio } from './studio-provider';
@@ -15,6 +15,7 @@ import { checkpointIntervals, lineHeights, manuscriptLayoutStyle, manuscriptWidt
 import { defaultEditorPreferences, fontSizes, manuscriptFonts } from '@/lib/editor-preferences';
 import { countMetrics } from '@/lib/text-statistics';
 import { Select } from './select';
+import { exportAgentData } from './writing-agent';
 
 export type SettingsSection='display'|'manuscript'|'tools'|'notes'|'ai'|'data'|'keys'|'profile';
 
@@ -105,13 +106,16 @@ function AISection(){
 }
 
 function DataSection(){
-  const [app,update,reset]=useAppPreferences();const readonly=!!useStudio().conflict;
+  const [app,update,reset]=useAppPreferences(),studio=useStudio(),readonly=!!studio.conflict;
+  const [exporting,setExporting]=useState(false),[exportError,setExportError]=useState('');
+  const exportAgent=()=>{setExporting(true);setExportError('');void exportAgentData(studio.user).catch(e=>setExportError(e instanceof Error?e.message:'AI 자료를 내보내지 못했습니다.')).finally(()=>setExporting(false));};
 
   return <><Head onReset={()=>reset(['checkpointMinutes'])}/>
     <Row label="자동 복구 지점"><Select aria-label="자동 복구 지점 간격" value={app.checkpointMinutes} onChange={value=>{const minutes=checkpointIntervals.find(n=>n===Number(value));
 
 if(minutes)update({checkpointMinutes:minutes});}}>{checkpointIntervals.map(n=><option key={n} value={n}>{n}분마다</option>)}</Select></Row>
-    <div className="settings-links"><button type="button" className="button" data-settings-child="backup" onClick={()=>modal('backup')}><Archive size={14}/>백업과 복구</button><button type="button" className="button" data-settings-child="interchange" onClick={()=>modal('interchange')}><ArrowLeftRight size={14}/>가져오기 · 내보내기</button><button type="button" className="button" data-settings-child="book" onClick={()=>modal('book')}><BookOpen size={14}/>책으로 내보내기</button><button type="button" className="button" disabled={readonly} data-settings-child="note-import" onClick={()=>modal('note-import')}><FileUp size={14}/>노트 가져오기</button><button type="button" className="button" disabled={readonly} data-settings-child="template" onClick={()=>modal('template')}><Files size={14}/>템플릿</button><button type="button" className="button" data-settings-child="trash" onClick={()=>modal('trash')}><Trash2 size={14}/>휴지통</button></div>
+    <div className="settings-links"><button type="button" className="button" data-settings-child="backup" onClick={()=>modal('backup')}><Archive size={14}/>백업과 복구</button><button type="button" className="button" data-settings-child="interchange" onClick={()=>modal('interchange')}><ArrowLeftRight size={14}/>가져오기 · 내보내기</button><button type="button" className="button" data-settings-child="book" onClick={()=>modal('book')}><BookOpen size={14}/>책으로 내보내기</button><button type="button" className="button" disabled={readonly} data-settings-child="note-import" onClick={()=>modal('note-import')}><FileUp size={14}/>노트 가져오기</button><button type="button" className="button" disabled={readonly} data-settings-child="template" onClick={()=>modal('template')}><Files size={14}/>템플릿</button><button type="button" className="button" data-settings-child="trash" onClick={()=>modal('trash')}><Trash2 size={14}/>휴지통</button>{studio.user&&<button type="button" className="button" disabled={exporting} onClick={exportAgent}><Download size={14}/>AI 자료 내보내기</button>}</div>
+    {exportError&&<p role="alert" className="ai-settings-error">{exportError}</p>}
   </>;
 }
 

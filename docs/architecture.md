@@ -106,7 +106,7 @@ flowchart LR
 | [rich-editor.tsx](../src/components/rich-editor.tsx) | 편집기와 사용자 정의 노드·링크 |
 | [studio-dialogs.tsx](../src/components/studio-dialogs.tsx) | 백업·충돌·작품 생성·게시 대화상자 |
 | [public-site.tsx](../src/components/public-site.tsx) | 서재·독서·공개 설정집 |
-| [writing-agent.tsx](../src/components/writing-agent.tsx) | 참고 패널 AI 대화(작업 대화 에이전트)·작업 대화 창·변경·기억 |
+| [writing-agent.tsx](../src/components/writing-agent.tsx) | 참고 패널 AI 대화(작업 대화 에이전트)·변경·기억·AI 자료 내보내기 |
 | [ai-settings-dialog.tsx](../src/components/ai-settings-dialog.tsx) | 제공자·모델·마스킹 키·시스템 프롬프트 설정 |
 | [ai-credentials.ts](../src/lib/ai-credentials.ts) | 계정·제공자에 묶인 AES-GCM 쿠키, HKDF, 30일 만료·기본 설정 선택 |
 | [ai-credential-handler.ts](../src/lib/ai-credential-handler.ts) | Origin·8KiB JSON·쿠키 보안 속성·키 미반환 |

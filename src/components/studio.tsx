@@ -45,7 +45,7 @@ import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences'
 import { openingDocument, readStudioPosition, readStudioTabs, rememberStudioPosition, rememberStudioTabs } from '@/lib/studio-position';
 import { workShelves, workShelfTitle } from '@/lib/work-shelves';
 import { Select } from './select';
-import { AgentPanel,openWritingAgent } from './writing-agent';
+import { AgentPanel } from './writing-agent';
 import { agentSourceOpenSchema } from '@/lib/writing-agent';
 
 const HOME='home';
@@ -328,7 +328,6 @@ if(!blob)throw new Error('첨부를 찾지 못했습니다.');const href=URL.cre
       <nav className="studio-tools" aria-label="작업 도구">
         <button type="button" className="nav-item" aria-pressed={onHome} onClick={()=>go(HOME)}><House size={16}/><span>집필실 홈</span></button>
         <button type="button" className="nav-item" data-workspace-search-opener onClick={()=>openSearch()}><Search size={16}/><span>전체 검색</span><kbd>Ctrl K</kbd></button>
-        <button type="button" className="nav-item" onClick={()=>openWritingAgent({kind:'work',id:work.id},docs.find(doc=>doc.id===current)?.id)}><Sparkles size={16}/><span>작업 대화</span></button>
         <button type="button" className="nav-item" aria-pressed={onBoard} onClick={()=>go(BOARD)}><LayoutGrid size={16}/><span>플롯보드</span></button>
         <button type="button" className="nav-item" aria-pressed={onGraph} onClick={()=>go(GRAPH)}><Network size={16}/><span>문서 그래프</span></button>
         <button type="button" className="nav-item" onClick={()=>modal('trash')}><Trash2 size={16}/><span>휴지통</span><small>{trashRows(s.state!.trash).length}</small></button>
