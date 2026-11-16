@@ -40,6 +40,7 @@ try{
   // A preference object saved before the change: the old defaults written out in full, plus a dragged sidebar width.
   await context.addInitScript(({profile,token})=>{
    if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('kosmos-app-preferences',JSON.stringify({studioStart:'last',lineHeight:2,paragraphIndent:1,paragraphGap:1.2,manuscriptWidth:680,sidebarWidth:300}));}
+
    localStorage.setItem('sb-krakjollsufgnwealroh-auth-token',JSON.stringify({access_token:token,refresh_token:'synthetic-refresh',token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:profile}));
   },{profile,token});
   await context.route('**/auth/v1/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(profile)}));
@@ -66,12 +67,15 @@ tx.onerror=()=>reject(tx.error);};}),data);
   }
 
   const shell=page.locator('.editor-panes > .editor-shell'),body=shell.locator('.manuscript');
+
   const spacing=()=>body.evaluate(el=>{const p=el.querySelector(':scope > p'),li=el.querySelector('li p'),size=parseFloat(getComputedStyle(el).fontSize);
 
 return {line:Math.round(parseFloat(getComputedStyle(el).lineHeight)/size*100)/100,gap:Math.round(parseFloat(getComputedStyle(p).marginBottom)/size*100)/100,item:Math.round(parseFloat(getComputedStyle(li).marginBottom)/size*100)/100};});
+
   const shows=(line,gap,label)=>until(page,async()=>{const s=await spacing();
 
 return s.line===line&&s.gap===gap&&s.item===gap;},`${label}: ${line}/${gap}`);
+
   const stored=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('kosmos-app-preferences')||'null'));
   const button=shell.getByRole('button',{name:'줄·문단 간격',exact:true}),popover=page.getByRole('dialog',{name:'줄·문단 간격',exact:true});
   const choice=(group,label)=>popover.getByRole('group',{name:group,exact:true}).getByRole('button',{name:label,exact:true});
@@ -85,11 +89,13 @@ return s.line===line&&s.gap===gap&&s.item===gap;},`${label}: ${line}/${gap}`);
   await body.locator('p').first().click();
   await button.click();await popover.waitFor();
   assert.equal(await pressed('줄간격'),'1.8');assert.equal(await pressed('문단 간격'),'0.6줄');
+
   const fits=await popover.evaluate(el=>{const box=el.getBoundingClientRect();
 
 return [...el.querySelectorAll('button')].every(b=>{const r=b.getBoundingClientRect();
 
 return r.left>=box.left-.5&&r.right<=box.right+.5;})&&box.left>=0&&box.right<=innerWidth;});
+
   assert(fits,'popover buttons stay inside the popover and the screen');
   await page.screenshot({path:resolve(output,`toolbar-${width}.png`)});
   await choice('줄간격','2.2').click();await shows(2.2,0.6,'toolbar line height');
@@ -130,9 +136,11 @@ return r.left>=box.left-.5&&r.right<=box.right+.5;})&&box.left>=0&&box.right<=in
   // Notes keep their own spacing and have no manuscript spacing control.
   await page.goto(`${base}/studio#notes/${note.id}`,{waitUntil:'networkidle'});const notes=page.locator('.notes-workspace .editor-shell');await notes.locator('.manuscript').waitFor();
   assert.equal(await notes.getByRole('button',{name:'줄·문단 간격',exact:true}).count(),0);
+
   const noteSpacing=await notes.locator('.manuscript').evaluate(el=>{const size=parseFloat(getComputedStyle(el).fontSize);
 
 return [Math.round(parseFloat(getComputedStyle(el).lineHeight)/size*100)/100,Math.round(parseFloat(getComputedStyle(el.querySelector('p')).marginBottom)/size*100)/100];});
+
   assert.deepEqual(noteSpacing,[1.85,0.6]);
   await notes.getByRole('button',{name:'문단 서식',exact:true}).click();
   assert.match(await page.getByRole('dialog',{name:'문단 서식',exact:true}).getByRole('combobox',{name:'줄간격',exact:true}).textContent(),/기본 · 1\.85배/);
@@ -147,11 +155,13 @@ return [Math.round(parseFloat(getComputedStyle(el).lineHeight)/size*100)/100,Mat
 
   for(const [palette,mode] of combos){
    await page.evaluate(([palette,mode])=>{document.documentElement.setAttribute('data-palette',palette);document.documentElement.setAttribute('data-theme',mode);},[palette,mode]);
+
    const check=await popover.evaluate(el=>{const box=el.getBoundingClientRect(),buttons=[...el.querySelectorAll('.segmented button')];
 
 return {inside:buttons.every(b=>{const r=b.getBoundingClientRect();
 
-return r.left>=box.left-.5&&r.right<=box.right+.5&&r.height>=20;}),onScreen:box.left>=0&&box.right<=innerWidth,pressed:buttons.filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>[getComputedStyle(b).backgroundColor,getComputedStyle(b).color])};});
+return r.left>=box.left-.5&&r.right<=box.right+.5&&r.height>=20;}),onScreen:box.left>=0&&box.right<=innerWidth,pressed:buttons.flatMap(b=>b.getAttribute('aria-pressed')==='true'?[[getComputedStyle(b).backgroundColor,getComputedStyle(b).color]]:[])};});
+
    assert(check.inside&&check.onScreen,`${palette}/${mode} ${width}: popover layout`);
    assert.equal(check.pressed.length,2,`${palette}/${mode}: two pressed choices`);
    assert(check.pressed.every(([bg,fg])=>bg!==fg),`${palette}/${mode}: pressed text is visible`);
