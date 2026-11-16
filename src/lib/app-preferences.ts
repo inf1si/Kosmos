@@ -36,7 +36,13 @@ export type GraphScope='all'|'local';
 
 export type StudioStart='home'|'last';
 
-export const defaultAppPreferences={lineHeight:2,paragraphIndent:1,paragraphGap:1.2,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home',sidebarWidth:defaultSidebarWidth} as const;
+/** Raised when the manuscript spacing defaults change; values saved under an older version that still equal that version's default follow the new one. */
+const spacingDefaults=2;
+
+/** Version 1 (until 2026-11-16) used line height 2 and paragraph gap 1.2. */
+const previousSpacing={lineHeight:2,paragraphGap:1.2} as const;
+
+export const defaultAppPreferences={lineHeight:1.8,paragraphIndent:1,paragraphGap:0.6,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home',sidebarWidth:defaultSidebarWidth,spacingDefaults} as const;
 
 const d=defaultAppPreferences;
 
@@ -58,12 +64,25 @@ const appPreferencesSchema=z.object({
   studioStart:z.enum(['home','last']).catch(d.studioStart),
   /** Studio and notes sidebar width set by dragging its edge. */
   sidebarWidth:z.number().int().min(sidebarWidthRange.min).max(sidebarWidthRange.max).nullable().catch(d.sidebarWidth),
+  /** The spacing defaults the saved values were written against; missing before 2026-11-16. Every save writes the current version. */
+  spacingDefaults:z.literal(spacingDefaults).optional().catch(undefined),
 }).catch({...defaultAppPreferences});
 
-export type AppPreferences=z.infer<typeof appPreferencesSchema>;
+export type AppPreferences=z.infer<typeof appPreferencesSchema>&{spacingDefaults:typeof spacingDefaults};
 
-export function parseAppPreferences(raw:string|null):AppPreferences{
+function readStored(raw:string|null){
   try{return appPreferencesSchema.parse(JSON.parse(raw||'null'));}catch{return appPreferencesSchema.parse(null);}
+}
+
+/** Every save stores the whole object, so an untouched old default looks the same as a chosen one; both move to the new default once. */
+export function parseAppPreferences(raw:string|null):AppPreferences{
+  const stored=readStored(raw);
+
+  if(stored.spacingDefaults===spacingDefaults)return {...stored,spacingDefaults};
+
+  return {...stored,spacingDefaults,
+    lineHeight:stored.lineHeight===previousSpacing.lineHeight?d.lineHeight:stored.lineHeight,
+    paragraphGap:stored.paragraphGap===previousSpacing.paragraphGap?d.paragraphGap:stored.paragraphGap};
 }
 
 /** CSS variable read by `.studio-sidebar` in studio.css. */

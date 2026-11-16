@@ -16,7 +16,7 @@ import { useAppPreferences } from './use-app-preferences';
 import { manuscriptLayoutStyle } from '@/lib/app-preferences';
 import { manuscriptFontVariables } from './manuscript-fonts';
 import { editorExtensions } from '@/lib/editor-extensions';
-import { EditorFormatTools,FontSizeControl,ListMenu } from './editor-format-tools';
+import { EditorFormatTools,FontSizeControl,ListMenu,ManuscriptSpacingControl } from './editor-format-tools';
 import { EditorSearch } from './editor-search';
 import type { EditorAIScope } from '@/lib/ai-conversation';
 import { EditorCommands } from './editor-commands';
@@ -141,6 +141,8 @@ if(previewLocked.current)return;hideTimer.current=window.setTimeout(()=>setPrevi
     <div className="editor-toolbar" ref={toolbarRef}>
       <Select aria-label="본문 글꼴" value={font} onChange={value=>setPreferences({font:value})}>{manuscriptFonts.map(f=><option key={f.id} value={f.id}>{f.label}</option>)}</Select>
       <FontSizeControl editor={editor} readonly={readonly} size={size} onBaseChange={size=>setPreferences({size})}/>
+      {/* Notes keep their own fixed spacing (personal-notes.css). */}
+      {!noteTools&&<ManuscriptSpacingControl editor={editor}/>}
       <span className="toolbar-divider"/>
       <IconButton label="실행 취소" disabled={!editor?.can().undo()||readonly} onClick={()=>editor?.chain().focus().undo().run()}><Undo2 size={16}/></IconButton>
       <IconButton label="다시 실행" disabled={!editor?.can().redo()||readonly} onClick={()=>editor?.chain().focus().redo().run()}><Redo2 size={16}/></IconButton>
