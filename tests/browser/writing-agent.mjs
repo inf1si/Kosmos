@@ -350,6 +350,7 @@ async function verifySharedAI(width){
     const chosenModel=provider==='gemini'?'gemini-fast':'claude-opus-5-5';await chooseOption(modelControl,chosenModel);
     // The thinking level sits under the model, offers what the model supports, and is sent with every agent step.
     const thinking=panel.getByRole('combobox',{name:'에이전트 생각 단계',exact:true}),level=provider==='gemini'?'high':'medium',labels=(await readOptions(thinking)).map(option=>option.label);
+
     if(provider==='gemini')assert.deepEqual(labels,['생각 · 자동','생각 · 낮음','생각 · 중간','생각 · 높음']);else assert(labels.includes('생각 · 최대'),'the agent offers Claude its full range');
     await chooseOption(thinking,level);assert.equal(await selectedValue(thinking),level);
     const body=await askPanel(panel,`${provider} 문서 질문`);assert.equal(body.focusId,doc.id,'the open document is the request focus');assert.equal(body.provider,provider);
@@ -372,6 +373,7 @@ async function verifySharedAI(width){
   let exchanges=await panel.locator('.agent-exchange').count();assert(exchanges>=2);const lastTwo=(await pg.query('select session_id from public.agent_runs order by created_at desc limit 2')).rows;assert.equal(lastTwo[0].session_id,lastTwo[1].session_id);await panel.locator('.chat-message.assistant').last().locator('summary').click();assert((await panel.locator('.chat-message.assistant').last().locator('li strong').allInnerTexts()).includes('열어 둔 문서'));
 
   if(mentionsOnly){await verifySourceMentions(panel,width,'work');exchanges=await panel.locator('.agent-exchange').count();}
+
   await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
   await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');
   await chooseOption(page.getByRole('combobox',{name:'AI 질문 제공자',exact:true}),'gemini');await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),longModel);await checkModelMenu(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}));await chooseOption(page.getByRole('combobox',{name:'AI 질문 모델',exact:true}),'gemini-fast');
@@ -406,7 +408,9 @@ async function checkPanelPalettes(panel,scope){
   for(const palette of PALETTES)for(const mode of ['light','dark']){
     await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});
 
-    const layout=await panel.evaluate(el=>{const box=el.getBoundingClientRect(),inside=[...el.querySelectorAll('.chat-provider,.chat-heading,.chat-composer,.agent-panel-views,.chat-message')].filter(child=>{const b=child.getBoundingClientRect();return b.width>0&&(b.left<box.left-1||b.right>box.right+1||child.scrollWidth>child.clientWidth+1);}).map(child=>child.className);
+    const layout=await panel.evaluate(el=>{const box=el.getBoundingClientRect(),inside=[...el.querySelectorAll('.chat-provider,.chat-heading,.chat-composer,.agent-panel-views,.chat-message')].flatMap(child=>{const b=child.getBoundingClientRect();
+
+return b.width>0&&(b.left<box.left-1||b.right>box.right+1||child.scrollWidth>child.clientWidth+1)?[child.className]:[];});
 
 return {left:box.left,right:box.right,inside,page:document.documentElement.scrollWidth>document.documentElement.clientWidth+1};});
 
