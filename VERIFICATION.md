@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-11-17 — 참고 패널 폭 조절과 크게 보기
+
+- 기준: main 1a42892(PR #135) 위. 사용자 요청: AI 대화 창 크기 조절과 크게 보기. 읽은 안내: [디자인 가이드](docs/design-guide.md) 0절·참고 패널, [설정](docs/settings.md).
+- 바꾼 것: [`reference-panel-size.tsx`](src/components/reference-panel-size.tsx)(손잡이·크게 보기 버튼·상태), [`app-preferences.ts`](src/lib/app-preferences.ts)의 `referenceWidth`, 집필실·노트 참고 패널, `studio-tools.css`.
+- 단위 [`app-preferences.test.ts`](tests/app-preferences.test.ts): 기본값·CSS 변수·범위 밖 값. 전체 단위 341개, 타입 검사, Anti Slop(oxlint) 통과. 기존 `app-settings.mjs`·`sidebar-resize.mjs`도 통과.
+- 브라우저 [`reference-panel-size.mjs`](tests/browser/reference-panel-size.mjs)(실제 Next 개발 서버, 합성 Supabase, Chromium): 1280px에서 끌기(360→560, 편집 창 쪽으로 넓어짐)·다른 탭도 같은 폭·새로 고침 뒤 유지·최대(줄의 70%)·최소 280·←/→ 16px·두 번 눌러 기본값, 크게 보기(줄 전체·편집 창 숨김·손잡이 없음·가운데 880px 열)·원래 크기로·닫았다 열면 원래 크기, 원고 글 그대로; 노트에서 같은 폭·끌기 저장·크게 보기; 쉰네 조합에서 탭 줄 버튼이 패널 안·가로 스크롤 없음; 900/360px에서 손잡이 없음·크게 보기가 줄을 채움. 58경우·페이지 오류 0. 보라·카세트·사이버 화면과 360px·노트 화면을 눈으로 보았다.
+- 미확인: CI·운영 배포, Safari·Firefox·터치 끌기, 실제 계정.
+
 ## 2026-11-16 — 사이드바 작업 대화 창 없애기
 
 - 기준: main 7881df8(PR #134 병합) 위. 사용자 보고: 병합 뒤에도 노트 사이드바에 작업 대화가 남아 있음. 읽은 안내: [작업 대화](docs/writing-agent.md), [설정](docs/settings.md), [디자인 가이드](docs/design-guide.md) 0절.

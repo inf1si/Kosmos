@@ -70,6 +70,7 @@
 - 저장값: `src/lib/app-preferences.ts`, 훅 `src/components/use-app-preferences.ts`(`useAppPreferences`, 기존 키를 쓰는 `useStoredChoice`).
 - 창: `src/components/settings-dialog.tsx`, 배치 CSS `src/app/settings.css`. `studio-modal` 이벤트의 `settings` 또는 `settings:<구역>`으로 연다(`StudioDialogs`).
 - 원고 표시는 `RichEditor`가 `--manuscript-line`·`--manuscript-indent`·`--manuscript-gap`·`--manuscript-width` 변수를 편집기 바깥 요소에 넣고 `studio.css`의 `.manuscript` 규칙이 읽는다(기본값을 함께 적어 변수가 없어도 이전과 같다).
+- **참고 패널 폭**(2026-11-17)도 설정 창 구역이 아니라 참고 패널(연결·첨부·노트·AI 대화) 왼쪽 가장자리를 끌어 바꾼다(280~960px, 줄의 70%까지). 기본은 `null`이며 CSS 기본 300px(AI 대화 360px, 1200px 이하 340px)을 쓴다. 두 번 누르기로 기본값, ←는 넓히고 →는 좁힌다. 같은 기기 `kosmos-app-preferences`의 `referenceWidth`이고 집필실·노트가 함께 쓰며, 900px 이하 겹쳐 뜨는 패널에는 손잡이가 없다. 탭 줄의 **크게 보기**는 편집 창 자리를 패널로 채우는 화면 상태이며 저장하지 않는다. [`reference-panel-size.tsx`](../src/components/reference-panel-size.tsx).
 - 사이드바 폭은 `SidebarResizer`(`src/components/sidebar-resizer.tsx`)가 끄는 동안 사이드바의 `--sidebar-width`만 바꾸고 손을 뗄 때 한 번 저장한다. `studio.css`의 `.studio-sidebar`가 `min(var(--sidebar-width,264px),40vw)`로 읽는다.
 - 밝기 **기기 설정**은 `orbis-theme`을 지우고 기기 설정을 적용한다. 저장한 밝기가 없으면 열린 화면도 기기 설정 변경을 따라간다(`theme-toggle.tsx`의 `useThemeMode`).
 - AI 구역은 AI 설정 창과 같은 `AISettingsPanel`을 쓴다. 설정 창은 열려 있을 때만 내용을 그리므로 AI 연결 상태는 AI 구역을 열 때만 조회한다.

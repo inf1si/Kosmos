@@ -1,15 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultAppPreferences, manuscriptLayoutStyle, parseAppPreferences, sidebarWidthStyle } from '../src/lib/app-preferences';
+import { defaultAppPreferences, manuscriptLayoutStyle, parseAppPreferences, referenceWidthStyle, sidebarWidthStyle } from '../src/lib/app-preferences';
 
 test('저장값이 없거나 깨졌으면 기본값으로 시작한다',()=>{
   for(const raw of [null,'','not json','[]','"x"','null'])assert.deepEqual(parseAppPreferences(raw),defaultAppPreferences);
-  assert.deepEqual(defaultAppPreferences,{lineHeight:1.8,paragraphIndent:1,paragraphGap:0.6,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home',sidebarWidth:null,spacingDefaults:2});
+  assert.deepEqual(defaultAppPreferences,{lineHeight:1.8,paragraphIndent:1,paragraphGap:0.6,manuscriptWidth:680,plotBoardMode:'part',graphScope:'all',graphDepth:1,graphIncludePov:true,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'home',sidebarWidth:null,referenceWidth:null,spacingDefaults:2});
 });
 
 test('허용한 값만 받고 잘못된 항목 하나는 그 항목만 기본값으로 돌린다',()=>{
-  const value=parseAppPreferences(JSON.stringify({lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:960,plotBoardMode:'time',graphScope:'local',graphDepth:3,graphIncludePov:false,aiIncludeManuscript:false,aiAttachLinked:false,checkpointMinutes:30,studioStart:'last',sidebarWidth:360,spacingDefaults:2}));
-  assert.deepEqual(value,{lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:960,plotBoardMode:'time',graphScope:'local',graphDepth:3,graphIncludePov:false,aiIncludeManuscript:false,aiAttachLinked:false,checkpointMinutes:30,studioStart:'last',sidebarWidth:360,spacingDefaults:2});
+  const value=parseAppPreferences(JSON.stringify({lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:960,plotBoardMode:'time',graphScope:'local',graphDepth:3,graphIncludePov:false,aiIncludeManuscript:false,aiAttachLinked:false,checkpointMinutes:30,studioStart:'last',sidebarWidth:360,referenceWidth:null,spacingDefaults:2}));
+  assert.deepEqual(value,{lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:960,plotBoardMode:'time',graphScope:'local',graphDepth:3,graphIncludePov:false,aiIncludeManuscript:false,aiAttachLinked:false,checkpointMinutes:30,studioStart:'last',sidebarWidth:360,referenceWidth:null,spacingDefaults:2});
   const mixed=parseAppPreferences(JSON.stringify({lineHeight:9,manuscriptWidth:'800',graphDepth:4,graphIncludePov:'no',checkpointMinutes:1,plotBoardMode:'status',studioStart:'editor'}));
   assert.equal(mixed.lineHeight,1.8);assert.equal(mixed.manuscriptWidth,680);assert.equal(mixed.graphDepth,1);assert.equal(mixed.graphIncludePov,true);assert.equal(mixed.checkpointMinutes,10);assert.equal(mixed.studioStart,'home');assert.equal(mixed.plotBoardMode,'status');
 });
@@ -38,4 +38,13 @@ test('사이드바 폭은 끌어 둔 값만 CSS 변수로 넘기고 범위 밖 �
   for(const sidebarWidth of [120,900,300.5,'300'])assert.equal(parseAppPreferences(JSON.stringify({sidebarWidth,lineHeight:2.4})).sidebarWidth,null);
 
   assert.equal(parseAppPreferences(JSON.stringify({sidebarWidth:900,lineHeight:2.4})).lineHeight,2.4);
+});
+
+test('참고 패널 폭은 끌어 둔 값만 CSS 변수로 넘기고 범위 밖 값은 기본 폭으로 돌린다',()=>{
+  assert.deepEqual(referenceWidthStyle(defaultAppPreferences),{});
+  assert.deepEqual(referenceWidthStyle(parseAppPreferences(JSON.stringify({referenceWidth:560}))),{'--reference-width':'560px'});
+
+  for(const referenceWidth of [200,1200,400.5,'400'])assert.equal(parseAppPreferences(JSON.stringify({referenceWidth,sidebarWidth:320})).referenceWidth,null);
+
+  assert.equal(parseAppPreferences(JSON.stringify({referenceWidth:1200,sidebarWidth:320})).sidebarWidth,320);
 });

@@ -38,6 +38,7 @@ import { db } from '@/lib/database';
 import { Select } from './select';
 import { agentSourceOpenSchema } from '@/lib/writing-agent';
 import { AgentPanel } from './writing-agent';
+import { ReferenceExpandButton, ReferenceResizer, useReferencePanelSize } from './reference-panel-size';
 
 const EMPTY_NOTES:PersonalNote[]=[];
 
@@ -84,7 +85,7 @@ return()=>window.removeEventListener('writing-agent-source',navigate);},[compact
 window.addEventListener('studio-modal',listener);
 
 return()=>window.removeEventListener('studio-modal',listener);},[]);
-  const aiRef=useRef<HTMLElement>(null),closeAI=useCallback(()=>setSide(null),[]);
+  const aiRef=useRef<HTMLElement>(null),closeAI=useCallback(()=>setSide(null),[]);const referenceSize=useReferencePanelSize(!!side&&!!activeId);
   useDrawerFocus(compact&&!!side,aiRef,closeAI,side==='links'?'note-links-toggle':'note-ai-toggle');
   useDrawerFocus(compact&&sidebar,sidebarRef,closeSidebar,'sidebar-toggle');
   const visible=useMemo(()=>filterNotes(spaceNotes,{box,tag,workId}),[spaceNotes,box,tag,workId]);
@@ -173,7 +174,7 @@ if(compact)setSidebar(false);}
       <footer className="sidebar-footer"><div><span className={`save-state ${s.error||s.conflict?'is-error':''}`} aria-live="polite">{cloudConfigured?<Cloud size={14}/>:<HardDrive size={14}/>}<span>{s.status}</span></span><Link className="icon-button" href="/library" aria-label="공개 서재" title="공개 서재"><Globe2 size={16}/></Link><ThemeToggle/></div></footer>
     </aside>}
     {sidebar&&!compact&&<SidebarResizer target={sidebarRef} onCollapse={closeSidebar}/>}
-    <main className="studio-panel">
+    <main className={`studio-panel ${referenceSize.expanded?'is-covered':''}`}>
       <div className="panel-tabs"><IconButton id="sidebar-toggle" label={sidebar?'사이드바 닫기':'사이드바 열기'} aria-pressed={sidebar} onClick={()=>{setSide(null);setSidebar(v=>!v);}}><PanelLeft size={16}/></IconButton><IconButton label="집필실로 돌아가기" onClick={onReturn}><ArrowLeft size={16}/></IconButton><div className="tab-list"><div className="doc-tab active">{active?<StickyNote size={14}/>:<House size={14}/>}<span>{active?noteTitle(active):spaceHome&&space?noteSpaceTitle(space):'노트 홈'}</span></div></div><span className="tab-spacer"/><GoogleAccountControl/><IconButton label="새 노트" disabled={readonly} onClick={()=>create()}><Plus size={16}/></IconButton></div>
       {s.error&&<button type="button" className="studio-error" onClick={s.clearError}><span>{s.error}</span><X size={14}/></button>}
       {/* Wait for the mobile drawer to restore its trigger before the editor applies a search jump. */}
@@ -190,7 +191,7 @@ if(compact)setSidebar(false);}} onPatch={change=>patch(active.id,change)} onOpen
 if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
         :<NotesHome state={s.state} spaceId={spaceHome?spaceId:undefined} currentSpaceId={spaceId} onSpace={selectSpace} onNewSpace={anchor=>setSpaceRequest({type:'new',spaceId,anchor})} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
     </main>
-    {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<><InternalReferencePanel sourceId={active.id} preview={referencePreview} onPreview={setReferencePreview} onOpen={openReferenceTarget} showEmpty={!noteLinkCount}/>{!referencePreview&&noteLinkCount>0&&<NoteLinks note={active} notes={notes} onOpen={select}/>}</>
+    {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''} ${referenceSize.expanded?'is-expanded':''}`} style={referenceSize.style} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}>{!compact&&!referenceSize.expanded&&<ReferenceResizer target={aiRef}/>}<div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<ReferenceExpandButton expanded={referenceSize.expanded} onToggle={referenceSize.toggle}/><IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<><InternalReferencePanel sourceId={active.id} preview={referencePreview} onPreview={setReferencePreview} onOpen={openReferenceTarget} showEmpty={!noteLinkCount}/>{!referencePreview&&noteLinkCount>0&&<NoteLinks note={active} notes={notes} onOpen={select}/>}</>
       :<AgentPanel key={`${s.namespace}-notes-${spaceId}`} scope={{kind:'notes',id:spaceId}} docId={active.id} title={noteTitle(active)} legacy={active.aiMessages||[]} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);
 
 return true;}
