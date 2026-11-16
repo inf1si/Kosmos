@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-11-16 — 사이드바 작업 대화 창 없애기
+
+- 기준: main 7881df8(PR #134 병합) 위. 사용자 보고: 병합 뒤에도 노트 사이드바에 작업 대화가 남아 있음. 읽은 안내: [작업 대화](docs/writing-agent.md), [설정](docs/settings.md), [디자인 가이드](docs/design-guide.md) 0절.
+- 바꾼 것: [`writing-agent.tsx`](src/components/writing-agent.tsx)에서 `WritingAgentDialog`·`openWritingAgent`를 지우고 내보내기를 `exportAgentData`로 뺐다. 집필실·노트 사이드바 버튼과 [`studio/page.tsx`](src/app/studio/page.tsx)의 창을 지웠고, [`settings-dialog.tsx`](src/components/settings-dialog.tsx) 저장 · 백업 버튼 줄에 기존 `.button`으로 **AI 자료 내보내기**를 더했다. 창 전용 CSS는 지웠다.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs)의 창 흐름(검토 실행·중단 중 잠금·작업 개수·변경 비교·적용·문서 열기·열어 둔 문서·기억 잊기·되돌리기·보기 전환과 색 계열·새 대화·세션 고르기·새로 고침 뒤 세션)을 AI 대화 패널로 옮기고, 사이드바에 작업 대화 버튼이 없음과 설정에서의 내보내기를 검사한다. 노트의 맡겨 실행 세션도 노트 AI 대화에서 고르고 문서 열기·열어 둔 문서를 검사한다.
+- 결과: 단위 340개, 타입 검사, Anti Slop(oxlint), `pnpm docs:check` 통과. `writing-agent.mjs` quick(1280/360px) 25경우·페이지 오류 0. 옮기며 바뀐 점: 패널의 **문서 열기**는 기존대로 같은 작품 문서를 옆에 열므로(대화가 보이게) 검사도 옆 편집기에서 본문을 확인하고, 열어 둔 문서 검사는 그 문서를 사이드바에서 연 뒤 한다. 새 대화 첫 요청에 이어 온 AI 대화가 실리면 작업 개수에서 뺀다. 360px 설정 저장 · 백업 화면을 눈으로 보았다(새 색·모양 없음).
+- 미확인: CI·운영 배포, Safari·Firefox·터치, 실제 계정의 예전 작업 대화 세션.
+
 ## 2026-11-16 — 문서 옆 AI 대화를 작업 대화 에이전트로
 
 - 기준: 같은 날 1단계(PR #133, 다른 작품·노트 읽기와 스스로 쓰는 웹 조사) 위. 사용자 결정: 문서 AI 대화와 작업 대화를 하나로 합치기. 읽은 안내: [작업 대화](docs/writing-agent.md), [AI](docs/ai.md), [디자인 가이드](docs/design-guide.md) 0절·8절 참고 패널·AI 대화·32절, [설정](docs/settings.md), [실제 조작 검증](docs/interaction-verification.md).
