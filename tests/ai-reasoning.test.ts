@@ -9,24 +9,28 @@ import { vertexTestAuth,vertexReviewResponse } from './fixtures/vertex';
 
 const review={review:'확인',suggestions:[]};
 
-// The last column marks models whose levels only the agent offers.
+// The last column marks models whose levels only the agent offers: their JSON answers use a forced tool call, which Claude refuses while thinking.
 const models:[ProviderConfig['provider'],string,ReasoningLevel[],boolean?][]=[
   ['gemini','gemini-3.1-pro-preview',['low','medium','high']],
   ['gemini','gemini-3.8-flash',['low','medium','high']],
   ['gemini','gemini-3.5-flash-lite',['low','medium','high']],
   ['gemini','gemini-4-argon',['low','medium','high']],
+  ['gemini','gemini-4-carbon',['low','medium','high']],
   ['gemini','gemini-2.5-pro',['low','medium','high']],
   ['gemini','gemini-2.5-flash',['low','medium','high']],
   ['gemini','gemini-2.0-flash',[]],
   ['gemini','gemini-3-pro-image-preview',[]],
   ['anthropic','claude-opus-5-5',['low','medium','high','xhigh','max']],
   ['anthropic','claude-sonnet-5-5@20260901',['low','medium','high','xhigh','max']],
-  ['anthropic','claude-haiku-5-5',['low','medium','high','xhigh','max']],
+  ['anthropic','claude-haiku-5-5',['low','medium','high','xhigh','max'],true],
   ['anthropic','claude-fable-5-1',['low','medium','high','xhigh','max']],
-  ['anthropic','claude-opus-4-8',['low','medium','high','xhigh','max']],
-  ['anthropic','claude-test@20260101',['low','medium','high','xhigh','max']],
-  ['anthropic','claude-sonnet-4-6',['low','medium','high','max']],
-  ['anthropic','claude-opus-4-6',['low','medium','high','max']],
+  ['anthropic','claude-opus-4-8',['low','medium','high','xhigh','max'],true],
+  ['anthropic','claude-opus-5',['low','medium','high','xhigh','max'],true],
+  ['anthropic','claude-sonnet-5@20260301',['low','medium','high','xhigh','max'],true],
+  ['anthropic','claude-fable-5',['low','medium','high','xhigh','max'],true],
+  ['anthropic','claude-test@20260101',['low','medium','high','xhigh','max'],true],
+  ['anthropic','claude-sonnet-4-6',['low','medium','high','max'],true],
+  ['anthropic','claude-opus-4-6',['low','medium','high','max'],true],
   ['anthropic','claude-sonnet-4-5@20250929',['low','medium','high'],true],
   ['anthropic','claude-haiku-4-5@20251001',['low','medium','high'],true],
   ['anthropic','claude-opus-4-1@20250805',['low','medium','high'],true],
@@ -68,15 +72,39 @@ return Response.json(vertexReviewResponse(provider,review));};
 
       if(provider==='gemini'){
         const thinking=body.generationConfig.thinkingConfig;
-        assert.equal(body.generationConfig.maxOutputTokens,8192+(room[level]||0),label);
+        assert.equal(body.generationConfig.maxOutputTokens,8192+(room[level==='auto'&&levels.length?'high':level]||0),label);
 
         if(level==='auto')assert.equal(thinking,undefined,label);
         else if(model.includes('2.5')){assert(thinking.thinkingBudget>=1024,label);assert(thinking.thinkingBudget<body.generationConfig.maxOutputTokens,label);}
         else assert.deepEqual(thinking,{thinkingLevel:level},label);
       }else if(level==='auto'){assert.equal(body.thinking,undefined,label);assert.equal(body.output_config?.effort,undefined,label);assert(body.max_tokens<=8192,label);}
-      else{assert.equal(body.thinking.type,'adaptive',label);assert.equal(body.output_config.effort,level,label);assert(body.max_tokens>8192,label);}
+      else{assert.equal(body.thinking.type,'adaptive',label);assert.equal(body.output_config.effort,level,label);assert(body.max_tokens>8192,label);assert(!['any','tool'].includes(body.tool_choice?.type),`${label}: Claude refuses a forced tool call while thinking`);}
     }
   }
+});
+
+test('JSON을 도구 강제로 받는 Claude 모델은 생각을 켜면 요청이 거절되므로 즉시 답에서는 자동만 둔다',async()=>{
+  for(const model of ['claude-sonnet-4-6','claude-opus-4-8','claude-haiku-5-5','claude-test@20260101']){
+    let body:any;
+
+    const mock:typeof fetch=async(input,init)=>{body=JSON.parse(String(init?.body??await new Request(input).text()));
+
+return Response.json(vertexReviewResponse('anthropic',review));};
+
+    await requestChat({provider:'anthropic',model,project:'orbiter-ai',location:'global'},{question:'질문'},[],mock,undefined,{googleAuthOptions:vertexTestAuth()},'high');
+    assert.equal(body.tool_choice?.type,'any',model);assert.equal(body.thinking?.type,'adaptive',model);assert.deepEqual(reasoningLevels('anthropic',model),['auto'],model);
+  }
+});
+
+test('자동이어도 Gemini는 기본 생각을 하므로 답 자리를 남기고, 한 번에 끝나지 않은 답은 이어 받는다',async()=>{
+  const bodies:any[]=[];
+
+  const mock:typeof fetch=async(input,init)=>{bodies.push(JSON.parse(String(init?.body??await new Request(input).text())));
+
+return Response.json(bodies.length===1?{candidates:[{finishReason:'CONTINUATION',continuationToken:'next',content:{role:'model',parts:[{text:'생각',thought:true}]}}],usageMetadata:{promptTokenCount:1,candidatesTokenCount:32768}}:vertexReviewResponse('gemini',review));};
+
+  assert.deepEqual(await requestChat({provider:'gemini',model:'gemini-4-carbon',project:'orbiter-ai',location:'global'},{question:'질문'},[],mock,undefined,{googleAuthOptions:vertexTestAuth()}),review);
+  assert.equal(bodies[0].generationConfig.maxOutputTokens,8192+32768);assert.equal(bodies[0].generationConfig.thinkingConfig,undefined);assert.equal(bodies[1].continuationToken,'next');
 });
 
 test('요청 형식은 단계를 받고 모르는 값은 거절하며 실행 기록에서 단계를 되읽는다',()=>{
