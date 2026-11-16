@@ -7,7 +7,7 @@ import { fromText,plainText,uid,workspaceSchema } from '../src/lib/model';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { addNoteSpace,moveNote,noteSpaceFor,resolveNoteNavigation } from '../src/lib/note-navigation';
 import { resolveNavigation } from '../src/lib/document-navigation';
-import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,agentBranchMemory,agentUsageTotal,agentStructure,agentMemoryEditSchema,type AgentOperation } from '../src/lib/writing-agent';
+import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,agentBranchMemory,agentUsageTotal,agentStructure,agentMemoryEditSchema,agentMergeApply,agentMergeRevert,type AgentOperation } from '../src/lib/writing-agent';
 import { buildAgentInstructions } from '../src/lib/agent-instructions';
 import { DEFAULT_AI_SYSTEM_PROMPT } from '../src/lib/ai-settings';
 import { AgentLanguageModel } from '../src/lib/agent-language-model';
@@ -318,4 +318,29 @@ test('구조 변경은 새 폴더·문서의 위치, 옮긴 곳, 같은 자리�
   const last=siblings.at(-1)!,reorder=agentStructure(snapshot,[{type:'move',id:last.id,parentId:last.parentId,sectionId:last.sectionId,beforeId:siblings[0].id}]);
   assert.deepEqual(reorder.map(item=>[item.id,item.change,item.before,item.after]),[[last.id,'reordered',`${siblings.length}번째`,'1번째']],'only the moved node is reported');
   assert.deepEqual(agentStructure(snapshot,[{type:'replace',id:doc.id,quote:'관측소',replacement:'우주항'}]),[]);
+});
+
+test('문서 단위 병합: 고친 문서가 그대로면 다른 문서의 새 편집을 지키며 적용하고 되돌린다',()=>{
+  const {state,work,doc,scope,sectionId}=fixture(),snapshot=captureAgentScope(state,scope),other=work.documents[1],created=uid();
+  const edit:AgentOperation[]=[{type:'replace',id:doc.id,quote:'낡은',replacement:'새'}];
+  // The writer edited another document after the run read the scope.
+  const later=structuredClone(state);later.works[0].documents[1].content=fromText('작가가 나중에 쓴 문장.');
+  const merged=agentMergeApply(later,snapshot,edit)!;assert(merged);
+  assert.equal(plainText(merged.works[0].documents[0].content),'달에는 새 관측소가 있었다.');assert.equal(plainText(merged.works[0].documents[1].content),'작가가 나중에 쓴 문장.');
+  // The edited document itself moved on: no merge.
+  const clash=structuredClone(state);clash.works[0].documents[0].content=fromText('달에는 낡은 관측소와 다른 문장이 있었다.');assert.equal(agentMergeApply(clash,snapshot,edit),null);
+  // A tree change needs the tree as the run read it; text edits elsewhere leave it alone.
+  const create:AgentOperation[]=[{type:'create',id:created,kind:'memo',title:'메모',text:'메모',parentId:null,sectionId,beforeId:null}];
+  assert(agentMergeApply(later,snapshot,create));
+  const grown=applyAgentOperations(structuredClone(state),scope,[{type:'create',id:uid(),kind:'memo',title:'작가 메모',text:'',parentId:null,sectionId,beforeId:null}]);assert.equal(agentMergeApply(grown,snapshot,create),null);
+  // Reverting after the writer kept editing another document takes back only the change.
+  const both=[...edit,...create],applied=applyAgentOperations(structuredClone(state),scope,both);
+  const edited=structuredClone(applied);edited.works[0].documents.find(d=>d.id===other.id)!.content=fromText('적용 뒤에 쓴 문장.');
+  const reverted=agentMergeRevert(edited,snapshot,both)!;assert(reverted);
+  assert.equal(plainText(reverted.works[0].documents.find(d=>d.id===doc.id)!.content),'달에는 낡은 관측소가 있었다.');assert.equal(plainText(reverted.works[0].documents.find(d=>d.id===other.id)!.content),'적용 뒤에 쓴 문장.');
+  assert(!reverted.works[0].documents.some(d=>d.id===created));assert(!resolveNavigation(reverted.works[0]).nodes.some(n=>n.id===created));
+  // Opening a document in the editor fills unset attributes and new block IDs; that is not an edit.
+  const opened=structuredClone(edited),touchedDoc=opened.works[0].documents.find(d=>d.id===doc.id)!;touchedDoc.content={...touchedDoc.content,content:touchedDoc.content.content?.map(node=>({...node,attrs:{...node.attrs,blockId:uid(),lineHeight:null,indent:null}}))};assert(agentMergeRevert(opened,snapshot,both));
+  // A document the change wrote that was edited again is not overwritten.
+  const touched=structuredClone(applied);touched.works[0].documents.find(d=>d.id===doc.id)!.content=fromText('작가가 다시 고친 문장.');assert.equal(agentMergeRevert(touched,snapshot,both),null);
 });

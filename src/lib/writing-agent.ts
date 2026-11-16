@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { documentSchema, noteSchema, workspaceSchema, plainText, fromText, newDocument, statuses, wikiReferences, type Workspace, type RichNode } from './model';
+import { documentSchema, noteSchema, workspaceSchema, plainText, fromText, newDocument, statuses, wikiReferences, type Workspace, type RichNode, type RichAttributes } from './model';
 import { internalReferences } from './internal-reference-node';
 import { referenceTargets } from './internal-references';
 import { applySuggestion } from './ai';
@@ -280,6 +280,70 @@ export function agentDiff(before:AgentSnapshot,operations:readonly AgentOperatio
   });
 
   return {rows,structure:agentStructure(before,operations)};
+}
+
+/** Attributes that carry meaning: an editor fills unset ones with null and gives paragraphs block IDs on its own. */
+function meaningfulAttributes(attrs:RichAttributes|undefined){
+  const kept=Object.entries(attrs||{}).filter(([key,value])=>key!=='blockId'&&value!==null&&value!==undefined);
+
+  return kept.length?Object.fromEntries(kept):undefined;
+}
+
+function contentFace(node:RichNode):RichNode{
+  return {type:node.type,text:node.text,attrs:meaningfulAttributes(node.attrs),marks:node.marks?.map(mark=>({type:mark.type,attrs:meaningfulAttributes(mark.attrs)})),content:node.content?.map(contentFace)};
+}
+
+/**
+ * What a change depends on in a document: its text, formatting and properties, not time stamps, AI chat history,
+ * or what opening it in the editor fills in (block IDs, unset attributes).
+ */
+const documentFace=(doc:ReturnType<typeof agentDocuments>[number]|undefined)=>doc&&JSON.stringify({title:doc.title,kind:doc.kind,content:contentFace(doc.content),properties:doc.properties});
+
+const treeFace=(snapshot:AgentSnapshot)=>JSON.stringify(snapshotTree(snapshot));
+
+/** Documents a change touches, and whether it changes the tree (new documents and folders, moves). */
+function agentTouched(snapshot:AgentSnapshot,operations:readonly AgentOperation[]){
+  const known=new Set(agentDocuments(snapshot).map(d=>d.id)),ids=new Set(operations.map(op=>op.id));
+
+  return {ids,structural:operations.some(op=>op.type==='create'||op.type==='folder'||op.type==='move'||!known.has(op.id))};
+}
+
+function sameDocuments(ids:Set<string>,a:AgentSnapshot,b:AgentSnapshot){
+  const left=new Map(agentDocuments(a).map(d=>[d.id,d])),right=new Map(agentDocuments(b).map(d=>[d.id,d]));
+
+  return [...ids].every(id=>documentFace(left.get(id))===documentFace(right.get(id)));
+}
+
+/**
+ * Applies a change to a scope that moved on since the run read it, as long as nothing the change touches moved:
+ * the documents it edits are as the run read them and, for a change to the tree, the tree is too. Returns null otherwise.
+ */
+export function agentMergeApply(state:Workspace,snapshot:AgentSnapshot,operations:readonly AgentOperation[]):Workspace|null{
+  const current=captureAgentScope(state,snapshot.scope),{ids,structural}=agentTouched(snapshot,operations);
+
+  if(!sameDocuments(ids,snapshot,current)||(structural&&treeFace(snapshot)!==treeFace(current)))return null;
+
+  return applyAgentOperations(state,snapshot.scope,operations);
+}
+
+/**
+ * Takes back only what a change did when the writer edited other documents after it was applied.
+ * The touched documents (and, for a tree change, the tree) must still be exactly as the change left them; returns null otherwise.
+ */
+export function agentMergeRevert(state:Workspace,snapshot:AgentSnapshot,operations:readonly AgentOperation[]):Workspace|null{
+  const applied=agentOverlay(snapshot,operations),current=captureAgentScope(state,snapshot.scope),{ids,structural}=agentTouched(snapshot,operations);
+
+  if(!sameDocuments(ids,applied,current)||(structural&&treeFace(applied)!==treeFace(current)))return null;
+
+  if(current.work&&snapshot.work){
+    const old=new Map(snapshot.work.documents.map(d=>[d.id,d]));
+
+    return restoreAgentScope(state,{...current,work:{...current.work,documents:current.work.documents.flatMap(d=>!ids.has(d.id)?[d]:old.has(d.id)?[old.get(d.id)!]:[]),navigation:structural?snapshot.work.navigation:current.work.navigation}});
+  }
+
+  const old=new Map(snapshot.notes.map(n=>[n.id,n]));
+
+  return restoreAgentScope(state,{...current,notes:current.notes.flatMap(n=>!ids.has(n.id)?[n]:old.has(n.id)?[old.get(n.id)!]:[]),navigation:structural?snapshot.navigation:current.navigation});
 }
 
 /** Sections and tree nodes of a snapshot, in stored order. */

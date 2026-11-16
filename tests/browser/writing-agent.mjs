@@ -481,10 +481,19 @@ return row?.status==='completed'&&!row.reverted;},'durable agent finishes');
     // The structure list says where the new document goes; the summary counts it.
     const placed=panel.locator('.agent-structure li').filter({hasText:'에이전트 개요'});assert.equal(await placed.count(),1);assert.match(await placed.innerText(),/새로 만듦[\s\S]*\S/);assert.match(await panel.locator('.agent-change-actions>span').innerText(),/구조 변경 1개$/);await page.screenshot({path:resolve(output,`changes-${width}.png`)});
     const before=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!before.works[0].documents.some(doc=>doc.id===run.operations[0].id));
+    // Another device saved an edit to a different document after the run read the work; the change applies beside it.
+    const elsewhere=initial.works[0].documents[1].id,editElsewhere=async text=>{const row=(await pg.query('select payload,version from public.workspaces where id=$1',[workspaceId])).rows[0],payload=structuredClone(row.payload);payload.works[0].documents.find(doc=>doc.id===elsewhere).content=fromText(text);state=workspaceSchema.parse(payload);await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(state),workspaceId]);};
+
+    const elsewhereText=async()=>plainText((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents.find(doc=>doc.id===elsewhere).content);
+
+    if(width===1280)await editElsewhere('다른 기기에서 적용 전에 쓴 문장.');
     await panel.getByRole('button',{name:'변경 적용',exact:true}).click();await until(async()=>{const row=(await pg.query('select applied_version from public.agent_runs where id=$1',[run.id])).rows[0];
 
 return row.applied_version!==null;},'review changes apply');
     await panel.getByRole('button',{name:'되돌리기',exact:true}).waitFor();
+
+    if(width===1280){const after=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(after.works[0].documents.some(doc=>doc.id===run.operations[0].id),'the change is applied');assert.equal(await elsewhereText(),'다른 기기에서 적용 전에 쓴 문장.','an edit to another document made after the run survives the apply');}
+
     await panel.getByRole('button',{name:'문서 열기',exact:true}).click();
     await writeFile(resolve(output,'after-source-open.txt'),await page.locator('body').innerText());await page.screenshot({path:resolve(output,'after-source-open.png')});
     // The panel opens a source of this work beside the open document, so the conversation stays in view.
@@ -501,7 +510,12 @@ return row.applied_version!==null;},'review changes apply');
     await panel.getByRole('button',{name:'고치기',exact:true}).click();const memoryText=panel.getByRole('textbox',{name:'기억 내용',exact:true});assert(await panel.getByRole('textbox',{name:'기억 제목',exact:true}).evaluate(el=>el===document.activeElement));await memoryText.fill('관측소가 비어 있는 이유는 3장에서 밝힌다.');await panel.getByRole('button',{name:'저장',exact:true}).click();await memoryText.waitFor({state:'detached'});await panel.locator('.agent-memories p').filter({hasText:'관측소가 비어 있는 이유는 3장에서 밝힌다.'}).waitFor();
     const edited=(await pg.query('select content,sources from public.agent_memories where session_id=$1',[run.session_id])).rows;assert.equal(edited.length,1);assert.equal(edited[0].content,'관측소가 비어 있는 이유는 3장에서 밝힌다.');assert(edited[0].sources.length>0,'editing keeps the sources');
     await panel.getByRole('button',{name:'잊기',exact:true}).click();await until(async()=>(await pg.query('select * from public.agent_memories where session_id=$1',[run.session_id])).rows.length===0,'forget memory');
+
+    if(width===1280)await editElsewhere('다른 기기에서 적용 뒤에 쓴 문장.');
     await changesView.click();await panel.getByRole('button',{name:'되돌리기',exact:true}).click();await until(async()=>(await pg.query('select reverted from public.agent_runs where id=$1',[run.id])).rows[0].reverted,'undo batch');
+
+    if(width===1280){const after=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!after.works[0].documents.some(doc=>doc.id===run.operations[0].id),'the undo takes the created document back');assert.equal(await elsewhereText(),'다른 기기에서 적용 뒤에 쓴 문장.','an edit to another document made after the apply survives the undo');}
+
     await panel.getByRole('button',{name:'대화',exact:true}).click();
 
     for(const palette of quick?PALETTES.slice(0,1):PALETTES){for(const mode of ['light','dark']){
@@ -596,10 +610,16 @@ return row.status==='completed';},'API task completes');
   const noteSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('노트에서 묻는다')));assert(noteSystem.includes(`작가가 지금 열어 둔 문서: "에이전트 개요" (id ${executed.operations[0].id})`),'the open note is named to the model');assert(noteSystem.includes('노트 작업공간: '));assert(noteSystem.includes('현재 실행 방식: 맡겨 실행'));
   // Even a cancellation after the commit must leave undo available.
   await pg.query("update public.agent_runs set status='cancelled' where id=$1",[notes.id]);assert.equal((await api(`changes/${notes.id}/revert`,'POST',{})).status,200);await until(async()=>await page.getByLabel('노트 본문',{exact:true}).count()===0,'remote undo refreshes open note without realtime');await noteContext.close();
-  const stale=await createTask({kind:'work',id:initial.works[0].id},'review','개요를 제안해줘.');await finish(stale.id);
-  const current=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;
-  current.works[0].documents[0].title='작성자가 새로 고친 제목';await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(current),workspaceId]);
-  assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,409);assert.equal((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents[0].title,'작성자가 새로 고친 제목');
+  const stale=await createTask({kind:'work',id:initial.works[0].id},'review','개요를 제안해줘.');assert((await finish(stale.id)).operations.some(op=>op.type==='create'),'the stale change adds a document');
+  // The writer renamed one document and a folder after the run read the work.
+  const current=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload,folder=current.works[0].navigation.nodes.find(node=>node.type==='folder'),folderTitle=folder.title;
+  current.works[0].documents[0].title='작성자가 새로 고친 제목';folder.title='작성자가 바꾼 부';await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(current),workspaceId]);
+  // A change that adds a document needs the tree as the run read it, so the folder rename stops it and nothing is written.
+  assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,409);const kept=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert.equal(kept.works[0].documents[0].title,'작성자가 새로 고친 제목');assert.equal(kept.works[0].navigation.nodes.find(node=>node.id===folder.id).title,'작성자가 바꾼 부');
+  // With the tree back as it was, the rename of an untouched document no longer blocks the change and survives it.
+  kept.works[0].navigation.nodes.find(node=>node.id===folder.id).title=folderTitle;await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(kept),workspaceId]);
+  assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,200);const joined=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert.equal(joined.works[0].documents[0].title,'작성자가 새로 고친 제목');assert.equal(joined.works[0].documents.length,kept.works[0].documents.length+1,'the staged document is added');
+  assert.equal((await api(`changes/${stale.id}/revert`,'POST',{})).status,200);assert.equal((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents.length,kept.works[0].documents.length);
   const cancelled=await createTask({kind:'work',id:initial.works[0].id},'execute','이 실행은 중단한다.');assert.equal((await api(`runs/${cancelled.id}/cancel`,'POST',{})).status,200);assert.equal((await pg.query('select status from public.agent_runs where id=$1',[cancelled.id])).rows[0].status,'cancelled');
   const exported=await api('export');assert.equal(exported.status,200);assert.equal(exported.data.format,'orbis-writing-agent');assert(exported.data.runs.some(r=>r.id===notes.id));assert(!JSON.stringify(exported.data).includes('synthetic-openai'));
   // An execute run that commits while the writer keeps typing elsewhere is joined, not turned into a save conflict.

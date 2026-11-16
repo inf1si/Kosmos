@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-11-17 — AI 대화: 문서 단위로 변경 적용·되돌리기
+
+- 기준: main 307c5fc(PR #139) 위. 사용자 요청: 설계 대비 빠진 기능 구현(2묶음 문서 단위 병합). 읽은 안내: [작업 대화](docs/writing-agent.md)의 적용·합치기 절, [설계](docs/personal-knowledge-agent-design.md)의 원본 반영 절.
+- 바꾼 것: [`writing-agent.ts`](src/lib/writing-agent.ts)의 `agentMergeApply`·`agentMergeRevert`(대상 문서 비교는 블록 ID·null 속성을 뺀 제목·본문·서식·속성, 구조 변경은 범위 트리 비교), [`agent-server.ts`](src/lib/agent-server.ts)의 `commitAgentChanges`가 범위 해시가 다를 때 이것을 쓴다.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 다른 문서가 바뀐 뒤 적용(두 편집 모두 남음), 대상 문서가 바뀌면 거절, 트리가 그대로면 새 문서 적용·트리가 바뀌면 거절, 적용 뒤 다른 문서 편집을 남기며 되돌리기(새 문서·트리 노드 제거), 편집기를 연 것(블록 ID·null 속성)만으로는 거절하지 않음, 대상 문서를 다시 고치면 되돌리기 거절.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버, PGlite에 실제 마이그레이션, 합성 모델): 25경우·페이지 오류 0. 1280px에서 다른 기기가 다른 문서를 저장한 뒤 패널 **변경 적용** → 적용되고 그 문장이 남음, 다시 다른 문서를 저장한 뒤 **되돌리기**(그 사이 새 문서를 편집기로 열었음) → 새 문서가 빠지고 그 문장이 남음. API로 폴더 이름을 바꾼 뒤 새 문서를 만드는 변경 적용은 409·원고 그대로, 폴더 이름을 되돌리면 다른 문서의 제목 변경을 남긴 채 200, 이어 되돌리기 200.
+- 고친 결함(검사 중 발견): 처음 비교는 본문 JSON 전체여서 편집기로 연 새 문서(블록 ID·빈 속성이 채워짐)의 되돌리기가 거절됐다. 그 차이를 무시하도록 고쳤다.
+- 미확인: 운영 Supabase, 큰 작품에서의 비교 시간, 실제 모델이 만든 여러 문서 변경, Safari·Firefox.
+
 ## 2026-11-17 — AI 대화: 구조 변경 비교
 
 - 기준: main 6af5e33(PR #138) 위. 사용자 요청: 설계 대비 빠진 기능 구현(1묶음 마지막, 구조 변경 비교 화면). 읽은 안내: [작업 대화](docs/writing-agent.md), [디자인 가이드](docs/design-guide.md) AI 대화 절.
