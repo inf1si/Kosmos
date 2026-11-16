@@ -89,6 +89,8 @@ return;}
       const names=new Set((google?(body.tools||[]).flatMap(tool=>tool.functionDeclarations||[]):body.tools||[]).map(tool=>tool.name));let item;
 
       if(step===0&&JSON.stringify(google?body.contents?.at(-1):body.messages?.at(-1)).includes('이 장면은 어디야'))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'열어 둔 문서를 확인했습니다.',annotations:[]}]};
+      // Questions asked in the reference-panel chat are answered directly.
+      else if(step===0&&/문서 질문|노트 질문|비교해줘/.test(JSON.stringify(google?body.contents?.at(-1):body.messages?.at(-1))))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'합성 문서 답변',annotations:[]}]};
       else if(step===0)item=tool('searchSources',{query:'',offset:0});
       else if(step===1)item=tool('readSource',{id:search.documents[0].id,offset:0,length:12000});
       else if(!names.has('stageChange'))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'원문을 읽었고 다른 전개를 함께 생각했습니다.',annotations:[]}]};
@@ -249,11 +251,9 @@ return;
 
 async function verifySourceMentions(panel,width,scope){
   console.log(JSON.stringify({flow:'mention-start',scope,width}));
-  const input=panel.getByRole('textbox',{name:'AI에게 질문',exact:true}),context=panel.locator('.chat-context');
+  const input=panel.getByRole('textbox',{name:'AI에게 질문',exact:true}),chips=panel.locator('.chat-source-chips button');
 
-  if(!await context.evaluate(el=>el.open))await context.locator('summary').click();
-
-  while(await context.locator('.chat-source-chips button').count())await context.locator('.chat-source-chips button').first().click();
+  while(await chips.count())await chips.first().click();
   const beforeCalls=modelCalls.length;
   await input.fill('앞 문장 @공통 뒤 문장');
 
@@ -270,20 +270,16 @@ async function verifySourceMentions(panel,width,scope){
 
   for(let i=0;i<'@새검색'.length;i++)await input.press('ArrowLeft');
   assert.equal(await list.count(),0);
-  await context.getByRole('button',{name:'참고 자료 선택',exact:true}).click();
-  const picker=page.getByRole('dialog',{name:'AI 참고 자료 선택',exact:true}),duplicates=picker.locator('label').filter({hasText:'공통 자료'});
-  assert.equal(await duplicates.count(),2);assert.equal(await duplicates.nth(0).getByRole('checkbox').isChecked(),false);assert.equal(await duplicates.nth(1).getByRole('checkbox').isChecked(),true);
-  await duplicates.nth(1).getByRole('checkbox').uncheck();await page.keyboard.press('Escape');
-  assert((await context.locator('summary').innerText()).includes('참고 0개'));
+  // A chosen source shows as a chip above the input; the chip takes it out again.
+  assert.equal(await chips.count(),1);assert((await chips.first().innerText()).startsWith('공통 자료'));await chips.first().click();assert.equal(await chips.count(),0);
   await input.fill('@공통');await list.getByRole('option').first().click();
   await input.fill('@공통');assert.equal(await list.getByLabel('선택됨').count(),1);await list.getByRole('option').first().click();
-  assert((await context.locator('summary').innerText()).includes('참고 1개'));
+  assert.equal(await chips.count(),1);
   await input.fill('name@example.com');assert.equal(await list.count(),0);
   await input.fill('@없는자료 같은 표기는 어떻게 써?');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor({state:'detached'});assert.equal(await list.count(),0,'an ordinary @ in a sentence does not keep the source search open');
   await input.fill('@없는자료');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor();assert.equal(await list.getByRole('option').count(),0);await input.press('Enter');assert.equal(modelCalls.length,beforeCalls);await input.press('Escape');assert(await panel.isVisible());
   await input.fill('@공통');await list.waitFor();await input.dispatchEvent('compositionstart',{data:'ㄱ'});assert.equal(await list.count(),0);await input.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true});assert.equal(modelCalls.length,beforeCalls);await input.dispatchEvent('compositionend',{data:'공통'});await list.waitFor();await input.press('Escape');
   await input.fill('');await input.fill('@공통');await list.waitFor();await input.press('Tab');assert.equal(await list.count(),0);assert(await panel.getByRole('button',{name:'질문 보내기',exact:true}).evaluate(el=>el===document.activeElement));
-  await input.fill('');await input.fill('@공통');await list.waitFor();await context.getByRole('button',{name:'참고 자료 선택',exact:true}).click();await picker.waitFor();assert.equal(await list.count(),0);await page.keyboard.press('Escape');
   await input.fill('@긴 제목');await list.waitFor();
 
   for(const palette of quick?PALETTES.slice(0,1):PALETTES)for(const mode of ['light','dark']){
@@ -298,21 +294,35 @@ return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,overflow:el.
   }
 
   await input.press('Escape');await input.fill('줄바꿈');await input.press('Shift+Enter');assert.equal(await input.inputValue(),'줄바꿈\n');assert.equal(modelCalls.length,beforeCalls);await input.fill('선택한 @공통 자료를 비교해줘.');await page.getByText('일치하는 자료가 없습니다.',{exact:true}).waitFor({state:'detached'});assert.equal(await list.count(),0,'a finished sentence closes the source search by itself');
-  const previous=await panel.locator('.chat-message.assistant').count(),request=page.waitForRequest(r=>r.url().endsWith('/api/ai/chat')&&r.method()==='POST');
+  const previous=await panel.locator('.chat-message.assistant').count(),request=page.waitForRequest(r=>r.url().includes('/api/agent/sessions/')&&r.url().endsWith('/messages')&&r.method()==='POST');
   await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();assert.deepEqual((await request).postDataJSON().sourceIds,[mentionA.id]);
-  await until(async()=>await panel.locator('.chat-message.assistant').count()===previous+1,'mention reference answer');
-  const sent=JSON.stringify(modelCalls.at(-1).body);assert(sent.includes('첫 번째 합성 참고 자료의 전문이다.'));assert(!sent.includes('두 번째 노트는 선택하지 않았다.'));
-  results.push({flow:'ai-source-mention-keyboard/pointer/caret/checkbox/dedup/email/IME/escape/send',scope,width});console.log(JSON.stringify({flow:'mention-complete',scope,width}));
+  await until(async()=>await panel.locator('.chat-message.assistant').count()===previous+1&&await panel.locator('.chat-message.assistant').last().locator(':scope > p').count()>0,'mention reference answer');assert.equal(await chips.count(),0,'the pointed sources go with the request');
+  // The agent is told which sources were pointed at and reads them itself.
+  const sent=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('비교해줘')));assert(sent.includes('@로 가리킨 자료')&&sent.includes(mentionA.id));assert(!sent.includes(mentionB.id));
+  results.push({flow:'ai-source-mention-keyboard/pointer/caret/chip/dedup/email/IME/escape/send',scope,width});console.log(JSON.stringify({flow:'mention-complete',scope,width}));
+}
+
+/** The answer of the latest run in the panel: its own paragraph, not the work log's details. */
+const panelAnswer=panel=>panel.locator('.chat-message.assistant').last().locator(':scope > p').first();
+
+async function askPanel(panel,question){
+  const before=await panel.locator('.chat-message.assistant').count(),request=page.waitForRequest(r=>r.url().includes('/api/agent/sessions/')&&r.url().endsWith('/messages')&&r.method()==='POST');
+  await panel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill(question);await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();const body=(await request).postDataJSON();
+  await until(async()=>await panel.locator('.chat-message.assistant').count()===before+1&&await panelAnswer(panel).count()>0,`panel answer: ${question}`);
+
+  return body;
 }
 
 async function verifySharedAI(width){
   await page.getByRole('button',{name:/^사이드바 (열기|닫기)$/}).waitFor();
-  const row=page.locator(`[data-navigation-row="${initial.works[0].documents[0].id}"]`);
+  const doc=initial.works[0].documents[0],row=page.locator(`[data-navigation-row="${doc.id}"]`);
 
   if(!await row.isVisible())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();
-  await row.getByTitle(initial.works[0].documents[0].title,{exact:true}).click();
+  await row.getByTitle(doc.title,{exact:true}).click();
   await page.getByRole('button',{name:'AI 대화',exact:true}).click();
+  // The reference-panel chat is the writing agent: no separate source or web switches, and the open document is its focus.
   const panel=page.locator('.reference-panel.is-chat');await panel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();
+  assert.equal(await panel.getByRole('button',{name:/웹 조사|참고 자료 선택/}).count(),0);assert.equal(await panel.locator('.chat-heading strong').innerText(),doc.title);
 
   for(const provider of ['gemini','anthropic']){
     await panel.getByRole('button',{name:'AI 설정',exact:true}).click();const settings=page.getByRole('dialog',{name:'AI 설정',exact:true});
@@ -331,31 +341,34 @@ async function verifySharedAI(width){
       }
     }
 
-    await settings.getByRole('button',{name:'닫기',exact:true}).click();
+    await settings.getByRole('button',{name:'닫기',exact:true}).click();await chooseOption(panel.getByRole('combobox',{name:'에이전트 제공자',exact:true}),provider);
+    const modelControl=panel.getByRole('combobox',{name:'에이전트 모델',exact:true});
 
-    if(provider==='gemini'){await chooseOption(panel.getByRole('combobox',{name:'AI 모델',exact:true}),longModel);await checkModelMenu(panel.getByRole('combobox',{name:'AI 모델',exact:true}));}
+    if(provider==='gemini'){await chooseOption(modelControl,longModel);await checkModelMenu(modelControl);}
 
-    const chosenModel=provider==='gemini'?'gemini-fast':'claude-opus-5-5';await chooseOption(panel.getByRole('combobox',{name:'AI 모델',exact:true}),chosenModel);
-    // The thinking level sits under the model, offers what the model supports, and is sent as chosen.
-    const thinking=panel.getByRole('combobox',{name:'AI 생각 단계',exact:true}),level=provider==='gemini'?'high':'medium';assert.deepEqual((await readOptions(thinking)).map(option=>option.label),['자동','낮음','중간','높음']);await chooseOption(thinking,level);assert.equal(await selectedValue(thinking),level);
-    const previousAnswers=await panel.locator('.chat-message.assistant').count();
-    await panel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill(`${provider} 문서 질문`);await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();
-    await until(async()=>await panel.locator('.chat-message.assistant').count()===previousAnswers+1,'ordinary document AI answer');
-    assert.equal(await panel.locator('.chat-message.assistant').last().locator('p').first().innerText(),'합성 문서 답변');assert.equal(modelCalls.at(-1).model,chosenModel);assert.equal(await panel.locator('.chat-message.assistant').last().locator('header small').innerText(),chosenModel);
-    const thought=modelCalls.at(-1).body;
+    const chosenModel=provider==='gemini'?'gemini-fast':'claude-opus-5-5';await chooseOption(modelControl,chosenModel);
+    // The thinking level sits under the model, offers what the model supports, and is sent with every agent step.
+    const thinking=panel.getByRole('combobox',{name:'에이전트 생각 단계',exact:true}),level=provider==='gemini'?'high':'medium',labels=(await readOptions(thinking)).map(option=>option.label);
+    if(provider==='gemini')assert.deepEqual(labels,['자동','낮음','중간','높음']);else assert(labels.includes('최대'),'the agent offers Claude its full range');
+    await chooseOption(thinking,level);assert.equal(await selectedValue(thinking),level);
+    const body=await askPanel(panel,`${provider} 문서 질문`);assert.equal(body.focusId,doc.id,'the open document is the request focus');assert.equal(body.provider,provider);
+    assert.equal(await panelAnswer(panel).innerText(),'합성 문서 답변');assert.equal(await panel.locator('.chat-message.assistant').last().locator('header small').innerText(),chosenModel);
+    const call=modelCalls.findLast(c=>JSON.stringify(c.body).includes(`${provider} 문서 질문`));assert.equal(call.model,chosenModel);
+    // The open document's text is in the instructions, so "이 장면" needs no extra step.
+    assert(systemOf(call).includes(`작가가 지금 열어 둔 문서: "${doc.title}" (id ${doc.id})`));assert(systemOf(call).includes(plainText(doc.content).slice(0,20)));
 
-    if(provider==='gemini'){assert.deepEqual(thought.generationConfig.thinkingConfig,{thinkingLevel:'high'});assert.equal(thought.generationConfig.maxOutputTokens,8192+32768);}
-    else{assert.equal(thought.thinking.type,'adaptive');assert.equal(thought.output_config.effort,'medium');}
-
-    if(provider==='gemini'){await page.screenshot({path:resolve(output,`thinking-chat-${width}.png`)});await checkThinkingPalettes(thinking,'chat');}
+    if(provider==='gemini'){assert.equal(call.body.generationConfig.thinkingConfig.thinkingLevel,'high');await page.screenshot({path:resolve(output,`thinking-chat-${width}.png`)});await checkThinkingPalettes(thinking,'chat');}
+    else{assert.equal(call.body.thinking.type,'adaptive');assert.equal(call.body.output_config.effort,'medium');}
 
     if(provider==='anthropic'){
       await panel.getByRole('button',{name:'AI 설정',exact:true}).click();const settings=page.getByRole('dialog',{name:'AI 설정',exact:true});
       assert.equal(await settings.getByRole('combobox',{name:'설정할 AI 모델',exact:true}).getAttribute('data-value'),'claude-selected@20260101');
       await settings.getByRole('button',{name:'기본 모델 사용',exact:true}).click();await settings.getByText('기본 모델로 돌아갔습니다.',{exact:true}).waitFor();assert.equal(await settings.getByRole('combobox',{name:'설정할 AI 모델',exact:true}).getAttribute('data-value'),vertexTestEnvironment.VERTEX_CLAUDE_MODEL);await settings.getByRole('button',{name:'닫기',exact:true}).click();
     }
-
   }
+
+  // Two questions in the panel are one session: the second run follows the first.
+  assert.equal(await panel.locator('.agent-exchange').count(),2);await panel.locator('.chat-message.assistant').last().locator('summary').click();assert((await panel.locator('.chat-message.assistant').last().locator('li strong').allInnerTexts()).includes('열어 둔 문서'));
 
   if(mentionsOnly)await verifySourceMentions(panel,width,'work');
   await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
@@ -364,17 +377,44 @@ async function verifySharedAI(width){
   // The level chosen in the chat panel is the same device preference here; changing it here changes the next request.
   const cursorThinking=page.getByRole('combobox',{name:'AI 질문 생각 단계',exact:true});assert.equal(await selectedValue(cursorThinking),'high');await chooseOption(cursorThinking,'low');await page.screenshot({path:resolve(output,`thinking-cursor-${width}.png`)});await checkThinkingPalettes(cursorThinking,'cursor');
   const cursorBox=await page.locator('.note-ai-settings').evaluate(el=>({overflow:el.scrollWidth>el.clientWidth+1,right:el.getBoundingClientRect().right}));assert(!cursorBox.overflow&&cursorBox.right<=width+1,JSON.stringify(cursorBox));
-  await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'적용할 AI 답변'}).inputValue(),'합성 문서 답변');assert.equal(modelCalls.at(-1).model,'gemini-fast');assert.deepEqual(modelCalls.at(-1).body.generationConfig.thinkingConfig,{thinkingLevel:'low'});await page.keyboard.press('Escape');
+  await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();assert.equal(await page.getByRole('textbox',{name:'적용할 AI 답변'}).inputValue(),'합성 문서 답변');assert.equal(modelCalls.at(-1).model,'gemini-fast');assert.deepEqual(modelCalls.at(-1).body.generationConfig.thinkingConfig,{thinkingLevel:'low'});
+  // "AI 대화에서 계속" opens the panel with the quick exchange shown, and the next request carries it to the agent once.
+  await page.getByRole('button',{name:'AI 대화에서 계속',exact:true}).click();const legacy=panel.locator('.agent-legacy');await legacy.waitFor();assert(await legacy.evaluate(el=>el.open));assert((await legacy.innerText()).includes('현재 문단 질문'));
+  const continued=await askPanel(panel,'gemini 문서 질문 이어서');assert.deepEqual(continued.previous.map(m=>m.text),['현재 문단 질문','합성 문서 답변']);assert(systemOf(modelCalls.findLast(c=>JSON.stringify(c.body).includes('문서 질문 이어서'))).includes('이어지는 대화'));await until(async()=>!await legacy.evaluate(el=>el.open),'carried exchanges fold away');
+  const again=await askPanel(panel,'gemini 문서 질문 한 번 더');assert.equal(again.previous,undefined,'a carried exchange is sent once');
+  await page.screenshot({path:resolve(output,`panel-chat-${width}.png`)});await checkPanelPalettes(panel,'work');
+  await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
   await page.goto(`${browserBase}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await page.getByRole('button',{name:'AI 대화',exact:true}).click();
-  const notePanel=page.locator('.reference-panel.is-chat');await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();const previousNotes=await notePanel.locator('.chat-message.assistant').count();
+  const notePanel=page.locator('.reference-panel.is-chat');await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();
+  // A note space has its own sessions; the work's conversation is not shown here.
+  assert.equal(await notePanel.locator('.agent-exchange').count(),0);assert.equal(await notePanel.locator('.chat-starters button').count(),4);
   // After a reload the level saved for this provider is still chosen; 자동 sends no thinking setting.
-  const noteThinking=notePanel.getByRole('combobox',{name:'AI 생각 단계',exact:true});await until(async()=>await selectedValue(noteThinking)==='low','saved thinking level returns after reload');await chooseOption(noteThinking,'auto');
-  await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 질문');await notePanel.getByRole('button',{name:'질문 보내기',exact:true}).click();await until(async()=>await notePanel.locator('.chat-message.assistant').count()===previousNotes+1,'ordinary note AI answer');assert.equal(modelCalls.at(-1).provider,'gemini');assert.equal(modelCalls.at(-1).body.generationConfig.thinkingConfig,undefined);assert.equal(modelCalls.at(-1).body.generationConfig.maxOutputTokens,8192);
+  const noteThinking=notePanel.getByRole('combobox',{name:'에이전트 생각 단계',exact:true});await until(async()=>await selectedValue(noteThinking)==='low','saved thinking level returns after reload');await chooseOption(noteThinking,'auto');
+  const noteBody=await askPanel(notePanel,'노트 질문');assert.equal(noteBody.focusId,note.id);const noteCall=modelCalls.findLast(c=>JSON.stringify(c.body).includes('노트 질문'));assert.equal(noteCall.provider,'gemini');assert.equal(noteCall.body.generationConfig?.thinkingConfig,undefined);assert(systemOf(noteCall).includes('노트 작업공간: '));
 
   if(mentionsOnly)await verifySourceMentions(notePanel,width,'note');
   await notePanel.getByRole('button',{name:'노트 참고 패널 닫기',exact:true}).click();await page.locator('.ProseMirror').first().locator('p').first().click();await page.keyboard.press('Alt+Enter');await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).fill('노트 현재 문단 질문');await page.getByRole('button',{name:'AI 질문 보내기',exact:true}).click();await page.getByRole('textbox',{name:'적용할 AI 답변'}).waitFor();await page.keyboard.press('Escape');
   await page.goto(`${browserBase}/studio`,{waitUntil:'networkidle'});
 
+}
+
+/** The panel is built from the reference panel's existing parts: in every palette and mode it fits the screen without a sideways scroll. */
+async function checkPanelPalettes(panel,scope){
+  const width=page.viewportSize().width,original=await page.evaluate(()=>({palette:document.documentElement.dataset.palette,theme:document.documentElement.dataset.theme}));
+
+  for(const palette of PALETTES)for(const mode of ['light','dark']){
+    await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});
+
+    const layout=await panel.evaluate(el=>{const box=el.getBoundingClientRect(),inside=[...el.querySelectorAll('.chat-provider,.chat-heading,.chat-composer,.agent-panel-views,.chat-message')].filter(child=>{const b=child.getBoundingClientRect();return b.width>0&&(b.left<box.left-1||b.right>box.right+1||child.scrollWidth>child.clientWidth+1);}).map(child=>child.className);
+
+return {left:box.left,right:box.right,inside,page:document.documentElement.scrollWidth>document.documentElement.clientWidth+1};});
+
+    assert(layout.left>=0&&layout.right<=width+1&&!layout.inside.length&&!layout.page,JSON.stringify({scope,width,palette,mode,layout}));
+
+    if(['violet-light','cassette-light','cyber-dark'].includes(`${palette}-${mode}`))await page.screenshot({path:resolve(output,`panel-${scope}-${width}-${palette}-${mode}.png`)});
+  }
+
+  await page.evaluate(({palette,theme})=>{for(const [key,value] of [['palette',palette],['theme',theme]]){if(value===undefined)delete document.documentElement.dataset[key];else document.documentElement.dataset[key]=value;}},original);results.push({width,view:`panel-${scope}`,combinations:PALETTES.length*2});
 }
 
 try{
@@ -394,7 +434,7 @@ try{
     const agentThinking=dialog.getByRole('combobox',{name:'에이전트 생각 단계',exact:true});assert.equal(await selectedValue(agentThinking),'auto','the agent starts from the level last saved for this provider, 자동 from the note chat');assert.deepEqual((await readOptions(agentThinking)).map(option=>option.label),['생각 · 자동','생각 · 낮음','생각 · 중간','생각 · 높음']);await chooseOption(agentThinking,'medium');
     const settingsBox=await dialog.locator('.agent-settings').evaluate(el=>({overflow:el.scrollWidth>el.clientWidth+1,right:el.getBoundingClientRect().right}));assert(!settingsBox.overflow&&settingsBox.right<=width+1,JSON.stringify(settingsBox));await page.screenshot({path:resolve(output,`thinking-agent-${width}.png`)});await checkThinkingPalettes(agentThinking,'agent');
     assert.equal(await dialog.getByRole('button',{name:/웹 조사/}).count(),0,'web research is the agent\'s own tool, not a switch');await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).fill('개요를 만들고 열린 질문을 기억해줘.');await dialog.getByRole('button',{name:'에이전트 요청 보내기'}).click();assert(await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled());await until(async()=>!await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).isDisabled()&&await dialog.getByRole('textbox',{name:'에이전트에게 요청'}).evaluate(el=>el===document.activeElement),'accepted request returns focus without losing new typing');
-    await until(async()=>await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()||(await pg.query("select * from public.agent_runs where status='completed'")).rows.length>0,'running task visible');
+    await until(async()=>await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()||(await pg.query("select * from public.agent_runs where status='completed' and message=$1",['개요를 만들고 열린 질문을 기억해줘.'])).rows.length>0,'running task visible');
 
     if(await dialog.getByRole('button',{name:'중단',exact:true}).isVisible()){
       assert(await dialog.getByRole('combobox',{name:'에이전트 실행 방식'}).isDisabled());assert(await dialog.getByRole('combobox',{name:'에이전트 제공자'}).isDisabled());assert(await dialog.getByRole('combobox',{name:'에이전트 모델'}).isDisabled());assert(await agentThinking.isDisabled());assert.equal(await selectedValue(agentThinking),'medium');

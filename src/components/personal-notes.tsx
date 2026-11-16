@@ -12,7 +12,6 @@ import { CustomPropertiesForm, CustomPropertyChips } from './custom-properties';
 import { NoteSpaceSwitcher,NoteSpaceForm,type NoteSpaceRequest } from './note-spaces';
 import { NotesHome } from './notes-home';
 import { NoteCard } from './notes-reference';
-import { AIChat } from './ai-chat';
 import { editNoteTree, moveNote, noteTreeWork, treeDestination, noteSpaceFor, notesInSpace, noteSpaceTitle, resolveNoteNavigation, DEFAULT_NOTE_SPACE, type NoteDestination } from '@/lib/note-navigation';
 import { descendantsOf } from '@/lib/document-navigation';
 import { useStudio } from './studio-provider';
@@ -38,7 +37,7 @@ import { cloud, cloudConfigured } from '@/lib/cloud';
 import { db } from '@/lib/database';
 import { Select } from './select';
 import { agentSourceOpenSchema } from '@/lib/writing-agent';
-import { openWritingAgent } from './writing-agent';
+import { AgentPanel,openWritingAgent } from './writing-agent';
 
 const EMPTY_NOTES:PersonalNote[]=[];
 
@@ -193,13 +192,15 @@ if(compact)setSidebar(false);}}><Sparkles size={15}/>AI 대화</button></>}/>
         :<NotesHome state={s.state} spaceId={spaceHome?spaceId:undefined} currentSpaceId={spaceId} onSpace={selectSpace} onNewSpace={anchor=>setSpaceRequest({type:'new',spaceId,anchor})} readonly={readonly} onOpen={select} onNew={to=>create(to)} onTemplate={id=>create(undefined,id)} onMove={move} onFolderWork={(id,anchor)=>setFolderWork({id,anchor})}/>}
     </main>
     {side&&active&&<><div className="reference-backdrop" aria-hidden="true" onClick={closeAI}/><aside ref={aiRef} className={`reference-panel ${side==='ai'?'is-chat':''}`} aria-label="노트 참고 패널" role={compact?'dialog':undefined} aria-modal={compact||undefined}><div className="reference-tabs" role="tablist" aria-label="노트 참고 자료">{(['links','ai'] as const).map(p=><button type="button" role="tab" key={p} aria-selected={side===p} onClick={()=>setSide(p)}>{p==='links'?'연결':'AI 대화'}</button>)}<IconButton label="노트 참고 패널 닫기" data-drawer-close onClick={closeAI}><X size={15}/></IconButton></div><div className="reference-content">{side==='links'?<><InternalReferencePanel sourceId={active.id} preview={referencePreview} onPreview={setReferencePreview} onOpen={openReferenceTarget} showEmpty={!noteLinkCount}/>{!referencePreview&&noteLinkCount>0&&<NoteLinks note={active} notes={notes} onOpen={select}/>}</>
-      :<AIChat key={`${s.namespace}-${active.id}-${s.epoch}`} noteId={active.id} doc={noteDocument(active)} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);
+      :<AgentPanel key={`${s.namespace}-notes-${spaceId}`} scope={{kind:'notes',id:spaceId}} docId={active.id} title={noteTitle(active)} legacy={active.aiMessages||[]} onOpen={id=>{if(notes.some(n=>n.id===id)){select(id);
 
-return;}
+return true;}
 
 const work=works.find(w=>w.documents.some(d=>d.id===id));
 
-if(work)onOpenWork(work.id,id);}}/>}</div></aside></>}
+if(work)onOpenWork(work.id,id);
+
+return !!work;}}/>}</div></aside></>}
     {spaceRequest&&<NoteSpaceForm key={`${spaceRequest.type}-${spaceRequest.type==='move'?spaceRequest.id:spaceRequest.spaceId}`} request={spaceRequest} onClose={()=>setSpaceRequest(null)} onSelect={selectSpace} onMoved={(id,destination)=>{setSelectedSpace(destination);
 
 if(active?.id===id||tree?.navigation&&descendantsOf(tree.navigation,id).has(activeId)){setSpaceHome(false);onSelect(activeId);}else selectSpace(destination);}}/>}

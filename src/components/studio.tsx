@@ -33,7 +33,6 @@ import { DocIcon, WikiIcon } from './studio-icons';
 import { ThemeToggle } from './theme-toggle';
 import { StudioDialogs } from './studio-dialogs';
 import { Login,GoogleAccountControl } from './studio-auth';
-import { AIChat } from './ai-chat';
 import { EditableCombobox } from './editable-combobox';
 import { useDrawerFocus } from './use-drawer-focus';
 import { SidebarResizer, useSidebarStyle } from './sidebar-resizer';
@@ -46,7 +45,7 @@ import { APP_PREFERENCES_KEY, parseAppPreferences } from '@/lib/app-preferences'
 import { openingDocument, readStudioPosition, readStudioTabs, rememberStudioPosition, rememberStudioTabs } from '@/lib/studio-position';
 import { workShelves, workShelfTitle } from '@/lib/work-shelves';
 import { Select } from './select';
-import { openWritingAgent } from './writing-agent';
+import { AgentPanel,openWritingAgent } from './writing-agent';
 import { agentSourceOpenSchema } from '@/lib/writing-agent';
 
 const HOME='home';
@@ -397,7 +396,7 @@ if(e.key==='ArrowRight')setSplitWidth(v=>Math.min(70,v+2));}}/><div className="s
         :reference==='files'?<><h3>첨부 자료</h3>{active.assetIds.length?<div className="asset-list">{active.assetIds.map(id=><button type="button" key={id} onClick={()=>void downloadAsset(id)}><Paperclip size={14}/>{s.state!.assets.find(a=>a.id===id)?.name}</button>)}</div>:<p className="muted">이 문서에 첨부한 이미지가 없습니다.</p>}<label className="asset-upload">이미지 첨부<input aria-label="이미지 첨부" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];
 
 if(file)void s.addAsset(work.id,active.id,file).catch(error=>alert(error.message));e.target.value='';}}/></label></>
-        :<AIChat key={`${s.namespace}-${work.id}-${active.id}`} workId={work.id} doc={active} onOpen={id=>openDoc(id,true)}/>}
+        :<AgentPanel key={`${s.namespace}-${work.id}`} scope={{kind:'work',id:work.id}} docId={active.id} title={documentTitle(active)} legacy={work.aiConversations?.find(c=>c.docId===active.id)?.messages||[]} onOpen={id=>{if(!work.documents.some(d=>d.id===id))return false;openDoc(id,true);return true;}}/>}
       </div></aside></>}
       </div>}
     </main>

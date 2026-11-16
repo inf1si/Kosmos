@@ -12,13 +12,13 @@
 .agent-turn{display:flex;flex-direction:column;gap:12px;min-width:0}
 .agent-question{margin:0;padding:12px 14px;background:var(--side);border-radius:var(--r-in,8px);white-space:pre-wrap;overflow-wrap:anywhere}
 .agent-answer{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8}
-.agent-turn details{color:var(--muted);font-size:12px}
-.agent-turn summary{cursor:pointer;padding:4px 0}
-.agent-turn ol{list-style:decimal;padding-left:20px;margin:8px 0;display:flex;flex-direction:column;gap:10px}
-.agent-turn li strong{margin-right:8px}
-.agent-turn li p{white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;margin:6px 0}
-.agent-turn li a,.agent-turn li .chip{display:inline-flex;margin:4px 8px 4px 0;color:var(--link)}
-.agent-turn iframe{width:100%;height:110px;border:0}
+.agent-turn details,.agent-reply details{color:var(--muted);font-size:12px}
+.agent-turn summary,.agent-reply summary{cursor:pointer;padding:4px 0}
+.agent-turn ol,.agent-reply ol{list-style:decimal;padding-left:20px;margin:8px 0;display:flex;flex-direction:column;gap:10px}
+.agent-turn li strong,.agent-reply li strong{margin-right:8px}
+.agent-turn li p,.agent-reply li p{white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;margin:6px 0}
+.agent-turn li a,.agent-turn li .chip,.agent-reply li a,.agent-reply li .chip{display:inline-flex;margin:4px 8px 4px 0;color:var(--link)}
+.agent-turn iframe,.agent-reply iframe{width:100%;height:110px;border:0}
 .agent-composer{display:flex;align-items:flex-end;gap:8px;flex-shrink:0;padding:4px}
 .agent-composer textarea{min-height:76px;max-height:180px;resize:vertical;flex:1;min-width:0}
 .agent-send-actions{display:flex;flex-direction:column;gap:8px}
@@ -31,6 +31,16 @@
 .agent-memories article{border-bottom:1px solid var(--line);padding-bottom:14px}
 .agent-memories p{white-space:pre-wrap;overflow-wrap:anywhere}
 .writing-agent-dialog .error{color:var(--danger);font-size:12px;flex-shrink:0;margin:0;overflow-wrap:anywhere}
+/* The reference-panel chat reuses the AI 대화 parts; only placement differs from the dialog. */
+.agent-panel-views{padding:0 16px 10px;flex-shrink:0}
+.agent-panel-views .segmented{display:flex;width:100%}
+.agent-panel-views .segmented>button{flex:1}
+.agent-legacy{max-height:30dvh;overflow-y:auto;flex-shrink:0}
+.agent-panel .chat-log .agent-changes,.agent-panel .chat-log .agent-memories{gap:16px}
+.agent-panel .agent-diff{grid-template-columns:minmax(0,1fr)}
+.agent-panel .agent-diff>div{background:var(--panel)}
+.agent-panel .chat-log .error{color:var(--danger);font-size:12px;margin:6px 0;overflow-wrap:anywhere}
+.agent-panel .chat-composer>div .button{min-height:32px}
 @media(max-width:700px){
  .writing-agent-dialog{padding:16px;gap:8px}
  .agent-session-choice{flex-basis:calc(100% - 50px)}

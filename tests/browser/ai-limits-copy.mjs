@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { seedWorkspace } from '../../src/lib/seed.ts';
 import { fromText, uid, workspaceSchema } from '../../src/lib/model.ts';
 import { addNote, newNote } from '../../src/lib/personal-notes.ts';
-import { chooseOption, selectedValue } from './select.mjs';
+import { selectedValue } from './select.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -141,20 +141,9 @@ const screenshot=async name=>page.screenshot({path:resolve(output,name+'.png'),a
 try{
  await page.goto(`${base}/studio`,{waitUntil:'domcontentloaded'});await editor().waitFor();await button('AI 대화').click();await chat().waitFor();
  assert.equal(await q().getAttribute('maxlength'),null);
- await chat().locator('summary').click();await button('참고 자료 선택').click();
-
- for(const input of await page.locator('.chat-source-picker input:checked').all())await input.uncheck();
-
- for(const source of sources)await page.getByRole('checkbox',{name:source.title,exact:false}).check();
- assert.equal(await page.locator('.chat-source-picker input:checked').count(),10);await button('선택 완료 · 10개').click();
-
- for(let i=0;i<12;i++){
-  await chooseOption(page.getByRole('combobox',{name:'AI 제공자',exact:true}),providers[i%3].id);
-  await q().fill(longQuestion+String(i));await button('질문 보내기').click();await page.waitForFunction(()=>document.querySelector('.ai-chat textarea')?.value==='');
- }
-
- assert.equal(requests.length,12);assert.equal(requests[0].sourceIds.length,10);assert.equal(requests[0].history.length,48);assert(requests[0].message.length>2000);
- await synced();assert.equal(data.works[0].aiConversations[0].messages.length,72);assert.equal(data.works[0].documents[0].content.content[0].content[0].text.length,13001);
+ // The panel question has no length cap or limit copy; the agent reads sources itself, so there is no source picker.
+ assert.equal(await button('참고 자료 선택').count(),0);await q().fill(longQuestion);assert.equal(await q().inputValue(),longQuestion,'the panel question is not cut');await q().fill('');
+ await synced();assert.equal(data.works[0].documents[0].content.content[0].content[0].text.length,13001);
 
  for(const width of [1280,360])for(const palette of PALETTES)for(const theme of ['light','dark']){
   await page.setViewportSize({width,height:900});await page.evaluate(({palette,theme})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=theme;},{palette,theme});

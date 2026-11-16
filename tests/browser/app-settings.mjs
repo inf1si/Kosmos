@@ -166,13 +166,13 @@ try{
   assert.equal(await selectedValue(page.getByRole('combobox',{name:'주변 연결 단계'})),'2');
   await page.getByRole('button',{name:/^필터/}).click();assert.equal(await page.getByRole('checkbox',{name:'시점 인물 연결'}).isChecked(),false);await page.keyboard.press('Escape');
 
-  // AI: the existing AI settings live in this section; new chats start with the chosen sources.
+  // AI: the existing AI settings live in this section. The agent finds its own sources, so there are no default-source rows.
   await page.locator('.doc-tab').filter({hasText:scene.title}).getByRole('tab').click();await editor().waitFor();
   await openSettings();await section('AI').click();
   await dialog().getByRole('combobox',{name:'설정할 AI 제공자'}).waitFor();await dialog().getByRole('heading',{name:'내 스킬'}).waitFor();
-  await choose('현재 문서 포함','끔');await choose('연결 설정 자동 첨부','끔');await close();
+  assert.equal(await dialog().getByText('현재 문서 포함').count(),0);assert.equal(await dialog().getByText('연결 설정 자동 첨부').count(),0);await close();
   await page.getByRole('button',{name:'AI 대화',exact:true}).click();
-  await page.locator('.chat-context summary').waitFor();assert.match(await page.locator('.chat-context summary').innerText(),/원고 제외 · 참고 0개/);
+  await page.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();assert.equal(await page.locator('.chat-context summary').count(),0);
   await page.getByRole('button',{name:'AI 대화',exact:true}).click();
 
   // Data: the checkpoint interval is stored; sync timings remain internal.

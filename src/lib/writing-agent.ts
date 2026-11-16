@@ -22,7 +22,7 @@ export const agentStateSchema=z.enum(['queued','running','completed','failed','c
 
 export const agentSessionInputSchema=z.object({id:z.uuid(),title:z.string().trim().min(1).max(300),scope:agentScopeSchema,mode:agentModeSchema,provider:providerSchema,web:z.boolean().optional()}).strict();
 
-export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),focusId:z.uuid().optional(),model:vertexModelIdSchema.optional(),reasoning:reasoningLevelSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean().optional()}).strict();
+export const agentMessageInputSchema=z.object({id:z.uuid(),message:z.string().trim().min(1),focusId:z.uuid().optional(),sourceIds:z.array(z.uuid()).max(50).optional(),previous:z.array(z.object({role:z.enum(['user','assistant']),text:z.string().max(20000)})).max(12).optional(),model:vertexModelIdSchema.optional(),reasoning:reasoningLevelSchema.optional(),mode:agentModeSchema,provider:providerSchema,web:z.boolean().optional()}).strict();
 
 const destination={parentId:z.uuid().nullable(),sectionId:z.string().min(1),beforeId:z.uuid().nullable()};
 

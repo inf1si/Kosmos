@@ -9,7 +9,7 @@ import { providerConfig } from './ai-provider';
 import { reasoningChoice,reasoningLevels,reasoningEvent } from './ai-reasoning';
 import { workspaceSchema } from './model';
 import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges } from './agent-server';
-import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema } from './writing-agent';
+import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentLibrary,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema } from './writing-agent';
 import { runWritingAgent } from './agent-workflow';
 
 const json=<T,>(value:T,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
@@ -120,7 +120,7 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
         const workspace=await auth.client.from('workspaces').select('id,payload').eq('id',session.workspace_id).eq('owner_id',auth.userId).single();
 
         if(workspace.error)return json({error:'원고를 읽지 못했습니다.'},403);
-        let snapshot=captureAgentScope(workspaceSchema.parse(workspace.data.payload),session.scope);const hash=await agentHash(snapshot);
+        const payload=workspaceSchema.parse(workspace.data.payload);let snapshot=captureAgentScope(payload,session.scope);const hash=await agentHash(snapshot);
         const history=await agentSessionHistory(session.id,auth.userId),last=history.runs.at(-1);
         let operations=last?.status==='completed'&&last.applied_version===null&&!last.reverted&&last.base_hash===hash?last.operations:[];
 
@@ -137,7 +137,11 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
         // The document open behind the dialog and the chosen thinking level are kept as the run's first work-log entries.
         const focus=input.focusId?agentDocuments(snapshot).find(d=>d.id===input.focusId):undefined;
         const level=reasoningChoice(input.reasoning,reasoningLevels(config.provider,config.model,true));
-        const events=[...focus?[{id:'focus',title:'열어 둔 문서',sources:[{id:focus.id,title:focus.title}]}]:[],...level!=='auto'?[reasoningEvent(level)]:[]];
+        // Documents the writer pointed at with @ may sit in the scope or anywhere else in the workspace; the agent is told to read them first.
+        const wanted=[...new Set(input.sourceIds||[])],known=wanted.length?[...agentDocuments(snapshot),...agentLibrary(payload,session.scope)]:[],pointed=wanted.map(id=>known.find(d=>d.id===id));
+
+        if(pointed.some(d=>!d))return json({error:'가리킨 자료를 찾지 못했습니다. 휴지통에 있거나 지워진 문서일 수 있습니다.'},400);
+        const events=[...focus?[{id:'focus',title:'열어 둔 문서',sources:[{id:focus.id,title:focus.title}]}]:[],...pointed.length?[{id:'pointed',title:'가리킨 자료',sources:pointed.map(d=>({id:d!.id,title:d!.title}))}]:[],...input.previous?.length?[{id:'previous',title:'이어 온 AI 대화',detail:input.previous.map(m=>`${m.role==='user'?'작가':'AI'}: ${m.text}`).join('\n\n').slice(-8000)}]:[],...level!=='auto'?[reasoningEvent(level)]:[]];
         const saved=await db.from('agent_runs').insert({id:input.id,session_id:session.id,owner_id:auth.userId,workspace_id:session.workspace_id,message:input.message,provider:config.provider,model:config.model,mode:session.mode,web:webAvailable(),snapshot,base_hash:hash,operations,...events.length&&{events}}).select('*').single();
 
         if(saved.error)throw new Error('작업 요청을 보관하지 못했습니다.');

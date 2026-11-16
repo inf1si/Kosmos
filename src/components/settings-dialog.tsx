@@ -97,12 +97,9 @@ function NotesSection(){
 }
 
 function AISection(){
-  const [app,update,reset]=useAppPreferences();const {providers,provider,storageAvailable,refreshProviders}=useAIConnection();
+  const {providers,provider,storageAvailable,refreshProviders}=useAIConnection();
 
-  return <><Head onReset={()=>reset(['aiIncludeManuscript','aiAttachLinked'])}/>
-    <h3>새 대화의 보낼 자료</h3>
-    <Row label="현재 문서 포함"><Choice label="현재 문서 포함" value={app.aiIncludeManuscript} options={onOff} onChange={aiIncludeManuscript=>update({aiIncludeManuscript})}/></Row>
-    <Row label="연결 설정 자동 첨부"><Choice label="연결 설정 자동 첨부" value={app.aiAttachLinked} options={onOff} onChange={aiAttachLinked=>update({aiAttachLinked})}/></Row>
+  return <>
     <AISettingsPanel providers={providers} providerId={provider} storageAvailable={storageAvailable} onRefresh={refreshProviders}/>
   </>;
 }
