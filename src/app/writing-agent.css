@@ -35,7 +35,7 @@
 .agent-panel-views{padding:0 16px 10px;flex-shrink:0}
 .agent-panel-views .segmented{display:flex;width:100%}
 .agent-panel-views .segmented>button{flex:1}
-.agent-legacy{max-height:30dvh;overflow-y:auto;flex-shrink:0}
+.agent-legacy{max-height:30dvh;min-height:3em;overflow-y:auto;flex-shrink:1}
 .agent-panel .chat-log .agent-changes,.agent-panel .chat-log .agent-memories{gap:16px}
 .agent-panel .agent-diff{grid-template-columns:minmax(0,1fr)}
 .agent-panel .agent-diff>div{background:var(--panel)}
@@ -51,3 +51,5 @@
  .agent-diff{grid-template-columns:1fr}
  .agent-composer textarea{min-height:66px}
 }
+.agent-panel-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+.agent-panel-settings .select{width:100%;min-width:0;max-width:100%}

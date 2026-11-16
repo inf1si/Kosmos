@@ -98,7 +98,10 @@ return value;},[namespace,s.user]);
 
 try{saved=localStorage.getItem(storage)||'';}catch{}
 
-      setSelected(pickRef.current(value.sessions,saved));
+      const found=value.sessions.find(session=>session.id===pickRef.current(value.sessions,saved));setSelected(found?.id||'');
+
+      // The session's own settings show at once, so a choice made right after opening is not overwritten by a later read.
+      if(found){setMode(found.mode);setSessionProvider(found.provider);}
     }).catch(e=>{if(!abort.signal.aborted)setError(e instanceof Error?e.message:'대화를 불러오지 못했습니다.');}).finally(()=>{if(!abort.signal.aborted)setLoading(false);});
 
     return()=>abort.abort();
@@ -110,15 +113,15 @@ try{saved=localStorage.getItem(storage)||'';}catch{}
 
 return;}
 
-    const abort=new AbortController(),current=++generation.current;let first=true,tick=0;
+    const abort=new AbortController(),current=++generation.current;let tick=0;
 
     const read=async()=>{try{const value=await request(`sessions/${selected}`,historySchema,'GET',undefined,abort.signal);
 
-if(current!==generation.current)return;setRuns(value.runs);setMemories(value.memories);
+if(current!==generation.current)return;setRuns(value.runs);setMemories(value.memories);}catch(e){if(!abort.signal.aborted&&current===generation.current)setError(e instanceof Error?e.message:'작업 기록을 읽지 못했습니다.');}};
 
-if(first){first=false;setMode(value.session.mode);setSessionProvider(value.session.provider);}}catch(e){if(!abort.signal.aborted&&current===generation.current)setError(e instanceof Error?e.message:'작업 기록을 읽지 못했습니다.');}};
+    void read();
 
-    void read();const timer=setInterval(()=>{tick++;
+const timer=setInterval(()=>{tick++;
 
 if(watching.current||tick%5===0)void read();},2000);
 
@@ -130,7 +133,9 @@ if(watching.current||tick%5===0)void read();},2000);
 
   const act=async(action:()=>Promise<void>)=>{setBusy(true);setError('');
 
-try{await action();return true;}catch(e){setError(e instanceof Error?e.message:'작업을 처리하지 못했습니다.');
+try{await action();
+
+return true;}catch(e){setError(e instanceof Error?e.message:'작업을 처리하지 못했습니다.');
 
 return false;}finally{setBusy(false);}};
 
@@ -150,7 +155,7 @@ if(change.provider){setSessionProvider(change.provider);connection.setProvider(c
   const send=(question:string,scope:AgentScope,focusId?:string,sourceIds:string[]=[],previous:{role:'user'|'assistant';text:string}[]=[])=>act(async()=>{
     if(!question.trim()||connection.loadingProviders)throw new Error('요청을 입력하세요.');await sync();let id=selected;
 
-    if(!id){const created=await request('sessions',z.object({session:agentSessionSchema}),'POST',JSON.stringify({id:uid(),title:question.trim().slice(0,80),scope,mode,provider}));id=created.session.id;setSessions(list=>[created.session,...list]);setSelected(id);}
+    if(!id){const created=await request('sessions',z.object({session:agentSessionSchema}),'POST',JSON.stringify({id:uid(),title:question.trim().slice(0,80),scope,mode,provider}));id=created.session.id;setSessions(list=>[created.session,...list]);setSelected(id);setSessionProvider(created.session.provider);}
 
     questionId.current ||=uid();await request(`sessions/${id}/messages`,z.object({run:agentRunViewSchema}),'POST',JSON.stringify({id:questionId.current,message:question.trim(),model,reasoning:reasoning.level,mode,provider,...focusId&&{focusId},...sourceIds.length&&{sourceIds},...previous.length&&{previous}}));questionId.current='';setView('chat');const value=await request(`sessions/${id}`,historySchema);setRuns(value.runs);setMemories(value.memories);
   });
@@ -160,7 +165,12 @@ if(change.provider){setSessionProvider(change.provider);connection.setProvider(c
   const cancel=(run:AgentRunView)=>act(async()=>{await request(`runs/${run.id}/cancel`,z.object({cancelled:z.boolean()}),'POST','{}');await refresh();});
   const forget=(memory:AgentMemory)=>act(async()=>{await request(`memories/${memory.id}/forget`,z.object({forgotten:z.boolean()}),'POST','{}');await refresh();});
   const exportData=()=>act(async()=>{const value=await request('export',z.record(z.string(),z.json())),url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='orbis-agent.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
-  const choose=(id:string)=>{generation.current++;setSelected(id);setSessionProvider(null);setRuns([]);setMemories([]);setError('');setView('chat');questionId.current='';};
+
+  const choose=(id:string)=>{const session=sessions.find(item=>item.id===id);
+
+    if(session)setMode(session.mode);
+
+    generation.current++;setSelected(id);setSessionProvider(session?.provider||null);setRuns([]);setMemories([]);setError('');setView('chat');questionId.current='';};
 
   const active=runs.find(r=>r.status==='queued'||r.status==='running'),latest=runs.find(r=>r.id===changeId)||runs.findLast(r=>r.operations.length>0);
   const applied=runs.filter(run=>run.applied_version!==null).map(run=>`${run.id}:${run.applied_version}:${run.reverted}`).join('|');
@@ -215,6 +225,7 @@ return()=>window.removeEventListener('writing-agent-open',show);
 
   const send=()=>{if(!question.trim()||!initialScope)return;const split=scopeValue.indexOf(':'),scope=agentScopeSchema.parse({kind:scopeValue.slice(0,split),id:scopeValue.slice(split+1)});
     void agent.send(question,scope,scopeValue===scopeKey(initialScope)?focusId.current:undefined).then(ok=>{if(ok)setQuestion('');requestAnimationFrame(()=>inputRef.current?.focus());});};
+
   const session=agent.sessions.find(item=>item.id===agent.selected);
   const choices=s.state?[...s.state.works.map(work=>({value:`work:${work.id}`,label:work.title})),...resolveNoteNavigation(s.state).spaces.map(space=>({value:`notes:${space.id}`,label:`노트 · ${space.title||'이름 없는 작업공간'}`}))]:[];
 
@@ -254,9 +265,11 @@ const noteStarters=[
  */
 export function AgentPanel({scope,docId,title,legacy,onOpen}:{scope:AgentScope;docId:string;title:string;legacy:ChatMessage[];onOpen:(id:string)=>boolean}){
   const key=scopeKey(scope);
+
   const agent=useWritingAgent({open:true,storageKey:`:${key}`,pick:(sessions,saved)=>{const mine=sessions.filter(session=>scopeKey(session.scope)===key);
 
 return mine.find(session=>session.id===saved)?.id||mine[0]?.id||'';}});
+
   const {s,runs,busy,active,connection,providers,provider,model,models,reasoning}=agent;
   const [question,setQuestion]=useState(''),[sourceIds,setSourceIds]=useState<string[]>([]),[settingsOpen,setSettingsOpen]=useState(false);
   const inputRef=useRef<HTMLTextAreaElement>(null),log=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLElement|null>(null);
@@ -270,17 +283,23 @@ return mine.find(session=>session.id===saved)?.id||mine[0]?.id||'';}});
 
   // Quick AI exchanges on this document since the session's last request ride along once, so "AI 대화에서 계속" continues them.
   const since=Date.parse(runs.at(-1)?.created_at||'')||0,previous=legacy.filter(m=>Date.parse(m.createdAt)>since).slice(-6).map(m=>({role:m.role,text:(m.role==='user'?m.text:m.result.review).slice(0,20000)}));
-  const send=()=>{if(!question.trim()||busy||!configured||s.conflict)return;void agent.send(question,scope,docId,pointed,previous).then(ok=>{if(ok){setQuestion('');setSourceIds([]);}requestAnimationFrame(()=>inputRef.current?.focus());});};
+
+  const send=()=>{if(!question.trim()||busy||!configured||s.conflict)return;void agent.send(question,scope,docId,pointed,previous).then(ok=>{if(ok){setQuestion('');setSourceIds([]);}
+
+requestAnimationFrame(()=>inputRef.current?.focus());});};
+
   const settings=(event:{currentTarget:HTMLElement})=>{settingsTrigger.current=event.currentTarget;setSettingsOpen(true);};
 
   return <div className="ai-chat agent-panel">
     <div className="chat-heading"><div><strong title={title}>{title}</strong></div><IconButton label="AI 설정" disabled={busy||connection.loadingProviders} onClick={settings}><Settings2 size={17}/></IconButton><IconButton label="새 대화" disabled={busy||!agent.selected} onClick={()=>{agent.choose('');inputRef.current?.focus();}}><MessageSquarePlus size={17}/></IconButton></div>
     <div className="chat-provider">
       {sessions.length>0&&<label>대화<Select aria-label="작업 대화 선택" disabled={busy} value={agent.selected} onChange={agent.choose}><option value="">새 대화</option>{sessions.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</Select></label>}
-      <label>방식<Select aria-label="에이전트 실행 방식" value={agent.mode} disabled={busy||!!active} onChange={value=>void agent.act(()=>agent.settings({mode:agentModeSchema.parse(value)}))}>{Object.entries(modeNames).map(([id,label])=><option value={id} key={id}>{label}</option>)}</Select></label>
-      <label>제공자<Select aria-label="에이전트 제공자" value={provider} disabled={busy||!!active} onChange={value=>void agent.act(()=>agent.settings({provider:providerSchema.parse(value)}))}>{activeAIProviders.map(id=><option key={id} value={id}>{providerLabels[id]}{providers.find(p=>p.id===id)?.configured===false?' · 연결 필요':''}</option>)}</Select></label>
-      <label>모델<Select aria-label="에이전트 모델" value={active?.model||model} disabled={busy||!!active||connection.loadingProviders||!models.length} onChange={value=>connection.setProviderModel(value,provider)}>{[...new Set([...models,...active?[active.model]:[]])].map(id=><option key={id} value={id}>{id}</option>)}</Select></label>
-      <label>생각<Select aria-label="에이전트 생각 단계" value={active?eventReasoning(active.events):reasoning.level} disabled={busy||!!active||connection.loadingProviders||reasoning.options.length<2} onChange={value=>connection.setProviderReasoning(value,provider)}>{[...new Set([...reasoning.options,...active?[eventReasoning(active.events)]:[]])].map(id=><option key={id} value={id}>{reasoningLabels[id]}</option>)}</Select></label>
+      <div className="agent-panel-settings">
+      <Select aria-label="에이전트 실행 방식" value={agent.mode} disabled={agent.loading||busy||!!active} onChange={value=>void agent.act(()=>agent.settings({mode:agentModeSchema.parse(value)}))}>{Object.entries(modeNames).map(([id,label])=><option value={id} key={id}>{label}</option>)}</Select>
+      <Select aria-label="에이전트 제공자" value={provider} disabled={agent.loading||busy||!!active} onChange={value=>void agent.act(()=>agent.settings({provider:providerSchema.parse(value)}))}>{activeAIProviders.map(id=><option key={id} value={id}>{providerLabels[id]}{providers.find(p=>p.id===id)?.configured===false?' · 연결 필요':''}</option>)}</Select>
+      <Select aria-label="에이전트 모델" value={active?.model||model} disabled={busy||!!active||connection.loadingProviders||!models.length} onChange={value=>connection.setProviderModel(value,provider)}>{[...new Set([...models,...active?[active.model]:[]])].map(id=><option key={id} value={id}>{id}</option>)}</Select>
+      <Select aria-label="에이전트 생각 단계" value={active?eventReasoning(active.events):reasoning.level} disabled={busy||!!active||connection.loadingProviders||reasoning.options.length<2} onChange={value=>connection.setProviderReasoning(value,provider)}>{[...new Set([...reasoning.options,...active?[eventReasoning(active.events)]:[]])].map(id=><option key={id} value={id}>생각 · {reasoningLabels[id]}</option>)}</Select>
+      </div>
     </div>
     {!configured&&!connection.loadingProviders&&<div className="chat-connection"><p>{current?.browserInvalid?'모델 선택이 만료되었습니다. 다시 저장하세요.':'AI 연결이 필요합니다.'}</p><button type="button" onClick={settings}>AI 설정 열기</button></div>}
     <div className="chat-preset"><label>프리셋<Select aria-label="AI 프롬프트 프리셋" value={activePreset.id} disabled={busy||!!s.conflict} onChange={value=>{try{s.update(state=>({...state,aiPreferences:activatePromptPreset(state.aiPreferences,value)}));}catch(e){agent.setError(e instanceof Error?e.message:'프리셋을 적용하지 못했습니다.');}}}>{promptCatalog(s.state?.aiPreferences).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</Select></label></div>
