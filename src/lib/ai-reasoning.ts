@@ -13,10 +13,13 @@ const order=reasoningLevelSchema.options;
 function claudeLevels(id:string,deep:boolean):ReasoningLevel[]{
   if(!id.includes('claude-')||/claude-(?:instant|v?2|3)(?=$|[-.:@])/.test(id))return [];
 
+  // The 45-second answers are JSON. The SDK asks most Claude models for it through a forced tool call, and Claude refuses
+  // a forced tool call while thinking is on, so only models the SDK asks through native structured output get levels there.
+  if(!deep&&!/claude-(?:opus|sonnet)-5-5|claude-fable-5-1/.test(id))return [];
+
   if(/claude-(?:sonnet|opus)-4-6/.test(id))return ['low','medium','high','max'];
 
-  // Budget thinking (Claude 4.5 and older) cannot force the JSON answer tool, so only the agent's free-form answers get levels.
-  if(/claude-(?:sonnet|opus|haiku)-4(?:[-@]|$)/.test(id)&&!/claude-opus-4-[78]/.test(id))return deep?['low','medium','high']:[];
+  if(/claude-(?:sonnet|opus|haiku)-4(?:[-@]|$)/.test(id)&&!/claude-opus-4-[78]/.test(id))return ['low','medium','high'];
 
   return ['low','medium','high','xhigh','max'];
 }

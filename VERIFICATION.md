@@ -8,6 +8,14 @@
 - 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버·Workflow·SDK, 합성 Postgres·Supabase·모델, Chromium 1280/360px): 작업 대화 창에 웹 조사 버튼이 없음, 합성 모델이 `researchWeb`·`searchLibrary`·범위 밖 `readSource`를 차례로 부르면 작업 내역에 **Google 웹 조사**, **다른 작품·노트 검색**, **다른 자료 읽기**(`작품|노트 이름 · 제목`)가 남고 변경은 범위 안 세 개뿐이며, 지침에 다른 작품·노트 목록과 웹 조사 문장이 실림, Claude로 실행해도 웹 조사 문장이 실림. 23경우·페이지 오류 0·합성 모델 120회. 웹 조사 결과의 Google 검색 제안이 샌드박스 iframe으로 그려질 때 검사용 로그인 주입 스크립트가 그 iframe에서도 돌아 생긴 오류는 검사 쪽 문제라 주입을 최상위 창으로 한정했다.
 - 미확인: 실제 Vertex 모델이 언제 이 도구들을 쓰는지와 늘어난 토큰, CI·운영 배포, Safari·Firefox·터치.
 
+## 2026-11-16 — AI 생각 단계: 자동 Gemini 응답 실패 수정
+
+- 기준 main `6f0472d`(PR #131 병합). 사용자 보고: 배포 뒤 문서·노트 **AI 대화**에서 생각 **자동**, 모델 Gemini 4 Carbon으로 **AI 응답 실패**. 자동은 PR #131 전과 같은 요청(생각 설정 없음, 출력 8,192토큰)이라 이 변경이 요청을 바꾼 것은 아니다. Google Cloud의 Gemini 4 Carbon 안내를 읽어 확인한 것: 기본 생각 단계 중간, 출력 한도에 생각이 포함, `generateContent` 비스트리밍 한 번에 32,768토큰(넘으면 `CONTINUATION`으로 이어 받기), global 지원. 앱은 `length`로 끝난 답을 실패로 돌려 502를 낸다. 실제 운영 요청의 끝난 이유는 Vercel·Vertex 기록에 접근할 수 없어 확인하지 못했고, 생각이 8,192토큰을 다 쓴 것이 가장 유력한 원인이라는 추정이다. 45초 시간 제한 초과일 수도 있다.
+- 바꾼 것: [`ai-vertex.ts`](src/lib/ai-vertex.ts) 자동이어도 생각 단계가 있는 Gemini는 출력 40,960토큰. [`ai-reasoning.ts`](src/lib/ai-reasoning.ts) 즉시 답에서 Claude 단계는 SDK가 네이티브 구조화 출력을 쓰는 Opus 5.5·Sonnet 5.5·Fable 5.1에만(설치된 `@ai-sdk/anthropic` 4.0.99의 모델 능력표를 읽어 확인). 다른 Claude에서 높음을 보내면 요청 본문이 `tool_choice:any`와 `thinking:adaptive`를 함께 싣는 것을 단위 검사로 재현했다.
+- 단위 [`ai-reasoning.test.ts`](tests/ai-reasoning.test.ts) 6개: Gemini 4 Carbon 추가, 자동 Gemini 출력 40,960, 첫 응답이 `CONTINUATION`이면 SDK가 이어 받은 요청에 `continuationToken`을 싣고 답을 돌려줌, 생각이 켜진 Claude 요청에 도구 강제가 없음. [`ai-provider.test.ts`](tests/ai-provider.test.ts)의 Gemini 출력 기대값을 40,960으로 바꿨다. 전체 단위 337개·타입 검사·문서 검사 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버·SDK, 합성 모델, Chromium 1280/360px): 노트 대화의 자동 요청 기대 출력을 40,960으로 바꾸고 23경우·페이지 오류 0·합성 모델 92회 통과. 화면 모양은 바뀌지 않았다.
+- 미확인: 실제 Gemini 4 Carbon이 이 한도로 45초 안에 답하는지, CI·운영 배포, Safari·Firefox.
+
 ## 2026-11-16 — AI 생각 단계 선택
 
 - 기준 main `a609b4e`(PR #129 병합), 작업 뒤 `24fb4db`(PR #130)를 합침. 사용자 요청: thinking 단계별 선택과 자동. 읽은 안내: [AI](docs/ai.md), [작업 대화](docs/writing-agent.md), [Vertex 연결](docs/vertex-ai.md), [디자인 가이드](docs/design-guide.md) 8절 AI 설정·커서 명령·32절, [실제 조작 검증](docs/interaction-verification.md). 설치된 SDK(`ai` 7.0.166, `@ai-sdk/google` 4.0.114, `@ai-sdk/anthropic` 4.0.99)의 `reasoning` 처리와 모델별 단계표를 읽고 단계 목록을 맞췄다.
