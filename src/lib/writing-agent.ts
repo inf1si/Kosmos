@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { documentSchema, noteSchema, workspaceSchema, plainText, fromText, newDocument, type Workspace, type RichNode } from './model';
+import { documentSchema, noteSchema, workspaceSchema, plainText, fromText, newDocument, statuses, wikiReferences, type Workspace, type RichNode } from './model';
+import { internalReferences } from './internal-reference-node';
+import { referenceTargets } from './internal-references';
 import { applySuggestion } from './ai';
 import { insertDocument, insertFolder, moveNavigation, resolveNavigation } from './document-navigation';
 import { addNote, newNote } from './personal-notes';
@@ -33,6 +35,8 @@ export const agentOperationSchema=z.discriminatedUnion('type',[
   z.object({type:z.literal('insert'),id:z.uuid(),after:z.string().min(1).nullable(),text:z.string().trim().min(1)}),
   z.object({type:z.literal('rename'),id:z.uuid(),title:z.string().max(300)}),
   z.object({type:z.literal('move'),id:z.uuid(),...destination}),
+  // null leaves a property as it is. Work documents have no tags and notes have only tags.
+  z.object({type:z.literal('properties'),id:z.uuid(),summary:z.string().max(20000).nullable(),status:z.enum(['idea','draft','review','done']).nullable(),pov:z.string().max(200).nullable(),storyTime:z.string().max(300).nullable(),category:z.string().max(200).nullable(),tags:z.array(z.string().trim().min(1).max(40)).max(20).nullable()}),
 ]);
 
 export type AgentOperation=z.infer<typeof agentOperationSchema>;
@@ -55,7 +59,9 @@ export const agentRunViewSchema=agentRunSchema.omit({snapshot:true});
 
 export type AgentRunView=z.infer<typeof agentRunViewSchema>;
 
-export const agentChangesSchema=z.object({rows:z.array(z.object({id:z.uuid(),title:z.string(),before:z.string(),after:z.string(),created:z.boolean()})),structure:z.number()});
+export const agentPropertyChangeSchema=z.object({name:z.string(),before:z.string(),after:z.string()});
+
+export const agentChangesSchema=z.object({rows:z.array(z.object({id:z.uuid(),title:z.string(),before:z.string(),after:z.string(),created:z.boolean(),properties:z.array(agentPropertyChangeSchema).optional()})),structure:z.number()});
 
 export function agentRunView(run:AgentRun):AgentRunView{const {snapshot:_snapshot,...view}=run;
 
@@ -150,6 +156,23 @@ function insertBlocks(content:RichNode,after:string|null,text:string):RichNode{
   return {...content,content:[...blocks.slice(0,hits[0]+1),...added,...blocks.slice(hits[0]+1)]};
 }
 
+type PropertiesOperation=Extract<AgentOperation,{type:'properties'}>;
+
+/** The document properties a properties change sets; null fields are left out. */
+function documentProperties(op:PropertiesOperation){
+  return Object.fromEntries((['summary','status','pov','storyTime','category'] as const).flatMap(key=>op[key]===null?[]:[[key,op[key]]]));
+}
+
+const propertyNames=new Map([['summary','요약'],['status','상태'],['pov','시점 인물'],['storyTime','작중 시각'],['category','분류'],['tags','태그']]);
+
+const statusNames=new Map<string,string>(Object.entries(statuses));
+
+function propertyChanges(before:Record<string,string>|undefined,after:Record<string,string>){
+  return Object.keys(after).flatMap(key=>{const old=before?.[key]??'',value=after[key];
+
+return old===value?[]:[{name:propertyNames.get(key)||key,before:key==='status'?statusNames.get(old)||old:old,after:key==='status'?statusNames.get(value)||value:value}];});
+}
+
 function scopedState(snapshot:AgentSnapshot):Workspace{
   // The temporary work is only a validator requirement for notes; it is never stored.
   const work=snapshot.work||{id:snapshot.workspaceId,title:'노트',subtitle:'',description:'',form:'단편' as const,documents:[],publications:[],activePublicationId:null};
@@ -182,7 +205,9 @@ export function applyAgentOperations(state:Workspace,scope:AgentScope,operations
       }else if(op.type==='move')changed=moveNavigation(work,op.id,{parentId:op.parentId,sectionId:op.sectionId,beforeId:op.beforeId||undefined});
       else{
         if(!doc)throw new Error('허용한 문서 안에서만 수정할 수 있습니다.');
-        changed={...work,documents:work.documents.map(d=>d.id!==op.id?d:op.type==='rename'?{...d,title:op.title,updatedAt:now}:{...d,content:op.type==='insert'?insertBlocks(d.content,op.after,op.text):applySuggestion(d.content,op.quote,op.replacement),updatedAt:now})};
+
+        if(op.type==='properties'&&op.tags!==null)throw new Error('작품 문서에는 태그가 없습니다. 노트에서만 태그를 고칩니다.');
+        changed={...work,documents:work.documents.map(d=>d.id!==op.id?d:op.type==='rename'?{...d,title:op.title,updatedAt:now}:op.type==='properties'?{...d,...documentProperties(op),updatedAt:now}:{...d,content:op.type==='insert'?insertBlocks(d.content,op.after,op.text):applySuggestion(d.content,op.quote,op.replacement),updatedAt:now})};
       }
 
       next.works=next.works.map(w=>w.id===work.id?changed:w);
@@ -209,7 +234,9 @@ export function applyAgentOperations(state:Workspace,scope:AgentScope,operations
         next=moveNote(next,op.id,{spaceId:scope.id,parentId:op.parentId,sectionId:op.sectionId,beforeId:op.beforeId||undefined});
       }else{
         if(!note||!snapshot.notes.some(n=>n.id===op.id))throw new Error('허용한 노트 안에서만 수정할 수 있습니다.');
-        next.notes=next.notes!.map(n=>n.id!==op.id?n:op.type==='rename'?{...n,title:op.title,updatedAt:now}:{...n,content:op.type==='insert'?insertBlocks(n.content,op.after,op.text):applySuggestion(n.content,op.quote,op.replacement),updatedAt:now});
+
+        if(op.type==='properties'&&Object.keys(documentProperties(op)).length)throw new Error('노트에서는 태그만 고칩니다.');
+        next.notes=next.notes!.map(n=>n.id!==op.id?n:op.type==='rename'?{...n,title:op.title,updatedAt:now}:op.type==='properties'?{...n,...op.tags&&{tags:[...new Set(op.tags)]},updatedAt:now}:{...n,content:op.type==='insert'?insertBlocks(n.content,op.after,op.text):applySuggestion(n.content,op.quote,op.replacement),updatedAt:now});
       }
     }
   }
@@ -242,9 +269,10 @@ export function validateAgentWorkspace(state:Workspace){return workspaceSchema.p
 
 export function agentDiff(before:AgentSnapshot,operations:readonly AgentOperation[]){
   const old=agentDocuments(before),next=agentDocuments(agentOverlay(before,operations)),rows=next.flatMap(d=>{
-    const previous=old.find(p=>p.id===d.id);
+    // A new document is compared with a fresh one of its kind, so only the properties the agent set show.
+    const previous=old.find(p=>p.id===d.id),fresh=d.kind==='note'?{tags:''}:(({chapter,status,category,pov,storyTime,summary})=>({chapter,status,category,pov,storyTime,summary}))(newDocument(d.kind==='wiki'||d.kind==='memo'?d.kind:'scene','')),properties=propertyChanges(previous?.properties||fresh,d.properties);
 
-    return previous&&previous.title===d.title&&previous.text===d.text?[]:[{id:d.id,title:d.title,before:previous?.text||'',after:d.text,created:!previous}];
+    return previous&&previous.title===d.title&&previous.text===d.text&&!properties.length?[]:[{id:d.id,title:d.title,before:previous?.text||'',after:d.text,created:!previous,...properties.length&&{properties}}];
   });
 
   return {rows,structure:operations.filter(op=>op.type==='move'||op.type==='folder').length};
@@ -313,6 +341,58 @@ if(lines.length>before)listed.add(id);
   if(docs.size>listed.size)lines.push(`(지도에 싣지 못한 문서 ${docs.size-listed.size}개는 searchSources로 찾는다.)`);
 
   return lines.join('\n');
+}
+
+/**
+ * Links out of and into one document anywhere in the workspace: wiki links inside its work and @ references across works and notes.
+ * Folders, works and shelves an @ reference points at are named but have no text to read.
+ */
+export function agentReferences(state:Workspace,id:string){
+  const targets=referenceTargets(state),readable=targets.filter(t=>(t.kind==='document'||t.kind==='note')&&t.content),source=readable.find(t=>t.targetId===id);
+
+  if(!source)throw new Error('문서를 찾지 못했습니다. 휴지통에 있거나 지워진 문서일 수 있습니다.');
+  const describe=(t:(typeof targets)[number],how:string)=>({id:t.targetId,title:t.label,place:t.path,kind:t.category,how});
+  const work=state.works.find(w=>w.id===source.workId),wiki=new Set(wikiReferences(source.content!));
+  const linked=(work?.documents||[]).filter(d=>wiki.has(d.id)).flatMap(d=>readable.filter(t=>t.targetId===d.id).map(t=>describe(t,'설정 연결')));
+
+  const mentioned=internalReferences(source.content!).map(ref=>{const t=targets.find(r=>r.kind===ref.kind&&r.targetId===ref.targetId);
+
+return t?describe(t,'@ 참조'):{id:ref.targetId,title:ref.label,place:'',kind:'찾지 못한 대상',how:'@ 참조'};});
+
+  const outgoing=[...linked,...mentioned];
+
+  const incoming=readable.filter(t=>t.targetId!==id).flatMap(t=>{const how=[...(t.workId&&t.workId===source.workId&&wikiReferences(t.content!).includes(id)?['설정 연결']:[]),...(internalReferences(t.content!).some(ref=>ref.targetId===id)?['@ 참조']:[])];
+
+return how.length?[describe(t,how.join(' · '))]:[];});
+
+  return {id,title:source.label,place:source.path,outgoing,incoming};
+}
+
+/**
+ * Checks a run's staged result with code before the writer sees it: links that lead nowhere, empty new documents,
+ * a point of view with no setting document, titles shared by two documents. These are warnings, not proof the work is right.
+ */
+export function agentValidate(state:Workspace,snapshot:AgentSnapshot,operations:readonly AgentOperation[]){
+  const after=agentOverlay(snapshot,operations),docs=agentDocuments(after),before=new Map(agentDocuments(snapshot).map(d=>[d.id,d]));
+  const changed=new Set(operations.flatMap(op=>'id' in op?[op.id]:[])),issues:{id:string;title:string;issue:string}[]=[];
+  const live=new Set([...state.works.flatMap(w=>w.documents.map(d=>d.id)),...(state.notes||[]).map(n=>n.id),...docs.map(d=>d.id)]);
+  const wikiTitles=new Set(docs.filter(d=>d.kind==='wiki').map(d=>d.title));
+
+  for(const d of docs.filter(doc=>changed.has(doc.id))){
+    const add=(issue:string)=>issues.push({id:d.id,title:d.title,issue});
+
+    if(!before.has(d.id)&&!d.text.trim())add('새 문서의 본문이 비어 있다.');
+
+    for(const target of wikiReferences(d.content))if(!live.has(target))add('설정 연결이 없는 문서를 가리킨다.');
+
+    for(const ref of internalReferences(d.content))if((ref.kind==='document'||ref.kind==='note')&&!live.has(ref.targetId))add(`@ 참조 "${ref.label}"가 없는 문서를 가리킨다.`);
+
+    if('pov' in d.properties&&d.properties.pov.trim()&&!wikiTitles.has(d.properties.pov.trim()))add(`시점 인물 "${d.properties.pov}"과 같은 제목의 설정 문서가 없다.`);
+
+    if(d.title!=='제목 없음'&&docs.some(other=>other.id!==d.id&&other.title===d.title))add('같은 제목의 문서가 범위 안에 또 있다.');
+  }
+
+  return {checked:changed.size,issues};
 }
 
 export function richBlocks(content:RichNode){return content.content?.map((node,index)=>({index,id:z.string().safeParse(node.attrs?.blockId).data||null,text:plainText(node)}))||[];}

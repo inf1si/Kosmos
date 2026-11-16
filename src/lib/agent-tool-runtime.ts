@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { agentSessionHistory,agentAdmin,agentWorkspace,readAgentRun,recordAgentEvent } from './agent-server';
-import { agentContext,agentDocuments,agentLibrary,agentLiveIds,agentOverlay,agentOperationSchema,agentSearch,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
+import { agentContext,agentDocuments,agentLibrary,agentReferences,agentValidate,agentLiveIds,agentOverlay,agentOperationSchema,agentSearch,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
 import { providerConfig } from './ai-provider';
 import { researchAgentWeb } from './agent-web';
 
@@ -78,12 +78,26 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     agentOverlay(run.snapshot,[...run.operations,op]);
     // The work log names the changed document or folder; an ID alone tells the writer nothing.
     const folder=[...overlay.work?.navigation?.nodes||[],...overlay.navigation?.nodes||[]].find(n=>n.id===op.id),named=docs.find(d=>d.id===op.id)?.title||(folder?.type==='folder'?folder.title:'제목 없음');
-    await recordAgentEvent(run,{id:callId,title:op.type==='create'?'문서 만들기':op.type==='folder'?'폴더 만들기':op.type==='move'?'문서 이동':op.type==='rename'?'이름 변경':op.type==='insert'?'이어 쓰기':'문장 수정',detail:'title' in op?op.title:named},op);
+    await recordAgentEvent(run,{id:callId,title:op.type==='create'?'문서 만들기':op.type==='folder'?'폴더 만들기':op.type==='move'?'문서 이동':op.type==='rename'?'이름 변경':op.type==='properties'?'속성 변경':op.type==='insert'?'이어 쓰기':'문장 수정',detail:'title' in op?op.title:named},op);
 
     return {saved:true,id:op.id,changes:agentDiff(run.snapshot,[...run.operations,op])};
   }
 
   if(name==='inspect')return agentDiff(run.snapshot,run.operations);
+
+  if(name==='references'){
+    const {id}=z.object({id:z.uuid()}).parse(input),result=agentReferences(state,id);
+    await recordAgentEvent(run,{id:callId,title:'연결 찾기',detail:`${result.title} · 나가는 연결 ${result.outgoing.length}개 · 들어오는 연결 ${result.incoming.length}개`,sources:[{id:result.id,title:result.title}]});
+
+    return result;
+  }
+
+  if(name==='validate'){
+    const result=agentValidate(state,run.snapshot,run.operations);
+    await recordAgentEvent(run,{id:callId,title:'변경 점검',detail:result.issues.length?result.issues.map(i=>`${i.title}: ${i.issue}`).join('\n'):`문서 ${result.checked}개 · 문제 없음`});
+
+    return result;
+  }
 
   if(name==='web'){
     if(!run.web||!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL))throw new Error('웹 조사 연결이 없습니다.');
