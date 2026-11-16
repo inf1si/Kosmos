@@ -4,13 +4,15 @@ import type { RichAttributes } from '@/lib/model';
 import { useEffect,useRef,useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
-import { AlignLeft,AlignCenter,AlignRight,AlignJustify,IndentIncrease,IndentDecrease,List,ChevronDown,Pilcrow,Table2,Type,Strikethrough,Superscript,Subscript,Highlighter,RemoveFormatting,Omega } from 'lucide-react';
+import { AlignLeft,AlignCenter,AlignRight,AlignJustify,IndentIncrease,IndentDecrease,List,ChevronDown,Pilcrow,Table2,Type,Strikethrough,Superscript,Subscript,Highlighter,RemoveFormatting,Omega,UnfoldVertical } from 'lucide-react';
 import { IconButton,Popover } from './primitives';
 import { fontSizes,validFontSize } from '@/lib/editor-preferences';
 import { inlineFontSize,bulletListStyles,orderedListStyles,listStyleType } from '@/lib/manuscript-format';
 import { blockStyle } from '@/lib/editor-block-style';
 import styles from './editor-tools.module.css';
 import { Select } from './select';
+import { useAppPreferences } from './use-app-preferences';
+import { lineHeights,paragraphGaps } from '@/lib/app-preferences';
 
 /** A heading draws unsized text at a multiple of the manuscript size; this is that size for the heading holding `pos`, in the 0.5px steps the control accepts. */
 function headingFontSize(editor:Editor,pos:number,base:number){
@@ -67,6 +69,22 @@ if(!ranged)e.currentTarget.blur();}else if(e.key==='Escape')setValue(shown===nul
   </span>;
 }
 
+function SpacingChoice<T extends number>({name,value,options,label,onChange}:{name:string;value:T;options:readonly T[];label:(n:T)=>string;onChange:(n:T)=>void}){
+  return <div><p className={styles.group}>{name}</p><div className="segmented" role="group" aria-label={name}>{options.map(n=><button type="button" key={n} aria-pressed={value===n} onClick={()=>onChange(n)}>{label(n)}</button>)}</div></div>;
+}
+
+/** The manuscript-wide spacing from 설정 › 원고 표시, on the toolbar. A device display preference, so it works in read-only documents too. */
+export function ManuscriptSpacingControl({editor}:{editor:Editor|null}){
+  const [open,setOpen]=useState(false),[{lineHeight,paragraphGap},update]=useAppPreferences();
+
+  return <Popover open={open} onOpenChange={setOpen} title="줄·문단 간격" width={300} initialFocus="content" onReturnFocus={()=>editor?.commands.focus()} trigger={<IconButton label="줄·문단 간격" aria-pressed={open}><UnfoldVertical size={16}/></IconButton>}>
+    <div className={styles.tools}>
+      <SpacingChoice name="줄간격" value={lineHeight} options={lineHeights} label={String} onChange={n=>update({lineHeight:n})}/>
+      <SpacingChoice name="문단 간격" value={paragraphGap} options={paragraphGaps} label={n=>n?`${n}줄`:'없음'} onChange={n=>update({paragraphGap:n})}/>
+    </div>
+  </Popover>;
+}
+
 type ListType='bulletList'|'orderedList';
 
 /** The list that holds the cursor, and the marker it shows. Nested bullet lists default to 빈 원, then 네모. */
@@ -119,6 +137,14 @@ return true;}).run();
   </Popover>;
 }
 
+/** The line height a paragraph without its own value shows: the manuscript setting, or the notes layout. */
+function baseLineHeight(editor:Editor|null){
+  if(!editor)return '';
+  const style=getComputedStyle(editor.view.dom);
+
+  return String(Math.round(parseFloat(style.lineHeight)/parseFloat(style.fontSize)*100)/100);
+}
+
 const symbols=[{name:'문장 부호',characters:['“','”','‘','’','「','」','『','』','〈','〉','《','》','…','—','–','·','※']},{name:'SF · 수학',characters:['±','×','÷','≠','≤','≥','≈','∞','√','∑','∫','°','℃','α','β','γ','δ','λ','μ','π','Ω']},{name:'화살표 · 기호',characters:['←','→','↑','↓','↔','⇒','⇔','☐','☑','○','●','◇','◆','☆','★']}];
 
 export function EditorFormatTools({editor,readonly}:{editor:Editor|null;readonly:boolean}){
@@ -151,7 +177,7 @@ if(level===0||level===1||level===2||level===3)editor?.chain().focus().command(bl
 for(const name of ['bold','italic','underline','strike','code','superscript','subscript','highlight','fontSize'])chain=chain?.unsetMark(name);chain?.run();setPanel(null);}}><RemoveFormatting size={16}/></IconButton>
     </div>}
     {item.id==='paragraph'&&<><div className={styles.row}>{[{name:'왼쪽 정렬',value:'left',icon:<AlignLeft size={16}/>},{name:'가운데 정렬',value:'center',icon:<AlignCenter size={16}/>},{name:'오른쪽 정렬',value:'right',icon:<AlignRight size={16}/>},{name:'양쪽 정렬',value:'justify',icon:<AlignJustify size={16}/>}].map(align=><IconButton key={align.value} label={align.name} aria-pressed={editor?.isActive({textAlign:align.value})} onClick={()=>paragraph({textAlign:align.value})}>{align.icon}</IconButton>)}<IconButton label="들여쓰기" onClick={()=>indent(1)}><IndentIncrease size={16}/></IconButton><IconButton label="내어쓰기" onClick={()=>indent(-1)}><IndentDecrease size={16}/></IconButton></div>
-      <label>줄간격<Select aria-label="줄간격" value={attrs.lineHeight??'default'} onChange={value=>paragraph({lineHeight:value==='default'?null:Number(value)})}><option value="default">기본 · 2배</option>{[1,1.15,1.3,1.5,1.75,2,2.25,2.5,3].map(n=><option key={n} value={n}>{n}배</option>)}</Select></label>
+      <label>줄간격<Select aria-label="줄간격" value={attrs.lineHeight??'default'} onChange={value=>paragraph({lineHeight:value==='default'?null:Number(value)})}><option value="default">{`기본 · ${baseLineHeight(editor)}배`}</option>{[1,1.15,1.3,1.5,1.75,2,2.25,2.5,3].map(n=><option key={n} value={n}>{n}배</option>)}</Select></label>
       <label>첫 줄 들여쓰기<Select aria-label="첫 줄 들여쓰기" value={attrs.firstLineIndent??'default'} onChange={value=>paragraph({firstLineIndent:value==='default'?null:Number(value)})}><option value="default">기본</option>{[0,1,2,3,4].map(n=><option key={n} value={n}>{n}자</option>)}</Select></label>
       <div className={styles.grid}>{[['문단 앞 간격','spaceBefore'],['문단 뒤 간격','spaceAfter']].map(([label,key])=><label key={key}>{label}<Select aria-label={label} value={attrs[key]??'default'} onChange={value=>paragraph({[key]:value==='default'?null:Number(value)})}><option value="default">기본</option>{[0,4,8,12,16,24,36,48].map(n=><option key={n} value={n}>{n}px</option>)}</Select></label>)}</div><button className="button" onClick={()=>paragraph({lineHeight:null,indent:null,firstLineIndent:null,spaceBefore:null,spaceAfter:null,textAlign:null})}>문단 서식 초기화</button></>}
     {item.id==='table'&&(editor?.isActive('table')?<div className={styles.actions}>{actions.map(([label,run,can])=><button key={label} className="button" disabled={!can()} onClick={()=>{run();setPanel(null);}}>{label}</button>)}</div>:<form onSubmit={e=>{e.preventDefault();

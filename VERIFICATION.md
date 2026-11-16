@@ -1,5 +1,26 @@
 # 구현 검증
 
+## 2026-11-16 — AI 생각 단계 선택
+
+- 기준 main `a609b4e`(PR #129 병합), 작업 뒤 `24fb4db`(PR #130)를 합침. 사용자 요청: thinking 단계별 선택과 자동. 읽은 안내: [AI](docs/ai.md), [작업 대화](docs/writing-agent.md), [Vertex 연결](docs/vertex-ai.md), [디자인 가이드](docs/design-guide.md) 8절 AI 설정·커서 명령·32절, [실제 조작 검증](docs/interaction-verification.md). 설치된 SDK(`ai` 7.0.166, `@ai-sdk/google` 4.0.114, `@ai-sdk/anthropic` 4.0.99)의 `reasoning` 처리와 모델별 단계표를 읽고 단계 목록을 맞췄다.
+- 바꾼 것: [`ai-reasoning.ts`](src/lib/ai-reasoning.ts)(모델별 단계·가까운 아래 단계로 맞추기·작업 내역 항목), [`ai-vertex.ts`](src/lib/ai-vertex.ts)(단계와 늘린 출력 한도), AI 대화 경로·작업 대화 API/Workflow, [`use-ai-connection.ts`](src/components/use-ai-connection.ts)(기기 설정 `kosmos:ai-reasoning:<namespace>`), AI 대화·커서 AI 질문·작업 대화의 공용 `Select`. 대상과 기대: 고른 단계가 다음 요청 하나에만이 아니라 같은 계정의 세 화면에 이어지고, 자동은 생각 설정을 보내지 않으며, 모델에 없는 단계는 보이지도 보내지지도 않는다.
+- 단위 [`ai-reasoning.test.ts`](tests/ai-reasoning.test.ts) 4개: 21개 모델 ID의 단계표, 저장 단계 맞추기, 실제 SDK로 만든 Vertex 요청 본문(Gemini 3 `thinkingLevel`, Gemini 2.5 예산, Claude `adaptive`+`effort`, 자동이면 생각 필드 없음·출력 8,192)과 요청 형식 거절. Claude 4.5 이하에 생각을 켜면 SDK가 JSON 답 도구 강제를 풀어 버리는 것을 이 검사에서 발견해 AI 대화·AI 질문에서는 자동만 두었다. 전체 단위 334개 통과, 타입 검사 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버·Workflow·SDK, 합성 Postgres·Supabase·모델, Chromium 1280/360px): 23경우·페이지 오류 0·합성 모델 92회. AI 대화에서 Gemini 높음·Claude 중간을 골라 보낸 요청 본문, 커서 AI 질문이 같은 설정을 이어받고 낮음으로 바꾸면 그 값이 실림, 새로고침 뒤 노트 대화에 저장 단계가 남고 자동이면 생각 설정·늘린 한도가 없음, 작업 대화의 모든 단계 요청에 중간이 실리고 실행 중 잠김, 작업 내역의 **생각 단계** 항목이 작업 개수에서 빠짐, API로 모델에 없는 최대는 높음으로 저장·전송, 모르는 값 400, Claude 작업 대화 최대.
+- 색 계열: 같은 검사에서 세 화면의 생각 선택 칸과 펼친 목록을 쉰네 조합 × 두 폭에서 열어 화면·줄 밖으로 나가지 않고 가로 스크롤이 없음을 측정했다. 보라 다크, 카세트 라이트, 사이버 다크를 1280/360px 화면으로 눈으로 보았다. 새 색·모양·글자 크기는 없다.
+- 미확인: 실제 Vertex 모델이 각 단계를 받는지와 단계별 지연·요금·답의 차이, CI·운영 배포, Safari·Firefox·터치.
+
+## 2026-11-16 — 원고 줄·문단 간격 기본값과 도구 모음 조절
+
+- 기준 main `a609b4e`(PR #129 병합). 사용자 요청: 독서 화면은 그대로 두고 줄간격·문단 간격 기본값을 좁히며, 설정에서만 바꾸던 이 값을 편집기 도구 모음으로 꺼낼 것. 읽은 안내: [디자인 가이드](docs/design-guide.md) 0절·8절 서식 도구·설정·글꼴·노트·32절, [설정](docs/settings.md), [실제 조작 검증](docs/interaction-verification.md).
+- 바꾼 것: [`app-preferences.ts`](src/lib/app-preferences.ts) 기본값(줄간격 1.8, 문단 간격 0.6)과 `spacingDefaults` 표시, `studio.css`의 변수 대체값, [`editor-format-tools.tsx`](src/components/editor-format-tools.tsx)의 `ManuscriptSpacingControl`(원고 편집기에만)과 문단 서식 **기본** 표시. 대상과 기대: 기기 보기 설정 두 값이며 원고 전체에 바로 적용되고 원고 JSON·백업·공개 판본은 바뀌지 않는다. 문단 서식의 줄간격은 선택한 문단에 저장되는 별개 값으로 그대로다.
+- 저장값 처리: 설정 창과 사이드바 폭 끌기도 모든 값을 함께 저장하므로 기존 사용자 대부분은 `lineHeight:2`·`paragraphGap:1.2`가 저장되어 있다. 기본값만 바꾸면 반영되지 않아, 표시가 없는 옛 저장값이 옛 기본값과 같을 때만 새 기본값으로 읽는다. 옛 기본값과 다른 값, 그리고 표시가 있는 저장값의 2·1.2는 그대로다.
+- 단위 [`app-preferences.test.ts`](tests/app-preferences.test.ts) 5개(옛 기본값 이동, 고른 값 유지, 이동 뒤 다시 고른 2 유지)와 Node 단위 전체 331개.
+- 브라우저 [`manuscript-spacing.mjs`](tests/browser/manuscript-spacing.mjs), 실제 Next 개발 서버와 합성 Supabase, Chromium 1280px·360px: 옛 저장값(2, 1.2, 사이드바 300px)으로 시작해 원고가 1.8·0.6em(목록 항목 포함)이고 사이드바 폭은 유지, 도구 모음 팝오버에서 2.2·1.2줄을 연달아 고르는 동안 열려 있고 원고 계산된 스타일이 바로 바뀜, Esc로 원고에 초점 복귀, 저장값, 열린 팝오버에서 **문단 서식**으로 한 번에 전환되고 그 줄간격 기본 항목이 `기본 · 2.2배`, 설정 › 원고 표시가 같은 값을 보이고 거기서 1.6을 고르면 원고와 도구 모음이 따라옴, 다시 고른 2가 새로고침 뒤에도 유지, 노트에는 버튼이 없고 1.85·0.6em 그대로(`기본 · 1.85배`). 페이지 오류 0.
+- 색 계열: 같은 검사에서 쉰네 조합 × 두 폭으로 열린 팝오버의 버튼이 팝오버·화면 안에 있고 눌린 값 두 개의 글자색과 바탕색이 다름을 측정했다. 보라 라이트, 카세트·사이버 다크, 잉크 라이트를 두 폭으로 눈으로 보았다(카세트 주황 키, 사이버 분홍, 잉크 남색 눌림 표시). 새 색·모양 토큰은 없다.
+- 기존 검사: `app-settings.mjs`(새 기본값으로 기대값 갱신)·`list-item-style.mjs` 통과. `heading-font-size.mjs`는 이 브랜치와 main 모두에서 저장 시점·선택 대기 때문에 간헐적으로 실패했다(main 4회 중 2회 실패). `split-toolbar-publish.mjs`는 main에서도 없는 `보라 테마` 버튼을 찾다 실패한다.
+- 그 밖: 타입 검사, Anti Slop(oxlint), `pnpm docs:check`.
+- 미확인: CI·운영 배포, Safari·Firefox·터치, 실제 사용자 기기의 옛 저장값.
+
 ## 2026-11-16 — 조회수 칩
 
 - 기준 main `9dc71eb`(PR #128 병합). 사용자 보고: 운영에서 조회수가 보이며, 표시가 더 잘 보여도 되겠다고 했다. 읽은 안내: [디자인 가이드](docs/design-guide.md) 0절·8절 집필실 홈·작품 정보·32절.

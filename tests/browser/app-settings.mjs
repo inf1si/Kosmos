@@ -125,7 +125,7 @@ return {lineHeight:s.lineHeight,fontSize:s.fontSize,maxWidth:s.maxWidth,fontFami
 try{
   await page.goto(`${base}/studio`,{waitUntil:'domcontentloaded'});await editor().waitFor();
   const before=await manuscriptStyle();
-  assert.deepEqual({lineHeight:before.lineHeight,fontSize:before.fontSize,maxWidth:before.maxWidth,indent:before.indent,gap:before.gap},{lineHeight:'36px',fontSize:'18px',maxWidth:'680px',indent:'18px',gap:'21.6px'},'defaults match the old fixed layout');
+  assert.deepEqual({lineHeight:before.lineHeight,fontSize:before.fontSize,maxWidth:before.maxWidth,indent:before.indent,gap:before.gap},{lineHeight:'32.4px',fontSize:'18px',maxWidth:'680px',indent:'18px',gap:'10.8px'},'defaults: line height 1.8, paragraph gap 0.6');
 
   // Display: brightness can return to the device setting, which the toggle alone could not do.
   await openSettings();
@@ -156,7 +156,7 @@ try{
   await openSettings();await section('집필 도구').click();
   await chooseOption(dialog().getByRole('combobox',{name:'글자 수 기준'}), 'words');
   await choose('플롯보드 첫 보기','진행 상태');await choose('문서 그래프 첫 범위','주변 연결');await choose('주변 연결 단계','2단계');await choose('시점 인물 연결선','끔');
-  assert.deepEqual(await prefs(),{lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:800,plotBoardMode:'status',graphScope:'local',graphDepth:2,graphIncludePov:false,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'last',sidebarWidth:null});
+  assert.deepEqual(await prefs(),{lineHeight:2.4,paragraphIndent:0,paragraphGap:0.6,manuscriptWidth:800,plotBoardMode:'status',graphScope:'local',graphDepth:2,graphIncludePov:false,aiIncludeManuscript:true,aiAttachLinked:true,checkpointMinutes:10,studioStart:'last',sidebarWidth:null,spacingDefaults:2});
   await close();
   assert.match(await page.locator('.editor-panes > .editor-shell .editor-toolbar').innerText(),/단어/);
   await page.locator('.studio-tools').getByRole('button',{name:'플롯보드',exact:true}).click();
@@ -197,10 +197,10 @@ try{
   assert.match(await page.getByRole('dialog',{name:'템플릿'}).innerText(),/노트 \d+개/,'notes space opens note templates');await page.keyboard.press('Escape');await page.getByRole('dialog',{name:'템플릿'}).waitFor({state:'detached'});
   await page.locator('.notes-mode').getByRole('button',{name:'집필실'}).click();await page.locator('.studio-tools').waitFor();
   await openSettings();await section('단축키').click();assert.equal(await dialog().locator('.settings-keys > div').count(),8);
-  // Reset brings back the old fixed layout for that section only.
+  // Reset brings back the default layout for that section only.
   await section('원고 표시').click();await dialog().getByRole('button',{name:'기본값으로'}).click();
-  const reset=await prefs();assert.deepEqual([reset.lineHeight,reset.paragraphIndent,reset.paragraphGap,reset.manuscriptWidth,reset.plotBoardMode,reset.checkpointMinutes],[2,1,1.2,680,'status',5]);
-  await close();after=await manuscriptStyle();assert.deepEqual([after.lineHeight,after.fontSize,after.maxWidth,after.indent],['36px','18px','680px','18px']);
+  const reset=await prefs();assert.deepEqual([reset.lineHeight,reset.paragraphIndent,reset.paragraphGap,reset.manuscriptWidth,reset.plotBoardMode,reset.checkpointMinutes],[1.8,1,0.6,680,'status',5]);
+  await close();after=await manuscriptStyle();assert.deepEqual([after.lineHeight,after.fontSize,after.maxWidth,after.indent],['32.4px','18px','680px','18px']);
 
   // Notes: the views chosen here and in the notes space are the same value.
   await openSettings();await section('노트').click();await choose('노트 홈 보기','보드');await choose('노트 목록','최근 수정순');await close();

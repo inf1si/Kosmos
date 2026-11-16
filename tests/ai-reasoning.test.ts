@@ -54,17 +54,21 @@ test('고른 단계는 Vertex 요청에 그 값 그대로 실리고 자동은 �
   for(const [provider,model] of models){
     const levels=reasoningLevels(provider,model).slice(1);
 
-    for(const level of ['auto',...levels] as ReasoningLevel[]){
+    const choices:ReasoningLevel[]=['auto',...levels];
+
+    for(const level of choices){
       let body:any;
+
       const mock:typeof fetch=async(input,init)=>{body=JSON.parse(String(init?.body??await new Request(input).text()));
 
 return Response.json(vertexReviewResponse(provider,review));};
+
       await requestChat({provider,model,project:'orbiter-ai',location:'global'},{question:'질문'},[],mock,undefined,{googleAuthOptions:vertexTestAuth()},level);
-      const label=`${model} ${level}`;
+      const label=`${model} ${level}`,room:Partial<Record<ReasoningLevel,number>>={low:8192,medium:20480,high:32768};
 
       if(provider==='gemini'){
         const thinking=body.generationConfig.thinkingConfig;
-        assert.equal(body.generationConfig.maxOutputTokens,8192+({low:8192,medium:20480,high:32768}[level as string]||0),label);
+        assert.equal(body.generationConfig.maxOutputTokens,8192+(room[level]||0),label);
 
         if(level==='auto')assert.equal(thinking,undefined,label);
         else if(model.includes('2.5')){assert(thinking.thinkingBudget>=1024,label);assert(thinking.thinkingBudget<body.generationConfig.maxOutputTokens,label);}

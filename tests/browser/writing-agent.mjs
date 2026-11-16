@@ -210,9 +210,12 @@ async function checkThinkingPalettes(control,view){
 
   for(const palette of PALETTES)for(const mode of ['light','dark']){
     await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});await checkModelMenu(control);
+
     const row=await control.evaluate(el=>{const parent=el.closest('.chat-provider,.note-ai-settings,.agent-settings');
 
-return {overflow:parent.scrollWidth>parent.clientWidth+1,page:document.documentElement.scrollWidth>document.documentElement.clientWidth+1};});assert(!row.overflow&&!row.page,JSON.stringify({view,width,palette,mode,row}));
+return {overflow:parent.scrollWidth>parent.clientWidth+1,page:document.documentElement.scrollWidth>document.documentElement.clientWidth+1};});
+
+    assert(!row.overflow&&!row.page,JSON.stringify({view,width,palette,mode,row}));
 
     if(['cassette-light','cyber-dark'].includes(`${palette}-${mode}`))await page.screenshot({path:resolve(output,`thinking-${view}-${width}-${palette}-${mode}.png`)});
   }
