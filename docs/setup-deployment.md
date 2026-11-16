@@ -191,7 +191,21 @@ Preview 배포가 운영 작업본을 수정하지 않도록 별도 시험 Supab
 4. `withWorkflow`를 포함한 앱을 배포한다. `/.well-known/workflow/`의 생성 route는 Workflow SDK가 관리한다. Vercel의 Workflow 사용 가능 여부·실행/단계 요금·보관 정책을 프로젝트에서 확인한다. Preview에 Production 서비스 키를 자동 복제하지 않는다.
 5. 작은 합성 작품에서 검색→작업본→적용→되돌리기, 브라우저 종료 후 재접속을 확인한 뒤 실제 글에 사용한다. 실제 GCP 인증을 사용하지 않은 합성 검사는 실제 모델 품질·요금을 검증하지 않는다.
 
-선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000), `AGENT_TOOL_RESULT_CHARACTERS`(기본 80000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
+### 위키 마이그레이션 (2026-11-17)
+
+[20261117040000_agent_wiki.sql](../supabase/migrations/20261117040000_agent_wiki.sql)은 에이전트 위키의 두 테이블 `agent_wiki_pages`(페이지)와 `agent_wiki_scopes`(자료 역할)를 만든다. 작가는 자기 행만 읽고(`select`), 쓰기는 서비스 역할만 한다. 작업공간을 지우면 페이지도 지워진다. 기존 테이블·함수·원고 저장 형식은 바꾸지 않는다. 앱을 먼저 배포해도 위키만 꺼진 채 대화가 동작하므로 순서는 상관없지만, 같은 SQL을 두 번 실행하지 않는다.
+
+SQL Editor에서 파일 내용을 한 번 실행한 뒤 다음으로 확인한다.
+
+```sql
+select table_name from information_schema.tables where table_schema='public' and table_name like 'agent_wiki%' order by 1;
+select tablename,policyname,cmd,roles from pg_policies where tablename like 'agent_wiki%' order by 1;
+select table_name,grantee,string_agg(privilege_type,',' order by privilege_type) from information_schema.role_table_grants where table_name like 'agent_wiki%' and grantee in ('anon','authenticated','service_role') group by 1,2 order by 1,2;
+```
+
+기대값: 테이블 두 개, 각 테이블에 `authenticated`의 `SELECT` 정책 하나, `authenticated`는 `SELECT`만, `anon`은 없음, `service_role`은 전체 권한.
+
+선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000), `AGENT_TOOL_RESULT_CHARACTERS`(기본 80000), `AGENT_WIKI_INDEX_CHARACTERS`(기본 3000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
 
 기본 `pnpm dev`·`pnpm build`는 Webpack을 명시한다. Next.js 16.3.8의 Turbopack 글꼴 내부 쿼리 해석 오류가 CI에서 재현되어 빌드 방식을 고정했다. 운영의 글꼴 파일·종류·라이선스는 변경하지 않는다.
 

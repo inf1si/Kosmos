@@ -19,6 +19,7 @@ import { activePromptPreset,activatePromptPreset,promptCatalog } from '@/lib/ai-
 import type { ChatMessage } from '@/lib/ai-conversation';
 import { providerLabels,providerSchema,activeAIProviders,type AIProvider } from '@/lib/ai-provider';
 import { agentSessionSchema,agentRunViewSchema,agentMemorySchema,agentChangesSchema,agentScopeSchema,agentModeSchema,agentUsageTotal,type AgentSession,type AgentRunView,type AgentMemory,type AgentScope,type AgentMode } from '@/lib/writing-agent';
+import { wikiPageViewSchema,wikiRolesSchema,wikiRoleSchema,wikiRoleNames,wikiCategoryNames,type WikiPageView } from '@/lib/agent-wiki';
 
 const stateNames={queued:'대기 중',running:'진행 중',completed:'완료',failed:'실패',cancelled:'중단'};
 
@@ -56,9 +57,9 @@ export async function exportAgentData(owner:string|null){
   link.href=url;link.download='orbis-agent.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
-const importFileSchema=z.object({format:z.literal('orbis-writing-agent'),version:z.literal(1),sessions:z.array(z.json()),runs:z.array(z.json()),memories:z.array(z.json())});
+const importFileSchema=z.object({format:z.literal('orbis-writing-agent'),version:z.literal(1),sessions:z.array(z.json()),runs:z.array(z.json()),memories:z.array(z.json()),wikiPages:z.array(z.json()).default([]),wikiScopes:z.array(z.json()).default([])});
 
-const importResultSchema=z.object({sessions:z.number(),runs:z.number(),memories:z.number(),skipped:z.number()});
+const importResultSchema=z.object({sessions:z.number(),runs:z.number(),memories:z.number(),wiki:z.number(),skipped:z.number()});
 
 /** Request bodies stay under the hosting limit, so a large export goes up in several batches; a single row over it is skipped. */
 const importBatchBytes=3_500_000;
@@ -72,19 +73,19 @@ export async function importAgentData(owner:string|null,file:File){
 
   try{parsed=importFileSchema.parse(JSON.parse(await file.text()));}catch{throw new Error('AI 자료 내보내기 파일(orbis-agent.json)을 고르세요.');}
 
-  const total={sessions:0,runs:0,memories:0,skipped:0};
+  const total={sessions:0,runs:0,memories:0,wiki:0,skipped:0};
 
-  for(const table of ['sessions','runs','memories'] as const){
+  for(const table of ['sessions','runs','memories','wikiPages','wikiScopes'] as const){
     let batch:z.infer<typeof z.json>[]=[],size=0;
 
-    const send=async()=>{if(!batch.length)return;const result=await agentRequest(owner,'import',importResultSchema,'POST',JSON.stringify({[table]:batch}));total.sessions+=result.sessions;total.runs+=result.runs;total.memories+=result.memories;total.skipped+=result.skipped;batch=[];size=0;};
+    const send=async()=>{if(!batch.length)return;const result=await agentRequest(owner,'import',importResultSchema,'POST',JSON.stringify({[table]:batch}));total.sessions+=result.sessions;total.runs+=result.runs;total.memories+=result.memories;total.wiki+=result.wiki;total.skipped+=result.skipped;batch=[];size=0;};
 
     for(const row of parsed[table]){
       const bytes=new TextEncoder().encode(JSON.stringify(row)).length;
 
       if(bytes>importBatchBytes){total.skipped++;continue;}
 
-      if(size+bytes>importBatchBytes||batch.length>=(table==='memories'?2000:500))await send();batch.push(row);size+=bytes;
+      if(size+bytes>importBatchBytes||batch.length>=(table==='memories'||table==='wikiPages'?2000:500))await send();batch.push(row);size+=bytes;
     }
 
     await send();
@@ -118,7 +119,7 @@ function useWritingAgent({open,storageKey,pick}:{open:boolean;storageKey:string;
   const s=useStudio(),namespace=s.namespace,accountRef=useRef(namespace);accountRef.current=namespace;
   const [sessions,setSessions]=useState<AgentSession[]>([]),[selected,setSelected]=useState(''),[runs,setRuns]=useState<AgentRunView[]>([]),[memories,setMemories]=useState<AgentMemory[]>([]);
   const connection=useAIConnection(),providers=connection.providers;
-  const [mode,setMode]=useState<AgentMode>('review'),[sessionProvider,setSessionProvider]=useState<AIProvider|null>(null),[view,setView]=useState<'chat'|'changes'|'memory'>('chat');
+  const [mode,setMode]=useState<AgentMode>('review'),[sessionProvider,setSessionProvider]=useState<AIProvider|null>(null),[view,setView]=useState<'chat'|'changes'|'memory'|'wiki'>('chat');
   // A chosen session keeps its provider; a new one starts from the provider this device last used for AI.
   const provider=selected&&sessionProvider?sessionProvider:connection.provider;
   const model=connection.modelFor(provider),models=providers.find(p=>p.id===provider)?.models||[],reasoning=connection.reasoningFor(provider,model,true);
@@ -238,7 +239,7 @@ const abort=new AbortController();void request(`runs/${latest.id}/changes`,agent
 
 return()=>abort.abort();},[open,view,latest?.id,latest?.operations.length,request]);
 
-  return {s,sessions,selected,choose,runs,memories,connection,providers,mode,provider,model,models,reasoning,view,setView,error,setError,busy,loading,changes,setChangeId,active,latest,settings,send,apply,discard,cancel,forget,editMemory,remove,branch,questionId,act};
+  return {s,request,sessions,selected,choose,runs,memories,connection,providers,mode,provider,model,models,reasoning,view,setView,error,setError,busy,loading,changes,setChangeId,active,latest,settings,send,apply,discard,cancel,forget,editMemory,remove,branch,questionId,act};
 }
 
 type Agent=ReturnType<typeof useWritingAgent>;
@@ -278,8 +279,39 @@ function AgentMemories({agent,onOpen}:{agent:Agent;onOpen:(id:string)=>void}){
   return <div className="agent-memories">{!agent.memories.length?<p className="muted">저장한 기억이 없습니다.</p>:agent.memories.map(memory=><article key={memory.id}>{editing===memory.id?<MemoryEditor memory={memory} agent={agent} onDone={()=>setEditing('')}/>:<><div className="agent-change-actions"><strong>{memory.title}</strong><button type="button" className="button" disabled={agent.busy} onClick={()=>setEditing(memory.id)}>고치기</button><button type="button" className="button" disabled={agent.busy} onClick={()=>void agent.forget(memory)}>잊기</button></div><p>{memory.content}</p></>}{memory.sources.map(source=><button type="button" className="chip" key={source.id} onClick={()=>onOpen(source.id)}>{source.title}</button>)}</article>)}</div>;
 }
 
+const wikiSchema=z.object({available:z.boolean(),pages:z.array(wikiPageViewSchema),roles:wikiRolesSchema});
+
+const roleOptions=[['','역할 없음'],...wikiRoleSchema.options.map(role=>[role,wikiRoleNames[role]])];
+
+const sourceMarks={current:'',changed:' · 바뀜',gone:' · 사라짐'};
+
+/** The agent's wiki for this scope, and what the writer says the open document is. Pages reload when a run completes. */
+function AgentWiki({agent,scope,docId,onOpen}:{agent:Agent;scope:AgentScope;docId:string;onOpen:(id:string)=>void}){
+  const [wiki,setWiki]=useState<z.infer<typeof wikiSchema>|null>(null);
+  const {request,setError}=agent,key=scopeKey(scope),completed=agent.runs.filter(run=>run.status==='completed').length;
+
+  useEffect(()=>{const abort=new AbortController(),[kind,...id]=key.split(':');
+    void request(`wiki?scope=${encodeURIComponent(JSON.stringify({kind,id:id.join(':')}))}`,wikiSchema,'GET',undefined,abort.signal).then(setWiki).catch(e=>{if(!abort.signal.aborted)setError(e instanceof Error?e.message:'위키를 불러오지 못했습니다.');});
+
+    return()=>abort.abort();},[key,completed,request,setError]);
+
+  const setRole=(role:string)=>agent.act(async()=>{await request('wiki/roles',z.object({roles:wikiRolesSchema}),'POST',JSON.stringify({scope,id:docId,role:role?wikiRoleSchema.parse(role):null}));
+    setWiki(value=>value&&{...value,roles:{...Object.fromEntries(Object.entries(value.roles).filter(([id])=>id!==docId)),...role&&{[docId]:wikiRoleSchema.parse(role)}}});});
+
+  const remove=(page:WikiPageView)=>agent.act(async()=>{await request(`wiki/${page.id}`,z.object({deleted:z.boolean()}),'DELETE');setWiki(value=>value&&{...value,pages:value.pages.filter(item=>item.id!==page.id)});});
+
+  if(!wiki)return <p className="chat-working">불러오는 중…</p>;
+
+  if(!wiki.available)return <p className="muted">위키 저장소가 아직 준비되지 않았습니다.</p>;
+
+  return <div className="agent-memories agent-wiki">
+    <div className="chat-preset agent-wiki-role"><label>이 문서<Select aria-label="자료 역할" value={wiki.roles[docId]||''} disabled={agent.busy} onChange={value=>void setRole(value)}>{roleOptions.map(([id,label])=><option key={id} value={id}>{label}</option>)}</Select></label></div>
+    {!wiki.pages.length?<p className="muted">위키 페이지가 없습니다.</p>:wiki.pages.map(page=><article key={page.id}><details><summary><strong>{page.title}</strong><span className="chip">{wikiCategoryNames[page.category]}</span>{scope.kind==='work'&&page.scope_key==='common'&&<span className="chip">공통</span>}{page.stale&&<span className="chip agent-wiki-stale">출처 바뀜</span>}</summary><p>{page.content}</p>{page.sources.length>0&&<div className="agent-wiki-sources">{page.sources.map(source=><button type="button" className="chip" key={source.id} disabled={source.status==='gone'} onClick={()=>onOpen(source.id)}>{source.title}{sourceMarks[source.status]}</button>)}</div>}<div className="agent-change-actions"><span className="muted">{new Date(page.updated_at).toLocaleString('ko-KR',{dateStyle:'medium',timeStyle:'short'})}</span><button type="button" className="button" disabled={agent.busy} onClick={()=>void remove(page)}>지우기</button></div></details></article>)}
+  </div>;
+}
+
 function AgentViews({agent}:{agent:Agent}){
-  return <div className="segmented" role="group" aria-label="작업 대화 보기">{([['chat','대화'],['changes','변경'],['memory','기억']] as const).map(([id,label])=><button type="button" key={id} aria-pressed={agent.view===id} onClick={()=>agent.setView(id)}>{label}{id==='changes'&&agent.latest?.operations.length?` ${agent.latest.operations.length}`:''}</button>)}</div>;
+  return <div className="segmented" role="group" aria-label="작업 대화 보기">{([['chat','대화'],['changes','변경'],['memory','기억'],['wiki','위키']] as const).map(([id,label])=><button type="button" key={id} aria-pressed={agent.view===id} onClick={()=>agent.setView(id)}>{label}{id==='changes'&&agent.latest?.operations.length?` ${agent.latest.operations.length}`:''}</button>)}</div>;
 }
 
 const workStarters=[
@@ -289,6 +321,7 @@ const workStarters=[
   {title:'문서 요약',text:'이 문서의 핵심 사건, 인물의 변화, 남은 질문을 짧게 정리해 줘.'},
   {title:'SF 개연성',text:'이 장면의 SF 설정에서 실제 과학으로 확인할 가정과 독자가 의문을 가질 지점을 짚어 줘.'},
   {title:'다른 작품 참고',text:'내 다른 작품이나 노트에서 이 장면에 쓸 만한 자료를 찾아줘.'},
+  {title:'위키 정리',text:'이 작품의 원고와 설정을 읽고 인물, 장소, 규칙, 사건, 복선, 미해결 사항을 위키에 정리해 줘.'},
 ];
 
 const noteStarters=[
@@ -296,6 +329,7 @@ const noteStarters=[
   {title:'브레인스토밍',text:'이 노트를 출발점으로 자유롭게 연상할 수 있는 아이디어와 조합을 던져 줘.'},
   {title:'생각 정리',text:'이 노트의 핵심 생각, 연결점, 아직 답하지 않은 질문을 정리해 줘.'},
   {title:'관련 자료 찾기',text:'다른 노트와 작품에서 이 노트와 이어지는 자료를 찾아줘.'},
+  {title:'위키 정리',text:'노트에 나온 개념과 자료, 아직 답하지 않은 질문을 공통 위키에 정리해 줘.'},
 ];
 
 /**
@@ -352,7 +386,7 @@ return mine.find(session=>session.id===saved)?.id||mine[0]?.id||'';}});
         {!runs.length&&<div className="chat-welcome"><div className="chat-starters">{(scope.kind==='notes'?noteStarters:workStarters).map(p=><button type="button" key={p.title} onClick={()=>{setQuestion(p.text);agent.questionId.current='';inputRef.current?.focus();}}><span>{p.title}</span></button>)}</div></div>}
         {runs.map(run=><div className="agent-exchange" key={run.id}><article className="chat-message user"><header>작가</header><p>{run.message}</p></article><article className="chat-message assistant agent-reply"><header>{providerLabels[run.provider]}<small>{run.model}</small></header><WorkLog run={run} onOpen={open}/>{run.answer&&<p>{run.answer}</p>}{run.error&&<p className="error">{run.error}</p>}{!run.answer&&!run.error&&<p className="chat-working">{stateNames[run.status]}</p>}{run.status==='completed'&&<div className="chat-message-actions">{run.operations.length>0&&<button type="button" onClick={()=>{agent.setChangeId(run.id);agent.setView('changes');}}><FileText size={12}/>변경 {run.operations.length}개 보기</button>}<button type="button" disabled={busy} onClick={()=>void agent.branch(run)}><GitBranch size={12}/>여기서 분기</button></div>}</article></div>)}
         {runs.length>1&&!active&&<p className="agent-usage muted">이 대화 · {usageText(runs)}</p>}
-      </>:agent.view==='changes'?<AgentChanges agent={agent} onOpen={open}/>:<AgentMemories agent={agent} onOpen={open}/>}
+      </>:agent.view==='changes'?<AgentChanges agent={agent} onOpen={open}/>:agent.view==='wiki'?<AgentWiki agent={agent} scope={scope} docId={docId} onOpen={open}/>:<AgentMemories agent={agent} onOpen={open}/>}
     </div>
     {(agent.error||connection.connectionError)&&<p role="alert" className="chat-error">{agent.error||connection.connectionError}</p>}
     <form className="chat-composer" onSubmit={event=>{event.preventDefault();send();}}>{pointed.length>0&&<div className="chat-source-chips">{pointed.map(id=><button type="button" key={id} disabled={busy} onClick={()=>setSourceIds(ids=>ids.filter(v=>v!==id))}>{targets.find(target=>target.targetId===id)?.label} ×</button>)}</div>}<ChatMentionInput inputRef={inputRef} value={question} onChange={value=>{setQuestion(value);agent.questionId.current='';}} targets={targets} sourceId={docId} selectedIds={pointed} onSelectSource={id=>setSourceIds(ids=>ids.includes(id)?ids:[...ids,id])} disabled={busy||!!s.conflict} onSend={send}/><div>{active&&<button type="button" className="button" disabled={busy} onClick={()=>void agent.cancel(active)}><Square size={13}/>중단</button>}<button type="submit" className="primary" aria-label="질문 보내기" disabled={!configured||busy||agent.loading||!question.trim()||!!s.conflict}><ArrowUp size={17}/></button></div></form>

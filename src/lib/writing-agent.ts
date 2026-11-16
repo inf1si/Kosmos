@@ -590,7 +590,7 @@ export function agentUsageTotal(runs:Pick<AgentRunView,'usage'|'status'>[]){
   return {input:finished.reduce((sum,run)=>sum+(run.usage?.input||0),0),output:finished.reduce((sum,run)=>sum+(run.usage?.output||0),0),unknown:finished.filter(run=>!run.usage).length};
 }
 
-export const agentImportBatchSchema=z.object({sessions:z.array(z.json()).max(500).default([]),runs:z.array(z.json()).max(500).default([]),memories:z.array(z.json()).max(2000).default([])}).strict();
+export const agentImportBatchSchema=z.object({sessions:z.array(z.json()).max(500).default([]),runs:z.array(z.json()).max(500).default([]),memories:z.array(z.json()).max(2000).default([]),wikiPages:z.array(z.json()).max(2000).default([]),wikiScopes:z.array(z.json()).max(500).default([])}).strict();
 
 /**
  * Rows of an AI data export made fit for this account: the owner and workspace become the importer's, and a run that was

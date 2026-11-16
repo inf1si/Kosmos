@@ -111,7 +111,7 @@ function DataSection(){
   const exportAgent=()=>{setExporting(true);setExportError('');setImported('');void exportAgentData(studio.user).catch(e=>setExportError(e instanceof Error?e.message:'AI 자료를 내보내지 못했습니다.')).finally(()=>setExporting(false));};
 
   const importAgent=(file:File|undefined)=>{if(!file)return;setExporting(true);setExportError('');setImported('');
-    void importAgentData(studio.user,file).then(n=>setImported(`대화 ${n.sessions}개 · 실행 ${n.runs}개 · 기억 ${n.memories}개를 가져왔습니다.${n.skipped?` 이미 있거나 읽지 못한 ${n.skipped}개는 건너뛰었습니다.`:''}`)).catch(e=>setExportError(e instanceof Error?e.message:'AI 자료를 가져오지 못했습니다.')).finally(()=>{setExporting(false);
+    void importAgentData(studio.user,file).then(n=>setImported(`대화 ${n.sessions}개 · 실행 ${n.runs}개 · 기억 ${n.memories}개${n.wiki?` · 위키 ${n.wiki}개`:''}를 가져왔습니다.${n.skipped?` 이미 있거나 읽지 못한 ${n.skipped}개는 건너뛰었습니다.`:''}`)).catch(e=>setExportError(e instanceof Error?e.message:'AI 자료를 가져오지 못했습니다.')).finally(()=>{setExporting(false);
 
 if(agentFile.current)agentFile.current.value='';});};
 

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { workspaceSchema } from './model';
+import { wikiPageSchema,wikiScopeRowSchema,wikiMissing,type WikiPage,type WikiRole } from './agent-wiki';
 import { agentRunSchema,agentRunViewSchema,agentSessionSchema,agentMemorySchema,agentHash,captureAgentScope,applyAgentOperations,restoreAgentScope,validateAgentWorkspace,agentMergeApply,agentMergeRevert,type AgentRun,type AgentEvent,type AgentOperation } from './writing-agent';
 
 export function agentAdmin(){
@@ -98,4 +99,32 @@ if(parsed.length<100)break;
   }
 
   return {runs,memories};
+}
+
+/**
+ * Wiki pages and source roles for the given scope keys. Roles of the common scope come first and a work's own roles override them.
+ * Before the wiki migration has run this answers available:false, so conversations keep working without a wiki.
+ */
+export async function readAgentWiki(owner:string,keys:string[]):Promise<{available:boolean;pages:WikiPage[];roles:Record<string,WikiRole>}>{
+  const db=agentAdmin(),pages:WikiPage[]=[];
+
+  for(let offset=0;;offset+=500){
+    const result=await db.from('agent_wiki_pages').select('*').eq('owner_id',owner).in('scope_key',keys).order('updated_at',{ascending:false}).range(offset,offset+499);
+
+    if(wikiMissing(result.error))return {available:false,pages:[],roles:{}};
+
+    if(result.error)throw new Error('위키를 읽지 못했습니다.');
+    const page=z.array(wikiPageSchema).parse(result.data);pages.push(...page);
+
+    if(page.length<500)break;
+  }
+
+  const scopes=await db.from('agent_wiki_scopes').select('*').eq('owner_id',owner).in('scope_key',keys);
+
+  if(wikiMissing(scopes.error))return {available:false,pages:[],roles:{}};
+
+  if(scopes.error)throw new Error('위키를 읽지 못했습니다.');
+  const rows=z.array(wikiScopeRowSchema).parse(scopes.data).sort((a,b)=>Number(a.scope_key!=='common')-Number(b.scope_key!=='common'));
+
+  return {available:true,pages,roles:Object.assign({},...rows.map(row=>row.source_roles))};
 }
