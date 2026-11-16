@@ -143,7 +143,7 @@ return send(value.rows[0].value);
     const parameters=[],conditions=[];
 
     for(const [key,raw] of url.searchParams){
-      if(['select','order','limit','offset','on_conflict'].includes(key))continue;assert(/^[a-z_]+$/.test(key));
+      if(['select','order','limit','offset','on_conflict','columns'].includes(key))continue;assert(/^[a-z_]+$/.test(key));
 
       if(raw==='is.null'){conditions.push(`${key} is null`);continue;}
 
@@ -156,8 +156,13 @@ return `$${parameters.length}`;}).join(',')})`);}
     const where=conditions.length?` where ${conditions.join(' and ')}`:'',single=String(req.headers.accept).includes('vnd.pgrst.object');let rows;
 
     if(req.method==='POST'){
-      const keys=Object.keys(body);assert(keys.every(key=>/^[a-z_]+$/.test(key)));const update=String(req.headers.prefer).includes('merge-duplicates')?` on conflict(id) do update set ${keys.filter(k=>k!=='id').map(k=>`${k}=excluded.${k}`).join(',')}`:'';
-      rows=(await pg.query(`insert into public.${name}(${keys.join(',')}) values(${keys.map((_,i)=>`$${i+1}`).join(',')})${update} returning *`,keys.map(key=>objectValue(key,body[key])))).rows;
+      // A branch copies its memories in one bulk insert.
+      rows=[];
+
+      for(const item of Array.isArray(body)?body:[body]){
+        const keys=Object.keys(item);assert(keys.every(key=>/^[a-z_]+$/.test(key)));const update=String(req.headers.prefer).includes('merge-duplicates')?` on conflict(id) do update set ${keys.filter(k=>k!=='id').map(k=>`${k}=excluded.${k}`).join(',')}`:'';
+        rows.push(...(await pg.query(`insert into public.${name}(${keys.join(',')}) values(${keys.map((_,i)=>`$${i+1}`).join(',')})${update} returning *`,keys.map(key=>objectValue(key,item[key])))).rows);
+      }
     }else if(req.method==='PATCH'){
       const keys=Object.keys(body);assert(keys.every(key=>/^[a-z_]+$/.test(key)));
 
@@ -469,7 +474,7 @@ return row?.status==='completed'&&!row.reverted;},'durable agent finishes');
     const firstSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('개요를 만들고 열린 질문을 기억해줘.')));
     // Every step of the run carries the level it was sent with, and the run keeps it in its log without counting it as work.
     const steps=modelCalls.filter(call=>JSON.stringify(call.body).includes('개요를 만들고 열린 질문을 기억해줘.'));assert(steps.length>3);assert(steps.every(call=>call.body.generationConfig?.thinkingConfig?.thinkingLevel==='medium'),'each agent step is sent at the chosen level');
-    assert.deepEqual(run.events.find(event=>event.id==='reasoning-medium'),{id:'reasoning-medium',title:'생각 단계',detail:'중간'});const worked=`완료 · 작업 ${run.events.filter(event=>!['focus','previous','pointed','reasoning-medium'].includes(event.id)).length}개`;await until(async()=>await panel.locator('.chat-message.assistant').last().locator('summary').innerText()===worked,'the work count leaves out the open document, carried AI 대화 and the thinking level');
+    assert.deepEqual(run.events.find(event=>event.id==='reasoning-medium'),{id:'reasoning-medium',title:'생각 단계',detail:'중간'});const worked=`완료 · 작업 ${run.events.filter(event=>!['focus','previous','pointed','reasoning-medium'].includes(event.id)).length}개`;assert(run.usage&&run.usage.input>0,'the provider-reported tokens are kept with the run');await until(async()=>await panel.locator('.chat-message.assistant').last().locator('summary').innerText()===`${worked} · 토큰 ${(run.usage.input+run.usage.output).toLocaleString('ko-KR')}`,'the work count leaves out the open document, carried AI 대화 and the thinking level, and the run shows its tokens');
 
     for(const part of ['현재 실행 방식: 검토하며 실행','작가가 따로 말하지 않아도 researchWeb으로 조사','searchLibrary로 찾아 readSource로 읽는다',`- 노트 `,'창작 파트너','상상력과 문학성이 최우선',`작품: ${initial.works[0].title}`,`id ${initial.works[0].documents[0].id}`])assert(firstSystem.includes(part),`agent instructions carry: ${part}`);assert.equal(run.events.some(event=>event.title==='Google 웹 조사'),true);assert(run.events.some(event=>event.title==='다른 작품·노트 검색'));assert.match(run.events.find(event=>event.title==='다른 자료 읽기')?.detail||'',/^(작품|노트) .+ · .+$/,'the work log says where a read-only source lives');assert.equal(run.operations.length,4,'reading another space stages nothing');assert.equal(run.operations[3].type,'properties');assert(run.events.some(event=>event.title==='연결 찾기'));assert.equal(run.events.find(event=>event.title==='변경 점검')?.detail,'문서 1개 · 문제 없음');assert.equal(run.events.find(event=>event.title==='속성 변경')?.detail,'에이전트 개요');assert.equal(run.applied_version,null);
     await changesView.click();await panel.getByText('달로 돌아온 인물은 관측소를 찾는다.').waitFor();assert.equal(await panel.locator('.agent-diff pre').last().innerText(),'달로 돌아온 인물은 관측소를 찾는다.\n\n문은 열려 있었다.','the continued paragraph is staged after the quoted one');assert.deepEqual(await panel.locator('.agent-properties div').allInnerTexts(),['요약\n없음 → 관측소를 찾는 장면'],'the new summary shows beside the text change');
@@ -488,8 +493,12 @@ return row.applied_version!==null;},'review changes apply');
     await input.fill('이 장면은 어디야?');const focused=page.waitForRequest(request=>request.url().endsWith('/messages')&&request.method()==='POST');await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();assert.equal((await focused).postDataJSON().focusId,run.operations[0].id);
     await panel.locator('.chat-message.assistant').filter({hasText:'열어 둔 문서를 확인했습니다.'}).waitFor();
     const focusSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('이 장면은 어디야')));assert(focusSystem.includes(`작가가 지금 열어 둔 문서: "에이전트 개요" (id ${run.operations[0].id})`),'the open document is named to the model');assert(focusSystem.includes(`- 에이전트 개요 · memo · ${'달로 돌아온 인물은 관측소를 찾는다.\n\n문은 열려 있었다.'.length}자 · id ${run.operations[0].id}`),'the applied document is on the map');
-    const focusTurn=panel.locator('.chat-message.assistant').last();assert.equal(await focusTurn.locator('summary').innerText(),'완료');await focusTurn.locator('summary').click();assert.deepEqual(await focusTurn.locator('li strong').allInnerTexts(),['열어 둔 문서','생각 단계']);assert.equal(await focusTurn.locator('li p').innerText(),'중간');await focusTurn.getByRole('button',{name:'에이전트 개요',exact:true}).waitFor();await page.screenshot({path:resolve(output,`open-document-${width}.png`)});
-    await panel.getByRole('button',{name:'기억',exact:true}).click();await panel.getByText('관측소가 비어 있는 이유를 다음에 검토한다.',{exact:true}).waitFor();await panel.getByRole('button',{name:'잊기',exact:true}).click();await until(async()=>(await pg.query('select * from public.agent_memories where session_id=$1',[run.session_id])).rows.length===0,'forget memory');
+    const focusTurn=panel.locator('.chat-message.assistant').last();assert.match(await focusTurn.locator('summary').innerText(),/^완료 · 토큰 [\d,]+$/);assert.match(await panel.locator('.agent-usage').innerText(),/^이 대화 · 토큰 [\d,]+$/,'the conversation total shows once there are two runs');await focusTurn.locator('summary').click();assert.deepEqual(await focusTurn.locator('li strong').allInnerTexts(),['열어 둔 문서','생각 단계']);assert.equal(await focusTurn.locator('li p').innerText(),'중간');await focusTurn.getByRole('button',{name:'에이전트 개요',exact:true}).waitFor();await page.screenshot({path:resolve(output,`open-document-${width}.png`)});
+    await panel.getByRole('button',{name:'기억',exact:true}).click();await panel.getByText('관측소가 비어 있는 이유를 다음에 검토한다.',{exact:true}).waitFor();
+    // Editing a memory changes what the next run reads; the sources stay.
+    await panel.getByRole('button',{name:'고치기',exact:true}).click();const memoryText=panel.getByRole('textbox',{name:'기억 내용',exact:true});assert(await panel.getByRole('textbox',{name:'기억 제목',exact:true}).evaluate(el=>el===document.activeElement));await memoryText.fill('관측소가 비어 있는 이유는 3장에서 밝힌다.');await panel.getByRole('button',{name:'저장',exact:true}).click();await memoryText.waitFor({state:'detached'});await panel.locator('.agent-memories p').filter({hasText:'관측소가 비어 있는 이유는 3장에서 밝힌다.'}).waitFor();
+    const edited=(await pg.query('select content,sources from public.agent_memories where session_id=$1',[run.session_id])).rows;assert.equal(edited.length,1);assert.equal(edited[0].content,'관측소가 비어 있는 이유는 3장에서 밝힌다.');assert(edited[0].sources.length>0,'editing keeps the sources');
+    await panel.getByRole('button',{name:'잊기',exact:true}).click();await until(async()=>(await pg.query('select * from public.agent_memories where session_id=$1',[run.session_id])).rows.length===0,'forget memory');
     await changesView.click();await panel.getByRole('button',{name:'되돌리기',exact:true}).click();await until(async()=>(await pg.query('select reverted from public.agent_runs where id=$1',[run.id])).rows[0].reverted,'undo batch');
     await panel.getByRole('button',{name:'대화',exact:true}).click();
 
@@ -515,6 +524,14 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow&&!layout.page,JSO
     }}
 
     await panel.getByRole('button',{name:'대화',exact:true}).click();
+    // A branch starts a new conversation in the same scope from the chosen request; deleting it removes its rows and leaves the source.
+    await panel.locator('.agent-exchange').first().getByRole('button',{name:'여기서 분기',exact:true}).click();const sessionSelect=panel.getByRole('combobox',{name:'작업 대화 선택'});await until(async()=>await selectedValue(sessionSelect)!==run.session_id&&await selectedValue(sessionSelect)!=='','the branch becomes the chosen conversation');
+    const branchId=await selectedValue(sessionSelect),branchRow=(await pg.query('select * from public.agent_sessions where id=$1',[branchId])).rows[0];assert.equal(branchRow.title.endsWith(' · 분기'),true);assert.deepEqual(branchRow.scope,{kind:'work',id:initial.works[0].id});assert.equal(await panel.locator('.agent-exchange').count(),0);
+    const carried=(await pg.query('select title,content from public.agent_memories where session_id=$1',[branchId])).rows;assert.equal(carried.length,1);assert.match(carried[0].title,/^분기 전 대화: /);assert(carried[0].content.includes('작가: 개요를 만들고 열린 질문을 기억해줘.')&&!carried[0].content.includes('이 장면은 어디야'),'only the conversation up to the chosen request is carried');
+    await panel.getByRole('button',{name:'기억',exact:true}).click();await panel.getByText(carried[0].title,{exact:true}).waitFor();await panel.getByRole('button',{name:'대화',exact:true}).click();
+    await panel.getByRole('button',{name:'대화 삭제',exact:true}).click();const confirm=page.getByRole('dialog',{name:'대화 삭제'});await confirm.getByText(`‘${branchRow.title}’ 대화를 삭제할까요?`).waitFor();await confirm.getByRole('button',{name:'삭제',exact:true}).click();await confirm.waitFor({state:'hidden'});await until(async()=>await input.evaluate(el=>el===document.activeElement),'focus returns to the input after deleting');
+    await until(async()=>(await pg.query('select id from public.agent_sessions where id=$1',[branchId])).rows.length===0,'the branch is deleted');assert.equal((await pg.query('select id from public.agent_memories where session_id=$1',[branchId])).rows.length,0);assert.equal((await pg.query('select id from public.agent_sessions where id=$1',[run.session_id])).rows.length,1);assert.equal(await selectedValue(sessionSelect),'');assert(!(await readOptions(sessionSelect)).some(option=>option.value===branchId));
+    await chooseOption(sessionSelect,run.session_id);await panel.locator('.agent-exchange').first().waitFor();
     await panel.getByRole('button',{name:'새 대화',exact:true}).click();assert.equal(await panel.locator('.agent-exchange').count(),0);assert(await input.evaluate(el=>el===document.activeElement));await chooseOption(panel.getByRole('combobox',{name:'작업 대화 선택'}),run.session_id);await panel.locator('.agent-exchange').first().waitFor();
     // AI 자료 내보내기 lives with the other exports in 설정 › 저장 · 백업.
     await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();

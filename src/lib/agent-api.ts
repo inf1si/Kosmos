@@ -9,7 +9,7 @@ import { providerConfig } from './ai-provider';
 import { reasoningChoice,reasoningLevels,reasoningEvent } from './ai-reasoning';
 import { workspaceSchema } from './model';
 import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges } from './agent-server';
-import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentLibrary,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema } from './writing-agent';
+import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentLibrary,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema,agentMemoryEditSchema,agentBranchInputSchema,agentBranchMemory } from './writing-agent';
 import { runWritingAgent } from './agent-workflow';
 
 const json=<T,>(value:T,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
@@ -102,6 +102,40 @@ return json({session:agentSessionSchema.parse(old.data)});}
         if(result.error)throw new Error('대화 설정을 저장하지 못했습니다.');
 
         return json({session:agentSessionSchema.parse(result.data)});
+      }
+
+      // Deleting a conversation removes its runs, input snapshots and memories; applied changes stay in the manuscript.
+      if(path.length===2&&method==='DELETE'){
+        const busy=await db.from('agent_runs').select('id').eq('session_id',session.id).eq('owner_id',auth.userId).in('status',['queued','running']).limit(1);
+
+        if(busy.error)throw new Error('대화를 지우지 못했습니다.');
+
+        if(busy.data.length)return json({error:'진행 중인 작업을 중단한 뒤 지우세요.'},409);
+        const result=await db.from('agent_sessions').delete().eq('id',session.id).eq('owner_id',auth.userId);
+
+        if(result.error)throw new Error('대화를 지우지 못했습니다.');
+
+        return json({deleted:true});
+      }
+
+      // A branch keeps the scope and settings, copies the memories, and starts from the conversation up to the chosen request.
+      if(path.length===3&&path[2]==='branch'&&method==='POST'){
+        const input=agentBranchInputSchema.parse(await readLimitedJson(request,8192));
+        const old=await db.from('agent_sessions').select('*').eq('id',input.id).maybeSingle();
+
+        if(old.data){if(old.data.owner_id!==auth.userId)return json({error:'사용할 수 없는 대화 ID입니다.'},409);
+
+return json({session:agentSessionSchema.parse(old.data)});}
+
+        const history=await agentSessionHistory(session.id,auth.userId),record=agentBranchMemory(session.title,history.runs,input.from),now=new Date().toISOString();
+        const saved=await db.from('agent_sessions').insert({id:input.id,owner_id:auth.userId,workspace_id:session.workspace_id,title:`${session.title.slice(0,290)} · 분기`,scope:session.scope,mode:session.mode,provider:session.provider,web:session.web}).select('*').single();
+
+        if(saved.error)throw new Error('대화를 나누지 못했습니다.');
+        const copied=await db.from('agent_memories').insert([{id:crypto.randomUUID(),session_id:input.id,owner_id:auth.userId,...record,sources:[],updated_at:now},...history.memories.map(memory=>({id:crypto.randomUUID(),session_id:input.id,owner_id:auth.userId,title:memory.title,content:memory.content,sources:memory.sources,updated_at:memory.updated_at}))]);
+
+        if(copied.error){await db.from('agent_sessions').delete().eq('id',input.id).eq('owner_id',auth.userId);throw new Error('대화를 나누지 못했습니다.');}
+
+        return json({session:agentSessionSchema.parse(saved.data)},201);
       }
 
       if(path.length===3&&path[2]==='messages'&&method==='POST'){
@@ -205,6 +239,15 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
       const run=await readAgentRun(ids[0].id);
 
       return json({commit:agentCommitSchema.parse({workspace_id:run.workspace_id,scope:run.snapshot.scope,base_hash:run.base_hash,applied_hash:run.applied_hash,applied_version:run.applied_version})});
+    }
+
+    if(path[0]==='memories'&&path.length===2&&method==='PATCH'){
+      const input=agentMemoryEditSchema.parse(await readLimitedJson(request,64*1024));
+      const result=await db.from('agent_memories').update({...input,updated_at:new Date().toISOString()}).eq('id',z.uuid().parse(path[1])).eq('owner_id',auth.userId).select('id');
+
+      if(result.error||!result.data.length)throw new Error('기억을 고치지 못했습니다.');
+
+      return json({saved:true});
     }
 
     if(path[0]==='memories'&&path[1]&&path[2]==='forget'&&method==='POST'){

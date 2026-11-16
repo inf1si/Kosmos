@@ -446,3 +446,33 @@ export async function agentCommitJoiner(local:Workspace,remote:Workspace,commit:
     };
   }catch{return null;}
 }
+
+export const agentMemoryEditSchema=z.object({title:z.string().trim().min(1).max(300),content:z.string().trim().min(1).max(20000)}).strict();
+
+export const agentBranchInputSchema=z.object({id:z.uuid(),from:z.uuid()}).strict();
+
+/**
+ * The memory a branched session starts with: the source conversation up to the chosen request, newest turns first kept within budget.
+ * Only completed turns count, so a failed or cancelled request is not carried over as a decision.
+ */
+export function agentBranchMemory(title:string,runs:Pick<AgentRunView,'id'|'message'|'answer'|'status'>[],from:string,budget=8000){
+  const end=runs.findIndex(run=>run.id===from);
+
+  if(end<0)throw new Error('분기할 요청을 찾지 못했습니다.');
+  const turns:string[]=[];let used=0;
+
+  for(const run of runs.slice(0,end+1).filter(item=>item.status==='completed').toReversed()){
+    const turn=`작가: ${run.message.slice(0,2000)}\n\nAI: ${run.answer.slice(0,4000)}`;
+
+    if(turns.length&&used+turn.length>budget)break;turns.unshift(turn);used+=turn.length;
+  }
+
+  return {title:`분기 전 대화: ${title}`.slice(0,300),content:turns.join('\n\n---\n\n').slice(-budget)||'완료한 요청이 없습니다.'};
+}
+
+/** Token totals of the runs that reported usage, and how many finished runs did not. */
+export function agentUsageTotal(runs:Pick<AgentRunView,'usage'|'status'>[]){
+  const finished=runs.filter(run=>run.status!=='queued'&&run.status!=='running');
+
+  return {input:finished.reduce((sum,run)=>sum+(run.usage?.input||0),0),output:finished.reduce((sum,run)=>sum+(run.usage?.output||0),0),unknown:finished.filter(run=>!run.usage).length};
+}

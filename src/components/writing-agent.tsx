@@ -2,8 +2,8 @@
 
 import { useCallback,useEffect,useMemo,useRef,useState } from 'react';
 import { z } from 'zod';
-import { ArrowUp,FileText,MessageSquarePlus,Settings2,Square,Undo2 } from 'lucide-react';
-import { IconButton } from './primitives';
+import { ArrowUp,FileText,GitBranch,MessageSquarePlus,Settings2,Square,Trash2,Undo2 } from 'lucide-react';
+import { IconButton,Modal } from './primitives';
 import { useAIConnection } from './use-ai-connection';
 import { reasoningLabels,eventReasoning,isReasoningEvent } from '@/lib/ai-reasoning';
 import { Select } from './select';
@@ -18,7 +18,7 @@ import { referenceTargets } from '@/lib/internal-references';
 import { activePromptPreset,activatePromptPreset,promptCatalog } from '@/lib/ai-prompt-presets';
 import type { ChatMessage } from '@/lib/ai-conversation';
 import { providerLabels,providerSchema,activeAIProviders,type AIProvider } from '@/lib/ai-provider';
-import { agentSessionSchema,agentRunViewSchema,agentMemorySchema,agentChangesSchema,agentScopeSchema,agentModeSchema,type AgentSession,type AgentRunView,type AgentMemory,type AgentScope,type AgentMode } from '@/lib/writing-agent';
+import { agentSessionSchema,agentRunViewSchema,agentMemorySchema,agentChangesSchema,agentScopeSchema,agentModeSchema,agentUsageTotal,type AgentSession,type AgentRunView,type AgentMemory,type AgentScope,type AgentMode } from '@/lib/writing-agent';
 
 const stateNames={queued:'대기 중',running:'진행 중',completed:'완료',failed:'실패',cancelled:'중단'};
 
@@ -40,7 +40,7 @@ async function agentRequest<T extends z.ZodType>(owner:string|null,path:string,s
   if(session&&session.user.id!==owner)throw new Error('계정이 바뀌었습니다.');
 
   if(!token)throw new Error('작가 로그인이 필요합니다.');
-  const response=await fetch(`/api/agent/${path}`,{method,body,signal,headers:{Authorization:`Bearer ${token}`,...body&&{'Content-Type':'application/json'}},cache:'no-store'}),value=await response.json();
+  const response=await fetch(`/api/agent/${path}`,{method,body,signal,headers:{Authorization:`Bearer ${token}`,...body&&{'Content-Type':'application/json'}},cache:'no-store'}),value:unknown=await response.json().catch(()=>null);
 
   if(!response.ok)throw new Error(z.object({error:z.string()}).safeParse(value).data?.error||'작업 대화에 연결하지 못했습니다.');
 
@@ -168,12 +168,16 @@ if(change.provider){setSessionProvider(change.provider);connection.setProvider(c
   const discard=(run:AgentRunView)=>act(async()=>{await request(`changes/${run.id}/discard`,z.object({discarded:z.boolean()}),'POST','{}');await refresh();});
   const cancel=(run:AgentRunView)=>act(async()=>{await request(`runs/${run.id}/cancel`,z.object({cancelled:z.boolean()}),'POST','{}');await refresh();});
   const forget=(memory:AgentMemory)=>act(async()=>{await request(`memories/${memory.id}/forget`,z.object({forgotten:z.boolean()}),'POST','{}');await refresh();});
+  const editMemory=(memory:AgentMemory,edit:{title:string;content:string})=>act(async()=>{await request(`memories/${memory.id}`,z.object({saved:z.boolean()}),'PATCH',JSON.stringify(edit));await refresh();});
 
-  const choose=(id:string)=>{const session=sessions.find(item=>item.id===id);
+  const choose=(id:string,known?:AgentSession)=>{const session=known||sessions.find(item=>item.id===id);
 
     if(session)setMode(session.mode);
 
     generation.current++;setSelected(id);setSessionProvider(session?.provider||null);setRuns([]);setMemories([]);setError('');setView('chat');questionId.current='';};
+
+  const remove=()=>act(async()=>{const id=selected;await request(`sessions/${id}`,z.object({deleted:z.boolean()}),'DELETE');setSessions(list=>list.filter(session=>session.id!==id));choose('');});
+  const branch=(run:AgentRunView)=>act(async()=>{const created=await request(`sessions/${run.session_id}/branch`,z.object({session:agentSessionSchema}),'POST',JSON.stringify({id:uid(),from:run.id}));setSessions(list=>[created.session,...list]);choose(created.session.id,created.session);});
 
   const active=runs.find(r=>r.status==='queued'||r.status==='running'),latest=runs.find(r=>r.id===changeId)||runs.findLast(r=>r.operations.length>0);
   const applied=runs.filter(run=>run.applied_version!==null).map(run=>`${run.id}:${run.applied_version}:${run.reverted}`).join('|');
@@ -186,15 +190,26 @@ const abort=new AbortController();void request(`runs/${latest.id}/changes`,agent
 
 return()=>abort.abort();},[open,view,latest?.id,latest?.operations.length,request]);
 
-  return {s,sessions,selected,choose,runs,memories,connection,providers,mode,provider,model,models,reasoning,view,setView,error,setError,busy,loading,changes,setChangeId,active,latest,settings,send,apply,discard,cancel,forget,questionId,act};
+  return {s,sessions,selected,choose,runs,memories,connection,providers,mode,provider,model,models,reasoning,view,setView,error,setError,busy,loading,changes,setChangeId,active,latest,settings,send,apply,discard,cancel,forget,editMemory,remove,branch,questionId,act};
 }
 
 type Agent=ReturnType<typeof useWritingAgent>;
 
-function WorkLog({run,onOpen}:{run:AgentRunView;onOpen:(id:string)=>void}){
-  if(!run.events.length)return null;
+const tokens=(n:number)=>n.toLocaleString('ko-KR');
 
-  return <details><summary>{stateNames[run.status]}{run.events.some(isWork)&&` · 작업 ${run.events.filter(isWork).length}개`}</summary><ol>{run.events.map(event=><li key={event.id}><strong>{event.title}</strong>{event.detail&&<p>{event.detail}</p>}{event.sources?.map(source=>source.url?<a key={source.id} href={source.url} target="_blank" rel="noreferrer">{source.title}</a>:<button type="button" className="chip" key={source.id} onClick={()=>onOpen(source.id)}>{source.title}</button>)}{event.searchHtml&&<iframe title="Google 검색 제안" sandbox="allow-popups allow-popups-to-escape-sandbox" srcDoc={event.searchHtml}/>}</li>)}</ol></details>;
+/** Tokens the provider reported for one run or a whole conversation; runs that ended without a report are counted as unknown. */
+function usageText(runs:AgentRunView[]){
+  const total=agentUsageTotal(runs),known=runs.length>total.unknown;
+
+  return [known&&`토큰 ${tokens(total.input+total.output)}`,total.unknown>0&&(runs.length>1?`사용량 미확인 ${total.unknown}회`:'사용량 미확인')].filter(Boolean).join(' · ');
+}
+
+function WorkLog({run,onOpen}:{run:AgentRunView;onOpen:(id:string)=>void}){
+  const usage=run.status==='queued'||run.status==='running'?'':usageText([run]);
+
+  if(!run.events.length&&!usage)return null;
+
+  return <details><summary title={run.usage?`입력 ${tokens(run.usage.input)} · 출력 ${tokens(run.usage.output)} 토큰`:undefined}>{stateNames[run.status]}{run.events.some(isWork)&&` · 작업 ${run.events.filter(isWork).length}개`}{usage&&` · ${usage}`}</summary><ol>{run.events.map(event=><li key={event.id}><strong>{event.title}</strong>{event.detail&&<p>{event.detail}</p>}{event.sources?.map(source=>source.url?<a key={source.id} href={source.url} target="_blank" rel="noreferrer">{source.title}</a>:<button type="button" className="chip" key={source.id} onClick={()=>onOpen(source.id)}>{source.title}</button>)}{event.searchHtml&&<iframe title="Google 검색 제안" sandbox="allow-popups allow-popups-to-escape-sandbox" srcDoc={event.searchHtml}/>}</li>)}</ol></details>;
 }
 
 function AgentChanges({agent,onOpen}:{agent:Agent;onOpen:(id:string)=>void}){
@@ -203,8 +218,16 @@ function AgentChanges({agent,onOpen}:{agent:Agent;onOpen:(id:string)=>void}){
   return <div className="agent-changes">{runs.some(r=>r.operations.length>0)&&<Select aria-label="변경 작업 선택" value={latest?.id||''} onChange={agent.setChangeId}>{runs.filter(r=>r.operations.length>0).map(r=><option value={r.id} key={r.id}>{r.message.slice(0,80)}</option>)}</Select>}{!latest||!changes?<p className="muted">변경이 없습니다.</p>:<><div className="agent-change-actions"><span>{changes.rows.length}개 문서{changes.structure?` · 구조 변경 ${changes.structure}개`:''}</span>{latest.applied_version!==null&&!latest.reverted?<button type="button" className="button" disabled={busy||!!active} onClick={()=>void agent.apply(latest,true)}><Undo2 size={14}/>되돌리기</button>:<><button type="button" className="button" disabled={busy||!!active||latest.reverted} onClick={()=>void agent.discard(latest)}>작업본 버리기</button><button type="button" className="button primary" disabled={busy||!!active||latest.reverted||latest.status!=='completed'} onClick={()=>void agent.apply(latest)}>변경 적용</button></>}</div>{latest.reverted&&<p className="muted">되돌리거나 버린 변경입니다.</p>}{changes.rows.map(row=><section key={row.id}><div className="agent-diff-title"><FileText size={15}/><strong>{row.title}</strong>{row.created&&<span className="chip">새 문서</span>}{latest.applied_version!==null&&!latest.reverted&&<button type="button" className="button" onClick={()=>onOpen(row.id)}>문서 열기</button>}</div>{row.properties&&<dl className="agent-properties">{row.properties.map(p=><div key={p.name}><dt>{p.name}</dt><dd><span className="muted">{p.before||'없음'}</span> → {p.after||'없음'}</dd></div>)}</dl>}{(row.created||row.before!==row.after)&&<div className="agent-diff"><div><span className="muted">변경 전</span><pre>{row.before||'빈 문서'}</pre></div><div><span className="muted">변경 후</span><pre>{row.after||'빈 문서'}</pre></div></div>}</section>)}</>}</div>;
 }
 
+function MemoryEditor({memory,agent,onDone}:{memory:AgentMemory;agent:Agent;onDone:()=>void}){
+  const [title,setTitle]=useState(memory.title),[content,setContent]=useState(memory.content);
+
+  return <form className="agent-memory-edit" onSubmit={event=>{event.preventDefault();void agent.editMemory(memory,{title,content}).then(ok=>{if(ok)onDone();});}}><input aria-label="기억 제목" value={title} maxLength={300} onChange={event=>setTitle(event.target.value)} autoFocus/><textarea aria-label="기억 내용" value={content} rows={5} onChange={event=>setContent(event.target.value)}/><div className="agent-change-actions"><button type="button" className="button" disabled={agent.busy} onClick={onDone}>취소</button><button type="submit" className="button primary" disabled={agent.busy||!title.trim()||!content.trim()}>저장</button></div></form>;
+}
+
 function AgentMemories({agent,onOpen}:{agent:Agent;onOpen:(id:string)=>void}){
-  return <div className="agent-memories">{!agent.memories.length?<p className="muted">저장한 기억이 없습니다.</p>:agent.memories.map(memory=><article key={memory.id}><div className="agent-change-actions"><strong>{memory.title}</strong><button type="button" className="button" disabled={agent.busy} onClick={()=>void agent.forget(memory)}>잊기</button></div><p>{memory.content}</p>{memory.sources.map(source=><button type="button" className="chip" key={source.id} onClick={()=>onOpen(source.id)}>{source.title}</button>)}</article>)}</div>;
+  const [editing,setEditing]=useState('');
+
+  return <div className="agent-memories">{!agent.memories.length?<p className="muted">저장한 기억이 없습니다.</p>:agent.memories.map(memory=><article key={memory.id}>{editing===memory.id?<MemoryEditor memory={memory} agent={agent} onDone={()=>setEditing('')}/>:<><div className="agent-change-actions"><strong>{memory.title}</strong><button type="button" className="button" disabled={agent.busy} onClick={()=>setEditing(memory.id)}>고치기</button><button type="button" className="button" disabled={agent.busy} onClick={()=>void agent.forget(memory)}>잊기</button></div><p>{memory.content}</p></>}{memory.sources.map(source=><button type="button" className="chip" key={source.id} onClick={()=>onOpen(source.id)}>{source.title}</button>)}</article>)}</div>;
 }
 
 function AgentViews({agent}:{agent:Agent}){
@@ -240,8 +263,8 @@ export function AgentPanel({scope,docId,title,legacy,onOpen}:{scope:AgentScope;d
 return mine.find(session=>session.id===saved)?.id||mine[0]?.id||'';}});
 
   const {s,runs,busy,active,connection,providers,provider,model,models,reasoning}=agent;
-  const [question,setQuestion]=useState(''),[sourceIds,setSourceIds]=useState<string[]>([]),[settingsOpen,setSettingsOpen]=useState(false);
-  const inputRef=useRef<HTMLTextAreaElement>(null),log=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLElement|null>(null);
+  const [question,setQuestion]=useState(''),[sourceIds,setSourceIds]=useState<string[]>([]),[settingsOpen,setSettingsOpen]=useState(false),[deleting,setDeleting]=useState(false);
+  const inputRef=useRef<HTMLTextAreaElement>(null),log=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLElement|null>(null),deleteTrigger=useRef<HTMLElement|null>(null);
   const sessions=agent.sessions.filter(session=>scopeKey(session.scope)===key),current=providers.find(p=>p.id===provider);
   const configured=cloudConfigured&&!connection.loadingProviders&&!!current?.configured;
   const targets=useMemo(()=>s.state?referenceTargets(s.state).filter(target=>target.kind==='note'||target.kind==='document'):[],[s.state]);
@@ -260,7 +283,7 @@ requestAnimationFrame(()=>inputRef.current?.focus());});};
   const settings=(event:{currentTarget:HTMLElement})=>{settingsTrigger.current=event.currentTarget;setSettingsOpen(true);};
 
   return <div className="ai-chat agent-panel">
-    <div className="chat-heading"><div><strong title={title}>{title}</strong></div><IconButton label="AI 설정" disabled={busy||connection.loadingProviders} onClick={settings}><Settings2 size={17}/></IconButton><IconButton label="새 대화" disabled={busy||!agent.selected} onClick={()=>{agent.choose('');inputRef.current?.focus();}}><MessageSquarePlus size={17}/></IconButton></div>
+    <div className="chat-heading"><div><strong title={title}>{title}</strong></div><IconButton label="AI 설정" disabled={busy||connection.loadingProviders} onClick={settings}><Settings2 size={17}/></IconButton><IconButton label="새 대화" disabled={busy||!agent.selected} onClick={()=>{agent.choose('');inputRef.current?.focus();}}><MessageSquarePlus size={17}/></IconButton><IconButton label="대화 삭제" disabled={busy||!agent.selected||!!active} onClick={event=>{deleteTrigger.current=event.currentTarget;setDeleting(true);}}><Trash2 size={16}/></IconButton></div>
     <div className="chat-provider">
       {sessions.length>0&&<label>대화<Select aria-label="작업 대화 선택" disabled={busy} value={agent.selected} onChange={agent.choose}><option value="">새 대화</option>{sessions.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</Select></label>}
       <div className="agent-panel-settings">
@@ -277,11 +300,13 @@ requestAnimationFrame(()=>inputRef.current?.focus());});};
     <div className="chat-log" ref={log} role="log" aria-label="AI 대화 기록" aria-live="polite" aria-relevant="additions" aria-busy={!!active}>
       {agent.loading?<p className="chat-working">불러오는 중…</p>:agent.view==='chat'?<>
         {!runs.length&&<div className="chat-welcome"><div className="chat-starters">{(scope.kind==='notes'?noteStarters:workStarters).map(p=><button type="button" key={p.title} onClick={()=>{setQuestion(p.text);agent.questionId.current='';inputRef.current?.focus();}}><span>{p.title}</span></button>)}</div></div>}
-        {runs.map(run=><div className="agent-exchange" key={run.id}><article className="chat-message user"><header>작가</header><p>{run.message}</p></article><article className="chat-message assistant agent-reply"><header>{providerLabels[run.provider]}<small>{run.model}</small></header><WorkLog run={run} onOpen={open}/>{run.answer&&<p>{run.answer}</p>}{run.error&&<p className="error">{run.error}</p>}{!run.answer&&!run.error&&<p className="chat-working">{stateNames[run.status]}</p>}{run.operations.length>0&&run.status==='completed'&&<div className="chat-message-actions"><button type="button" onClick={()=>{agent.setChangeId(run.id);agent.setView('changes');}}><FileText size={12}/>변경 {run.operations.length}개 보기</button></div>}</article></div>)}
+        {runs.map(run=><div className="agent-exchange" key={run.id}><article className="chat-message user"><header>작가</header><p>{run.message}</p></article><article className="chat-message assistant agent-reply"><header>{providerLabels[run.provider]}<small>{run.model}</small></header><WorkLog run={run} onOpen={open}/>{run.answer&&<p>{run.answer}</p>}{run.error&&<p className="error">{run.error}</p>}{!run.answer&&!run.error&&<p className="chat-working">{stateNames[run.status]}</p>}{run.status==='completed'&&<div className="chat-message-actions">{run.operations.length>0&&<button type="button" onClick={()=>{agent.setChangeId(run.id);agent.setView('changes');}}><FileText size={12}/>변경 {run.operations.length}개 보기</button>}<button type="button" disabled={busy} onClick={()=>void agent.branch(run)}><GitBranch size={12}/>여기서 분기</button></div>}</article></div>)}
+        {runs.length>1&&!active&&<p className="agent-usage muted">이 대화 · {usageText(runs)}</p>}
       </>:agent.view==='changes'?<AgentChanges agent={agent} onOpen={open}/>:<AgentMemories agent={agent} onOpen={open}/>}
     </div>
     {(agent.error||connection.connectionError)&&<p role="alert" className="chat-error">{agent.error||connection.connectionError}</p>}
     <form className="chat-composer" onSubmit={event=>{event.preventDefault();send();}}>{pointed.length>0&&<div className="chat-source-chips">{pointed.map(id=><button type="button" key={id} disabled={busy} onClick={()=>setSourceIds(ids=>ids.filter(v=>v!==id))}>{targets.find(target=>target.targetId===id)?.label} ×</button>)}</div>}<ChatMentionInput inputRef={inputRef} value={question} onChange={value=>{setQuestion(value);agent.questionId.current='';}} targets={targets} sourceId={docId} selectedIds={pointed} onSelectSource={id=>setSourceIds(ids=>ids.includes(id)?ids:[...ids,id])} disabled={busy||!!s.conflict} onSend={send}/><div>{active&&<button type="button" className="button" disabled={busy} onClick={()=>void agent.cancel(active)}><Square size={13}/>중단</button>}<button type="submit" className="primary" aria-label="질문 보내기" disabled={!configured||busy||agent.loading||!question.trim()||!!s.conflict}><ArrowUp size={17}/></button></div></form>
+    <Modal open={deleting} onClose={()=>{if(!busy)setDeleting(false);}} title="대화 삭제" description={`‘${sessions.find(item=>item.id===agent.selected)?.title||''}’ 대화를 삭제할까요?`} onReturnFocus={()=>{const trigger=deleteTrigger.current;(trigger?.isConnected&&!trigger.matches(':disabled')?trigger:inputRef.current)?.focus();}}><p className="field-help">기록·기억·작업본이 함께 지워지고, 적용한 변경은 원고에 남습니다.</p><div className="modal-actions"><button type="button" className="button" disabled={busy} onClick={()=>setDeleting(false)}>취소</button><button type="button" className="button danger" disabled={busy} onClick={()=>void agent.remove().then(ok=>{if(ok)setDeleting(false);})}>삭제</button></div>{agent.error&&<p className="error-message" role="alert">{agent.error}</p>}</Modal>
     {settingsOpen&&<AISettingsDialog providers={providers} providerId={provider} storageAvailable={connection.storageAvailable} onRefresh={connection.refreshProviders} onClose={()=>setSettingsOpen(false)} onReturnFocus={()=>settingsTrigger.current?.focus()}/>}
   </div>;
 }

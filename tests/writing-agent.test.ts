@@ -7,7 +7,7 @@ import { fromText,plainText,uid,workspaceSchema } from '../src/lib/model';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { addNoteSpace,moveNote,noteSpaceFor,resolveNoteNavigation } from '../src/lib/note-navigation';
 import { resolveNavigation } from '../src/lib/document-navigation';
-import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,type AgentOperation } from '../src/lib/writing-agent';
+import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,agentBranchMemory,agentUsageTotal,agentMemoryEditSchema,type AgentOperation } from '../src/lib/writing-agent';
 import { buildAgentInstructions } from '../src/lib/agent-instructions';
 import { DEFAULT_AI_SYSTEM_PROMPT } from '../src/lib/ai-settings';
 import { AgentLanguageModel } from '../src/lib/agent-language-model';
@@ -280,4 +280,27 @@ test('변경 점검은 없는 문서를 가리키는 연결·빈 새 문서·설
 test('연결 찾기·변경 점검 도구가 있고 속성 변경은 쓰기 도구에만 있다',async()=>{
   const tools=writingAgentTools(uid(),'wf','discuss',false);assert('findReferences' in tools);assert('validateChanges' in tools);
   const schema=JSON.stringify(await asSchema(writingAgentTools(uid(),'wf','review',false).stageChange!.inputSchema!).jsonSchema);assert(schema.includes('"properties"'));assert(schema.includes('storyTime'));
+});
+
+test('분기 기억은 고른 요청까지의 완료한 대화만 최근 것부터 예산 안에 담는다',()=>{
+  const runs=[{id:uid(),message:'첫 질문',answer:'첫 답',status:'completed' as const},{id:uid(),message:'실패한 질문',answer:'',status:'failed' as const},{id:uid(),message:'둘째 질문',answer:'둘째 답',status:'completed' as const},{id:uid(),message:'나중 질문',answer:'나중 답',status:'completed' as const}];
+  const memory=agentBranchMemory('결말 구상',runs,runs[2].id);
+  assert.equal(memory.title,'분기 전 대화: 결말 구상');
+  assert.match(memory.content,/작가: 첫 질문[\s\S]*AI: 첫 답[\s\S]*작가: 둘째 질문/);
+  assert.doesNotMatch(memory.content,/실패한 질문|나중 질문/);
+  const short=agentBranchMemory('결말',runs,runs[2].id,30);
+  assert.match(short.content,/둘째 질문/);
+  assert.doesNotMatch(short.content,/첫 질문/);
+  assert.throws(()=>agentBranchMemory('결말',runs,uid()),/분기할 요청/);
+});
+
+test('사용량 합계는 끝난 작업만 더하고 보고가 없는 작업은 미확인으로 센다',()=>{
+  const total=agentUsageTotal([{usage:{input:1000,output:200},status:'completed'},{usage:null,status:'cancelled'},{usage:{input:50,output:5},status:'failed'},{usage:null,status:'running'}]);
+  assert.deepEqual(total,{input:1050,output:205,unknown:1});
+});
+
+test('기억 고치기는 빈 제목·내용과 다른 필드를 받지 않는다',()=>{
+  assert.deepEqual(agentMemoryEditSchema.parse({title:' 결정 ',content:'주인공은 돌아가지 않는다'}),{title:'결정',content:'주인공은 돌아가지 않는다'});
+  assert.equal(agentMemoryEditSchema.safeParse({title:'',content:'내용'}).success,false);
+  assert.equal(agentMemoryEditSchema.safeParse({title:'제목',content:'내용',session_id:uid()}).success,false);
 });
