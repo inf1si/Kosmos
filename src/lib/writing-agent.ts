@@ -61,7 +61,11 @@ export type AgentRunView=z.infer<typeof agentRunViewSchema>;
 
 export const agentPropertyChangeSchema=z.object({name:z.string(),before:z.string(),after:z.string()});
 
-export const agentChangesSchema=z.object({rows:z.array(z.object({id:z.uuid(),title:z.string(),before:z.string(),after:z.string(),created:z.boolean(),properties:z.array(agentPropertyChangeSchema).optional()})),structure:z.number()});
+export const agentStructureChangeSchema=z.object({id:z.string(),title:z.string(),folder:z.boolean(),change:z.enum(['created','moved','renamed','reordered']),before:z.string(),after:z.string()});
+
+export type AgentStructureChange=z.infer<typeof agentStructureChangeSchema>;
+
+export const agentChangesSchema=z.object({rows:z.array(z.object({id:z.uuid(),title:z.string(),before:z.string(),after:z.string(),created:z.boolean(),properties:z.array(agentPropertyChangeSchema).optional()})),structure:z.array(agentStructureChangeSchema)});
 
 export function agentRunView(run:AgentRun):AgentRunView{const {snapshot:_snapshot,...view}=run;
 
@@ -270,12 +274,57 @@ export function validateAgentWorkspace(state:Workspace){return workspaceSchema.p
 export function agentDiff(before:AgentSnapshot,operations:readonly AgentOperation[]){
   const old=agentDocuments(before),next=agentDocuments(agentOverlay(before,operations)),rows=next.flatMap(d=>{
     // A new document is compared with a fresh one of its kind, so only the properties the agent set show.
-    const previous=old.find(p=>p.id===d.id),fresh=d.kind==='note'?{tags:''}:(({chapter,status,category,pov,storyTime,summary})=>({chapter,status,category,pov,storyTime,summary}))(newDocument(d.kind==='wiki'||d.kind==='memo'?d.kind:'scene','')),properties=propertyChanges(previous?.properties||fresh,d.properties);
+    const previous=old.find(p=>p.id===d.id),fresh=d.kind==='note'?{tags:''}:(({chapter,status,category,pov,storyTime,summary})=>({chapter,status,category,pov,storyTime,summary}))(newDocument(d.kind==='wiki'||d.kind==='memo'?d.kind:'scene','')),properties=[...previous&&previous.title!==d.title?[{name:'제목',before:previous.title,after:d.title}]:[],...propertyChanges(previous?.properties||fresh,d.properties)];
 
     return previous&&previous.title===d.title&&previous.text===d.text&&!properties.length?[]:[{id:d.id,title:d.title,before:previous?.text||'',after:d.text,created:!previous,...properties.length&&{properties}}];
   });
 
-  return {rows,structure:operations.filter(op=>op.type==='move'||op.type==='folder').length};
+  return {rows,structure:agentStructure(before,operations)};
+}
+
+/** Sections and tree nodes of a snapshot, in stored order. */
+function snapshotTree(snapshot:AgentSnapshot){
+  const space=snapshot.navigation?.spaces?.find(s=>s.id===snapshot.scope.id);
+
+  return {sections:snapshot.work?.navigation?.sections||space?.sections||[],nodes:snapshot.work?.navigation?.nodes||snapshot.navigation?.nodes||[]};
+}
+
+/**
+ * Where folders and documents sit before and after a change: new folders and documents, moves between sections or folders,
+ * renamed folders, and a document or folder the agent moved within the same siblings. A place reads as "section / folder / folder".
+ */
+export function agentStructure(before:AgentSnapshot,operations:readonly AgentOperation[]):AgentStructureChange[]{
+  const after=agentOverlay(before,operations),moved=new Set(operations.flatMap(op=>op.type==='move'?[op.id]:[]));
+
+  const read=(snapshot:AgentSnapshot)=>{
+    const {sections,nodes}=snapshotTree(snapshot),byId=new Map(nodes.map(n=>[n.id,n])),docTitles=new Map(agentDocuments(snapshot).map(d=>[d.id,d.title]));
+    const name=(node:typeof nodes[number])=>node.type==='folder'?node.title||'이름 없는 폴더':docTitles.get(node.id)||'제목 없음';
+
+    const place=(sectionId:string|undefined,parentId:string|null|undefined)=>{
+      const parts:string[]=[];
+
+      for(let node=parentId?byId.get(parentId):undefined,guard=0;node&&guard<100;node=node.parentId?byId.get(node.parentId):undefined,guard++)parts.unshift(name(node));
+
+      return [sections.find(s=>s.id===sectionId)?.title||sectionId||'',...parts].filter(Boolean).join(' / ');
+    };
+
+    return new Map(nodes.map(n=>[n.id,{folder:n.type==='folder',title:name(n),place:place(n.sectionId,n.parentId),siblings:nodes.filter(o=>o.sectionId===n.sectionId&&o.parentId===n.parentId).map(o=>o.id)}]));
+  };
+
+  const old=read(before),next=read(after),rows:AgentStructureChange[]=[];
+
+  for(const [id,now] of next){
+    const was=old.get(id);
+
+    if(!was){rows.push({id,title:now.title,folder:now.folder,change:'created',before:'',after:now.place});continue;}
+
+    if(was.place!==now.place)rows.push({id,title:now.title,folder:now.folder,change:'moved',before:was.place,after:now.place});
+    else if(now.folder&&was.title!==now.title)rows.push({id,title:now.title,folder:true,change:'renamed',before:was.title,after:now.title});
+    // Only a node the agent moved is reported as reordered; its siblings shift with it.
+    else if(moved.has(id)&&was.siblings.indexOf(id)!==now.siblings.indexOf(id))rows.push({id,title:now.title,folder:now.folder,change:'reordered',before:`${was.siblings.indexOf(id)+1}번째`,after:`${now.siblings.indexOf(id)+1}번째`});
+  }
+
+  return rows;
 }
 
 type AgentDocument=ReturnType<typeof agentDocuments>[number];

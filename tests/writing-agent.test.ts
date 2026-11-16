@@ -7,7 +7,7 @@ import { fromText,plainText,uid,workspaceSchema } from '../src/lib/model';
 import { addNote,newNote } from '../src/lib/personal-notes';
 import { addNoteSpace,moveNote,noteSpaceFor,resolveNoteNavigation } from '../src/lib/note-navigation';
 import { resolveNavigation } from '../src/lib/document-navigation';
-import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,agentBranchMemory,agentUsageTotal,agentMemoryEditSchema,type AgentOperation } from '../src/lib/writing-agent';
+import { captureAgentScope,agentHash,agentOverlay,agentDiff,agentDocuments,agentMap,agentSearch,applyAgentOperations,restoreAgentScope,agentRunSchema,agentRunView,agentContext,agentCommitJoiner,agentMessageInputSchema,agentLibrary,agentLibraryMap,agentLiveIds,agentReferences,agentValidate,agentBranchMemory,agentUsageTotal,agentStructure,agentMemoryEditSchema,type AgentOperation } from '../src/lib/writing-agent';
 import { buildAgentInstructions } from '../src/lib/agent-instructions';
 import { DEFAULT_AI_SYSTEM_PROMPT } from '../src/lib/ai-settings';
 import { AgentLanguageModel } from '../src/lib/agent-language-model';
@@ -303,4 +303,19 @@ test('기억 고치기는 빈 제목·내용과 다른 필드를 받지 않는�
   assert.deepEqual(agentMemoryEditSchema.parse({title:' 결정 ',content:'주인공은 돌아가지 않는다'}),{title:'결정',content:'주인공은 돌아가지 않는다'});
   assert.equal(agentMemoryEditSchema.safeParse({title:'',content:'내용'}).success,false);
   assert.equal(agentMemoryEditSchema.safeParse({title:'제목',content:'내용',session_id:uid()}).success,false);
+});
+
+test('구조 변경은 새 폴더·문서의 위치, 옮긴 곳, 같은 자리의 순서와 바뀐 제목을 보인다',()=>{
+  const {state,work,doc,scope,sectionId}=fixture(),snapshot=captureAgentScope(state,scope),folder=uid(),created=uid(),section=resolveNavigation(work).sections[0].title;
+  const ops:AgentOperation[]=[{type:'folder',id:folder,title:'초안',parentId:null,sectionId,beforeId:null},{type:'move',id:doc.id,parentId:folder,sectionId,beforeId:null},{type:'create',id:created,kind:'memo',title:'새 메모',text:'메모',parentId:folder,sectionId,beforeId:null},{type:'rename',id:doc.id,title:'다시 쓴 귀환'}];
+  const changes=agentStructure(snapshot,ops),row=(id:string)=>changes.find(item=>item.id===id);
+  assert.deepEqual(row(folder),{id:folder,title:'초안',folder:true,change:'created',before:'',after:section});
+  assert.equal(row(doc.id)?.change,'moved');assert.equal(row(doc.id)?.title,'다시 쓴 귀환');assert.equal(row(doc.id)?.after,`${section} / 초안`);assert.notEqual(row(doc.id)?.before,row(doc.id)?.after);
+  assert.deepEqual(row(created),{id:created,title:'새 메모',folder:false,change:'created',before:'',after:`${section} / 초안`});
+  assert.deepEqual(agentDiff(snapshot,ops).rows.find(item=>item.id===doc.id)?.properties?.[0],{name:'제목',before:doc.title,after:'다시 쓴 귀환'},'a renamed document shows its old title');
+  const nav=resolveNavigation(work),siblings=nav.nodes.filter(n=>n.sectionId===nav.nodes.find(m=>m.id===doc.id)!.sectionId&&n.parentId===nav.nodes.find(m=>m.id===doc.id)!.parentId);
+  assert(siblings.length>1,'the seed has siblings to reorder');
+  const last=siblings.at(-1)!,reorder=agentStructure(snapshot,[{type:'move',id:last.id,parentId:last.parentId,sectionId:last.sectionId,beforeId:siblings[0].id}]);
+  assert.deepEqual(reorder.map(item=>[item.id,item.change,item.before,item.after]),[[last.id,'reordered',`${siblings.length}번째`,'1번째']],'only the moved node is reported');
+  assert.deepEqual(agentStructure(snapshot,[{type:'replace',id:doc.id,quote:'관측소',replacement:'우주항'}]),[]);
 });
