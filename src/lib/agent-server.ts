@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { workspaceSchema } from './model';
-import { agentRunSchema,agentRunViewSchema,agentSessionSchema,agentMemorySchema,agentHash,captureAgentScope,applyAgentOperations,restoreAgentScope,validateAgentWorkspace,type AgentRun,type AgentEvent,type AgentOperation } from './writing-agent';
+import { wikiPageSchema,wikiScopeRowSchema,wikiMissing,type WikiPage,type WikiRole } from './agent-wiki';
+import { agentRunSchema,agentRunViewSchema,agentSessionSchema,agentMemorySchema,agentHash,captureAgentScope,applyAgentOperations,restoreAgentScope,validateAgentWorkspace,agentMergeApply,agentMergeRevert,type AgentRun,type AgentEvent,type AgentOperation } from './writing-agent';
 
 export function agentAdmin(){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -51,8 +52,12 @@ export async function commitAgentChanges(id:string,owner:string,revert=false){
   if(revert&&(run.applied_version===null||run.reverted))throw new Error('되돌릴 변경이 없습니다.');
   const {state,version}=await agentWorkspace(run),current=captureAgentScope(state,run.snapshot.scope);
 
-  if(await agentHash(current)!==(revert?run.applied_hash:run.base_hash))throw new Error('작업 이후 원고가 바뀌었습니다. 변경을 다시 비교하세요.');
-  const next=validateAgentWorkspace(revert?restoreAgentScope(state,run.snapshot):applyAgentOperations(state,run.snapshot.scope,run.operations));
+  // An untouched scope takes the whole change back or forth; otherwise only a change whose own documents did not move since merges in.
+  const untouched=await agentHash(current)===(revert?run.applied_hash:run.base_hash);
+  const merged=untouched?(revert?restoreAgentScope(state,run.snapshot):applyAgentOperations(state,run.snapshot.scope,run.operations)):(revert?agentMergeRevert:agentMergeApply)(state,run.snapshot,run.operations);
+
+  if(!merged)throw new Error(revert?'되돌릴 문서가 적용 뒤에 바뀌었습니다. 원고 복구 이력에서 되돌리세요.':'에이전트가 고친 문서나 문서 구조가 작업 뒤에 바뀌었습니다. 변경을 다시 비교하세요.');
+  const next=validateAgentWorkspace(merged);
   const after=await agentHash(captureAgentScope(next,run.snapshot.scope));
   const result=await agentAdmin().rpc('agent_commit_workspace',{p_id:id,p_base_version:version,p_payload:next,p_after_hash:after,p_revert:revert});
 
@@ -94,4 +99,32 @@ if(parsed.length<100)break;
   }
 
   return {runs,memories};
+}
+
+/**
+ * Wiki pages and source roles for the given scope keys. Roles of the common scope come first and a work's own roles override them.
+ * Before the wiki migration has run this answers available:false, so conversations keep working without a wiki.
+ */
+export async function readAgentWiki(owner:string,keys:string[]):Promise<{available:boolean;pages:WikiPage[];roles:Record<string,WikiRole>}>{
+  const db=agentAdmin(),pages:WikiPage[]=[];
+
+  for(let offset=0;;offset+=500){
+    const result=await db.from('agent_wiki_pages').select('*').eq('owner_id',owner).in('scope_key',keys).order('updated_at',{ascending:false}).range(offset,offset+499);
+
+    if(wikiMissing(result.error))return {available:false,pages:[],roles:{}};
+
+    if(result.error)throw new Error('위키를 읽지 못했습니다.');
+    const page=z.array(wikiPageSchema).parse(result.data);pages.push(...page);
+
+    if(page.length<500)break;
+  }
+
+  const scopes=await db.from('agent_wiki_scopes').select('*').eq('owner_id',owner).in('scope_key',keys);
+
+  if(wikiMissing(scopes.error))return {available:false,pages:[],roles:{}};
+
+  if(scopes.error)throw new Error('위키를 읽지 못했습니다.');
+  const rows=z.array(wikiScopeRowSchema).parse(scopes.data).sort((a,b)=>Number(a.scope_key!=='common')-Number(b.scope_key!=='common'));
+
+  return {available:true,pages,roles:Object.assign({},...rows.map(row=>row.source_roles))};
 }

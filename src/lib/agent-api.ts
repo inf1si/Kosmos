@@ -8,20 +8,24 @@ import { providerSettingsStatus,requestProviderConfig } from './ai-credentials';
 import { providerConfig } from './ai-provider';
 import { reasoningChoice,reasoningLevels,reasoningEvent } from './ai-reasoning';
 import { workspaceSchema } from './model';
-import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges } from './agent-server';
-import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentLibrary,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema,agentMemoryEditSchema,agentBranchInputSchema,agentBranchMemory } from './writing-agent';
+import { agentAdmin,agentSessionHistory,readAgentSession,readAgentRun,commitAgentChanges,readAgentWiki } from './agent-server';
+import { agentSessionInputSchema,agentMessageInputSchema,agentDocuments,agentLibrary,agentHash,captureAgentScope,agentSessionSchema,agentModeSchema,agentRunView,agentDiff,agentCommitSchema,agentMemoryEditSchema,agentBranchInputSchema,agentBranchMemory,agentImportBatchSchema,agentImportRows,agentScopeSchema } from './writing-agent';
 import { runWritingAgent } from './agent-workflow';
+import { wikiDocuments,wikiMissing,wikiReadableKeys,wikiRoleInputSchema,wikiRolesSchema,wikiScopeKey,wikiView,wikiImportRows } from './agent-wiki';
 
 const json=<T,>(value:T,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store'}});
 
 /** Web research is a tool the agent picks for itself whenever the Gemini search connection exists. */
 const webAvailable=()=>!!providerConfig('gemini',process.env,process.env.VERTEX_SEARCH_MODEL);
 
-async function exportAgentRows(table:'agent_sessions'|'agent_runs'|'agent_memories',owner:string){
+async function exportAgentRows(table:'agent_sessions'|'agent_runs'|'agent_memories'|'agent_wiki_pages'|'agent_wiki_scopes',owner:string){
   const rows=[];
 
   for(let offset=0;;offset+=100){
-    const result=await agentAdmin().from(table).select('*').eq('owner_id',owner).order('id').range(offset,offset+99);
+    const result=await agentAdmin().from(table).select('*').eq('owner_id',owner).order(table==='agent_wiki_scopes'?'scope_key':'id').range(offset,offset+99);
+
+    // Before the wiki migration has run there is no wiki to export.
+    if(table.startsWith('agent_wiki')&&wikiMissing(result.error))return [];
 
     if(result.error)throw new Error('AI 자료를 내보내지 못했습니다.');
     const page=z.array(z.json()).parse(result.data);rows.push(...page);
@@ -241,6 +245,43 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
       return json({commit:agentCommitSchema.parse({workspace_id:run.workspace_id,scope:run.snapshot.scope,base_hash:run.base_hash,applied_hash:run.applied_hash,applied_version:run.applied_version})});
     }
 
+    // The wiki view of the panel: the pages a run in this scope reads, each with whether its sources changed since.
+    if(path[0]==='wiki'&&path.length===1&&method==='GET'){
+      const scope=agentScopeSchema.parse(JSON.parse(new URL(request.url).searchParams.get('scope')||'null'));
+      const row=await auth.client.from('workspaces').select('payload').eq('owner_id',auth.userId).single();
+
+      if(row.error)return json({error:'원고를 찾지 못했습니다.'},403);
+      const wiki=await readAgentWiki(auth.userId,wikiReadableKeys(scope)),docs=wikiDocuments(workspaceSchema.parse(row.data.payload));
+
+      return json({available:wiki.available,pages:wiki.pages.map(page=>wikiView(page,docs)),roles:wiki.roles});
+    }
+
+    if(path[0]==='wiki'&&path.length===2&&method==='DELETE'){
+      const result=await db.from('agent_wiki_pages').delete().eq('id',z.uuid().parse(path[1])).eq('owner_id',auth.userId);
+
+      if(result.error)throw new Error('위키 페이지를 지우지 못했습니다.');
+
+      return json({deleted:true});
+    }
+
+    // A role belongs to the wiki scope the writer set it in; a document in the common notes keeps its role in every work.
+    if(path[0]==='wiki'&&path[1]==='roles'&&path.length===2&&method==='POST'){
+      const input=wikiRoleInputSchema.parse(await readLimitedJson(request,8192)),key=wikiScopeKey(input.scope);
+      const old=await db.from('agent_wiki_scopes').select('source_roles').eq('owner_id',auth.userId).eq('scope_key',key).maybeSingle();
+
+      if(wikiMissing(old.error))return json({error:'위키 저장소가 아직 준비되지 않았습니다.'},503);
+
+      if(old.error)throw new Error('자료 역할을 저장하지 못했습니다.');
+      const roles={...wikiRolesSchema.parse(old.data?.source_roles||{})};
+
+      if(input.role)roles[input.id]=input.role;else delete roles[input.id];
+      const saved=await db.from('agent_wiki_scopes').upsert({owner_id:auth.userId,scope_key:key,source_roles:roles,updated_at:new Date().toISOString()},{onConflict:'owner_id,scope_key'});
+
+      if(saved.error)throw new Error('자료 역할을 저장하지 못했습니다.');
+
+      return json({roles});
+    }
+
     if(path[0]==='memories'&&path.length===2&&method==='PATCH'){
       const input=agentMemoryEditSchema.parse(await readLimitedJson(request,64*1024));
       const result=await db.from('agent_memories').update({...input,updated_at:new Date().toISOString()}).eq('id',z.uuid().parse(path[1])).eq('owner_id',auth.userId).select('id');
@@ -258,10 +299,47 @@ return json({run:agentRunView(await readAgentRun(input.id))});}
       return json({forgotten:true});
     }
 
-    if(path[0]==='export'&&path.length===1&&method==='GET'){
-      const [sessions,runs,memories]=await Promise.all([exportAgentRows('agent_sessions',auth.userId),exportAgentRows('agent_runs',auth.userId),exportAgentRows('agent_memories',auth.userId)]);
+    // An export file comes back in batches small enough for one request. Rows that exist already are skipped, never overwritten.
+    if(path[0]==='import'&&path.length===1&&method==='POST'){
+      const batch=agentImportBatchSchema.parse(await readLimitedJson(request,4*1024*1024));
+      const workspace=await auth.client.from('workspaces').select('id').eq('owner_id',auth.userId).single();
 
-      return json({format:'orbis-writing-agent',version:1,exportedAt:new Date().toISOString(),sessions,runs,memories});
+      if(workspace.error)return json({error:'원고를 찾지 못했습니다.'},403);
+      const rows=agentImportRows(batch,auth.userId,z.uuid().parse(workspace.data.id));
+
+      const insert=async(table:'agent_sessions'|'agent_runs'|'agent_memories'|'agent_wiki_pages'|'agent_wiki_scopes',values:object[])=>{
+        if(!values.length)return 0;
+        const result=await db.from(table).upsert(values,{onConflict:table==='agent_wiki_scopes'?'owner_id,scope_key':'id',ignoreDuplicates:true}).select('owner_id');
+
+        // Without the wiki migration the wiki rows are counted as skipped.
+        if(table.startsWith('agent_wiki')&&wikiMissing(result.error))return 0;
+
+        if(result.error)throw new Error('AI 자료를 가져오지 못했습니다.');
+
+        return result.data.length;
+      };
+
+      // Runs and memories join only conversations of this account, whether imported now or before.
+      const sessionIds=[...new Set([...rows.runs,...rows.memories].map(row=>row.session_id))];
+      const sessions=await insert('agent_sessions',rows.sessions);
+      const owned=sessionIds.length?await db.from('agent_sessions').select('id').eq('owner_id',auth.userId).in('id',sessionIds):{data:[],error:null};
+
+      if(owned.error)throw new Error('AI 자료를 가져오지 못했습니다.');
+      const mine=new Set(z.array(z.object({id:z.uuid()})).parse(owned.data).map(row=>row.id));
+      const runs=await insert('agent_runs',rows.runs.filter(row=>mine.has(row.session_id)));
+      const memories=await insert('agent_memories',rows.memories.filter(row=>mine.has(row.session_id)));
+      // Wiki pages and source roles belong to the account, not to one conversation.
+      const wikiRows=wikiImportRows(batch,auth.userId,z.uuid().parse(workspace.data.id));
+      const wiki=await insert('agent_wiki_pages',wikiRows.pages),roles=await insert('agent_wiki_scopes',wikiRows.scopes);
+      const offered=batch.sessions.length+batch.runs.length+batch.memories.length+batch.wikiPages.length+batch.wikiScopes.length;
+
+      return json({sessions,runs,memories,wiki,skipped:offered-sessions-runs-memories-wiki-roles});
+    }
+
+    if(path[0]==='export'&&path.length===1&&method==='GET'){
+      const [sessions,runs,memories,wikiPages,wikiScopes]=await Promise.all([exportAgentRows('agent_sessions',auth.userId),exportAgentRows('agent_runs',auth.userId),exportAgentRows('agent_memories',auth.userId),exportAgentRows('agent_wiki_pages',auth.userId),exportAgentRows('agent_wiki_scopes',auth.userId)]);
+
+      return json({format:'orbis-writing-agent',version:1,exportedAt:new Date().toISOString(),sessions,runs,memories,wikiPages,wikiScopes});
     }
 
     return json({error:'지원하지 않는 작업입니다.'},404);

@@ -1,5 +1,32 @@
 # 구현 검증
 
+## 2026-11-17 — AI 대화: 위키
+
+- 기준: AI 자료 가져오기(같은 브랜치) 위. 사용자 요청: 설계 대비 빠진 기능 구현(2묶음 LLM 위키). 읽은 안내: [설계](docs/personal-knowledge-agent-design.md)의 위키 범위·설정과 아이디어 구분·위키 동작 절, [작업 대화](docs/writing-agent.md), [디자인 가이드](docs/design-guide.md) AI 대화 절.
+- 바꾼 것: 마이그레이션 [`20261117040000_agent_wiki.sql`](supabase/migrations/20261117040000_agent_wiki.sql), [`agent-wiki.ts`](src/lib/agent-wiki.ts)(범위 키·출처 지문·최신성·검색·목차·자료 역할), 도구 `searchWiki`·`readWiki`·`writeWiki`, 지침의 위키 목차·자료 역할 절, `GET wiki`·`DELETE wiki/:id`·`POST wiki/roles`, 내보내기·가져오기의 `wikiPages`·`wikiScopes`, 패널 **위키** 보기와 **위키 정리** 시작 버튼.
+- 단위 [`agent-wiki.test.ts`](tests/agent-wiki.test.ts) 6개: 출처 그대로·바뀜·사라짐, 범위 키, 검색·목차·역할 힌트와 지침(위키가 없으면 위키 절 없음), 세 실행 방식의 도구와 객체 인자, 가져오기 행 변환, PGlite에 실제 마이그레이션(범위·종류·길이 검사, 작가는 자기 행만 읽고 쓰지 못함, 작업공간 삭제 시 함께 삭제). 전체 단위 357개 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버, PGlite에 두 마이그레이션, 합성 모델): 29경우·페이지 오류 0. 1280·360px 각각 **이 문서** 역할을 확정 설정으로 저장 → **위키 정리해줘** 실행이 페이지를 쓰고 찾고 읽음(작업 내역 위키 정리·검색·읽기, DB 범위·종류·출처·소유자 확인) → 지침에 위키 목차와 `확정 설정: [문서 제목]` → 위키 보기에서 펼쳐 출처 칩 확인. 1280px에서 출처 문서를 다른 기기가 고친 뒤 **출처 바뀜**과 `· 바뀜` 표시, 360px 실행의 지침 목차에 그 페이지가 `출처 바뀜`으로 실림, 360px에서 **지우기**. 내보낸 파일에 페이지·역할이 있고, 페이지를 지운 뒤 가져오기로 되살아남("· 위키 1개"). 위키 보기 violet 라이트·cyber 다크에서 가로 넘침 없음.
+- 고친 결함(검사 중 발견): 노트 시작 버튼이 5개가 되어 기존 단언을 고쳤다. 되돌리기 뒤 이미 열린 문서를 사이드바에서 다시 누르면 좁은 화면 서랍이 닫히지 않아 검사가 막혔다(기존 동작, 이번 변경 아님). 검사는 이미 열린 경우 다시 열지 않게 했다.
+- 미확인: 운영 Supabase 마이그레이션(사용자 SQL 실행 필요), 실제 모델의 위키 정리 품질, 쉰네 조합 전부(두 조합만), 큰 위키에서의 목차·지문 계산 시간, Safari·Firefox.
+
+## 2026-11-17 — AI 자료 가져오기
+
+- 기준: PR #140(문서 단위 병합, 병합 대기) 위. 사용자 요청: 설계 대비 빠진 기능 구현(2묶음 AI 자료 가져오기). 읽은 안내: [작업 대화](docs/writing-agent.md) 백업 절, [백업과 복구](docs/backup-restore.md), [설정](docs/settings.md).
+- 바꾼 것: [`agent-api.ts`](src/lib/agent-api.ts)의 `POST import`(행 검사, 소유자·작업공간 교체, `on conflict do nothing`, 실행·기억은 이 계정 대화에만), [`writing-agent.ts`](src/lib/writing-agent.ts)의 `agentImportRows`, [`writing-agent.tsx`](src/components/writing-agent.tsx)의 `importAgentData`(3.5MB 단위로 나눠 보냄), 설정 › 저장 · 백업 버튼. 패널 질문 칸 초점 복귀를 `busy`가 풀린 뒤로 옮김.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 가져온 행의 소유자·작업공간 교체, 진행 중 실행은 중단·workflow 비움, 형식이 틀린 행 제외.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick: 25경우·페이지 오류 0. 내보낸 파일에서 지운 대화를 **AI 자료 가져오기**로 되살림(1280·360px 각각: 대화 1개·실행 2개 복원, 소유자 일치, 나머지는 건너뜀 수로 표시), 새로 고침 뒤 패널에 그 대화의 질문이 다시 보임.
+- 고친 결함(검사 중 발견): 360px에서 요청 직후 질문 칸 초점이 빠져 "accepted request returns focus to the input"이 한 번 실패했다. 초점을 칸이 켜진 뒤 주게 고친 뒤 통과했다.
+- 미확인: 수십 MB 내보내기 파일, 다른 계정으로의 가져오기, 운영 Supabase, Safari·Firefox. 원고 ZIP 포함은 하지 않았다.
+
+## 2026-11-17 — AI 대화: 문서 단위로 변경 적용·되돌리기
+
+- 기준: main 307c5fc(PR #139) 위. 사용자 요청: 설계 대비 빠진 기능 구현(2묶음 문서 단위 병합). 읽은 안내: [작업 대화](docs/writing-agent.md)의 적용·합치기 절, [설계](docs/personal-knowledge-agent-design.md)의 원본 반영 절.
+- 바꾼 것: [`writing-agent.ts`](src/lib/writing-agent.ts)의 `agentMergeApply`·`agentMergeRevert`(대상 문서 비교는 블록 ID·null 속성을 뺀 제목·본문·서식·속성, 구조 변경은 범위 트리 비교), [`agent-server.ts`](src/lib/agent-server.ts)의 `commitAgentChanges`가 범위 해시가 다를 때 이것을 쓴다.
+- 단위 [`writing-agent.test.ts`](tests/writing-agent.test.ts): 다른 문서가 바뀐 뒤 적용(두 편집 모두 남음), 대상 문서가 바뀌면 거절, 트리가 그대로면 새 문서 적용·트리가 바뀌면 거절, 적용 뒤 다른 문서 편집을 남기며 되돌리기(새 문서·트리 노드 제거), 편집기를 연 것(블록 ID·null 속성)만으로는 거절하지 않음, 대상 문서를 다시 고치면 되돌리기 거절.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick(실제 Next 개발 서버, PGlite에 실제 마이그레이션, 합성 모델): 25경우·페이지 오류 0. 1280px에서 다른 기기가 다른 문서를 저장한 뒤 패널 **변경 적용** → 적용되고 그 문장이 남음, 다시 다른 문서를 저장한 뒤 **되돌리기**(그 사이 새 문서를 편집기로 열었음) → 새 문서가 빠지고 그 문장이 남음. API로 폴더 이름을 바꾼 뒤 새 문서를 만드는 변경 적용은 409·원고 그대로, 폴더 이름을 되돌리면 다른 문서의 제목 변경을 남긴 채 200, 이어 되돌리기 200.
+- 고친 결함(검사 중 발견): 처음 비교는 본문 JSON 전체여서 편집기로 연 새 문서(블록 ID·빈 속성이 채워짐)의 되돌리기가 거절됐다. 그 차이를 무시하도록 고쳤다.
+- 미확인: 운영 Supabase, 큰 작품에서의 비교 시간, 실제 모델이 만든 여러 문서 변경, Safari·Firefox.
+
 ## 2026-11-17 — AI 대화: 구조 변경 비교
 
 - 기준: main 6af5e33(PR #138) 위. 사용자 요청: 설계 대비 빠진 기능 구현(1묶음 마지막, 구조 변경 비교 화면). 읽은 안내: [작업 대화](docs/writing-agent.md), [디자인 가이드](docs/design-guide.md) AI 대화 절.

@@ -45,15 +45,17 @@ await pg.exec(`create role anon;create role authenticated;create role service_ro
 
 await pg.exec(await readFile('supabase/migrations/20261109135502_personal_writing_agent.sql','utf8'));
 
+await pg.exec(await readFile('supabase/migrations/20261117040000_agent_wiki.sql','utf8'));
+
 await pg.query('insert into public.authors values($1)',[profile.id]);
 
 await pg.query('insert into public.workspaces(id,owner_id,payload) values($1,$2,$3)',[workspaceId,profile.id,JSON.stringify(state)]);
 
-const jsonColumns=new Set(['payload','scope','snapshot','operations','events','usage','sources','p_payload','p_event','p_operation']);
+const jsonColumns=new Set(['payload','scope','snapshot','operations','events','usage','sources','source_roles','p_payload','p_event','p_operation']);
 
 const objectValue=(key,value)=>jsonColumns.has(key)&&value!==null?JSON.stringify(value):value;
 
-const tables=new Set(['authors','workspaces','workspace_revisions','agent_sessions','agent_runs','agent_memories']);
+const tables=new Set(['authors','workspaces','workspace_revisions','agent_sessions','agent_runs','agent_memories','agent_wiki_pages','agent_wiki_scopes']);
 
 const mock=createServer(async(req,res)=>{
   const send=(value,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(value));};
@@ -88,7 +90,13 @@ return;}
       const search=outputs.find(o=>o.data.documents)?.data,created=outputs.find(o=>o.data.saved&&o.data.id)?.data;
       const names=new Set((google?(body.tools||[]).flatMap(tool=>tool.functionDeclarations||[]):body.tools||[]).map(tool=>tool.name));let item;
 
-      if(step===0&&JSON.stringify(google?body.contents?.at(-1):body.messages?.at(-1)).includes('이 장면은 어디야'))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'열어 둔 문서를 확인했습니다.',annotations:[]}]};
+      // 위키 정리 writes a page from a document of the work, finds it and reads it back.
+      const asks=(google?body.contents:anthropic?body.messages:body.input)||[],lastAsk=[...asks].reverse().find(message=>message.role==='user'&&(google?message.parts?.some(part=>'text' in part):!Array.isArray(message.content)||message.content.some(part=>part.type==='text'||part.type==='input_text')));
+
+      if(JSON.stringify(lastAsk||'').includes('위키 정리해줘')){const written=outputs.find(o=>o.data.saved&&o.data.id)?.data;
+        item=[()=>tool('writeWiki',{id:null,title:'관측소',category:'place',content:'달 관측소는 비어 있다(원문).\n누가 비웠는지는 열린 질문이다.',sourceIds:[initial.works[0].documents[1].id]}),()=>tool('searchWiki',{query:'관측소',offset:0}),()=>tool('readWiki',{id:written?.id,offset:0,length:12000})][step]?.()||{type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'위키에 관측소를 정리했습니다.',annotations:[]}]};
+      }
+      else if(step===0&&JSON.stringify(google?body.contents?.at(-1):body.messages?.at(-1)).includes('이 장면은 어디야'))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'열어 둔 문서를 확인했습니다.',annotations:[]}]};
       // Questions asked in the reference-panel chat are answered directly.
       else if(step===0&&/문서 질문|노트 질문|비교해줘/.test(JSON.stringify(google?body.contents?.at(-1):body.messages?.at(-1))))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'합성 문서 답변',annotations:[]}]};
       else if(step===0)item=tool('searchSources',{query:'',offset:0});
@@ -160,7 +168,7 @@ return `$${parameters.length}`;}).join(',')})`);}
       rows=[];
 
       for(const item of Array.isArray(body)?body:[body]){
-        const keys=Object.keys(item);assert(keys.every(key=>/^[a-z_]+$/.test(key)));const update=String(req.headers.prefer).includes('merge-duplicates')?` on conflict(id) do update set ${keys.filter(k=>k!=='id').map(k=>`${k}=excluded.${k}`).join(',')}`:'';
+        const keys=Object.keys(item);assert(keys.every(key=>/^[a-z_]+$/.test(key)));const prefer=String(req.headers.prefer),conflict=(url.searchParams.get('on_conflict')||'id').split(','),update=prefer.includes('merge-duplicates')?` on conflict(${conflict.join(',')}) do update set ${keys.filter(k=>!conflict.includes(k)).map(k=>`${k}=excluded.${k}`).join(',')}`:prefer.includes('ignore-duplicates')?` on conflict(${conflict.join(',')}) do nothing`:'';assert(conflict.every(key=>/^[a-z_]+$/.test(key)));
         rows.push(...(await pg.query(`insert into public.${name}(${keys.join(',')}) values(${keys.map((_,i)=>`$${i+1}`).join(',')})${update} returning *`,keys.map(key=>objectValue(key,item[key])))).rows);
       }
     }else if(req.method==='PATCH'){
@@ -408,7 +416,7 @@ async function verifySharedAI(width){
   await page.goto(`${browserBase}/studio#notes/${note.id}`,{waitUntil:'networkidle'});await page.getByRole('button',{name:'AI 대화',exact:true}).click();
   const notePanel=page.locator('.reference-panel.is-chat');await notePanel.getByRole('textbox',{name:'AI에게 질문',exact:true}).waitFor();
   // A note space has its own sessions; the work's conversation is not shown here.
-  await until(async()=>await notePanel.locator('.chat-starters button').count()===4||await notePanel.locator('.agent-exchange').count()>0,'note panel loads');assert(!(await notePanel.locator('.chat-log').innerText()).includes('문서 질문'),'the work session is not in the note panel');
+  await until(async()=>await notePanel.locator('.chat-starters button').count()===5||await notePanel.locator('.agent-exchange').count()>0,'note panel loads');assert(!(await notePanel.locator('.chat-log').innerText()).includes('문서 질문'),'the work session is not in the note panel');
   // After a reload the level saved for this provider is still chosen; 자동 sends no thinking setting.
   const noteThinking=notePanel.getByRole('combobox',{name:'에이전트 생각 단계',exact:true});await until(async()=>await selectedValue(noteThinking)==='low','saved thinking level returns after reload');await chooseOption(noteThinking,'auto');
   const noteBody=await askPanel(notePanel,'노트 질문');assert.equal(noteBody.focusId,note.id);const noteCall=modelCalls.findLast(c=>JSON.stringify(c.body).includes('노트 질문'));assert.equal(noteCall.provider,'gemini');assert.equal(noteCall.body.generationConfig?.thinkingConfig,undefined);assert(systemOf(noteCall).includes('노트 작업공간: '));
@@ -481,10 +489,19 @@ return row?.status==='completed'&&!row.reverted;},'durable agent finishes');
     // The structure list says where the new document goes; the summary counts it.
     const placed=panel.locator('.agent-structure li').filter({hasText:'에이전트 개요'});assert.equal(await placed.count(),1);assert.match(await placed.innerText(),/새로 만듦[\s\S]*\S/);assert.match(await panel.locator('.agent-change-actions>span').innerText(),/구조 변경 1개$/);await page.screenshot({path:resolve(output,`changes-${width}.png`)});
     const before=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!before.works[0].documents.some(doc=>doc.id===run.operations[0].id));
+    // Another device saved an edit to a different document after the run read the work; the change applies beside it.
+    const elsewhere=initial.works[0].documents[1].id,editElsewhere=async text=>{const row=(await pg.query('select payload,version from public.workspaces where id=$1',[workspaceId])).rows[0],payload=structuredClone(row.payload);payload.works[0].documents.find(doc=>doc.id===elsewhere).content=fromText(text);state=workspaceSchema.parse(payload);await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(state),workspaceId]);};
+
+    const elsewhereText=async()=>plainText((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents.find(doc=>doc.id===elsewhere).content);
+
+    if(width===1280)await editElsewhere('다른 기기에서 적용 전에 쓴 문장.');
     await panel.getByRole('button',{name:'변경 적용',exact:true}).click();await until(async()=>{const row=(await pg.query('select applied_version from public.agent_runs where id=$1',[run.id])).rows[0];
 
 return row.applied_version!==null;},'review changes apply');
     await panel.getByRole('button',{name:'되돌리기',exact:true}).waitFor();
+
+    if(width===1280){const after=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(after.works[0].documents.some(doc=>doc.id===run.operations[0].id),'the change is applied');assert.equal(await elsewhereText(),'다른 기기에서 적용 전에 쓴 문장.','an edit to another document made after the run survives the apply');}
+
     await panel.getByRole('button',{name:'문서 열기',exact:true}).click();
     await writeFile(resolve(output,'after-source-open.txt'),await page.locator('body').innerText());await page.screenshot({path:resolve(output,'after-source-open.png')});
     // The panel opens a source of this work beside the open document, so the conversation stays in view.
@@ -501,7 +518,12 @@ return row.applied_version!==null;},'review changes apply');
     await panel.getByRole('button',{name:'고치기',exact:true}).click();const memoryText=panel.getByRole('textbox',{name:'기억 내용',exact:true});assert(await panel.getByRole('textbox',{name:'기억 제목',exact:true}).evaluate(el=>el===document.activeElement));await memoryText.fill('관측소가 비어 있는 이유는 3장에서 밝힌다.');await panel.getByRole('button',{name:'저장',exact:true}).click();await memoryText.waitFor({state:'detached'});await panel.locator('.agent-memories p').filter({hasText:'관측소가 비어 있는 이유는 3장에서 밝힌다.'}).waitFor();
     const edited=(await pg.query('select content,sources from public.agent_memories where session_id=$1',[run.session_id])).rows;assert.equal(edited.length,1);assert.equal(edited[0].content,'관측소가 비어 있는 이유는 3장에서 밝힌다.');assert(edited[0].sources.length>0,'editing keeps the sources');
     await panel.getByRole('button',{name:'잊기',exact:true}).click();await until(async()=>(await pg.query('select * from public.agent_memories where session_id=$1',[run.session_id])).rows.length===0,'forget memory');
+
+    if(width===1280)await editElsewhere('다른 기기에서 적용 뒤에 쓴 문장.');
     await changesView.click();await panel.getByRole('button',{name:'되돌리기',exact:true}).click();await until(async()=>(await pg.query('select reverted from public.agent_runs where id=$1',[run.id])).rows[0].reverted,'undo batch');
+
+    if(width===1280){const after=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert(!after.works[0].documents.some(doc=>doc.id===run.operations[0].id),'the undo takes the created document back');assert.equal(await elsewhereText(),'다른 기기에서 적용 뒤에 쓴 문장.','an edit to another document made after the apply survives the undo');}
+
     await panel.getByRole('button',{name:'대화',exact:true}).click();
 
     for(const palette of quick?PALETTES.slice(0,1):PALETTES){for(const mode of ['light','dark']){
@@ -535,12 +557,46 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow&&!layout.page,JSO
     await until(async()=>(await pg.query('select id from public.agent_sessions where id=$1',[branchId])).rows.length===0,'the branch is deleted');assert.equal((await pg.query('select id from public.agent_memories where session_id=$1',[branchId])).rows.length,0);assert.equal((await pg.query('select id from public.agent_sessions where id=$1',[run.session_id])).rows.length,1);assert.equal(await selectedValue(sessionSelect),'');assert(!(await readOptions(sessionSelect)).some(option=>option.value===branchId));
     await chooseOption(sessionSelect,run.session_id);await panel.locator('.agent-exchange').first().waitFor();
     await panel.getByRole('button',{name:'새 대화',exact:true}).click();assert.equal(await panel.locator('.agent-exchange').count(),0);assert(await input.evaluate(el=>el===document.activeElement));await chooseOption(panel.getByRole('combobox',{name:'작업 대화 선택'}),run.session_id);await panel.locator('.agent-exchange').first().waitFor();
+    // 위키: the open document's role reaches the next run; the agent writes a page from a source it read, and the panel lists it.
+    const wikiSource=initial.works[0].documents[1],wikiKey=`work:${initial.works[0].id}`;
+
+    // After the undo took the opened document away the editor falls back to the first one; the panel follows it.
+    if(await panel.locator('.chat-heading strong').innerText()!==initial.works[0].documents[0].title)await openPanel(initial.works[0].documents[0]);
+    await panel.getByRole('button',{name:'위키',exact:true}).click();const roleSelect=panel.getByRole('combobox',{name:'자료 역할',exact:true});await roleSelect.waitFor();await chooseOption(roleSelect,'canon');
+    await until(async()=>(await pg.query('select source_roles from public.agent_wiki_scopes where owner_id=$1 and scope_key=$2',[profile.id,wikiKey])).rows[0]?.source_roles?.[initial.works[0].documents[0].id]==='canon','the role is saved in the work wiki scope');
+    const pagesBefore=(await pg.query('select id from public.agent_wiki_pages')).rows.map(row=>row.id);
+    await panel.getByRole('button',{name:'대화',exact:true}).click();await input.fill('위키 정리해줘.');await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();await panel.locator('.chat-message.assistant').filter({hasText:'위키에 관측소를 정리했습니다.'}).waitFor();
+    const wikiRow=(await pg.query('select * from public.agent_wiki_pages order by created_at desc limit 1')).rows[0];assert(!pagesBefore.includes(wikiRow.id));assert.equal(wikiRow.scope_key,wikiKey);assert.equal(wikiRow.category,'place');assert.equal(wikiRow.owner_id,profile.id);assert.deepEqual(wikiRow.sources.map(source=>source.id),[wikiSource.id]);
+    const wikiRun=(await pg.query("select events from public.agent_runs where message='위키 정리해줘.' order by created_at desc limit 1")).rows[0];assert.deepEqual(wikiRun.events.filter(event=>event.title.startsWith('위키')).map(event=>event.title),['위키 정리','위키 검색','위키 읽기']);
+    const wikiSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('위키 정리해줘')));assert(wikiSystem.includes('## 위키 목차')&&wikiSystem.includes(`확정 설정: ${JSON.stringify([initial.works[0].documents[0].title])}`),'the wiki index and source roles reach the agent');
+    assert(wikiSystem.includes(width===1280?'(아직 위키 페이지가 없다.)':'"관측소" (장소·조직 · 출처 바뀜)'),'the index lists earlier pages and marks one whose source changed');
+    await panel.getByRole('button',{name:'위키',exact:true}).click();const wikiArticle=panel.locator('.agent-wiki article').first();await wikiArticle.locator('summary').filter({hasText:'관측소'}).click();
+    assert.equal(await wikiArticle.locator('.agent-wiki-sources .chip').innerText(),wikiRow.sources[0].title);assert.equal(await wikiArticle.locator('.agent-wiki-stale').count(),0);await page.screenshot({path:resolve(output,`wiki-${width}.png`)});
+
+    if(width===1280){
+      // A source edited after the page was written marks the page; the next look at the wiki shows it.
+      await editElsewhere('위키를 쓴 뒤 바꾼 문장.');await panel.getByRole('button',{name:'기억',exact:true}).click();await panel.getByRole('button',{name:'위키',exact:true}).click();
+      await panel.locator('.agent-wiki article').first().locator('.agent-wiki-stale').waitFor();await panel.locator('.agent-wiki article').first().locator('summary').click();assert.equal(await panel.locator('.agent-wiki article').first().locator('.agent-wiki-sources .chip').innerText(),`${wikiRow.sources[0].title} · 바뀜`);
+    }else{
+      // 지우기 removes the page the wider run left.
+      const older=panel.locator('.agent-wiki article').nth(1);await older.locator('summary').click();await older.getByRole('button',{name:'지우기',exact:true}).click();await until(async()=>(await pg.query('select id from public.agent_wiki_pages')).rows.length===1,'the older page is deleted');
+    }
+
+    for(const [palette,mode] of [['violet','light'],['cyber','dark']]){await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});const layout=await panel.evaluate(el=>({overflow:el.scrollWidth>el.clientWidth+1,page:document.documentElement.scrollWidth>document.documentElement.clientWidth+1}));assert(!layout.overflow&&!layout.page,JSON.stringify({width,palette,mode,layout}));results.push({width,palette,mode,view:'wiki'});}
+
+    await panel.getByRole('button',{name:'대화',exact:true}).click();
     // AI 자료 내보내기 lives with the other exports in 설정 › 저장 · 백업.
     await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
 
     if(!await page.locator('.studio-tools').getByRole('button',{name:'설정',exact:true}).isVisible())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();
     await page.locator('.studio-tools').getByRole('button',{name:'설정',exact:true}).click();const settingsDialog=page.getByRole('dialog',{name:'설정',exact:true});await settingsDialog.getByRole('button',{name:'저장 · 백업',exact:true}).click();
     const downloadPromise=page.waitForEvent('download');await settingsDialog.getByRole('button',{name:'AI 자료 내보내기',exact:true}).click();const download=await downloadPromise,archive=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(archive.format,'orbis-writing-agent');assert(archive.runs.some(row=>row.id===run.id));
+    // AI 자료 가져오기 brings a deleted conversation back from that file and skips what is still there.
+    assert(archive.wikiPages.some(row=>row.id===wikiRow.id)&&archive.wikiScopes.some(row=>row.scope_key===wikiKey),'the wiki and its roles are exported');
+    await pg.query('delete from public.agent_wiki_pages where id=$1',[wikiRow.id]);await pg.query('delete from public.agent_sessions where id=$1',[run.session_id]);const restored=archive.runs.filter(row=>row.session_id===run.session_id).length,remembered=archive.memories.filter(row=>row.session_id===run.session_id).length;
+    await settingsDialog.getByLabel('AI 자료 파일').setInputFiles(await download.path());const importedNote=settingsDialog.getByRole('status').filter({hasText:'가져왔습니다'});await importedNote.waitFor();
+    assert.match(await importedNote.innerText(),new RegExp(`^대화 1개 · 실행 ${restored}개 · 기억 ${remembered}개 · 위키 1개를 가져왔습니다\\.( 이미 있거나 읽지 못한 ${archive.sessions.length+archive.runs.length+archive.memories.length+archive.wikiPages.length+archive.wikiScopes.length-2-restored-remembered}개는 건너뛰었습니다\\.)?$`));
+    assert.equal((await pg.query('select id from public.agent_runs where session_id=$1',[run.session_id])).rows.length,restored);assert.equal((await pg.query('select owner_id from public.agent_sessions where id=$1',[run.session_id])).rows[0]?.owner_id,profile.id);assert.equal((await pg.query('select owner_id from public.agent_wiki_pages where id=$1',[wikiRow.id])).rows[0]?.owner_id,profile.id,'the wiki page comes back');
     await page.screenshot({path:resolve(output,`settings-agent-export-${width}.png`)});await settingsDialog.getByRole('button',{name:'닫기',exact:true}).click();
     await page.reload({waitUntil:'networkidle'});const reopened=await openPanel(initial.works[0].documents[0]);await reopened.locator('.agent-exchange .chat-message.user').filter({hasText:run.message}).waitFor();await context.close();
   }
@@ -596,10 +652,16 @@ return row.status==='completed';},'API task completes');
   const noteSystem=systemOf(modelCalls.findLast(call=>JSON.stringify(call.body).includes('노트에서 묻는다')));assert(noteSystem.includes(`작가가 지금 열어 둔 문서: "에이전트 개요" (id ${executed.operations[0].id})`),'the open note is named to the model');assert(noteSystem.includes('노트 작업공간: '));assert(noteSystem.includes('현재 실행 방식: 맡겨 실행'));
   // Even a cancellation after the commit must leave undo available.
   await pg.query("update public.agent_runs set status='cancelled' where id=$1",[notes.id]);assert.equal((await api(`changes/${notes.id}/revert`,'POST',{})).status,200);await until(async()=>await page.getByLabel('노트 본문',{exact:true}).count()===0,'remote undo refreshes open note without realtime');await noteContext.close();
-  const stale=await createTask({kind:'work',id:initial.works[0].id},'review','개요를 제안해줘.');await finish(stale.id);
-  const current=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;
-  current.works[0].documents[0].title='작성자가 새로 고친 제목';await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(current),workspaceId]);
-  assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,409);assert.equal((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents[0].title,'작성자가 새로 고친 제목');
+  const stale=await createTask({kind:'work',id:initial.works[0].id},'review','개요를 제안해줘.');assert((await finish(stale.id)).operations.some(op=>op.type==='create'),'the stale change adds a document');
+  // The writer renamed one document and a folder after the run read the work.
+  const current=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload,folder=current.works[0].navigation.nodes.find(node=>node.type==='folder'),folderTitle=folder.title;
+  current.works[0].documents[0].title='작성자가 새로 고친 제목';folder.title='작성자가 바꾼 부';await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(current),workspaceId]);
+  // A change that adds a document needs the tree as the run read it, so the folder rename stops it and nothing is written.
+  assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,409);const kept=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert.equal(kept.works[0].documents[0].title,'작성자가 새로 고친 제목');assert.equal(kept.works[0].navigation.nodes.find(node=>node.id===folder.id).title,'작성자가 바꾼 부');
+  // With the tree back as it was, the rename of an untouched document no longer blocks the change and survives it.
+  kept.works[0].navigation.nodes.find(node=>node.id===folder.id).title=folderTitle;await pg.query('update public.workspaces set payload=$1,version=version+1 where id=$2',[JSON.stringify(kept),workspaceId]);
+  assert.equal((await api(`changes/${stale.id}/apply`,'POST',{})).status,200);const joined=(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload;assert.equal(joined.works[0].documents[0].title,'작성자가 새로 고친 제목');assert.equal(joined.works[0].documents.length,kept.works[0].documents.length+1,'the staged document is added');
+  assert.equal((await api(`changes/${stale.id}/revert`,'POST',{})).status,200);assert.equal((await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.works[0].documents.length,kept.works[0].documents.length);
   const cancelled=await createTask({kind:'work',id:initial.works[0].id},'execute','이 실행은 중단한다.');assert.equal((await api(`runs/${cancelled.id}/cancel`,'POST',{})).status,200);assert.equal((await pg.query('select status from public.agent_runs where id=$1',[cancelled.id])).rows[0].status,'cancelled');
   const exported=await api('export');assert.equal(exported.status,200);assert.equal(exported.data.format,'orbis-writing-agent');assert(exported.data.runs.some(r=>r.id===notes.id));assert(!JSON.stringify(exported.data).includes('synthetic-openai'));
   // An execute run that commits while the writer keeps typing elsewhere is joined, not turned into a save conflict.

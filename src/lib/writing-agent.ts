@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { documentSchema, noteSchema, workspaceSchema, plainText, fromText, newDocument, statuses, wikiReferences, type Workspace, type RichNode } from './model';
+import { documentSchema, noteSchema, workspaceSchema, plainText, fromText, newDocument, statuses, wikiReferences, type Workspace, type RichNode, type RichAttributes } from './model';
 import { internalReferences } from './internal-reference-node';
 import { referenceTargets } from './internal-references';
 import { applySuggestion } from './ai';
@@ -282,6 +282,70 @@ export function agentDiff(before:AgentSnapshot,operations:readonly AgentOperatio
   return {rows,structure:agentStructure(before,operations)};
 }
 
+/** Attributes that carry meaning: an editor fills unset ones with null and gives paragraphs block IDs on its own. */
+function meaningfulAttributes(attrs:RichAttributes|undefined){
+  const kept=Object.entries(attrs||{}).filter(([key,value])=>key!=='blockId'&&value!==null&&value!==undefined);
+
+  return kept.length?Object.fromEntries(kept):undefined;
+}
+
+function contentFace(node:RichNode):RichNode{
+  return {type:node.type,text:node.text,attrs:meaningfulAttributes(node.attrs),marks:node.marks?.map(mark=>({type:mark.type,attrs:meaningfulAttributes(mark.attrs)})),content:node.content?.map(contentFace)};
+}
+
+/**
+ * What a change depends on in a document: its text, formatting and properties, not time stamps, AI chat history,
+ * or what opening it in the editor fills in (block IDs, unset attributes).
+ */
+const documentFace=(doc:ReturnType<typeof agentDocuments>[number]|undefined)=>doc&&JSON.stringify({title:doc.title,kind:doc.kind,content:contentFace(doc.content),properties:doc.properties});
+
+const treeFace=(snapshot:AgentSnapshot)=>JSON.stringify(snapshotTree(snapshot));
+
+/** Documents a change touches, and whether it changes the tree (new documents and folders, moves). */
+function agentTouched(snapshot:AgentSnapshot,operations:readonly AgentOperation[]){
+  const known=new Set(agentDocuments(snapshot).map(d=>d.id)),ids=new Set(operations.map(op=>op.id));
+
+  return {ids,structural:operations.some(op=>op.type==='create'||op.type==='folder'||op.type==='move'||!known.has(op.id))};
+}
+
+function sameDocuments(ids:Set<string>,a:AgentSnapshot,b:AgentSnapshot){
+  const left=new Map(agentDocuments(a).map(d=>[d.id,d])),right=new Map(agentDocuments(b).map(d=>[d.id,d]));
+
+  return [...ids].every(id=>documentFace(left.get(id))===documentFace(right.get(id)));
+}
+
+/**
+ * Applies a change to a scope that moved on since the run read it, as long as nothing the change touches moved:
+ * the documents it edits are as the run read them and, for a change to the tree, the tree is too. Returns null otherwise.
+ */
+export function agentMergeApply(state:Workspace,snapshot:AgentSnapshot,operations:readonly AgentOperation[]):Workspace|null{
+  const current=captureAgentScope(state,snapshot.scope),{ids,structural}=agentTouched(snapshot,operations);
+
+  if(!sameDocuments(ids,snapshot,current)||(structural&&treeFace(snapshot)!==treeFace(current)))return null;
+
+  return applyAgentOperations(state,snapshot.scope,operations);
+}
+
+/**
+ * Takes back only what a change did when the writer edited other documents after it was applied.
+ * The touched documents (and, for a tree change, the tree) must still be exactly as the change left them; returns null otherwise.
+ */
+export function agentMergeRevert(state:Workspace,snapshot:AgentSnapshot,operations:readonly AgentOperation[]):Workspace|null{
+  const applied=agentOverlay(snapshot,operations),current=captureAgentScope(state,snapshot.scope),{ids,structural}=agentTouched(snapshot,operations);
+
+  if(!sameDocuments(ids,applied,current)||(structural&&treeFace(applied)!==treeFace(current)))return null;
+
+  if(current.work&&snapshot.work){
+    const old=new Map(snapshot.work.documents.map(d=>[d.id,d]));
+
+    return restoreAgentScope(state,{...current,work:{...current.work,documents:current.work.documents.flatMap(d=>!ids.has(d.id)?[d]:old.has(d.id)?[old.get(d.id)!]:[]),navigation:structural?snapshot.work.navigation:current.work.navigation}});
+  }
+
+  const old=new Map(snapshot.notes.map(n=>[n.id,n]));
+
+  return restoreAgentScope(state,{...current,notes:current.notes.flatMap(n=>!ids.has(n.id)?[n]:old.has(n.id)?[old.get(n.id)!]:[]),navigation:structural?snapshot.navigation:current.navigation});
+}
+
 /** Sections and tree nodes of a snapshot, in stored order. */
 function snapshotTree(snapshot:AgentSnapshot){
   const space=snapshot.navigation?.spaces?.find(s=>s.id===snapshot.scope.id);
@@ -524,4 +588,29 @@ export function agentUsageTotal(runs:Pick<AgentRunView,'usage'|'status'>[]){
   const finished=runs.filter(run=>run.status!=='queued'&&run.status!=='running');
 
   return {input:finished.reduce((sum,run)=>sum+(run.usage?.input||0),0),output:finished.reduce((sum,run)=>sum+(run.usage?.output||0),0),unknown:finished.filter(run=>!run.usage).length};
+}
+
+export const agentImportBatchSchema=z.object({sessions:z.array(z.json()).max(500).default([]),runs:z.array(z.json()).max(500).default([]),memories:z.array(z.json()).max(2000).default([]),wikiPages:z.array(z.json()).max(2000).default([]),wikiScopes:z.array(z.json()).max(500).default([])}).strict();
+
+/**
+ * Rows of an AI data export made fit for this account: the owner and workspace become the importer's, and a run that was
+ * still queued or running when exported is kept as cancelled so no workflow picks it up. Rows that fail the schema are left out.
+ */
+export function agentImportRows(batch:z.infer<typeof agentImportBatchSchema>,owner:string,workspace:string){
+  const sessions=batch.sessions.flatMap(row=>{const parsed=agentSessionSchema.safeParse(row);
+
+return parsed.success?[{...parsed.data,owner_id:owner,workspace_id:workspace}]:[];});
+
+  const runs=batch.runs.flatMap(row=>{const parsed=agentRunSchema.safeParse(row);
+
+    if(!parsed.success)return [];
+    const run=parsed.data;
+
+    return [{...run,owner_id:owner,workspace_id:workspace,workflow_id:null,status:run.status==='queued'||run.status==='running'?'cancelled' as const:run.status}];});
+
+  const memories=batch.memories.flatMap(row=>{const parsed=agentMemorySchema.safeParse(row);
+
+return parsed.success?[{...parsed.data,owner_id:owner}]:[];});
+
+  return {sessions,runs,memories};
 }

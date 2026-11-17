@@ -1,8 +1,9 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { agentOperationSchema,type AgentOperation,type AgentMode } from './writing-agent';
+import { wikiWriteSchema } from './agent-wiki';
 
-type AgentToolInput=AgentOperation|{id:string}|{query:string;offset:number}|{id:string;offset:number;length:number}|{plan:string}|{title:string;content:string;sourceIds:string[]}|{query:string;url:string|null}|Record<string,never>;
+type AgentToolInput=AgentOperation|{id:string}|{query:string;offset:number}|{id:string;offset:number;length:number}|{plan:string}|{title:string;content:string;sourceIds:string[]}|{query:string;url:string|null}|z.infer<typeof wikiWriteSchema>|Record<string,never>;
 
 async function executeAgentTool(runId:string,workflow:string,name:string,input:AgentToolInput,callId:string){
   'use step';
@@ -22,6 +23,9 @@ export function writingAgentTools(runId:string,workflow:string,mode:AgentMode,we
     plan:tool({description:'진행할 작업과 열린 문제를 짧게 기록한다. 단순 대화에는 불필요하다.',inputSchema:z.object({plan:z.string()}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'plan',input,options.toolCallId);}}),
     remember:tool({description:'사용자가 선택한 방향·보류 이유·작업의 열린 질문 또는 근거가 있는 자료 종합을 기억한다. 취향·확정 설정을 추측해서 기록하지 않는다. 새 아이디어는 아이디어임을 명시한다.',inputSchema:z.object({title:z.string().max(300),content:z.string(),sourceIds:z.array(z.uuid())}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'remember',input,options.toolCallId);}}),
     findReferences:tool({description:'문서 하나에서 나가는 연결(설정 연결·@ 참조)과 그 문서를 가리키는 다른 문서(백링크)를 찾는다. 다른 작품·노트의 문서도 나오며, 읽으려면 readSource를 쓴다.',inputSchema:z.object({id:z.uuid()}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'references',input,options.toolCallId);}}),
+    searchWiki:tool({description:'위키 페이지를 찾는다. 작품에서는 이 작품의 페이지와 공통 페이지를 함께 찾는다. 빈 query는 목차를 돌려준다. stale이 true면 출처 문서가 쓴 뒤에 바뀌었거나 사라졌다.',inputSchema:z.object({query:z.string(),offset:z.number().int().min(0)}),execute:async(input,options)=>executeAgentTool(runId,workflow,'wiki_search',input,options.toolCallId)}),
+    readWiki:tool({description:'위키 페이지를 읽는다. sources의 status는 current(그대로)·changed(바뀜)·gone(사라짐)이다. 바뀐 출처는 readSource로 다시 읽고 확인한다. 위키에 없는 세부는 원문에서 확인한다.',inputSchema:z.object({id:z.uuid(),offset:z.number().int().min(0),length:z.number().int().min(1).max(50000)}),execute:async(input,options)=>executeAgentTool(runId,workflow,'wiki_read',input,options.toolCallId)}),
+    writeWiki:tool({description:'위키 페이지를 만들거나(id null) 이 범위의 페이지를 통째로 고친다. 원고는 바뀌지 않는다. category는 character 인물, place 장소·조직, rule 기술·규칙, event 사건·연표, thread 복선·회수, open 미해결, concept 개념, source 자료 요약, other 기타. content는 마크다운 없는 줄글이며 진술마다 지위(원문에 적힌 것·확정 설정·아이디어·네 해석)를 구분한다. sourceIds에는 근거로 읽은 문서 ID를 넣는다. 고칠 때는 먼저 readWiki로 읽고 남길 내용을 함께 넣는다.',inputSchema:wikiWriteSchema,execute:async(input,options)=>executeAgentTool(runId,workflow,'wiki_write',input,options.toolCallId)}),
     validateChanges:tool({description:'준비한 변경을 코드로 점검한다. 없는 문서를 가리키는 연결, 본문이 빈 새 문서, 설정 문서가 없는 시점 인물, 겹치는 제목을 알려 준다. 문서를 고친 뒤 답하기 전에 쓴다.',inputSchema:z.object({}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'validate',input,options.toolCallId);}}),
     inspectChanges:tool({description:'현재 문서 변경 전후를 확인한다. 작업 완료 전 결과와 의도를 대조한다.',inputSchema:z.object({}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'inspect',input,options.toolCallId);}}),
     ...mode!=='discuss'&&{

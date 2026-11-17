@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
-import { agentSessionHistory,agentAdmin,agentWorkspace,readAgentRun,recordAgentEvent } from './agent-server';
+import { agentSessionHistory,agentAdmin,agentWorkspace,readAgentRun,recordAgentEvent,readAgentWiki } from './agent-server';
+import { wikiDocuments,wikiFingerprint,wikiMissing,wikiReadableKeys,wikiScopeKey,wikiSearch,wikiView,wikiWriteSchema,wikiCategoryNames } from './agent-wiki';
 import { agentContext,agentDocuments,agentLibrary,agentReferences,agentValidate,agentLiveIds,agentOverlay,agentOperationSchema,agentSearch,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
 import { providerConfig } from './ai-provider';
 import { researchAgentWeb } from './agent-web';
@@ -118,6 +119,54 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     await recordAgentEvent(run,{id:callId,title:'작업 기억',detail:title});
 
     return {saved:true};
+  }
+
+  // The wiki is the agent's own notes: writing a page never touches the manuscript, so every mode may keep it.
+  if(name==='wiki_write'){
+    const write=wikiWriteSchema.parse(input),key=wikiScopeKey(run.snapshot.scope),id=write.id||operationId(`${runId}:${callId}`);
+
+    if(old)return {saved:true,id};
+
+    if(write.id){
+      const existing=await db.from('agent_wiki_pages').select('scope_key').eq('id',write.id).eq('owner_id',run.owner_id).maybeSingle();
+
+      if(wikiMissing(existing.error))throw new Error('위키 저장소가 아직 준비되지 않았습니다.');
+
+      if(existing.data?.scope_key!==key)throw new Error('이 범위의 위키 페이지만 고칠 수 있습니다. 새 페이지는 id를 null로 둔다.');
+    }
+
+    const docs=wikiDocuments(state),sources=write.sourceIds.map(source=>docs.get(source));
+
+    if(sources.some(source=>!source))throw new Error('위키의 출처를 찾지 못했습니다. 원고에 반영되지 않은 새 문서는 출처가 될 수 없습니다.');
+    const result=await db.from('agent_wiki_pages').upsert({id,owner_id:run.owner_id,workspace_id:run.workspace_id,scope_key:key,title:write.title,category:write.category,content:write.content,sources:sources.map(source=>({id:source!.id,title:source!.title,hash:wikiFingerprint(source!)})),run_id:run.id,updated_at:new Date().toISOString()});
+
+    if(wikiMissing(result.error))throw new Error('위키 저장소가 아직 준비되지 않았습니다.');
+
+    if(result.error)throw new Error('위키를 저장하지 못했습니다.');
+    await recordAgentEvent(run,{id:callId,title:write.id?'위키 고침':'위키 정리',detail:`${wikiCategoryNames[write.category]} · ${write.title}`,sources:sources.map(source=>({id:source!.id,title:source!.title}))});
+
+    return {saved:true,id};
+  }
+
+  if(name==='wiki_search'||name==='wiki_read'){
+    const wiki=await readAgentWiki(run.owner_id,wikiReadableKeys(run.snapshot.scope));
+
+    if(!wiki.available)throw new Error('위키 저장소가 아직 준비되지 않았습니다.');
+    const docs=wikiDocuments(state),pages=wiki.pages.map(page=>wikiView(page,docs));
+
+    if(name==='wiki_search'){
+      const {query,offset}=z.object({query:z.string(),offset:z.number().int().min(0)}).parse(input);
+      await recordAgentEvent(run,{id:callId,title:'위키 검색',detail:query||'위키 목차'});
+
+      return wikiSearch(pages,query,offset);
+    }
+
+    const {id,offset,length}=z.object({id:z.uuid(),offset:z.number().int().min(0),length:z.number().int().min(1).max(50000)}).parse(input),page=pages.find(item=>item.id===id);
+
+    if(!page)throw new Error('위키 페이지를 찾지 못했습니다.');
+    await recordAgentEvent(run,{id:callId,title:'위키 읽기',detail:page.title});
+
+    return {id:page.id,title:page.title,category:wikiCategoryNames[page.category],scope:page.scope_key==='common'?'공통':'이 작품',updated:page.updated_at,stale:page.stale,sources:page.sources,content:page.content.slice(offset,offset+length),nextOffset:offset+length<page.content.length?offset+length:null};
   }
 
   if(name==='plan'){
