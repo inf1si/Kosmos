@@ -110,10 +110,10 @@ test('모델 문맥은 최근 대화만 담고 과거 이력은 보존하며 삭
 });
 
 test('에이전트 변경 도구는 제공자가 받는 최상위 object 명세를 사용한다',async()=>{
-  const tools=writingAgentTools(uid(),'schema-fixture','review',true);
+  const tools=writingAgentTools(uid(),'schema-fixture','review',true,true);
   const schema=await asSchema(tools.stageChange!.inputSchema!).jsonSchema;
   assert.equal(schema.type,'object');assert.equal(schema.oneOf,undefined);assert.equal(schema.anyOf,undefined);assert(!JSON.stringify(schema).includes('\"oneOf\"'));
-  assert.equal(writingAgentTools(uid(),'schema-fixture','discuss',true).stageChange,undefined);
+  assert.equal(writingAgentTools(uid(),'schema-fixture','discuss',true,true).stageChange,undefined);
 });
 
 async function committed(scopeKind:'work'|'notes'){
@@ -232,8 +232,8 @@ test('다른 작품과 다른 노트 작업공간은 읽기 전용 서재로 보
 });
 
 test('작업 대화 도구에는 다른 작품·노트 검색이 있고 웹 조사는 연결이 있을 때 쓴다',()=>{
-  const tools=writingAgentTools(uid(),'wf','review',true);assert('searchLibrary' in tools);assert('researchWeb' in tools);assert(!('researchWeb' in writingAgentTools(uid(),'wf','review',false)));
-  assert('searchLibrary' in writingAgentTools(uid(),'wf','discuss',false));assert(!('stageChange' in writingAgentTools(uid(),'wf','discuss',false)));
+  const tools=writingAgentTools(uid(),'wf','review',true,true);assert('searchLibrary' in tools);assert('researchWeb' in tools);assert(!('researchWeb' in writingAgentTools(uid(),'wf','review',false,false)));
+  assert('searchLibrary' in writingAgentTools(uid(),'wf','discuss',false,false));assert(!('stageChange' in writingAgentTools(uid(),'wf','discuss',false,false)));
 });
 
 test('문서 옆 AI 대화의 연 문서 본문·가리킨 자료·이어 온 AI 질문은 자료로 지침에 실린다',()=>{
@@ -278,8 +278,8 @@ test('변경 점검은 없는 문서를 가리키는 연결·빈 새 문서·설
 });
 
 test('연결 찾기·변경 점검 도구가 있고 속성 변경은 쓰기 도구에만 있다',async()=>{
-  const tools=writingAgentTools(uid(),'wf','discuss',false);assert('findReferences' in tools);assert('validateChanges' in tools);
-  const schema=JSON.stringify(await asSchema(writingAgentTools(uid(),'wf','review',false).stageChange!.inputSchema!).jsonSchema);assert(schema.includes('"properties"'));assert(schema.includes('storyTime'));
+  const tools=writingAgentTools(uid(),'wf','discuss',false,false);assert('findReferences' in tools);assert('validateChanges' in tools);
+  const schema=JSON.stringify(await asSchema(writingAgentTools(uid(),'wf','review',false,false).stageChange!.inputSchema!).jsonSchema);assert(schema.includes('"properties"'));assert(schema.includes('storyTime'));
 });
 
 test('분기 기억은 고른 요청까지의 완료한 대화만 최근 것부터 예산 안에 담는다',()=>{

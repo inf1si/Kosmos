@@ -1,5 +1,14 @@
 # 구현 검증
 
+## 2026-11-17 — AI 대화: 의미 검색
+
+- 기준: main dbfc61f(PR #140) 위. 사용자 요청: 3묶음 중 A(의미 검색)와 B(PDF·OCR)만. 비용 질문에는 Vertex `gemini-embedding-001` 입력 100만 토큰당 0.15달러(Google 개발자 블로그·요금 정리 사이트, 2026-11-17 확인)로 답함. 읽은 안내: [설계](docs/personal-knowledge-agent-design.md) 검색 절, [작업 대화](docs/writing-agent.md).
+- 바꾼 것: 마이그레이션 [`20261117090000_agent_meaning_search.sql`](supabase/migrations/20261117090000_agent_meaning_search.sql)(`agent_embeddings`, `agent_match_passages`, 확장 없음), [`agent-meaning.ts`](src/lib/agent-meaning.ts)(대목 나누기·정규화), [`agent-meaning-server.ts`](src/lib/agent-meaning-server.ts)(바뀐 문서만 색인·사라진 문서 정리·검색), 도구 `searchMeaning`, 지침 한 줄. pgvector를 쓰는 PGlite 확장 패키지 추가가 막혀 `real[]` 내적으로 바꿨다.
+- 단위 [`agent-meaning.test.ts`](tests/agent-meaning.test.ts) 4개: 대목 위치가 원문과 일치·긴 문단 자르기, 정규화, Gemini 연결이 있을 때만 도구·지침, PGlite에 실제 마이그레이션(요청한 문서·소유자·모델만, 가까운 순, 768차원 검사, 작가 역할은 테이블·함수 모두 거절, 작업공간 삭제 시 함께 삭제).
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick: 29경우·페이지 오류 0. 1280px에서 합성 임베딩(글자 묶음)으로 **뜻으로 찾아줘** → 작업 내역 `의미 검색 · 새로 색인한 문서 n개 · 임베딩 토큰 n`, 첫 출처가 낱말을 가장 많이 공유한 문서, DB에 범위 문서 대목·모델 저장, 같은 검색을 다시 하면 검색어 임베딩 한 번뿐.
+- 고친 결함(검사 중 발견): 검사용 가짜 PostgREST가 표를 돌려주는 함수를 문자열 하나로 돌려줘 실행이 실패했다. 실제 PostgREST처럼 행 배열을 돌려주게 고쳤다.
+- 미확인: 운영 Supabase 마이그레이션, 실제 Vertex 임베딩의 한국어 검색 품질·요금·`global` 지역 지원(안 되면 `VERTEX_EMBEDDING_LOCATION`), 대목 수만 개에서의 검색 시간, 첫 색인 시간.
+
 ## 2026-11-17 — AI 대화: 위키
 
 - 기준: AI 자료 가져오기(같은 브랜치) 위. 사용자 요청: 설계 대비 빠진 기능 구현(2묶음 LLM 위키). 읽은 안내: [설계](docs/personal-knowledge-agent-design.md)의 위키 범위·설정과 아이디어 구분·위키 동작 절, [작업 대화](docs/writing-agent.md), [디자인 가이드](docs/design-guide.md) AI 대화 절.

@@ -29,6 +29,8 @@ bash scripts/setup-vertex-gcp.sh
 | `VERTEX_CLAUDE_MODEL` | 사용할 Vertex Claude 모델 ID |
 | `VERTEX_GEMINI_MODELS`, `VERTEX_CLAUDE_MODELS` | 선택. 쉼표·줄바꿈으로 나눈 기본 모델 목록 |
 | `VERTEX_SEARCH_MODEL` | 선택. 없으면 Gemini 기본 모델 |
+| `VERTEX_EMBEDDING_MODEL` | 선택. 의미 검색 임베딩, 기본 `gemini-embedding-001`(입력 100만 토큰당 0.15달러, 2026-11 확인) |
+| `VERTEX_EMBEDDING_LOCATION` | 선택. 임베딩 모델이 Gemini 연결의 지역에서 안 될 때 지역(예: `us-central1`) |
 | `VERTEX_GEMINI_LOCATION`, `VERTEX_CLAUDE_LOCATION` | 선택. 기본 위치와 다른 리전을 쓸 때 |
 
 Vercel의 실행별 OIDC 토큰을 GCP provider의 전용 audience로 교환한다. custom audience 토큰의 issuer는 `https://oidc.vercel.com/kosmos42`이며 프로젝트의 기본 issuer 모드와 무관하다. Google STS와 서비스 계정 impersonation을 거쳐 단기 OAuth 토큰으로 Vertex를 호출한다. 토큰과 서비스 계정 키를 브라우저·Workflow 인자·원고·로그·백업에 넣지 않는다. 서비스 계정 JSON 키를 생성할 필요가 없다. [Vercel 공식 GCP 안내](https://vercel.com/docs/oidc/gcp).

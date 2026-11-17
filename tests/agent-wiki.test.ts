@@ -61,9 +61,9 @@ test('위키 검색·목차·자료 역할은 에이전트 지침에 짧게 실�
 });
 
 test('위키 도구는 모든 실행 방식에 있고 인자 최상위가 객체다',()=>{
-  for(const mode of ['discuss','review','execute'] as const){const tools=writingAgentTools(uid(),'wf',mode,false);assert('searchWiki' in tools&&'readWiki' in tools&&'writeWiki' in tools,mode);}
+  for(const mode of ['discuss','review','execute'] as const){const tools=writingAgentTools(uid(),'wf',mode,false,false);assert('searchWiki' in tools&&'readWiki' in tools&&'writeWiki' in tools,mode);}
 
-  const tools=writingAgentTools(uid(),'wf','review',false);
+  const tools=writingAgentTools(uid(),'wf','review',false,false);
   assert.deepEqual([asSchema(tools.searchWiki.inputSchema).jsonSchema.type,asSchema(tools.readWiki.inputSchema).jsonSchema.type,asSchema(tools.writeWiki.inputSchema).jsonSchema.type],['object','object','object']);
 });
 

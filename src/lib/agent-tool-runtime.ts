@@ -5,6 +5,7 @@ import { wikiDocuments,wikiFingerprint,wikiMissing,wikiReadableKeys,wikiScopeKey
 import { agentContext,agentDocuments,agentLibrary,agentReferences,agentValidate,agentLiveIds,agentOverlay,agentOperationSchema,agentSearch,captureAgentScope,agentDiff,richBlocks,type AgentOperation,type AgentMode } from './writing-agent';
 import { providerConfig } from './ai-provider';
 import { researchAgentWeb } from './agent-web';
+import { indexMeaning,searchMeaning } from './agent-meaning-server';
 
 function operationId(key:string){
   const hex=createHash('sha256').update(key).digest('hex');
@@ -52,6 +53,16 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     await recordAgentEvent(run,{id:callId,title:'자료 검색',detail:query||'문서 목록'});
 
     return {...agentSearch(available,query,offset),sections,folders:nodes.filter(n=>n.type==='folder')};
+  }
+
+  // Meaning search reads the saved manuscript, not the run's working copy, so staged edits are found once applied.
+  if(name==='meaning_search'){
+    const {query,everywhere}=z.object({query:z.string().trim().min(1).max(2000),everywhere:z.boolean()}).parse(input),docs=[...agentDocuments(live),...everywhere?library():[]];
+    const index=await indexMeaning(run.owner_id,run.workspace_id,docs,agentLiveIds(state)),result=await searchMeaning(run.owner_id,docs,query);
+    await recordAgentEvent(run,{id:callId,title:'의미 검색',detail:[query,everywhere&&'다른 작품·노트 포함',index.indexed&&`새로 색인한 문서 ${index.indexed}개`,index.waiting&&`색인 대기 ${index.waiting}개`,`임베딩 토큰 ${index.tokens+result.tokens}`].filter(Boolean).join(' · '),sources:[...new Map(result.passages.map(p=>[p.id,{id:p.id,title:p.title}])).values()].slice(0,10)});
+    const places=everywhere?new Map(library().map(d=>[d.id,d.place])):new Map<string,string>();
+
+    return {passages:result.passages.map(p=>({...p,...places.has(p.id)&&{place:places.get(p.id),readOnly:true}})),...index.waiting&&{waiting:index.waiting,note:'아직 색인하지 못한 문서가 있다. 같은 검색을 다시 부르면 이어서 색인한다.'}};
   }
 
   if(name==='library_search'){

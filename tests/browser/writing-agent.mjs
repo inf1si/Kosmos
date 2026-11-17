@@ -39,13 +39,15 @@ const mentionA={...newNote(),title:'공통 자료',content:fromText('첫 번째 
 
 if(mentionsOnly)state=addNote(addNote(addNote(state,mentionA),mentionB,{parentId:note.id}),longMention);
 
-const initial=structuredClone(state),errors=[],results=[],modelCalls=[],longModel='gemini-'+ 'x'.repeat(193);
+const initial=structuredClone(state),errors=[],results=[],modelCalls=[],embeddingCalls=[],longModel='gemini-'+ 'x'.repeat(193);
 
 await pg.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;create table public.authors(user_id uuid primary key);create table public.workspaces(id uuid primary key,owner_id uuid not null,payload jsonb not null,version bigint not null default 1,updated_at timestamptz default now());create table public.workspace_revisions(id uuid default gen_random_uuid(),workspace_id uuid,owner_id uuid,payload jsonb,created_at timestamptz default now());`);
 
 await pg.exec(await readFile('supabase/migrations/20261109135502_personal_writing_agent.sql','utf8'));
 
 await pg.exec(await readFile('supabase/migrations/20261117040000_agent_wiki.sql','utf8'));
+
+await pg.exec(await readFile('supabase/migrations/20261117090000_agent_meaning_search.sql','utf8'));
 
 await pg.query('insert into public.authors values($1)',[profile.id]);
 
@@ -55,7 +57,7 @@ const jsonColumns=new Set(['payload','scope','snapshot','operations','events','u
 
 const objectValue=(key,value)=>jsonColumns.has(key)&&value!==null?JSON.stringify(value):value;
 
-const tables=new Set(['authors','workspaces','workspace_revisions','agent_sessions','agent_runs','agent_memories','agent_wiki_pages','agent_wiki_scopes']);
+const tables=new Set(['authors','workspaces','workspace_revisions','agent_sessions','agent_runs','agent_memories','agent_wiki_pages','agent_wiki_scopes','agent_embeddings']);
 
 const mock=createServer(async(req,res)=>{
   const send=(value,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(value));};
@@ -73,6 +75,15 @@ return;}
       const provider=url.searchParams.get('provider');modelCalls.push({provider,model:url.searchParams.get('model'),body});
 
       const google=provider==='gemini',anthropic=provider==='anthropic';
+
+      // Embeddings: one bucket per character, so texts that share words land close together.
+      if(body.instances){embeddingCalls.push(...body.instances.map(item=>item.task_type));
+
+return send({predictions:body.instances.map(item=>{const values=Array.from({length:768},()=>0);
+
+for(const ch of item.content.replace(/\s/g,''))values[ch.codePointAt(0)%768]+=1;
+
+return {embeddings:{values,statistics:{token_count:item.content.length}}};})});}
 
       if(google&&body.tools?.some(tool=>tool.googleSearch||tool.urlContext))return send({candidates:[{content:{role:'model',parts:[{text:'합성 자료에서는 기억의 재구성 가능성을 설명한다.'}]},finishReason:'STOP',groundingMetadata:{groundingChunks:[{web:{uri:'https://example.com/paper',title:'합성 연구 자료'}}],groundingSupports:[{segment:{startIndex:0,endIndex:27,text:'합성 자료에서는 기억의 재구성 가능성을 설명한다.'},groundingChunkIndices:[0]}],webSearchQueries:['기억 연구'],searchEntryPoint:{renderedContent:'<a href="https://www.google.com/search?q=memory" target="_blank">Google 검색 제안</a>'}}}],usageMetadata:{promptTokenCount:24,candidatesTokenCount:12,totalTokenCount:36}});
 
@@ -93,7 +104,8 @@ return;}
       // 위키 정리 writes a page from a document of the work, finds it and reads it back.
       const asks=(google?body.contents:anthropic?body.messages:body.input)||[],lastAsk=[...asks].reverse().find(message=>message.role==='user'&&(google?message.parts?.some(part=>'text' in part):!Array.isArray(message.content)||message.content.some(part=>part.type==='text'||part.type==='input_text')));
 
-      if(JSON.stringify(lastAsk||'').includes('위키 정리해줘')){const written=outputs.find(o=>o.data.saved&&o.data.id)?.data;
+      if(JSON.stringify(lastAsk||'').includes('뜻으로 찾아줘'))item=step===0?tool('searchMeaning',{query:'관측소에 아무도 없는 장면',everywhere:false}):{type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'뜻이 가까운 대목을 찾았습니다.',annotations:[]}]};
+      else if(JSON.stringify(lastAsk||'').includes('위키 정리해줘')){const written=outputs.find(o=>o.data.saved&&o.data.id)?.data;
         item=[()=>tool('writeWiki',{id:null,title:'관측소',category:'place',content:'달 관측소는 비어 있다(원문).\n누가 비웠는지는 열린 질문이다.',sourceIds:[initial.works[0].documents[1].id]}),()=>tool('searchWiki',{query:'관측소',offset:0}),()=>tool('readWiki',{id:written?.id,offset:0,length:12000})][step]?.()||{type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'위키에 관측소를 정리했습니다.',annotations:[]}]};
       }
       else if(step===0&&JSON.stringify(google?body.contents?.at(-1):body.messages?.at(-1)).includes('이 장면은 어디야'))item={type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'열어 둔 문서를 확인했습니다.',annotations:[]}]};
@@ -141,8 +153,11 @@ return;}
 return send({status:'saved',version:row.version+1});
       }
 
-      if(!service||!['agent_claim_run','agent_record_step','agent_commit_workspace'].includes(name))return send({message:'permission denied'},403);
-      const keys=Object.keys(body);assert(keys.every(key=>/^p_[a-z_]+$/.test(key)));const value=await pg.query(`select public.${name}(${keys.map((key,i)=>`${key}=>$${i+1}`).join(',')}) value`,keys.map(key=>objectValue(key,body[key])));
+      if(!service||!['agent_claim_run','agent_record_step','agent_commit_workspace','agent_match_passages'].includes(name))return send({message:'permission denied'},403);
+      const keys=Object.keys(body);assert(keys.every(key=>/^p_[a-z_]+$/.test(key)));const call=`public.${name}(${keys.map((key,i)=>`${key}=>$${i+1}`).join(',')})`,args=keys.map(key=>objectValue(key,body[key]));
+
+      // A function that returns a table answers with its rows, as PostgREST does.
+      if(name==='agent_match_passages')return send((await pg.query(`select * from ${call}`,args)).rows);const value=await pg.query(`select ${call} value`,args);
 
 return send(value.rows[0].value);
     }
@@ -585,6 +600,19 @@ assert(layout.left>=0&&layout.right<=width+1&&!layout.overflow&&!layout.page,JSO
     for(const [palette,mode] of [['violet','light'],['cyber','dark']]){await page.evaluate(({palette,mode})=>{document.documentElement.dataset.palette=palette;document.documentElement.dataset.theme=mode;},{palette,mode});const layout=await panel.evaluate(el=>({overflow:el.scrollWidth>el.clientWidth+1,page:document.documentElement.scrollWidth>document.documentElement.clientWidth+1}));assert(!layout.overflow&&!layout.page,JSON.stringify({width,palette,mode,layout}));results.push({width,palette,mode,view:'wiki'});}
 
     await panel.getByRole('button',{name:'대화',exact:true}).click();
+
+    if(width===1280){
+      // 의미 검색 indexes the work's documents once, then a second search embeds only the query.
+      const askMeaning=async()=>{const before=embeddingCalls.length;await input.fill('뜻으로 찾아줘.');await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();await until(async()=>(await panel.locator('.chat-message.assistant').filter({hasText:'뜻이 가까운 대목을 찾았습니다.'}).count())>(before?1:0),'meaning search answers');
+
+return {calls:embeddingCalls.slice(before),run:(await pg.query("select events from public.agent_runs where message='뜻으로 찾아줘.' order by created_at desc limit 1")).rows[0]};};
+
+      const first=await askMeaning(),event=first.run.events.find(item=>item.title==='의미 검색');assert(event,'the run logs the meaning search');assert.match(event.detail,/^관측소에 아무도 없는 장면 · 새로 색인한 문서 \d+개 · 임베딩 토큰 \d+$/);
+      assert.equal(event.sources[0].id,initial.works[0].documents[0].id,'the passage sharing the most words comes first');assert(first.calls.includes('RETRIEVAL_DOCUMENT')&&first.calls.at(-1)==='RETRIEVAL_QUERY');
+      const indexed=(await pg.query('select distinct document_id,model from public.agent_embeddings where owner_id=$1',[profile.id])).rows;assert(indexed.length>=2&&indexed.every(row=>row.model==='gemini-embedding-001'));assert(indexed.some(row=>row.document_id===initial.works[0].documents[0].id));
+      const second=await askMeaning();assert.deepEqual(second.calls,['RETRIEVAL_QUERY'],'unchanged documents are not embedded again');assert.match(second.run.events.find(item=>item.title==='의미 검색').detail,/^관측소에 아무도 없는 장면 · 임베딩 토큰 \d+$/);
+    }
+
     // AI 자료 내보내기 lives with the other exports in 설정 › 저장 · 백업.
     await panel.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
 

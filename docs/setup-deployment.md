@@ -59,6 +59,7 @@ pnpm start
 | `ALLOW_LOCAL_PREVIEW` | 서버 | 기본 `false`. 외부 배포에서 켜지 않음 |
 | `GOOGLE_VERTEX_PROJECT`, `GOOGLE_VERTEX_LOCATION` | 서버 | `orbiter-ai`, 기본 `global` |
 | `VERTEX_GEMINI_MODEL`, `VERTEX_CLAUDE_MODEL`, `VERTEX_SEARCH_MODEL` | 서버 | 프로젝트에 허용된 Vertex 모델 ID, 검색 모델은 선택 |
+| `VERTEX_EMBEDDING_MODEL`, `VERTEX_EMBEDDING_LOCATION` | 서버 | 선택. 의미 검색 임베딩 모델(기본 `gemini-embedding-001`)과 지역 |
 | `VERTEX_GEMINI_MODELS`, `VERTEX_CLAUDE_MODELS` | 서버 | 선택. 쉼표·줄바꿈 모델 목록. 앱에서 목록 저장도 가능 |
 | `VERTEX_AUTH_MODE`, `GOOGLE_VERTEX_WIF_PROVIDER`, `GOOGLE_VERTEX_SERVICE_ACCOUNT` | 서버 | Vercel OIDC/WIF 인증. 로컬은 `adc` |
 | `BACKUP_STORAGE_PROVIDER` | 서버 | 사용자 선택 `google-drive`. 선택적으로 `s3` |
@@ -205,7 +206,20 @@ select table_name,grantee,string_agg(privilege_type,',' order by privilege_type)
 
 기대값: 테이블 두 개, 각 테이블에 `authenticated`의 `SELECT` 정책 하나, `authenticated`는 `SELECT`만, `anon`은 없음, `service_role`은 전체 권한.
 
-선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000), `AGENT_TOOL_RESULT_CHARACTERS`(기본 80000), `AGENT_WIKI_INDEX_CHARACTERS`(기본 3000)다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
+### 의미 검색 마이그레이션 (2026-11-17)
+
+[20261117090000_agent_meaning_search.sql](../supabase/migrations/20261117090000_agent_meaning_search.sql)은 대목 임베딩 테이블 `agent_embeddings`와 검색 함수 `agent_match_passages`를 만든다. 확장(pgvector)은 쓰지 않는다. 작가 역할은 둘 다 읽지 못하고 서비스 역할만 쓴다. 작업공간을 지우면 함께 지워진다. 앱을 먼저 배포해도 의미 검색만 실패하고 나머지는 동작한다. 같은 SQL을 두 번 실행하지 않는다.
+
+```sql
+select table_name from information_schema.tables where table_schema='public' and table_name='agent_embeddings';
+select routine_name from information_schema.routines where routine_schema='public' and routine_name='agent_match_passages';
+select grantee,string_agg(privilege_type,',' order by privilege_type) from information_schema.role_table_grants where table_name='agent_embeddings' and grantee in ('anon','authenticated','service_role') group by 1 order by 1;
+select grantee,privilege_type from information_schema.role_routine_grants where routine_name='agent_match_passages' and grantee in ('anon','authenticated','service_role','PUBLIC') order by 1;
+```
+
+기대값: 테이블과 함수가 하나씩, 테이블 권한은 `service_role`만, 함수 실행 권한도 `service_role`만.
+
+선택 서버 설정은 `AGENT_MAX_STEPS`(기본 80), `AGENT_HISTORY_CHARACTERS`(기본 60000), `AGENT_TOOL_RESULT_CHARACTERS`(기본 80000), `AGENT_WIKI_INDEX_CHARACTERS`(기본 3000), `AGENT_MEANING_BATCH`(기본 400), `VERTEX_EMBEDDING_MODEL`(기본 `gemini-embedding-001`), `VERTEX_EMBEDDING_LOCATION`(없으면 Gemini 연결의 지역)이다. 일일 횟수·질문 글자 수 요금제는 추가하지 않는다. 새 질문을 포함한 최종 모델 문맥·HTTP 본문 크기·플랫폼/제공자 한도는 적용된다. [사용 계약](writing-agent.md).
 
 기본 `pnpm dev`·`pnpm build`는 Webpack을 명시한다. Next.js 16.3.8의 Turbopack 글꼴 내부 쿼리 해석 오류가 CI에서 재현되어 빌드 방식을 고정했다. 운영의 글꼴 파일·종류·라이선스는 변경하지 않는다.
 

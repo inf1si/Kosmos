@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { agentOperationSchema,type AgentOperation,type AgentMode } from './writing-agent';
 import { wikiWriteSchema } from './agent-wiki';
 
-type AgentToolInput=AgentOperation|{id:string}|{query:string;offset:number}|{id:string;offset:number;length:number}|{plan:string}|{title:string;content:string;sourceIds:string[]}|{query:string;url:string|null}|z.infer<typeof wikiWriteSchema>|Record<string,never>;
+type AgentToolInput=AgentOperation|{id:string}|{query:string;offset:number}|{id:string;offset:number;length:number}|{plan:string}|{title:string;content:string;sourceIds:string[]}|{query:string;url:string|null}|{query:string;everywhere:boolean}|z.infer<typeof wikiWriteSchema>|Record<string,never>;
 
 async function executeAgentTool(runId:string,workflow:string,name:string,input:AgentToolInput,callId:string){
   'use step';
@@ -13,12 +13,15 @@ async function executeAgentTool(runId:string,workflow:string,name:string,input:A
   return performAgentTool(runId,workflow,name,input,callId);
 }
 
-export function writingAgentTools(runId:string,workflow:string,mode:AgentMode,web:boolean){
+export function writingAgentTools(runId:string,workflow:string,mode:AgentMode,web:boolean,meaning:boolean){
   return {
     searchHistory:tool({description:'현재 작업 대화의 과거 질문·답변을 검색한다. query가 비어 있으면 전체 이력을 20개씩 탐색한다.',inputSchema:z.object({query:z.string(),offset:z.number().int().min(0)}),execute:async(input,options)=>executeAgentTool(runId,workflow,'history_search',input,options.toolCallId)}),
     readHistory:tool({description:'과거 대화를 이어 읽는다. 현재 허용한 자료 범위를 벗어난 출처의 대화는 제외한다.',inputSchema:z.object({id:z.uuid(),offset:z.number().int().min(0),length:z.number().int().min(1).max(50000)}),execute:async(input,options)=>executeAgentTool(runId,workflow,'history_read',input,options.toolCallId)}),
     searchSources:tool({description:'허용한 원고·노트에서 모든 검색어가 제목이나 본문에 든 문서를 찾는다. 문서마다 일치한 대목(matches)과 그 위치(offset)를 돌려주므로 readSource에 그 offset을 넣어 해당 대목부터 읽는다. 빈 query는 문서 목록·섹션·폴더를 돌려준다. 결과는 30개씩 다음 offset으로 이어 읽는다.',inputSchema:z.object({query:z.string(),offset:z.number().int().min(0)}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'search',input,options.toolCallId);}}),
     searchLibrary:tool({description:'지금 범위 밖의 다른 작품과 다른 노트 작업공간에서 모든 검색어가 제목이나 본문에 든 문서를 찾는다. place는 문서가 있는 곳이다. 찾은 문서는 readSource로 읽을 수 있지만 고칠 수는 없다. 결과는 30개씩 다음 offset으로 이어 읽는다.',inputSchema:z.object({query:z.string(),offset:z.number().int().min(0)}),execute:async(input,options)=>executeAgentTool(runId,workflow,'library_search',input,options.toolCallId)}),
+    ...meaning&&{
+      searchMeaning:tool({description:'뜻이 가까운 대목을 찾는다. 낱말이 달라도 같은 생각·장면·설정을 다룬 곳을 찾을 때 쓴다(예: "주인공이 고향을 그리워하는 장면"). 정확한 이름·낱말은 searchSources가 낫다. everywhere가 true면 다른 작품·노트 작업공간도 찾는다. 결과의 offset으로 readSource를 이어 읽는다. 처음 찾는 문서는 색인하느라 시간이 걸린다.',inputSchema:z.object({query:z.string().min(1),everywhere:z.boolean()}),execute:async(input,options)=>executeAgentTool(runId,workflow,'meaning_search',input,options.toolCallId)}),
+    },
     readSource:tool({description:'ID로 문서를 읽는다. 긴 글은 nextOffset으로 이어 읽는다. properties에는 작가가 적은 요약·시점 인물·작중 시각·상태가 있다. 아직 적용하지 않은 자신의 수정도 반영된 작업본이다. 다른 작품·노트 작업공간의 문서도 ID로 읽으며, 그때는 place와 readOnly가 붙는다.',inputSchema:z.object({id:z.uuid(),offset:z.number().int().min(0),length:z.number().int().min(1).max(50000)}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'read',input,options.toolCallId);}}),
     plan:tool({description:'진행할 작업과 열린 문제를 짧게 기록한다. 단순 대화에는 불필요하다.',inputSchema:z.object({plan:z.string()}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'plan',input,options.toolCallId);}}),
     remember:tool({description:'사용자가 선택한 방향·보류 이유·작업의 열린 질문 또는 근거가 있는 자료 종합을 기억한다. 취향·확정 설정을 추측해서 기록하지 않는다. 새 아이디어는 아이디어임을 명시한다.',inputSchema:z.object({title:z.string().max(300),content:z.string(),sourceIds:z.array(z.uuid())}),execute:async(input,options)=>{return executeAgentTool(runId,workflow,'remember',input,options.toolCallId);}}),
