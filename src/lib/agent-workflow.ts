@@ -10,6 +10,7 @@ import { activePromptPreset } from './ai-prompt-presets';
 import { eventReasoning } from './ai-reasoning';
 import { agentWorkspace,agentAdmin,readAgentRun,agentSessionHistory,commitAgentChanges,readAgentWiki } from './agent-server';
 import { meaningAvailable } from './agent-meaning-server';
+import { transcribeAvailable } from './agent-transcribe';
 import { wikiDocuments,wikiIndex,wikiReadableKeys,wikiRoleHints,wikiView } from './agent-wiki';
 
 async function prepareAgentRun(id:string,workflow:string){
@@ -37,7 +38,7 @@ return [{role:'user' as const,content:r.message},...answer?[{role:'assistant' as
   // The persona and skills are the writer's synced AI settings, read when the run starts.
   const instructions=buildAgentInstructions({mode:run.mode,web:run.web,meaning:meaningAvailable(),today:new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul'}).format(new Date()),persona:activePromptPreset(state.aiPreferences).prompt,skills:(state.aiPreferences?.skills||[]).map(skill=>({title:skill.title,description:skill.description,prompt:skill.prompt})),map:agentMap(agentOverlay(run.snapshot,run.operations),Number(process.env.AGENT_MAP_CHARACTERS)||16000),library:agentLibraryMap(state,run.snapshot.scope),focus:focus?{id:focus.id,title:focus.title,text:focusDoc?.text.slice(0,focusBudget)??'',more:Math.max(0,(focusDoc?.text.length??0)-focusBudget)}:null,pointed:pointed.map(p=>({id:p.id,title:p.title})),previous:run.events.find(e=>e.id==='previous')?.detail||'',memories:context.memories.map(m=>({title:m.title,content:m.content,sources:m.sources})),wiki:wiki.available?{index:wikiIndex(wiki.pages.map(page=>wikiView(page,docs)),Number(process.env.AGENT_WIKI_INDEX_CHARACTERS)||3000),roles:wikiRoleHints(wiki.roles,docs)}:null});
 
-  return {run:{provider:run.provider,model:run.model,mode:run.mode,web:run.web,meaning:meaningAvailable(),reasoning:eventReasoning(run.events)},messages,instructions,maxSteps:Number(process.env.AGENT_MAX_STEPS)||80,toolBudget:Number(process.env.AGENT_TOOL_RESULT_CHARACTERS)||80000};
+  return {run:{provider:run.provider,model:run.model,mode:run.mode,web:run.web,meaning:meaningAvailable(),images:transcribeAvailable(),reasoning:eventReasoning(run.events)},messages,instructions,maxSteps:Number(process.env.AGENT_MAX_STEPS)||80,toolBudget:Number(process.env.AGENT_TOOL_RESULT_CHARACTERS)||80000};
 }
 
 async function completeAgentRun(id:string,workflow:string,answer:string,usage:{input:number;output:number}|null,error=''){
@@ -58,7 +59,7 @@ export async function runWritingAgent(id:string){
 
   try{
     const {run,messages,instructions,maxSteps,toolBudget}=await prepareAgentRun(id,workflow);
-    const agent=new WorkflowAgent({model:agentLanguageModel(run.provider,run.model),toolCallConcurrency:1,stopWhen:isStepCount(maxSteps),maxRetries:0,...run.reasoning!=='auto'&&{reasoning:run.reasoning},instructions,tools:writingAgentTools(id,workflow,run.mode,run.web,run.meaning),prepareStep:({messages:prompt,stepNumber})=>agentStepSettings(prompt,stepNumber,maxSteps,toolBudget)});
+    const agent=new WorkflowAgent({model:agentLanguageModel(run.provider,run.model),toolCallConcurrency:1,stopWhen:isStepCount(maxSteps),maxRetries:0,...run.reasoning!=='auto'&&{reasoning:run.reasoning},instructions,tools:writingAgentTools(id,workflow,run.mode,run.web,run.meaning,run.images),prepareStep:({messages:prompt,stepNumber})=>agentStepSettings(prompt,stepNumber,maxSteps,toolBudget)});
     const result=await agent.generate({messages});
     // The last step has no tools, so reaching the step limit ends in an answer; automatic apply is still held back.
     const issue=result.finishReason==='tool-calls'||result.finishReason==='length'||result.steps.length>=maxSteps?'실행 단계 또는 모델 출력 한도에 도달했습니다. 준비한 변경을 확인하고 이어서 요청하세요.':'';

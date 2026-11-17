@@ -60,6 +60,7 @@ pnpm start
 | `GOOGLE_VERTEX_PROJECT`, `GOOGLE_VERTEX_LOCATION` | 서버 | `orbiter-ai`, 기본 `global` |
 | `VERTEX_GEMINI_MODEL`, `VERTEX_CLAUDE_MODEL`, `VERTEX_SEARCH_MODEL` | 서버 | 프로젝트에 허용된 Vertex 모델 ID, 검색 모델은 선택 |
 | `VERTEX_EMBEDDING_MODEL`, `VERTEX_EMBEDDING_LOCATION` | 서버 | 선택. 의미 검색 임베딩 모델(기본 `gemini-embedding-001`)과 지역 |
+| `VERTEX_OCR_MODEL` | 서버 | 선택. PDF·이미지 글자 읽기 모델(없으면 Gemini 기본 모델) |
 | `VERTEX_GEMINI_MODELS`, `VERTEX_CLAUDE_MODELS` | 서버 | 선택. 쉼표·줄바꿈 모델 목록. 앱에서 목록 저장도 가능 |
 | `VERTEX_AUTH_MODE`, `GOOGLE_VERTEX_WIF_PROVIDER`, `GOOGLE_VERTEX_SERVICE_ACCOUNT` | 서버 | Vercel OIDC/WIF 인증. 로컬은 `adc` |
 | `BACKUP_STORAGE_PROVIDER` | 서버 | 사용자 선택 `google-drive`. 선택적으로 `s3` |
