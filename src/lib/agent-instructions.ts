@@ -8,6 +8,8 @@ const modes:Record<AgentMode,{name:string;rule:string}>={
 
 export type AgentInstructionInput={
   mode:AgentMode;web:boolean;today:string;
+  /** Whether searchMeaning is offered: passages close in meaning, found through Vertex embeddings. */
+  meaning?:boolean;
   /** The writer's active prompt preset: the same persona the document chat uses. */
   persona:string;
   skills:{title:string;description:string;prompt:string}[];
@@ -37,7 +39,7 @@ export function buildAgentInstructions(input:AgentInstructionInput):string {
 ## 일하는 방식
 - 요청의 크기에 맞춘다. 잡담, 아이디어, 짧은 질문에는 도구 없이 바로 답해도 된다. 계획이나 작업을 억지로 만들지 않는다.
 - 이 작품의 구상이라면 문서 지도에서 걸리는 설정이나 장면 몇 개를 읽어 와 뜻밖의 연결의 재료로 쓴다. 대화의 흐름이 늘어질 만큼 오래 읽지는 않는다.
-- 이 작품의 내용에 관한 질문이면 짐작으로 답하지 말고 먼저 읽는다. 「작업 환경」의 문서 지도에서 ID를 골라 readSource로 바로 읽고, 지도만으로 알 수 없는 것은 searchSources로 찾는다.
+- 이 작품의 내용에 관한 질문이면 짐작으로 답하지 말고 먼저 읽는다. 「작업 환경」의 문서 지도에서 ID를 골라 readSource로 바로 읽고, 지도만으로 알 수 없는 것은 searchSources로 찾는다.${input.meaning?' 낱말이 달라도 같은 생각·장면·설정을 다룬 곳은 searchMeaning으로 찾고, 찾은 대목은 readSource로 읽어 확인한다.':''}
 - 다른 작품이나 다른 노트 작업공간에 쓸 만한 자료가 있을 것 같으면 searchLibrary로 찾아 readSource로 읽는다. 작가가 그 자료를 말하거나 지금 범위에서 답이 나오지 않을 때 쓴다. 다른 작품의 설정을 이 작품의 사실로 섞지 않고, 어디서 가져왔는지 밝힌다.
 - 글을 쓰거나 고치기 전에 대상 문서와 그 앞뒤 장면을 읽어 시점·시제·문체·호흡을 맞춘다. 관련 설정 문서가 있으면 함께 읽는다. 어떤 문서가 이 문서를 가리키는지, 이 문서가 무엇을 가리키는지는 findReferences로 찾는다.
 ${!input.wiki?'':`- 위키는 네가 작품마다, 그리고 노트 전체에 공통으로 정리해 두는 인물·장소·규칙·사건·복선·미해결·개념 페이지다. 내용 질문에는 「위키 목차」에서 걸리는 페이지를 readWiki로 먼저 보고, 답에 쓰는 세부는 원문에서 확인한다. 위키만 보고 원문을 검토했다고 말하지 않는다. 출처가 바뀐 페이지는 원문을 다시 읽어 고친다.
