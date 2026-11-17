@@ -3,7 +3,8 @@ import { start } from 'workflow/api';
 import { HookConflictError } from 'workflow/errors';
 import { writerClient } from './server-auth';
 import { sameOriginCredentialRequest } from './ai-credential-handler';
-import { readLimitedJson,BodyLimitError } from './http';
+import { readLimitedJson,readLimitedBytes,BodyLimitError } from './http';
+import { TRANSCRIBE_MAX_BYTES,transcribeAvailable,transcribeFile,transcribeType } from './agent-transcribe';
 import { providerSettingsStatus,requestProviderConfig } from './ai-credentials';
 import { providerConfig } from './ai-provider';
 import { reasoningChoice,reasoningLevels,reasoningEvent } from './ai-reasoning';
@@ -52,6 +53,17 @@ export async function writingAgentAPI(request:Request,path:string[]){
     if(!auth)return json({error:'작가 로그인이 필요합니다.'},401);
 
     if(request.method!=='GET'&&!sameOriginCredentialRequest(request))return json({error:'같은 사이트에서 작업 대화를 사용하세요.'},403);
+
+    // 노트 가져오기 sends a PDF a few pages at a time; the text comes back and nothing is kept on the server.
+    if(path[0]==='transcribe'&&path.length===1&&request.method==='POST'){
+      if(!transcribeAvailable())return json({error:'Vertex AI Gemini 연결이 없어 PDF 글자를 읽을 수 없습니다.'},503);
+      const bytes=await readLimitedBytes(request,TRANSCRIBE_MAX_BYTES),type=transcribeType(bytes);
+
+      if(!type)return json({error:'PDF 또는 PNG·JPEG·WebP 파일만 읽을 수 있습니다.'},415);
+      const result=await transcribeFile(bytes,type);
+
+      return json({text:result.text,truncated:result.truncated});
+    }
 
     if(!process.env.SUPABASE_SERVICE_ROLE_KEY)return json({error:'작업 대화의 서버 저장 연결이 필요합니다.'},503);
     const db=agentAdmin(),method=request.method;

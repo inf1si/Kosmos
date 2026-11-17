@@ -6,6 +6,7 @@ import { agentContext,agentDocuments,agentLibrary,agentReferences,agentValidate,
 import { providerConfig } from './ai-provider';
 import { researchAgentWeb } from './agent-web';
 import { indexMeaning,searchMeaning } from './agent-meaning-server';
+import { transcribeAvailable,transcribeFile,transcribeType } from './agent-transcribe';
 
 function operationId(key:string){
   const hex=createHash('sha256').update(key).digest('hex');
@@ -21,6 +22,13 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
   const available=docs.filter(d=>liveIds.has(d.id)||run.operations.some(op=>op.type==='create'&&op.id===d.id));
   // Other works and note spaces are read live and never staged; only the run's own scope can change.
   const library=()=>agentLibrary(state,run.snapshot.scope);
+
+  // Image attachments are read from the saved workspace; the agent never adds or removes them.
+  const attachments=(id:string)=>{const holder=state.works.flatMap(w=>w.documents).find(d=>d.id===id)||state.notes?.find(n=>n.id===id),assets=new Map(state.assets.map(a=>[a.id,a]));
+
+return (holder?.assetIds||[]).flatMap(asset=>{const meta=assets.get(asset);
+
+return meta?[{id:meta.id,name:meta.name}]:[];});};
 
   if(old&&name==='stage_change'){
     const op=agentOperationSchema.parse(input);
@@ -65,6 +73,25 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     return {passages:result.passages.map(p=>({...p,...places.has(p.id)&&{place:places.get(p.id),readOnly:true}})),...index.waiting&&{waiting:index.waiting,note:'아직 색인하지 못한 문서가 있다. 같은 검색을 다시 부르면 이어서 색인한다.'}};
   }
 
+  // An attached image is sent to Gemini once and its text comes back; the image itself never reaches the agent's model.
+  if(name==='image_read'){
+    const {id}=z.object({id:z.uuid()}).parse(input),readable=[...available,...library()],doc=readable.find(d=>attachments(d.id).some(a=>a.id===id)),image=doc&&attachments(doc.id).find(a=>a.id===id);
+
+    if(!doc||!image)throw new Error('이미지를 찾지 못했습니다. readSource 결과의 images에 있는 ID만 읽을 수 있습니다.');
+
+    if(!transcribeAvailable())throw new Error('Vertex AI Gemini 연결이 없어 이미지를 읽을 수 없습니다.');
+    const file=await db.storage.from('private-assets').download(`${run.owner_id}/${id}`);
+
+    if(file.error||!file.data)throw new Error('이미지 파일을 내려받지 못했습니다.');
+    const bytes=new Uint8Array(await file.data.arrayBuffer()),type=transcribeType(bytes);
+
+    if(!type||type==='application/pdf')throw new Error('PNG·JPEG·WebP 이미지만 읽을 수 있습니다.');
+    const result=await transcribeFile(bytes,type);
+    await recordAgentEvent(run,{id:callId,title:'이미지 읽기',detail:`${doc.title} · ${image.name}`,sources:[{id:doc.id,title:doc.title}]});
+
+    return {id,name:image.name,document:{id:doc.id,title:doc.title},text:result.text,...result.truncated&&{truncated:true}};
+  }
+
   if(name==='library_search'){
     const {query,offset}=z.object({query:z.string(),offset:z.number().int().min(0)}).parse(input),docs=library(),places=new Map(docs.map(d=>[d.id,d.place]));
     await recordAgentEvent(run,{id:callId,title:'다른 작품·노트 검색',detail:query||'문서 목록'});
@@ -79,7 +106,9 @@ export async function performAgentTool<T>(runId:string,workflow:string,name:stri
     if(!doc)throw new Error('자료를 찾지 못했습니다. 휴지통에 있거나 지워진 문서일 수 있습니다.');
     await recordAgentEvent(run,{id:callId,title:other?'다른 자료 읽기':'문서 읽기',detail:other?`${other.place} · ${doc.title}`:doc.title,sources:[{id:doc.id,title:doc.title}]});
 
-    return {id:doc.id,title:doc.title,kind:doc.kind,...other&&{place:other.place,readOnly:true},properties:doc.properties,text:doc.text.slice(offset,offset+length),nextOffset:offset+length<doc.text.length?offset+length:null,blocks:richBlocks(doc.content).map(b=>({id:b.id,index:b.index,characters:b.text.length})),characters:doc.text.length};
+    const images=attachments(doc.id);
+
+    return {id:doc.id,title:doc.title,kind:doc.kind,...other&&{place:other.place,readOnly:true},...images.length&&{images},properties:doc.properties,text:doc.text.slice(offset,offset+length),nextOffset:offset+length<doc.text.length?offset+length:null,blocks:richBlocks(doc.content).map(b=>({id:b.id,index:b.index,characters:b.text.length})),characters:doc.text.length};
   }
 
   if(name==='stage_change'){

@@ -1,5 +1,13 @@
 # 구현 검증
 
+## 2026-11-17 — PDF 가져오기와 AI 이미지 읽기
+
+- 기준: main f29a2cc(PR #141) 위. 사용자 요청: 3묶음 중 B(PDF·OCR). 저장 형식·DB 변경 없음.
+- 바꾼 것: [`agent-transcribe.ts`](src/lib/agent-transcribe.ts)(첫 바이트로 형식 판별, Gemini 판독), `POST /api/agent/transcribe`(4MB 이하, 저장 안 함), 에이전트 `readImage`·`readSource`의 `images`, [`pdf-transcribe.ts`](src/lib/pdf-transcribe.ts)(pdf-lib로 4쪽·3.5MB 이하 묶음, 3개씩 보냄), `readInterchange`의 `pdf` 선택, 노트 가져오기 파일 형식·진행 표시.
+- 단위 [`agent-ocr.test.ts`](tests/agent-ocr.test.ts) 4개: 형식 판별, 9쪽 PDF가 4·4·1쪽으로 나뉘고 크기 한도에서 반씩 줄며 쪽 순서 유지·한 쪽도 넘으면 거절·깨진 PDF 거절, PDF 노트 하나(제목·문단·경고)와 읽는 방법이 없을 때 건너뜀, Gemini 연결이 있을 때만 도구. 전체 단위 365개 통과.
+- 브라우저 [`writing-agent.mjs`](tests/browser/writing-agent.mjs) quick: 29경우·페이지 오류 0. 1280px에서 첫 장면에 PNG를 첨부해 **그림 글자 읽어줘** → `readSource`의 이미지 목록 → `readImage`가 합성 저장소에서 내려받아 Gemini에 `image/png`로 보냄 → 작업 내역 `이미지 읽기 · 문서 · 관측 메모.png`, 답에 읽은 글. 설정 → 저장 · 백업 → 노트 가져오기에서 6쪽 PDF 선택 → 서버 요청 2번(`application/pdf`), **노트 1개 · 첨부 0개**, 폴더 이름 `관측 일지` → 가져오기 → DB 작업 공간에 두 문단 노트 저장. 화면은 `test-results/writing-agent/notes-import-pdf-1280.png`(저장소에 넣지 않음)에서 확인.
+- 미확인: 실제 Gemini의 한국어·손글씨·스캔 판독 품질과 요금, 300쪽 PDF의 시간·Vercel 60초 한도 안 처리, 암호 PDF 실제 파일, 운영. `note-import-formats.mjs`는 다시 돌리지 않음(바뀐 것은 PDF 분기와 파일 형식 목록뿐).
+
 ## 2026-11-17 — AI 대화: 의미 검색
 
 - 기준: main dbfc61f(PR #140) 위. 사용자 요청: 3묶음 중 A(의미 검색)와 B(PDF·OCR)만. 비용 질문에는 Vertex `gemini-embedding-001` 입력 100만 토큰당 0.15달러(Google 개발자 블로그·요금 정리 사이트, 2026-11-17 확인)로 답함. 읽은 안내: [설계](docs/personal-knowledge-agent-design.md) 검색 절, [작업 대화](docs/writing-agent.md).

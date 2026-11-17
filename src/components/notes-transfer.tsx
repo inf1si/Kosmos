@@ -6,18 +6,19 @@ import { Check, FileText } from 'lucide-react';
 import { Modal, Popover } from './primitives';
 import { useStudio } from './studio-provider';
 import { readInterchange, type ImportBundle } from '@/lib/interchange';
+import { readPdfText } from '@/lib/pdf-transcribe';
 import { resolveNoteNavigation } from '@/lib/note-navigation';
 import type { Work } from '@/lib/model';
 import { Select } from './select';
 
-const noteFileTypes='.enex,.zip,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.hwp,.hwpx,.epub,.png,.jpg,.jpeg,.webp';
+const noteFileTypes='.enex,.zip,.md,.markdown,.html,.htm,.txt,.csv,.docx,.rtf,.hwp,.hwpx,.epub,.pdf,.png,.jpg,.jpeg,.webp';
 
 // Browsers expose folder picking only through this non-standard attribute.
 const folderPicker={webkitdirectory:'',directory:''};
 
 /** 여러 앱의 내보내기 파일·폴더를 새 최상위 폴더의 수집함 노트로 가져온다. 원본 폴더 구조·태그·날짜·노트 간 링크를 유지한다. */
 export function NotesImportDialog({open,spaceId,onClose,onImported,onBack,onReturnFocus}:{open:boolean;spaceId?:string;onClose:()=>void;onImported:(folderId:string)=>void;onBack:()=>void;onReturnFocus?:()=>void}){
-  const s=useStudio(),[bundle,setBundle]=useState<ImportBundle|null>(null),[folder,setFolder]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+  const s=useStudio(),[bundle,setBundle]=useState<ImportBundle|null>(null),[folder,setFolder]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[reading,setReading]=useState('');
   const operation=useRef(0);
 
   function close(){if(busy)return;operation.current++;setBundle(null);setError('');setMessage('');onClose();}
@@ -28,18 +29,20 @@ try{await fn();}catch(e){setError(e instanceof Error?e.message:'노트를 가져
 
   function pick(list:FileList|null,input:HTMLInputElement){const files=Array.from(list||[]);input.value='';
 
-if(!files.length)return;const op=++operation.current;setBundle(null);void run(async()=>{const parsed=await readInterchange(files);
+if(!files.length)return;const op=++operation.current;setBundle(null);void run(async()=>{// A PDF is read page by page on the server; the count shows while it runs.
+const parsed=await readInterchange(files,{pdf:(bytes,name)=>readPdfText(bytes,name,(done,total)=>{if(operation.current===op)setReading(`PDF 글자 읽는 중 ${done}/${total}`);}).finally(()=>setReading(''))});
 
-if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRelativePath.split('/')[0]||files[0].name).replace(/\.(scriv|zip|enex|epub|docx|hwpx?|rtf|md|markdown|html?|txt|csv)$/i,'').slice(0,300));});}
+if(operation.current!==op)return;setBundle(parsed);setFolder((files[0].webkitRelativePath.split('/')[0]||files[0].name).replace(/\.(scriv|zip|enex|epub|docx|hwpx?|rtf|md|markdown|html?|txt|csv|pdf)$/i,'').slice(0,300));});}
 
   const attached=bundle?bundle.assets.filter(a=>bundle.pages.some(p=>p.assetKeys.includes(a.key))).length:0;
 
   return <Modal open={open} onClose={close} onBack={()=>{if(!busy){close();onBack();}}} backDisabled={busy} onReturnFocus={onReturnFocus} title="노트 가져오기" wide>
-    <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · MD · HTML · TXT · CSV · Scrivener</p><p>Notion: 하위 페이지 포함 ZIP · Scrivener: 프로젝트 ZIP</p></div>
+    <div className="transfer-guide"><p>ZIP · ENEX · DOCX · HWP/HWPX · RTF · EPUB · PDF · MD · HTML · TXT · CSV · Scrivener</p><p>Notion: 하위 페이지 포함 ZIP · Scrivener: 프로젝트 ZIP · PDF: Gemini가 글자를 읽어 옮김</p></div>
     <div className="transfer-pick">
       <label className="backup-upload">파일 선택<input type="file" aria-label="가져올 노트 파일" multiple accept={noteFileTypes} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
       <label className="backup-upload">폴더 선택<input type="file" aria-label="가져올 노트 폴더" multiple {...folderPicker} disabled={busy} onChange={e=>pick(e.target.files,e.target)}/></label>
     </div>
+    {reading&&<p className="field-help" role="status">{reading}</p>}
     {bundle&&<>
       <div className="transfer-summary"><strong>노트 {bundle.pages.length}개 · 첨부 {attached}개</strong></div>
       <div className="transfer-target"><label>새 폴더 이름<input aria-label="가져올 폴더 이름" value={folder} maxLength={300} disabled={busy} onChange={e=>setFolder(e.target.value)}/></label></div>

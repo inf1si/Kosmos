@@ -8,6 +8,7 @@ import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createRequire} from 'node:module';
 import {PGlite} from '@electric-sql/pglite';
+import {PDFDocument,StandardFonts} from 'pdf-lib';
 import {seedWorkspace} from '../../src/lib/seed.ts';
 import {uid,fromText,plainText,workspaceSchema} from '../../src/lib/model.ts';
 import {addNote,newNote} from '../../src/lib/personal-notes.ts';
@@ -31,6 +32,13 @@ let state=seedWorkspace();
 
 state.works[0].documents[0].content=fromText('달의 관측소에는 아무도 없었다.');
 
+// A photographed note attached to the first scene, read by the agent through 이미지 읽기.
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==','base64'),imageId=uid();
+
+state.assets.push({id:imageId,workId:state.works[0].id,name:'관측 메모.png',type:'image/png',size:png.length});
+
+state.works[0].documents[0].assetIds.push(imageId);
+
 const note={...newNote(),title:'관측 노트',content:fromText('관측은 새벽에 시작한다.')};
 
 state=addNote(state,note);
@@ -39,7 +47,7 @@ const mentionA={...newNote(),title:'공통 자료',content:fromText('첫 번째 
 
 if(mentionsOnly)state=addNote(addNote(addNote(state,mentionA),mentionB,{parentId:note.id}),longMention);
 
-const initial=structuredClone(state),errors=[],results=[],modelCalls=[],embeddingCalls=[],longModel='gemini-'+ 'x'.repeat(193);
+const initial=structuredClone(state),errors=[],results=[],modelCalls=[],embeddingCalls=[],transcribeCalls=[],longModel='gemini-'+ 'x'.repeat(193);
 
 await pg.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create function auth.uid() returns uuid language sql as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;create table public.authors(user_id uuid primary key);create table public.workspaces(id uuid primary key,owner_id uuid not null,payload jsonb not null,version bigint not null default 1,updated_at timestamptz default now());create table public.workspace_revisions(id uuid default gen_random_uuid(),workspace_id uuid,owner_id uuid,payload jsonb,created_at timestamptz default now());`);
 
@@ -85,6 +93,11 @@ for(const ch of item.content.replace(/\s/g,''))values[ch.codePointAt(0)%768]+=1;
 
 return {embeddings:{values,statistics:{token_count:item.content.length}}};})});}
 
+      // 글자 읽기: a fixed text per file type, so the note and the tool result can be checked.
+      if(google&&JSON.stringify(body.systemInstruction||'').includes('글자를 옮겨 적는다')){const file=(body.contents||[]).flatMap(message=>message.parts||[]).find(part=>part.inlineData);transcribeCalls.push(file?.inlineData.mimeType);
+
+return send({candidates:[{content:{role:'model',parts:[{text:file?.inlineData.mimeType==='application/pdf'?'관측 일지 첫 문단.\n\n관측 일지 둘째 문단.':'산소 잔량 18%'}]},finishReason:'STOP'}],usageMetadata:{promptTokenCount:30,candidatesTokenCount:10,totalTokenCount:40}});}
+
       if(google&&body.tools?.some(tool=>tool.googleSearch||tool.urlContext))return send({candidates:[{content:{role:'model',parts:[{text:'합성 자료에서는 기억의 재구성 가능성을 설명한다.'}]},finishReason:'STOP',groundingMetadata:{groundingChunks:[{web:{uri:'https://example.com/paper',title:'합성 연구 자료'}}],groundingSupports:[{segment:{startIndex:0,endIndex:27,text:'합성 자료에서는 기억의 재구성 가능성을 설명한다.'},groundingChunkIndices:[0]}],webSearchQueries:['기억 연구'],searchEntryPoint:{renderedContent:'<a href="https://www.google.com/search?q=memory" target="_blank">Google 검색 제안</a>'}}}],usageMetadata:{promptTokenCount:24,candidatesTokenCount:12,totalTokenCount:36}});
 
       if(google&&body.generationConfig?.responseMimeType==='application/json'||anthropic&&(!body.tools?.length||body.tools?.some(tool=>tool.name==='json')))return send(vertexReviewResponse(google?'gemini':'anthropic',{review:'합성 문서 답변',suggestions:[]}));
@@ -104,7 +117,8 @@ return {embeddings:{values,statistics:{token_count:item.content.length}}};})});}
       // 위키 정리 writes a page from a document of the work, finds it and reads it back.
       const asks=(google?body.contents:anthropic?body.messages:body.input)||[],lastAsk=[...asks].reverse().find(message=>message.role==='user'&&(google?message.parts?.some(part=>'text' in part):!Array.isArray(message.content)||message.content.some(part=>part.type==='text'||part.type==='input_text')));
 
-      if(JSON.stringify(lastAsk||'').includes('뜻으로 찾아줘'))item=step===0?tool('searchMeaning',{query:'관측소에 아무도 없는 장면',everywhere:false}):{type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'뜻이 가까운 대목을 찾았습니다.',annotations:[]}]};
+      if(JSON.stringify(lastAsk||'').includes('그림 글자 읽어줘'))item=[()=>tool('readSource',{id:initial.works[0].documents[0].id,offset:0,length:12000}),()=>tool('readImage',{id:outputs[0].data.images[0].id}),()=>({type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:`그림 속 글자는 ${outputs[1].data.text}입니다.`,annotations:[]}]})][step]();
+      else if(JSON.stringify(lastAsk||'').includes('뜻으로 찾아줘'))item=step===0?tool('searchMeaning',{query:'관측소에 아무도 없는 장면',everywhere:false}):{type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'뜻이 가까운 대목을 찾았습니다.',annotations:[]}]};
       else if(JSON.stringify(lastAsk||'').includes('위키 정리해줘')){const written=outputs.find(o=>o.data.saved&&o.data.id)?.data;
         item=[()=>tool('writeWiki',{id:null,title:'관측소',category:'place',content:'달 관측소는 비어 있다(원문).\n누가 비웠는지는 열린 질문이다.',sourceIds:[initial.works[0].documents[1].id]}),()=>tool('searchWiki',{query:'관측소',offset:0}),()=>tool('readWiki',{id:written?.id,offset:0,length:12000})][step]?.()||{type:'message',id:uid(),role:'assistant',status:'completed',content:[{type:'output_text',text:'위키에 관측소를 정리했습니다.',annotations:[]}]};
       }
@@ -139,6 +153,11 @@ return {embeddings:{values,statistics:{token_count:item.content.length}}};})});}
     const author=req.headers.authorization===`Bearer ${token}`,service=req.headers.apikey==='synthetic-service';
 
     if(url.pathname==='/auth/v1/user')return author?send(profile):send({message:'unauthorized'},401);
+
+    // Storage holds the one attached image, in the author's own folder.
+    if(url.pathname.startsWith('/storage/v1/object/')){if((!author&&!service)||!url.pathname.endsWith(`/private-assets/${profile.id}/${imageId}`))return send({message:'not found'},404);res.writeHead(200,{'Content-Type':'image/png'});res.end(png);
+
+return;}
 
     if(!author&&!service)return send({message:'unauthorized'},401);
     const name=url.pathname.split('/').at(-1);
@@ -611,6 +630,12 @@ return {calls:embeddingCalls.slice(before),run:(await pg.query("select events fr
       assert.equal(event.sources[0].id,initial.works[0].documents[0].id,'the passage sharing the most words comes first');assert(first.calls.includes('RETRIEVAL_DOCUMENT')&&first.calls.at(-1)==='RETRIEVAL_QUERY');
       const indexed=(await pg.query('select distinct document_id,model from public.agent_embeddings where owner_id=$1',[profile.id])).rows;assert(indexed.length>=2&&indexed.every(row=>row.model==='gemini-embedding-001'));assert(indexed.some(row=>row.document_id===initial.works[0].documents[0].id));
       const second=await askMeaning();assert.deepEqual(second.calls,['RETRIEVAL_QUERY'],'unchanged documents are not embedded again');assert.match(second.run.events.find(item=>item.title==='의미 검색').detail,/^관측소에 아무도 없는 장면 · 임베딩 토큰 \d+$/);
+
+      // 이미지 읽기: readSource lists the attachment, readImage sends that image to Gemini and the answer quotes its text.
+      await input.fill('그림 글자 읽어줘.');await panel.getByRole('button',{name:'질문 보내기',exact:true}).click();await panel.locator('.chat-message.assistant').filter({hasText:'그림 속 글자는 산소 잔량 18%입니다.'}).waitFor();
+      const imageRun=(await pg.query("select events from public.agent_runs where message='그림 글자 읽어줘.' order by created_at desc limit 1")).rows[0],imageEvent=imageRun.events.find(item=>item.title==='이미지 읽기');
+      assert.equal(imageEvent?.detail,`${initial.works[0].documents[0].title} · 관측 메모.png`);assert.deepEqual(transcribeCalls,['image/png']);
+      assert(await panel.locator('li strong').filter({hasText:/^이미지 읽기$/}).count()>0,'the work log lists the image reading');
     }
 
     // AI 자료 내보내기 lives with the other exports in 설정 › 저장 · 백업.
@@ -626,7 +651,26 @@ return {calls:embeddingCalls.slice(before),run:(await pg.query("select events fr
     assert.match(await importedNote.innerText(),new RegExp(`^대화 1개 · 실행 ${restored}개 · 기억 ${remembered}개 · 위키 1개를 가져왔습니다\\.( 이미 있거나 읽지 못한 ${archive.sessions.length+archive.runs.length+archive.memories.length+archive.wikiPages.length+archive.wikiScopes.length-2-restored-remembered}개는 건너뛰었습니다\\.)?$`));
     assert.equal((await pg.query('select id from public.agent_runs where session_id=$1',[run.session_id])).rows.length,restored);assert.equal((await pg.query('select owner_id from public.agent_sessions where id=$1',[run.session_id])).rows[0]?.owner_id,profile.id);assert.equal((await pg.query('select owner_id from public.agent_wiki_pages where id=$1',[wikiRow.id])).rows[0]?.owner_id,profile.id,'the wiki page comes back');
     await page.screenshot({path:resolve(output,`settings-agent-export-${width}.png`)});await settingsDialog.getByRole('button',{name:'닫기',exact:true}).click();
-    await page.reload({waitUntil:'networkidle'});const reopened=await openPanel(initial.works[0].documents[0]);await reopened.locator('.agent-exchange .chat-message.user').filter({hasText:run.message}).waitFor();await context.close();
+    await page.reload({waitUntil:'networkidle'});const reopened=await openPanel(initial.works[0].documents[0]);await reopened.locator('.agent-exchange .chat-message.user').filter({hasText:run.message}).waitFor();
+
+    if(width===1280){
+      // 노트 가져오기 reads a PDF through the server a few pages at a time and makes one note of its text.
+      const doc=await PDFDocument.create(),font=await doc.embedFont(StandardFonts.Helvetica);
+
+      for(let i=0;i<6;i++)doc.addPage([300,400]).drawText(`page ${i+1}`,{x:40,y:300,size:18,font});
+      const pdf=resolve(output,'관측 일지.pdf');await writeFile(pdf,await doc.save());transcribeCalls.length=0;
+      await reopened.getByRole('button',{name:'참고 패널 닫기',exact:true}).click();
+
+      if(!await page.locator('.studio-tools').getByRole('button',{name:'설정',exact:true}).isVisible())await page.getByRole('button',{name:'사이드바 열기',exact:true}).click();
+      await page.locator('.studio-tools').getByRole('button',{name:'설정',exact:true}).click();await page.getByRole('dialog',{name:'설정',exact:true}).getByRole('button',{name:'저장 · 백업',exact:true}).click();await page.getByRole('dialog',{name:'설정',exact:true}).getByRole('button',{name:'노트 가져오기',exact:true}).click();
+      const importDialog=page.getByRole('dialog',{name:'노트 가져오기'});await importDialog.getByLabel('가져올 노트 파일').setInputFiles(pdf);
+      await importDialog.getByText('노트 1개 · 첨부 0개',{exact:true}).waitFor();assert.deepEqual(transcribeCalls,['application/pdf','application/pdf'],'six pages go in two parts');
+      assert.equal(await importDialog.getByLabel('가져올 폴더 이름').inputValue(),'관측 일지');await page.screenshot({path:resolve(output,'notes-import-pdf-1280.png')});
+      await importDialog.getByRole('button',{name:'노트 1개 가져오기',exact:true}).click();await importDialog.getByRole('status').filter({hasText:'노트 1개를 가져왔습니다.'}).waitFor();
+      await until(async()=>(await pg.query('select payload from public.workspaces where id=$1',[workspaceId])).rows[0].payload.notes?.some(item=>item.title==='관측 일지'&&plainText(item.content).includes('관측 일지 첫 문단.')&&plainText(item.content).includes('관측 일지 둘째 문단.')),'the PDF note is saved');
+    }
+
+    await context.close();
   }
 
   if(!mentionsOnly){

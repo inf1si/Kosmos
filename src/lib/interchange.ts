@@ -82,7 +82,7 @@ return path(`${base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):''}${cle
 
 function safeLink(href:string){return /^(https?:|mailto:)/i.test(href)&&!/[\u0000-\u0020]/.test(href)?href:undefined;}
 
-function baseTitle(name:string){return name.split('/').pop()!.replace(/\.(md|markdown|txt|html?|csv|enex|docx|rtf|hwpx?|epub)$/i,'').replace(/\s+[a-f0-9]{32}$/i,'').trim().slice(0,300)||'제목 없는 문서';}
+function baseTitle(name:string){return name.split('/').pop()!.replace(/\.(md|markdown|txt|html?|csv|enex|docx|rtf|hwpx?|epub|pdf)$/i,'').replace(/\s+[a-f0-9]{32}$/i,'').trim().slice(0,300)||'제목 없는 문서';}
 
 function imageMime(bytes:Uint8Array):AssetMeta['type']|null {
   if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b))return'image/png';
@@ -338,7 +338,10 @@ function csvContent(csv:string,bundle:ImportBundle,page:ImportedPage):RichNode{
 return{type:'doc',content:content.length?content:[paragraph([])]};
 }
 
-export async function readInterchange(files:readonly File[]):Promise<ImportBundle> {
+/** Reads the text of one PDF; 노트 가져오기 passes one that sends the pages to Gemini. */
+export type PdfReader=(bytes:Uint8Array,name:string)=>Promise<{text:string;warnings:string[]}>;
+
+export async function readInterchange(files:readonly File[],options:{pdf?:PdfReader}={}):Promise<ImportBundle> {
   if(!files.length)throw new Error('가져올 파일을 선택하세요.');
 
   if(files.reduce((n,f)=>n+f.size,0)>MAX_BYTES)throw new Error('한 번에 100MB까지 가져올 수 있습니다.');
@@ -532,6 +535,11 @@ if(!enml)throw new Error(`${page.title}: 본문이 없는 ENEX 노트입니다.`
 
 if(encoder.encode(body).length>MAX_TEXT)throw new Error(`${page.title}: 본문이 5MB를 넘습니다.`);bundle.pages.push(page);sources.set(page.key,body);
       }
+    }else if(ext==='pdf'&&options.pdf){
+      const result=await options.pdf(bytes,key);result.warnings.forEach(w=>warning(bundle,w));
+
+      if(encoder.encode(result.text).length>MAX_TEXT)throw new Error(`${key}: 옮긴 글이 5MB를 넘습니다. PDF를 나누어 가져오세요.`);
+      bundle.pages.push({key,title:baseTitle(key),kind:'memo',content:fromText(''),assetKeys:[],chapter:dirOf(key),category:'',summary:''});sources.set(key,result.text);
     }else warning(bundle,`${key}: 지원하지 않는 파일이므로 가져오지 않습니다.`);
 
     if(bundle.pages.length>MAX_PAGES)throw new Error('한 번에 500개 문서까지 가져올 수 있습니다.');
@@ -541,7 +549,7 @@ if(encoder.encode(body).length>MAX_TEXT)throw new Error(`${page.title}: 본문�
 
   for(const page of bundle.pages){const source=sources.get(page.key)!;
 
-if(/\.txt$/i.test(page.key))page.content=fromText(source);else if(/\.csv$/i.test(page.key))page.content=csvContent(source,bundle,page);else page.content=htmlContent(/\.(md|markdown)$/i.test(page.key)?markdown.render(obsidianMarkdown(source)):source,page,bundle);documentSchema.parse({...newDocument(page.kind,page.title),content:page.content,summary:page.summary,chapter:page.chapter,category:page.category});}
+if(/\.(txt|pdf)$/i.test(page.key))page.content=fromText(source);else if(/\.csv$/i.test(page.key))page.content=csvContent(source,bundle,page);else page.content=htmlContent(/\.(md|markdown)$/i.test(page.key)?markdown.render(obsidianMarkdown(source)):source,page,bundle);documentSchema.parse({...newDocument(page.kind,page.title),content:page.content,summary:page.summary,chapter:page.chapter,category:page.category});}
 
   const used=new Set(bundle.pages.flatMap(p=>p.assetKeys));
 
