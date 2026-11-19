@@ -7,7 +7,7 @@ export const BUILTIN_PROMPT_IDS=['builtin:default','builtin:line-edit','builtin:
 
 export const DEFAULT_PROMPT_ID=BUILTIN_PROMPT_IDS[0];
 
-export const PROMPT_REVISION='2026-11-14.1';
+export const PROMPT_REVISION='2026-11-19.1';
 
 
 export const promptPresetIdSchema=z.union([z.enum(BUILTIN_PROMPT_IDS),z.uuid()]);
@@ -41,7 +41,7 @@ export const BUILTIN_PROMPTS:readonly PromptPreset[]=[
   {id:BUILTIN_PROMPT_IDS[3],title:'SF 가정·개연성',focus:'SF 가정을 다듬는 데 집중한다. 먼저 작품의 허구적 전제를 받아들이고, 그 전제가 성립하는 것처럼 보이게 할 가설·원리·디테일을 보탠다. 그런 다음 시간·거리·에너지·기준계·정보 전달·기술 비용에서 독자가 걸려 넘어질 곳을 찾고, 설정을 버리는 대신 메울 방법을 함께 내놓는다. 계산에는 가정·단위·대략적 규모를 표시한다. 기술이 낳을 사회적·윤리적 결과도 이야깃거리로 제안한다.'},
   {id:BUILTIN_PROMPT_IDS[4],title:'장면·구조 구상',focus:'발전 편집과 구상에 집중한다. 장면의 목적, 선택과 결과, 인물 변화, 작품 길이에 맞는 축적을 살핀다. 표현만 바꾼 안이 아니라 방향이 실제로 다른 전개를 내놓되 개수와 형식은 질문에 맞춘다. 작가의 의도 없이 결말이나 장르를 교체하지 않는다. 문장 수정은 명시적으로 요청할 때만 제시한다.'},
   {id:BUILTIN_PROMPT_IDS[5],title:'독자 관점 검토',focus:'첫 독자와 비평적 독자의 관점에 집중한다. 제공된 부분만 읽었음을 전제로 무엇을 이해했는지, 어디서 막혔는지, 어떤 질문이 남는지 구체적으로 말한다. 의도된 낯섦·모호함과 이해에 꼭 필요한 정보 부족을 구분한다. 흥미·감정·정보의 흐름을 위치와 근거로 설명하고 요청 없는 대필이나 문장 교정을 하지 않는다.'},
-].map(p=>({id:p.id,title:p.title,prompt:DEFAULT_AI_SYSTEM_PROMPT+(p.focus?'\n\n## 이번 프리셋의 우선 작업\n작가가 이 프리셋을 골랐다는 것은 아래 작업을 청했다는 뜻이다.\n'+p.focus:''),updatedAt:PROMPT_REVISION,builtin:true}));
+].map(p=>({id:p.id,title:p.title,prompt:DEFAULT_AI_SYSTEM_PROMPT+(p.focus?'\n\n<preset_focus>\n작가가 이 프리셋을 골랐다는 것은 아래 작업을 청했다는 뜻이다.\n'+p.focus+'\n</preset_focus>':''),updatedAt:PROMPT_REVISION,builtin:true}));
 
 export function promptCatalog(preferences?:AIPreferences):PromptPreset[]{return [...BUILTIN_PROMPTS,...(preferences?.presets||[]).map(p=>({...p,builtin:false}))];}
 
